@@ -8,7 +8,7 @@ object Field:
 
   type FromLabelsAndTypes[Labels <: Tuple, Types <: Tuple] <: Tuple =
     (Labels, Types) match
-      case EmptyTuple => EmptyTuple
+      case (EmptyTuple, EmptyTuple) => EmptyTuple
       case (labelHead *: labelTail, typeHead *: typeTail) =>
         Field[labelHead, typeHead] *: FromLabelsAndTypes[labelTail, typeTail]
 
