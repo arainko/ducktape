@@ -16,16 +16,46 @@ case class TransformerBuilder[
 ](
   private val computeds: Map[FieldName, From => Any],
   private val constants: Map[FieldName, Any],
-  private val coprodInstances: Map[Ordinal, Any]
+  private val coprodInstances: Map[Ordinal, From => To]
 ) {
 
-  def withCoprodInstance = ???
+  inline def withCaseInstance[Type <: From, ToCase <: To]( // use the partially applied trick
+    f: Type => ToCase
+  ): TransformerBuilder[
+    From,
+    To,
+    FromSubcases,
+    ToSubcases,
+    Case.DropByType[Type, UnhandledFromSubcases],
+    UnhandledToSubcases
+  ] = {
+    val ordinal = constValue[Case.OrdinalForType[Type, FromSubcases]]
+    this.copy(coprodInstances = coprodInstances + (ordinal -> f.asInstanceOf[From => To]))
+  }
 
-  def withFieldConst = ???
+  inline def withFieldConst[Label <: String](
+    const: Field.TypeForLabel[Label, ToSubcases]
+  ): TransformerBuilder[
+    From,
+    To,
+    FromSubcases,
+    ToSubcases,
+    Field.DropByLabel[Label, UnhandledFromSubcases],
+    Field.DropByLabel[Label, UnhandledToSubcases]
+  ] = this.copy(constants = constants + (constValue[Label] -> const))
 
-  def withFieldRenamed = ???
+  inline def withFieldRenamed[FromLabel <: String, ToLabel <: String] = ???
 
-  def withFieldComputed = ???
+  inline def withFieldComputed[Label <: String](
+    f: From => Field.TypeForLabel[Label, ToSubcases]
+  ): TransformerBuilder[
+    From,
+    To,
+    FromSubcases,
+    ToSubcases,
+    Field.DropByLabel[Label, UnhandledFromSubcases],
+    Field.DropByLabel[Label, UnhandledToSubcases]
+  ] = this.copy(computeds = computeds + (constValue[Label] -> f.asInstanceOf[Any => Any]))
 }
 
 object TransformerBuilder:
