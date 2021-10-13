@@ -15,7 +15,7 @@ enum AnotherSumCase:
   case SingletonSubcase
   case ProductSubcase(subStr: String)
 
-class MySuite extends FunSuite {
+class TransformerBuilderCreationSuite extends FunSuite {
 
   test("Product to Product should compile") {
 
