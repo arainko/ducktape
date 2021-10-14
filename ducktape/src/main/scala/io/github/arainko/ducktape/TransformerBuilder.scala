@@ -5,6 +5,7 @@ import scala.compiletime.*
 import scala.compiletime.ops.int.*
 import scala.util.NotGiven
 import io.github.arainko.ducktape.TransformerBuilder.WithCaseInstancePartiallyApplied
+import io.github.arainko.ducktape.internal.Derivation
 
 type Ordinal = Int
 type FieldName = String
@@ -86,8 +87,8 @@ case class TransformerBuilder[
   ): To = {
     val fromAsProd = from.asInstanceOf[Product]
 
-    val transformers = TransformerBuilder.transformersForAllFields[UnhandledFromSubcases, UnhandledToSubcases]
-    val labelIndicesOfTo = TransformerBuilder.labelIndices[Field.ExtractLabels[ToSubcases], 0]
+    val transformers = Derivation.transformersForAllFields[UnhandledFromSubcases, UnhandledToSubcases]
+    val labelIndicesOfTo = Derivation.labelIndices[Field.ExtractLabels[ToSubcases], 0]
     val labelsToValuesOfFrom = fromAsProd.productElementNames.zip(fromAsProd.productIterator).toMap
     val valueArrayOfTo = Array.fill(labelIndicesOfTo.size)(null.asInstanceOf[Any])
 
@@ -158,42 +159,6 @@ object TransformerBuilder:
           Case.FromLabelsAndTypes[from.MirroredElemLabels, from.MirroredElemTypes],
           Field.FromLabelsAndTypes[to.MirroredElemLabels, to.MirroredElemTypes],
         ](Map.empty, Map.empty, Map.empty, Map.empty)
-    }
-
-  inline def transformersForAllFields[
-    UnhandledFromFields <: Tuple,
-    UnhandledToFields <: Tuple
-  ]: Map[String, Transformer[Any, Any]] =
-    inline erasedValue[UnhandledToFields] match {
-      case _: EmptyTuple =>
-        Map.empty
-      case _: (Field[label, tpe] *: tail) =>
-        transformersForAllFields[UnhandledFromFields, tail] + transformerForField[label, tpe, UnhandledFromFields]
-    }
-
-  inline def transformerForField[
-    ToLabel <: String,
-    ToType,
-    UnhandledFromFields <: Tuple
-  ]: (String, Transformer[Any, Any]) =
-    inline erasedValue[UnhandledFromFields] match {
-      case _: EmptyTuple =>
-        error("No Transformer found! - at field '" + constValue[ToLabel] + "'")
-      case _: (Field[ToLabel, tpe] *: _) =>
-        constValue[ToLabel] -> summonInline[Transformer[tpe, ToType]].asInstanceOf[Transformer[Any, Any]]
-      case _: (_ *: tail) =>
-        transformerForField[ToLabel, ToType, tail]
-    }
-
-  inline def labelIndices[ // TODO: make it prettier
-    Labels <: Tuple,
-    Acc <: Int
-  ]: Map[String, Int] =
-    inline erasedValue[Labels] match {
-      case _: EmptyTuple => Map.empty
-      case _: (h *: t) =>
-        val labelToIndex = constValue[h].asInstanceOf[String] -> constValue[Acc]
-        labelIndices[t, S[Acc]] + labelToIndex
     }
 
   case class WithCaseInstancePartiallyApplied[
