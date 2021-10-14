@@ -3,6 +3,8 @@ package io.github.arainko.ducktape
 import scala.deriving.Mirror
 import scala.compiletime.*
 import scala.compiletime.ops.int.*
+import scala.util.NotGiven
+import io.github.arainko.ducktape.TransformerBuilder.WithCaseInstancePartiallyApplied
 
 type Ordinal = Int
 type FieldName = String
@@ -17,26 +19,24 @@ case class TransformerBuilder[
 ](
   private val computeds: Map[FieldName, From => Any],
   private val constants: Map[FieldName, Any],
-  private val renames: Map[FieldName, FieldName],
+  private val renameTransformers: Map[FieldName, (FieldName, Transformer[Any, Any])],
   private val coprodInstances: Map[Ordinal, From => To]
 ) {
 
-  inline def withCaseInstance[Type <: From, ToCase <: To]( // use the partially applied trick
-    f: Type => ToCase
-  ): TransformerBuilder[
+  inline def withCaseInstance[
+    Type <: From
+  ]: WithCaseInstancePartiallyApplied[
     From,
     To,
     FromSubcases,
     ToSubcases,
-    Case.DropByType[Type, UnhandledFromSubcases],
-    UnhandledToSubcases
-  ] = {
-    val ordinal = constValue[Case.OrdinalForType[Type, FromSubcases]]
-    this.copy(coprodInstances = coprodInstances + (ordinal -> f.asInstanceOf[From => To]))
-  }
+    UnhandledFromSubcases,
+    UnhandledToSubcases,
+    Type
+  ] = WithCaseInstancePartiallyApplied(this)
 
   inline def withFieldConst[Label <: String](
-    const: Field.TypeForLabel[Label, ToSubcases]
+    const: => Field.TypeForLabel[Label, ToSubcases]
   ): TransformerBuilder[
     From,
     To,
@@ -46,7 +46,28 @@ case class TransformerBuilder[
     Field.DropByLabel[Label, UnhandledToSubcases]
   ] = this.copy(constants = constants + (constValue[Label] -> const))
 
-  inline def withFieldRenamed[FromLabel <: String, ToLabel <: String] = ???
+  inline def withFieldRenamed[
+    FromLabel <: String,
+    ToLabel <: String
+  ]: TransformerBuilder[
+    From,
+    To,
+    FromSubcases,
+    ToSubcases,
+    Field.DropByLabel[FromLabel, UnhandledFromSubcases],
+    Field.DropByLabel[ToLabel, UnhandledToSubcases]
+  ] = {
+    val transformer = summonInline[
+      Transformer[
+        Field.TypeForLabel[FromLabel, FromSubcases],
+        Field.TypeForLabel[ToLabel, ToSubcases],
+      ]
+    ].asInstanceOf[Transformer[Any, Any]]
+    val fromLabel = constValue[FromLabel]
+    val toLabel = constValue[ToLabel]
+
+    this.copy(renameTransformers = renameTransformers + (toLabel -> (fromLabel, transformer)))
+  }
 
   inline def withFieldComputed[Label <: String](
     f: From => Field.TypeForLabel[Label, ToSubcases]
@@ -74,14 +95,23 @@ case class TransformerBuilder[
 
     labelIndicesOfTo.foreach {
       case (label, idx) =>
-        val valueForLabel =transformers
-          .get(label)
-          .map(_.transform(labelsToValuesOfFrom(label)))
-          .orElse(computeds.get(label).map(f => f(from)))
-          .getOrElse(constants(label))
+        lazy val maybeValueFromRename =
+          renameTransformers.get(label).map { (fromLabel, transformer) =>
+            transformer.transform(labelsToValuesOfFrom(fromLabel))
+          }
+
+        lazy val maybeValueFromDerived =
+          transformers.get(label).map(_.transform(labelsToValuesOfFrom(label)))
+
+        lazy val maybeValueFromComputed =
+          computeds.get(label).map(f => f(from))
+
+        val valueForLabel =
+          maybeValueFromRename.orElse(maybeValueFromDerived).orElse(maybeValueFromComputed).getOrElse(constants(label))
 
         valueArrayOfTo.update(idx, valueForLabel)
     }
+
     To.fromProduct(Tuple.fromArray(valueArrayOfTo))
   }
 }
@@ -165,5 +195,38 @@ object TransformerBuilder:
         val labelToIndex = constValue[h].asInstanceOf[String] -> constValue[Acc]
         labelIndices[t, S[Acc]] + labelToIndex
     }
+
+  case class WithCaseInstancePartiallyApplied[
+    From,
+    To,
+    FromSubcases <: Tuple,
+    ToSubcases <: Tuple,
+    UnhandledFromSubcases <: Tuple,
+    UnhandledToSubcases <: Tuple,
+    Type <: From
+  ](
+    builder: TransformerBuilder[
+      From,
+      To,
+      FromSubcases,
+      ToSubcases,
+      UnhandledFromSubcases,
+      UnhandledToSubcases
+    ]
+  ) {
+    inline def apply[ToCase <: To](
+      f: Type => ToCase
+    ): TransformerBuilder[
+      From,
+      To,
+      FromSubcases,
+      ToSubcases,
+      Case.DropByType[Type, UnhandledFromSubcases],
+      UnhandledToSubcases
+    ] = {
+      val ordinal = constValue[Case.OrdinalForType[Type, FromSubcases]]
+      builder.copy(coprodInstances = builder.coprodInstances + (ordinal -> f.asInstanceOf[From => To]))
+    }
+  }
 
 end TransformerBuilder

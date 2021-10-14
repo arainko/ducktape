@@ -70,6 +70,6 @@ class TransformerBuilderCreationSuite extends FunSuite {
 
   test("Product to Sum should not compile") {
     assertNotEquals(compileErrors("TransformerBuilder.create[ProductCase, SumCase]"), "")
-  
+
   }
 }
