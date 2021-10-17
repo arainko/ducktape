@@ -2,6 +2,8 @@ package io.github.arainko.ducktape
 
 import scala.deriving.Mirror
 import io.github.arainko.ducktape.internal.Derivation
+import scala.collection.Factory
+import scala.collection.BuildFrom
 
 @FunctionalInterface
 trait Transformer[From, To] {
@@ -9,6 +11,9 @@ trait Transformer[From, To] {
 }
 
 object Transformer {
+
+  def apply[A, B](using trans: Transformer[A, B]): Transformer[A, B] = trans
+
   inline given [A, B](using A: Mirror.ProductOf[A], B: Mirror.ProductOf[B]): Transformer[A, B] = from => {
     val fromAsProd = from.asInstanceOf[Product]
     val labelsToValuesOfA = fromAsProd.productElementNames.zip(fromAsProd.productIterator).toMap
@@ -25,8 +30,23 @@ object Transformer {
     B.fromProduct(Tuple.fromArray(valuesOfB))
   }
 
+  inline given [A, B](using A: Mirror.SumOf[A], B: Mirror.SumOf[B]): Transformer[A, B] = from => {
+    val ordinalsOfAToSingletonsOfB = Derivation.ordinalsForMatchingSingletons[
+      Case.FromLabelsAndTypes[A.MirroredElemLabels, A.MirroredElemTypes],
+      Case.FromLabelsAndTypes[B.MirroredElemLabels, B.MirroredElemTypes],
+    ]
+    ordinalsOfAToSingletonsOfB(A.ordinal(from)).asInstanceOf[B]
+  }
+
   given [A]: Transformer[A, A] = identity
 
-  given [A, B](using transformer: Transformer[A, B]): Transformer[A, Option[B]] =
-    transformer.transform.andThen(Some.apply)(_)
+  given [A, B](using Transformer[A, B]): Transformer[A, Option[B]] =
+    Transformer[A, B].transform.andThen(Some.apply)(_)
+
+  given [A, B, CollFrom[+elem] <: Iterable[elem], CollTo[+elem] <: Iterable[elem]](using
+    trans: Transformer[A, B],
+    fac: Factory[B, CollTo[B]]
+  ): Transformer[CollFrom[A], CollTo[B]] = from => 
+    from.foldLeft(fac.newBuilder)(_ += trans.transform(_)).result
+  
 }

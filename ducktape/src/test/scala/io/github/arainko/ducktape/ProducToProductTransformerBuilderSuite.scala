@@ -11,15 +11,20 @@ enum Enum1:
   case Sing3
 
 enum Enum2:
-  case Sing11
-  case Sing31
-  case Sing21
+  case Sing1
+  case Sing2
+  case Sing3
+  case Sing4
+  case Sing5
 
-case class CoolCase1(int: String)
+// should derive for Enum1 to Enum2
+// should fail to derive for Enum2 to Enum1
+
+case class CoolCase1(int: String, additional: Int)
 case class CoolCase2(int: String)
 
-case class Product1(int: Int, str: String, list: List[Int], prod: CoolCase1)
-case class Product3(int: Option[Int], str: String, list: List[Int], prod: Option[CoolCase2])
+case class Product1(int: Int, str: String, list: List[Int], prod: CoolCase1, coprod: Enum2)
+case class Product3(int: Option[Int], str: String, list: Vector[Int], prod: Option[CoolCase2], coprod: Enum1)
 
 case class Product2(
   optInt: Option[Int],
@@ -44,20 +49,25 @@ class MySuite extends FunSuite {
   //   println(transformed)
   // }
 
-  val m1 = summon[Mirror.SumOf[Enum1]]
-  val m2 = summon[Mirror.SumOf[Enum2]]
+  // val cos = Derivation.summonSingleton[Enum2.Sing11.type]
 
-  val cos = Derivation.singletonToSingletonCase[
-    "Sing21",
-    Enum2.Sing21.type,
-    Case.FromLabelsAndTypes[m1.MirroredElemLabels, m1.MirroredElemTypes]
-  ]
+  val enumTrans = summon[Transformer[Enum1, Enum2]]
+
+  given Transformer[Enum2, Enum1] = TransformerBuilder
+    .create[Enum2, Enum1]
+    .withCaseInstance[Enum2.Sing4.type](_ => Enum1.Sing1)
+    .withCaseInstance[Enum2.Sing5.type](_ => Enum1.Sing2)
+    .build
 
   val trans = summon[Transformer[Product1, Product3]]
 
   test("trans test") {
-    val prod1 = Product1(1, "prod1", List(1, 2, 3, 4), CoolCase1("COOL"))
+    val prod1 = Product1(1, "prod1", List(1, 2, 3, 4), CoolCase1("COOL", 5), Enum2.Sing4)
     println(trans.transform(prod1))
-    println(cos)
+
+    val t = enumTrans.transform(Enum1.Sing2)
+    println(t)
+
+    // println(enum2ToEnum1)
   }
 }

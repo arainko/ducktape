@@ -7,6 +7,13 @@ import scala.collection.mutable.ArrayBuilder
 import scala.deriving.Mirror
 
 object Derivation {
+  inline def summonSingleton[T]: T =
+    inline summonInline[Mirror.ProductOf[T]] match {
+      case m: Mirror.Singleton      => m.fromProduct(EmptyTuple)
+      case m: Mirror.SingletonProxy => m.fromProduct(EmptyTuple)
+      case _ => error("Cannot summon a singleton!")
+    }
+
   inline def transformersForAllFields[
     FromFields <: Tuple,
     ToFields <: Tuple
@@ -33,26 +40,29 @@ object Derivation {
     }
 
   // return ordinal of `From` and instance of ToType
-  inline def singletonToSingletonCase[
-    ToLabel <: String,
-    ToType,
-    FromCases <: Tuple
-  ]: (Int, ToType) =
-    inline erasedValue[FromCases] match {
+  inline def ordinalWithSingletonLabel[
+    FromLabel <: String,
+    FromType,
+    ToCases <: Tuple
+  ]: (Int, Any) =
+    inline erasedValue[ToCases] match {
       case _: EmptyTuple =>
-        error("No Transformer found! - at case '" + constValue[ToLabel] + "'")
-
-      case _: (Case[ToLabel, tpe, ordinal] *: _) =>
-        inline summonInline[Mirror.Of[ToType]] match {
-          case m: Mirror.Singleton =>
-            constValue[ordinal] -> m.fromProduct(EmptyTuple).asInstanceOf[ToType]
-          case _ =>
-            error("welp")
-        }
-      
+        error("No Transformer found! - at case '" + constValue[FromLabel] + "'")
+      case _: (Case[FromLabel, tpe, ordinal] *: _) =>
+        constValue[ordinal] -> summonSingleton[tpe]
       case _: (_ *: t) =>
-        singletonToSingletonCase[ToLabel, ToType, t]
+        ordinalWithSingletonLabel[FromLabel, FromType, t]
     }
+
+  inline def ordinalsForMatchingSingletons[
+    FromCases <: Tuple,
+    ToCases <: Tuple
+  ]: Map[Int, Any] = 
+  inline erasedValue[FromCases] match {
+    case _: EmptyTuple => Map.empty
+    case _: (Case[label, tpe, ordinal] *: tail) =>
+      ordinalsForMatchingSingletons[tail, ToCases] + ordinalWithSingletonLabel[label, tpe, ToCases]
+  }
 
   inline def labelIndices[ // TODO: make it prettier
     Labels <: Tuple,
