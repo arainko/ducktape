@@ -64,6 +64,16 @@ private[ducktape] object Derivation:
         ordinalsForMatchingSingletons[tail, ToCases] + ordinalWithSingletonLabel[label, tpe, ToCases]
     }
 
+  inline def ordinalsForMatchingSingletons[
+    FromCases <: Tuple,
+    ToCases <: Tuple
+  ]: Map[Int, Any] = 
+  inline erasedValue[FromCases] match {
+    case _: EmptyTuple => Map.empty
+    case _: (Case[label, tpe, ordinal] *: tail) =>
+      ordinalsForMatchingSingletons[tail, ToCases] + ordinalWithSingletonLabel[label, tpe, ToCases]
+  }
+
   inline def labelIndices[ // TODO: make it prettier
     Labels <: Tuple,
     Acc <: Int
