@@ -33,14 +33,6 @@ object Transformer {
     ordinalsOfAToSingletonsOfB(A.ordinal(from)).asInstanceOf[B]
   }
 
-  inline given [A, B](using A: Mirror.SumOf[A], B: Mirror.SumOf[B]): Transformer[A, B] = from => {
-    val ordinalsOfAToSingletonsOfB = Derivation.ordinalsForMatchingSingletons[
-      Case.FromLabelsAndTypes[A.MirroredElemLabels, A.MirroredElemTypes],
-      Case.FromLabelsAndTypes[B.MirroredElemLabels, B.MirroredElemTypes],
-    ]
-    ordinalsOfAToSingletonsOfB(A.ordinal(from)).asInstanceOf[B]
-  }
-
   given [A]: Transformer[A, A] = identity
 
   given [A, B](using Transformer[A, B]): Transformer[A, Option[B]] =
