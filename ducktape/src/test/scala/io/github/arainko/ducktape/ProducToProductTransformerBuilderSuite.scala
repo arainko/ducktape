@@ -34,6 +34,8 @@ case class Product2(
   computed: Map[String, String]
 )
 
+case class Value(value: Int)
+
 class MySuite extends FunSuite {
 
   // test("Product to Product should compile") {
@@ -51,6 +53,9 @@ class MySuite extends FunSuite {
 
   // val cos = Derivation.summonSingleton[Enum2.Sing11.type]
 
+  val costam = summon[Transformer[Value, Int]]
+  val costamBack = summon[Transformer[Int, Value]]
+
   val enumTrans = summon[Transformer[Enum1, Enum2]]
 
   given Transformer[Enum2, Enum1] = TransformerBuilder
@@ -64,6 +69,9 @@ class MySuite extends FunSuite {
   test("trans test") {
     val prod1 = Product1(1, "prod1", List(1, 2, 3, 4), CoolCase1("COOL", 5), Enum2.Sing4)
     println(trans.transform(prod1))
+
+    println(costam.transform(Value(5)))
+    println(costamBack.transform(5))
 
     val t = enumTrans.transform(Enum1.Sing2)
     println(t)

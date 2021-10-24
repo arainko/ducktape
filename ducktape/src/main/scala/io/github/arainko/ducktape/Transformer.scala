@@ -10,9 +10,26 @@ trait Transformer[From, To] {
   def transform(from: From): To
 }
 
-object Transformer {
+object Transformer:
+
+  type ValueMirror[T, A] = Mirror.Product {
+    type MirroredType = T
+    type MirroredMonoType = T
+    type MirroredElemTypes = A *: EmptyTuple
+    type MirroredElemLabels = "value" *: EmptyTuple
+  }
 
   def apply[A, B](using trans: Transformer[A, B]): Transformer[A, B] = trans
+
+  inline given [A <: Product, SimpleType](using
+    A: ValueMirror[A, SimpleType]
+  ): Transformer[A, SimpleType] =
+    from => from.productElement(0).asInstanceOf[SimpleType]
+
+  inline given [A <: Product, SimpleType](using
+    A: ValueMirror[A, SimpleType]
+  ): Transformer[SimpleType, A] =
+    from => A.fromProduct(Tuple(from))
 
   inline given [A, B](using A: Mirror.ProductOf[A], B: Mirror.ProductOf[B]): Transformer[A, B] = from => {
     val transformers = Derivation.transformersForAllFields[
@@ -43,4 +60,4 @@ object Transformer {
     fac: Factory[B, CollTo[B]]
   ): Transformer[CollFrom[A], CollTo[B]] = from => from.foldLeft(fac.newBuilder)(_ += trans.transform(_)).result
 
-}
+end Transformer
