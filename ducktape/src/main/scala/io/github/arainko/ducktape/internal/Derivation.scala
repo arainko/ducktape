@@ -6,12 +6,12 @@ import io.github.arainko.ducktape.*
 import scala.collection.mutable.ArrayBuilder
 import scala.deriving.Mirror
 
-object Derivation {
+private[ducktape] object Derivation:
   inline def summonSingleton[T]: T =
     inline summonInline[Mirror.ProductOf[T]] match {
       case m: Mirror.Singleton      => m.fromProduct(EmptyTuple)
       case m: Mirror.SingletonProxy => m.fromProduct(EmptyTuple)
-      case _ => error("Cannot summon a singleton!")
+      case _                        => error("Cannot summon a singleton!")
     }
 
   inline def transformersForAllFields[
@@ -57,12 +57,12 @@ object Derivation {
   inline def ordinalsForMatchingSingletons[
     FromCases <: Tuple,
     ToCases <: Tuple
-  ]: Map[Int, Any] = 
-  inline erasedValue[FromCases] match {
-    case _: EmptyTuple => Map.empty
-    case _: (Case[label, tpe, ordinal] *: tail) =>
-      ordinalsForMatchingSingletons[tail, ToCases] + ordinalWithSingletonLabel[label, tpe, ToCases]
-  }
+  ]: Map[Int, Any] =
+    inline erasedValue[FromCases] match {
+      case _: EmptyTuple => Map.empty
+      case _: (Case[label, tpe, ordinal] *: tail) =>
+        ordinalsForMatchingSingletons[tail, ToCases] + ordinalWithSingletonLabel[label, tpe, ToCases]
+    }
 
   inline def labelIndices[ // TODO: make it prettier
     Labels <: Tuple,
@@ -75,4 +75,4 @@ object Derivation {
         labelIndices[t, S[Acc]] + labelToIndex
     }
 
-}
+end Derivation

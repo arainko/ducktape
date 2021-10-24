@@ -1,7 +1,8 @@
 package io.github.arainko.ducktape.internal
 
-final case class Both[A, B](first: A, second: B)
+private[ducktape] final case class Both[A, B](first: A, second: B)
 
-object Both {
+private[ducktape] object Both: 
   given [A, B](using a: A, b: B): Both[A, B] = Both(a, b)
-}
+  
+end Both
