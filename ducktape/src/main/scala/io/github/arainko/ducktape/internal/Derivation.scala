@@ -1,9 +1,9 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.*
+
 import scala.compiletime.*
 import scala.compiletime.ops.int.*
-import io.github.arainko.ducktape.*
-import scala.collection.mutable.ArrayBuilder
 import scala.deriving.Mirror
 
 private[ducktape] object Derivation:
@@ -11,13 +11,13 @@ private[ducktape] object Derivation:
     inline summonInline[Mirror.ProductOf[T]] match {
       case m: Mirror.Singleton      => m.fromProduct(EmptyTuple)
       case m: Mirror.SingletonProxy => m.fromProduct(EmptyTuple)
-      case _                        => error("Cannot summon a singleton!")
+      case _                        => error("Cannot summon a singleton of type " + Macros.showType[T])
     }
 
   inline def transformersForAllFields[
     FromFields <: Tuple,
     ToFields <: Tuple
-  ]: Map[String, Transformer[Any, Any]] =
+  ]: Map[FieldName, Transformer[Any, Any]] =
     inline erasedValue[ToFields] match {
       case _: EmptyTuple =>
         Map.empty
@@ -29,12 +29,12 @@ private[ducktape] object Derivation:
     ToLabel <: String,
     ToType,
     FromFields <: Tuple
-  ]: (String, Transformer[Any, Any]) =
+  ]: (FieldName, Transformer[Any, Any]) =
     inline erasedValue[FromFields] match {
       case _: EmptyTuple =>
-        error("No Transformer found! - at field '" + constValue[ToLabel] + "'")
+        error("Transformer not found for field '" + constValue[ToLabel] + "' with type " + Macros.showType[ToType])
       case _: (Field[ToLabel, tpe] *: _) =>
-        constValue[ToLabel] -> summonInline[Transformer[tpe, ToType]].asInstanceOf[Transformer[Any, Any]]
+        FieldName(constValue[ToLabel]) -> summonInline[Transformer[tpe, ToType]].asInstanceOf[Transformer[Any, Any]]
       case _: (_ *: tail) =>
         transformerForField[ToLabel, ToType, tail]
     }
@@ -44,12 +44,12 @@ private[ducktape] object Derivation:
     FromLabel <: String,
     FromType,
     ToCases <: Tuple
-  ]: (Int, Any) =
+  ]: (Ordinal, Any) =
     inline erasedValue[ToCases] match {
       case _: EmptyTuple =>
-        error("No Transformer found! - at case '" + constValue[FromLabel] + "'")
+        error("Singleton Transformer not found for case: " + Macros.showType[FromType])
       case _: (Case[FromLabel, tpe, ordinal] *: _) =>
-        constValue[ordinal] -> summonSingleton[tpe]
+        Ordinal(constValue[ordinal]) -> summonSingleton[tpe]
       case _: (_ *: t) =>
         ordinalWithSingletonLabel[FromLabel, FromType, t]
     }
@@ -57,7 +57,7 @@ private[ducktape] object Derivation:
   inline def ordinalsForMatchingSingletons[
     FromCases <: Tuple,
     ToCases <: Tuple
-  ]: Map[Int, Any] =
+  ]: Map[Ordinal, Any] =
     inline erasedValue[FromCases] match {
       case _: EmptyTuple => Map.empty
       case _: (Case[label, tpe, ordinal] *: tail) =>
@@ -67,11 +67,11 @@ private[ducktape] object Derivation:
   inline def labelIndices[ // TODO: make it prettier
     Labels <: Tuple,
     Acc <: Int
-  ]: Map[String, Int] =
+  ]: Map[FieldName, Int] =
     inline erasedValue[Labels] match {
       case _: EmptyTuple => Map.empty
       case _: (h *: t) =>
-        val labelToIndex = constValue[h].asInstanceOf[String] -> constValue[Acc]
+        val labelToIndex = FieldName(constValue[h].asInstanceOf[String]) -> constValue[Acc]
         labelIndices[t, S[Acc]] + labelToIndex
     }
 

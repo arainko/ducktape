@@ -1,4 +1,4 @@
-val scala3Version = "3.0.2"
+val scala3Version = "3.1.0"
 
 lazy val ducktape =
   project

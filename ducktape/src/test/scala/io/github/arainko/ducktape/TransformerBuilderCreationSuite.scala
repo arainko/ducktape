@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.builder.*
 import munit.*
 import io.github.arainko.ducktape.SumCase.ProductSubcase
 
@@ -70,6 +71,5 @@ class TransformerBuilderCreationSuite extends FunSuite {
 
   test("Product to Sum should not compile") {
     assertNotEquals(compileErrors("TransformerBuilder.create[ProductCase, SumCase]"), "")
-
   }
 }

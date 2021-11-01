@@ -1,8 +1,8 @@
 package io.github.arainko.ducktape
 
-import scala.deriving.Mirror
 import scala.compiletime.*
 import scala.compiletime.ops.int.*
+import scala.deriving.Mirror
 
 trait Case[Label <: String, Type, Ordinal <: Int]
 
