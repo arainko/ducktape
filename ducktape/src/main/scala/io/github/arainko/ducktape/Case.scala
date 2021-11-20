@@ -17,20 +17,6 @@ object Case {
       case _ *: tail                   => OrdinalForType[Type, tail]
     }
 
-  type OrdinalForLabel[Label <: String, Cases <: Tuple] <: Int =
-    Cases match {
-      case EmptyTuple                   => Nothing
-      case Case[Label, _, ordinal] *: _ => ordinal
-      case _ *: tail                    => OrdinalForLabel[Label, tail]
-    }
-
-  type TypeForLabel[Label <: String, Cases <: Tuple] =
-    Cases match {
-      case EmptyTuple               => Nothing
-      case Case[Label, tpe, _] *: _ => tpe
-      case _ *: tail                => TypeForLabel[Label, tail]
-    }
-
   type DropByType[Type, Cases <: Tuple] <: Tuple =
     Cases match {
       case EmptyTuple               => EmptyTuple
@@ -39,9 +25,10 @@ object Case {
     }
 
   type FromLabelsAndTypesWithAcc[Labels <: Tuple, Types <: Tuple, Ord <: Int] <: Tuple =
-    (Labels, Types) match
+    (Labels, Types) match {
       case (EmptyTuple, EmptyTuple) => EmptyTuple
       case (labelHead *: labelTail, typeHead *: typeTail) =>
         Case[labelHead, typeHead, Ord] *: FromLabelsAndTypesWithAcc[labelTail, typeTail, S[Ord]]
+    }
 
 }

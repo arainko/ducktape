@@ -1,9 +1,7 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.builder
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.builder.*
 import munit.*
-import io.github.arainko.ducktape.SumCase.ProductSubcase
 
 case class ProductCase(int: Int, str: String, list: List[Int])
 
@@ -22,7 +20,7 @@ class TransformerBuilderCreationSuite extends FunSuite {
 
     val _: TransformerBuilder[
       ProductCase,
-      ProductSubcase,
+      SumCase.ProductSubcase,
       Field["int", Int] *: Field["str", String] *: Field["list", List[Int]] *: EmptyTuple,
       Field["subInt", Int] *: Field["subStr", String] *: Field["subList", List[Int]] *: EmptyTuple,
       Field["int", Int] *: Field["str", String] *: Field["list", List[Int]] *: EmptyTuple,
@@ -37,12 +35,12 @@ class TransformerBuilderCreationSuite extends FunSuite {
       ProductCase,
       Case["SingletonSubcase1", SumCase.SingletonSubcase1.type, 0] *:
         Case["SingletonSubcase2", SumCase.SingletonSubcase2.type, 1] *:
-        Case["ProductSubcase", ProductSubcase, 2] *:
+        Case["ProductSubcase", SumCase.ProductSubcase, 2] *:
         EmptyTuple,
       Field["int", Int] *: Field["str", String] *: Field["list", List[Int]] *: EmptyTuple,
       Case["SingletonSubcase1", SumCase.SingletonSubcase1.type, 0] *:
         Case["SingletonSubcase2", SumCase.SingletonSubcase2.type, 1] *:
-        Case["ProductSubcase", ProductSubcase, 2] *:
+        Case["ProductSubcase", SumCase.ProductSubcase, 2] *:
         EmptyTuple,
       Field["int", Int] *: Field["str", String] *: Field["list", List[Int]] *: EmptyTuple
     ] = TransformerBuilder.create[SumCase, ProductCase]
@@ -57,14 +55,14 @@ class TransformerBuilderCreationSuite extends FunSuite {
         EmptyTuple,
       Case["SingletonSubcase1", SumCase.SingletonSubcase1.type, 0] *:
         Case["SingletonSubcase2", SumCase.SingletonSubcase2.type, 1] *:
-        Case["ProductSubcase", ProductSubcase, 2] *:
+        Case["ProductSubcase", SumCase.ProductSubcase, 2] *:
         EmptyTuple,
       Case["SingletonSubcase", AnotherSumCase.SingletonSubcase.type, 0] *:
         Case["ProductSubcase", AnotherSumCase.ProductSubcase, 1] *:
         EmptyTuple,
       Case["SingletonSubcase1", SumCase.SingletonSubcase1.type, 0] *:
         Case["SingletonSubcase2", SumCase.SingletonSubcase2.type, 1] *:
-        Case["ProductSubcase", ProductSubcase, 2] *:
+        Case["ProductSubcase", SumCase.ProductSubcase, 2] *:
         EmptyTuple,
     ] = TransformerBuilder.create[AnotherSumCase, SumCase]
   }

@@ -7,12 +7,13 @@ final case class PrimitivePerson(
   hobbies: List[String],
   coolnessFactor: PrimitiveCoolnessFactor
 )
+
 final case class PrimitiveContactInfo(phoneNo: String, address: String)
 
 enum PrimitiveCoolnessFactor:
-    case Uncool
-    case Cool
-    case SomewhatCool
+  case Uncool
+  case Cool
+  case SomewhatCool
 
 final case class ComplexPerson(
   name: Name,
@@ -35,6 +36,6 @@ final case class Address(value: String)
 final case class Hobby(value: String)
 
 enum ComplexCoolnessFactor:
-    case Uncool
-    case SomewhatCool
-    case Cool
+  case Uncool
+  case SomewhatCool
+  case Cool
