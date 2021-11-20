@@ -1,7 +1,6 @@
-package io.github.arainko.ducktape.builder.applied
+package io.github.arainko.ducktape.builder
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.builder.Partial
 import io.github.arainko.ducktape.internal.*
 
 import scala.compiletime.*

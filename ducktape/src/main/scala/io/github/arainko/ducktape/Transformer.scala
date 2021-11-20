@@ -1,6 +1,6 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.builder.TransformerBuilder
+import io.github.arainko.ducktape.builder.*
 import io.github.arainko.ducktape.internal.*
 
 import scala.collection.{ BuildFrom, Factory }
@@ -33,7 +33,7 @@ object Transformer:
   inline given [A, B](using A: Mirror.SumOf[A], B: Mirror.SumOf[B]): Transformer[A, B] = from => {
     val ordinalsOfAToSingletonsOfB = Derivation.ordinalsForMatchingSingletons[
       Case.FromLabelsAndTypes[A.MirroredElemLabels, A.MirroredElemTypes],
-      Case.FromLabelsAndTypes[B.MirroredElemLabels, B.MirroredElemTypes],
+      Case.FromLabelsAndTypes[B.MirroredElemLabels, B.MirroredElemTypes]
     ]
     val fromOrdinal = Ordinal(A.ordinal(from))
     ordinalsOfAToSingletonsOfB(fromOrdinal).asInstanceOf[B]

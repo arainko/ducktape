@@ -40,18 +40,18 @@ private[ducktape] object Derivation:
     }
 
   // return ordinal of `From` and instance of ToType
-  inline def ordinalWithSingletonLabel[
+  inline def singletonWithLabel[
     FromLabel <: String,
     FromType,
     ToCases <: Tuple
-  ]: (Ordinal, Any) =
+  ]: Any =
     inline erasedValue[ToCases] match {
       case _: EmptyTuple =>
         error("Singleton Transformer not found for case: " + Macros.showType[FromType])
       case _: (Case[FromLabel, tpe, ordinal] *: _) =>
-        Ordinal(constValue[ordinal]) -> summonSingleton[tpe]
+        summonSingleton[tpe]
       case _: (_ *: t) =>
-        ordinalWithSingletonLabel[FromLabel, FromType, t]
+        singletonWithLabel[FromLabel, FromType, t]
     }
 
   inline def ordinalsForMatchingSingletons[
@@ -61,7 +61,8 @@ private[ducktape] object Derivation:
     inline erasedValue[FromCases] match {
       case _: EmptyTuple => Map.empty
       case _: (Case[label, tpe, ordinal] *: tail) =>
-        ordinalsForMatchingSingletons[tail, ToCases] + ordinalWithSingletonLabel[label, tpe, ToCases]
+        ordinalsForMatchingSingletons[tail, ToCases] + 
+          (Ordinal(constValue[ordinal]) -> singletonWithLabel[label, tpe, ToCases])
     }
 
   inline def labelIndices[ // TODO: make it prettier

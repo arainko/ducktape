@@ -1,6 +1,6 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.builder.applied.*
+import io.github.arainko.ducktape.builder.*
 
 extension [From](value: From)
   transparent inline def into[To] =
