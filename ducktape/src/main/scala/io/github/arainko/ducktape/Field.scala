@@ -27,16 +27,4 @@ object Field:
       case head *: tail              => TypeForLabel[Label, tail]
     }
 
-  type ExtractLabels[Fields <: Tuple] <: Tuple =
-    Fields match {
-      case EmptyTuple              => EmptyTuple
-      case Field[label, _] *: tail => label *: ExtractLabels[tail]
-    }
-
-  type ExtractTypes[Fields <: Tuple] <: Tuple =
-    Fields match {
-      case EmptyTuple            => EmptyTuple
-      case Field[_, tpe] *: tail => tpe *: ExtractTypes[tail]
-    }
-
 end Field
