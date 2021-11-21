@@ -6,29 +6,34 @@ import munit.FunSuite
 
 import scala.compiletime.testing.*
 
+object DerivedTransformerSuite:
 // If these are declared inside their tests the compiler crashes 🤔
-enum MoreCases:
-  case Case1
-  case Case2
-  case Case3
-  case Case4
+  enum MoreCases:
+    case Case1
+    case Case2
+    case Case3
+    case Case4
 
-enum LessCases:
-  case Case1
-  case Case2
-  case Case3
+  enum LessCases:
+    case Case1
+    case Case2
+    case Case3
 
-enum Enum1:
-  case Case1
-  case Case2
-  case Case3
+  enum Enum1:
+    case Case1
+    case Case2
+    case Case3
 
-enum Enum2:
-  case Case3
-  case Case2
-  case Case1
+  enum Enum2:
+    case Case3
+    case Case2
+    case Case1
 
-class DerivedTransformerSpec extends FunSuite {
+end DerivedTransformerSuite
+
+class DerivedTransformerSuite extends FunSuite {
+  import DerivedTransformerSuite.*
+
   test("derived product transformer roundtrip") {
     val expectedPrimitive = PrimitivePerson(
       "Danzig",
@@ -116,25 +121,11 @@ class DerivedTransformerSpec extends FunSuite {
   }
 
   test("derivation fails when going from a sum with more cases to a sum with less cases") {
-    val errors = typeCheckErrors {
-      """
-      enum MoreCases {
-        case Case1
-        case Case2
-        case Case3
-        case Case4
-      }
+    val errors = typeCheckErrors("Transformer[MoreCases, LessCases]").map(_.message).mkString
 
-      enum LessCases {
-        case Case1
-        case Case2
-        case Case3    
-      }
-
-      val transformer = Transformer[MoreCases, LessCases]  
-      """
-    }.map(_.message).mkString
-
-    assertEquals(errors, "Singleton Transformer not found for case: MoreCases.Case4.type")
+    assertEquals(
+      errors,
+      "Singleton Transformer not found for case: io.github.arainko.ducktape.derivation.DerivedTransformerSuite.MoreCases.Case4.type"
+    )
   }
 }
