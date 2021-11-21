@@ -11,6 +11,7 @@ object BuilderMacros {
 
   def droppedWithLambdaImpl[Fields <: Tuple: Type](using Quotes) = 
     BuilderMacros().fromInlinedLambda[Fields] 
+    
 }
 
 class BuilderMacros(using Quotes) {
