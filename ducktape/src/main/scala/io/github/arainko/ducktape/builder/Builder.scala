@@ -20,50 +20,38 @@ trait Builder[
   private[builder] val renameTransformers: Map[FieldName, RenamedField]
   private[builder] val coprodInstances: Map[Ordinal, From => To]
 
-  // final inline def withCaseInstance[Type <: From](
-  //   f: Type => ? <: To
-  // ): SpecificBuilder[
-  //   From,
-  //   To,
-  //   FromSubcases,
-  //   ToSubcases,
-  //   Case.DropByType[Type, DerivedFromSubcases],
-  //   DerivedToSubcases
-  // ] = {
-  //   val ordinal = Ordinal(constValue[Case.OrdinalForType[Type, FromSubcases]])
-  //   this.construct(coprodInstances = coprodInstances + (ordinal -> f.asInstanceOf[From => To]))
-  // }
-
-  final transparent inline def withFieldConst2[FieldType](inline selector: From => FieldType, const: FieldType) = ${
-    BuilderMacros.withCompiletimeFieldDroppedMacro('this, 'selector)
-    // modified.construct(constants = modified.constants + (FieldName(field) -> const))
+  final inline def withCaseInstance[Type <: From](
+    f: Type => ? <: To
+  ): SpecificBuilder[
+    From,
+    To,
+    FromSubcases,
+    ToSubcases,
+    Case.DropByType[Type, DerivedFromSubcases],
+    DerivedToSubcases
+  ] = {
+    val ordinal = Ordinal(constValue[Case.OrdinalForType[Type, FromSubcases]])
+    this.construct(coprodInstances = coprodInstances + (ordinal -> f.asInstanceOf[From => To]))
   }
 
-  // final inline def withFieldConst[
-  //   Label <: String
-  // ]: Partial.WithFieldConst[
-  //   SpecificBuilder,
-  //   From,
-  //   To,
-  //   FromSubcases,
-  //   ToSubcases,
-  //   DerivedFromSubcases,
-  //   DerivedToSubcases,
-  //   Label
-  // ] = Partial.WithFieldConst(this)
+  final transparent inline def withFieldConst[FieldType, Provided](
+    inline selector: To => FieldType,
+    const: Provided
+  )(using Provided <:< FieldType) = {
+    val selectedField = BuilderMacros.selectedField(selector)
+    val modifiedBuilder = this.constructWithSameTypes(constants = constants + (FieldName(selectedField) -> const))
+    BuilderMacros.dropCompiletimeField(modifiedBuilder, selector)
+  }
 
-  // final inline def withFieldComputed[
-  //   Label <: String
-  // ]: Partial.WithFieldComputed[
-  //   SpecificBuilder,
-  //   From,
-  //   To,
-  //   FromSubcases,
-  //   ToSubcases,
-  //   DerivedFromSubcases,
-  //   DerivedToSubcases,
-  //   Label
-  // ] = Partial.WithFieldComputed(this)
+  final transparent inline def withFieldComputed[FieldType, Provided](
+    inline selector: To => FieldType,
+    f: From => Provided
+  )(using Provided <:< FieldType) = {
+    val selectedField = BuilderMacros.selectedField(selector)
+    val computedField = FieldName(selectedField) -> f.asInstanceOf[From => Any]
+    val modifiedBuilder = this.constructWithSameTypes(computeds = computeds + computedField)
+    BuilderMacros.dropCompiletimeField(modifiedBuilder, selector)
+  }
 
   // final inline def withFieldRenamed[
   //   FromLabel <: String,
@@ -138,11 +126,27 @@ trait Builder[
         }
     }
 
-  private[builder] def construct(
+  private[ducktape] def construct[
+    DerivedFromSubcases <: Tuple,
+    DerivedToSubcases <: Tuple
+  ](
     computeds: Map[FieldName, From => Any] = this.computeds,
     constants: Map[FieldName, Any] = this.constants,
     renameTransformers: Map[FieldName, RenamedField] = this.renameTransformers,
     coprodInstances: Map[Ordinal, From => To] = this.coprodInstances
   ): SpecificBuilder[From, To, FromSubcases, ToSubcases, DerivedFromSubcases, DerivedToSubcases]
+
+  private[ducktape] def constructWithSameTypes(
+    computeds: Map[FieldName, From => Any] = this.computeds,
+    constants: Map[FieldName, Any] = this.constants,
+    renameTransformers: Map[FieldName, RenamedField] = this.renameTransformers,
+    coprodInstances: Map[Ordinal, From => To] = this.coprodInstances
+  ): SpecificBuilder[From, To, FromSubcases, ToSubcases, DerivedFromSubcases, DerivedToSubcases] =
+    this.construct[DerivedFromSubcases, DerivedToSubcases](
+      computeds = computeds,
+      constants = constants,
+      renameTransformers = renameTransformers,
+      coprodInstances = coprodInstances
+    )
 
 end Builder

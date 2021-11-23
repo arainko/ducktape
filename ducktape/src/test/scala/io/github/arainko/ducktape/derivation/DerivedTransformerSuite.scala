@@ -34,7 +34,7 @@ object DerivedTransformerSuite:
 end DerivedTransformerSuite
 
 final case class Basic1(value: Int)
-final case class Basic2(value: String)
+final case class Basic2(value: Int, extra: String)
 
 class DerivedTransformerSuite extends FunSuite {
   import DerivedTransformerSuite.*
@@ -56,16 +56,16 @@ class DerivedTransformerSuite extends FunSuite {
       ComplexCoolnessFactor.Cool
     )
 
-    val costam = Basic1(1).into[Basic2]
+    
+    val aa = Basic1(1).into[Basic2]
+      .withFieldComputed(_.extra, _.value.toString)
+      .transform
 
-    val builder: Builder[io.github.arainko.ducktape.builder.AppliedTransformerBuilder, Basic1, Basic2, Field["value", Int] *: EmptyTuple, Field["value", String] *: EmptyTuple, EmptyTuple.type, EmptyTuple.type] = BuilderMacros.withCompiletimeFieldDropped(costam, _.value)
-
-    val aa:Builder[io.github.arainko.ducktape.builder.AppliedTransformerBuilder, Basic1, Basic2, Field["value", Int] *: EmptyTuple, Field["value", String] *: EmptyTuple, EmptyTuple.type, EmptyTuple.type] = costam.withFieldConst2(_.value, "asd")
-      // expectedPrimitive
-      // .into[ComplexPerson]
-      // .withFieldConst2(_.coolnessFactor, ComplexCoolnessFactor.Cool)
-      // .build
-
+    println(aa)
+    // expectedPrimitive
+    // .into[ComplexPerson]
+    // .withFieldConst2(_.coolnessFactor, ComplexCoolnessFactor.Cool)
+    // .build
 
     val actualComplex = expectedPrimitive.to[ComplexPerson]
     val actualPrimitive = actualComplex.to[PrimitivePerson]

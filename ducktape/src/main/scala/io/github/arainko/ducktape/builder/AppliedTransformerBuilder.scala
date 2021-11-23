@@ -16,13 +16,16 @@ final case class AppliedTransformerBuilder[
   DerivedToSubcases <: Tuple
 ] private (
   private val appliedTo: From,
-  override private[builder] val computeds: Map[FieldName, From => Any],
-  override private[builder] val constants: Map[FieldName, Any],
-  override private[builder] val renameTransformers: Map[FieldName, RenamedField],
-  override private[builder] val coprodInstances: Map[Ordinal, From => To]
+  override private[ducktape] val computeds: Map[FieldName, From => Any],
+  override private[ducktape] val constants: Map[FieldName, Any],
+  override private[ducktape] val renameTransformers: Map[FieldName, RenamedField],
+  override private[ducktape] val coprodInstances: Map[Ordinal, From => To]
 ) extends Builder[AppliedTransformerBuilder, From, To, FromSubcases, ToSubcases, DerivedFromSubcases, DerivedToSubcases]:
 
-  private[builder] def construct(
+  private[ducktape] def construct[
+    DerivedFromSubcases <: Tuple,
+    DerivedToSubcases <: Tuple
+  ](
     computeds: Map[FieldName, From => Any] = this.computeds,
     constants: Map[FieldName, Any] = this.constants,
     renameTransformers: Map[FieldName, RenamedField] = this.renameTransformers,
