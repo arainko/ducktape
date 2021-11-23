@@ -20,72 +20,77 @@ trait Builder[
   private[builder] val renameTransformers: Map[FieldName, RenamedField]
   private[builder] val coprodInstances: Map[Ordinal, From => To]
 
-  final inline def withCaseInstance[Type <: From](
-    f: Type => ? <: To
-  ): SpecificBuilder[
-    From,
-    To,
-    FromSubcases,
-    ToSubcases,
-    Case.DropByType[Type, DerivedFromSubcases],
-    DerivedToSubcases
-  ] = {
-    val ordinal = Ordinal(constValue[Case.OrdinalForType[Type, FromSubcases]])
-    this.construct(coprodInstances = coprodInstances + (ordinal -> f.asInstanceOf[From => To]))
+  // final inline def withCaseInstance[Type <: From](
+  //   f: Type => ? <: To
+  // ): SpecificBuilder[
+  //   From,
+  //   To,
+  //   FromSubcases,
+  //   ToSubcases,
+  //   Case.DropByType[Type, DerivedFromSubcases],
+  //   DerivedToSubcases
+  // ] = {
+  //   val ordinal = Ordinal(constValue[Case.OrdinalForType[Type, FromSubcases]])
+  //   this.construct(coprodInstances = coprodInstances + (ordinal -> f.asInstanceOf[From => To]))
+  // }
+
+  final transparent inline def withFieldConst2[FieldType](inline selector: From => FieldType, const: FieldType) = ${
+    BuilderMacros.withCompiletimeFieldDroppedMacro('this, 'selector)
+    // modified.construct(constants = modified.constants + (FieldName(field) -> const))
   }
 
-  final inline def withFieldConst[
-    Label <: String
-  ]: Partial.WithFieldConst[
-    SpecificBuilder,
-    From,
-    To,
-    FromSubcases,
-    ToSubcases,
-    DerivedFromSubcases,
-    DerivedToSubcases,
-    Label
-  ] = Partial.WithFieldConst(this)
+  // final inline def withFieldConst[
+  //   Label <: String
+  // ]: Partial.WithFieldConst[
+  //   SpecificBuilder,
+  //   From,
+  //   To,
+  //   FromSubcases,
+  //   ToSubcases,
+  //   DerivedFromSubcases,
+  //   DerivedToSubcases,
+  //   Label
+  // ] = Partial.WithFieldConst(this)
 
-  final inline def withFieldComputed[
-    Label <: String
-  ]: Partial.WithFieldComputed[
-    SpecificBuilder,
-    From,
-    To,
-    FromSubcases,
-    ToSubcases,
-    DerivedFromSubcases,
-    DerivedToSubcases,
-    Label
-  ] = Partial.WithFieldComputed(this)
+  // final inline def withFieldComputed[
+  //   Label <: String
+  // ]: Partial.WithFieldComputed[
+  //   SpecificBuilder,
+  //   From,
+  //   To,
+  //   FromSubcases,
+  //   ToSubcases,
+  //   DerivedFromSubcases,
+  //   DerivedToSubcases,
+  //   Label
+  // ] = Partial.WithFieldComputed(this)
 
-  final inline def withFieldRenamed[
-    FromLabel <: String,
-    ToLabel <: String
-  ]: SpecificBuilder[
-    From,
-    To,
-    FromSubcases,
-    ToSubcases,
-    Field.DropByLabel[FromLabel, DerivedFromSubcases],
-    Field.DropByLabel[ToLabel, DerivedToSubcases]
-  ] = {
-    Macros.verifyFieldExists[FromLabel, FromSubcases, From]
-    Macros.verifyFieldExists[ToLabel, ToSubcases, To]
+  // final inline def withFieldRenamed[
+  //   FromLabel <: String,
+  //   ToLabel <: String
+  // ]: SpecificBuilder[
+  //   From,
+  //   To,
+  //   FromSubcases,
+  //   ToSubcases,
+  //   Field.DropByLabel[FromLabel, DerivedFromSubcases],
+  //   Field.DropByLabel[ToLabel, DerivedToSubcases]
+  // ] = {
+  //   Macros.verifyFieldExists[FromLabel, FromSubcases, From]
+  //   Macros.verifyFieldExists[ToLabel, ToSubcases, To]
 
-    val transformer = summonInline[
-      Transformer[
-        Field.TypeForLabel[FromLabel, FromSubcases],
-        Field.TypeForLabel[ToLabel, ToSubcases],
-      ]
-    ].asInstanceOf[Transformer[Any, Any]]
+  //   val transformer = summonInline[
+  //     Transformer[
+  //       Field.TypeForLabel[FromLabel, FromSubcases],
+  //       Field.TypeForLabel[ToLabel, ToSubcases],
+  //     ]
+  //   ].asInstanceOf[Transformer[Any, Any]]
 
-    val fromLabel = FieldName(constValue[FromLabel])
-    val toLabel = FieldName(constValue[ToLabel])
-    val renamedField = RenamedField(fromLabel, transformer)
-    this.construct(renameTransformers = renameTransformers + (toLabel -> renamedField))
-  }
+  //   val fromLabel = FieldName(constValue[FromLabel])
+  //   val toLabel = FieldName(constValue[ToLabel])
+  //   val renamedField = RenamedField(fromLabel, transformer)
+  //   this.construct(renameTransformers = renameTransformers + (toLabel -> renamedField))
+  // }
 
   final inline def build: Transformer[From, To] =
     summonFrom {
@@ -133,10 +138,7 @@ trait Builder[
         }
     }
 
-  private[builder] def construct[
-    DerivedFromSubcases <: Tuple,
-    DerivedToSubcases <: Tuple
-  ](
+  private[builder] def construct(
     computeds: Map[FieldName, From => Any] = this.computeds,
     constants: Map[FieldName, Any] = this.constants,
     renameTransformers: Map[FieldName, RenamedField] = this.renameTransformers,

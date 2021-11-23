@@ -5,6 +5,8 @@ import io.github.arainko.ducktape.model.*
 import munit.FunSuite
 
 import scala.compiletime.testing.*
+import io.github.arainko.ducktape.internal.BuilderMacros
+import io.github.arainko.ducktape.builder.Builder
 
 object DerivedTransformerSuite:
 // If these are declared inside their tests the compiler crashes 🤔
@@ -31,6 +33,9 @@ object DerivedTransformerSuite:
 
 end DerivedTransformerSuite
 
+final case class Basic1(value: Int)
+final case class Basic2(value: String)
+
 class DerivedTransformerSuite extends FunSuite {
   import DerivedTransformerSuite.*
 
@@ -50,6 +55,17 @@ class DerivedTransformerSuite extends FunSuite {
       Vector(Hobby("cycling")),
       ComplexCoolnessFactor.Cool
     )
+
+    val costam = Basic1(1).into[Basic2]
+
+    val builder: Builder[io.github.arainko.ducktape.builder.AppliedTransformerBuilder, Basic1, Basic2, Field["value", Int] *: EmptyTuple, Field["value", String] *: EmptyTuple, EmptyTuple.type, EmptyTuple.type] = BuilderMacros.withCompiletimeFieldDropped(costam, _.value)
+
+    val aa:Builder[io.github.arainko.ducktape.builder.AppliedTransformerBuilder, Basic1, Basic2, Field["value", Int] *: EmptyTuple, Field["value", String] *: EmptyTuple, EmptyTuple.type, EmptyTuple.type] = costam.withFieldConst2(_.value, "asd")
+      // expectedPrimitive
+      // .into[ComplexPerson]
+      // .withFieldConst2(_.coolnessFactor, ComplexCoolnessFactor.Cool)
+      // .build
+
 
     val actualComplex = expectedPrimitive.to[ComplexPerson]
     val actualPrimitive = actualComplex.to[PrimitivePerson]

@@ -22,10 +22,7 @@ final case class TransformerBuilder[
   override private[builder] val coprodInstances: Map[Ordinal, From => To]
 ) extends Builder[TransformerBuilder, From, To, FromSubcases, ToSubcases, DerivedFromSubcases, DerivedToSubcases]:
 
-  private[builder] def construct[
-    DerivedFromSubcases <: Tuple,
-    DerivedToSubcases <: Tuple
-  ](
+  private[builder] def construct(
     computeds: Map[FieldName, From => Any],
     constants: Map[FieldName, Any],
     renameTransformers: Map[FieldName, RenamedField],
