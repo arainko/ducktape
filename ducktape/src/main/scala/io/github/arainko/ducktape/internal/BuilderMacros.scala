@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
+import scala.compiletime.*
 import io.github.arainko.ducktape.Field
 import scala.deriving.Mirror
 import io.github.arainko.ducktape.builder.Builder
@@ -21,12 +22,28 @@ private[ducktape] object BuilderMacros {
     inline selector: To => FieldType
   ) = ${ dropCompiletimeFieldMacro('builder, 'selector) }
 
+  transparent inline def dropCompiletimeFieldsForRename[
+    SpecificBuilder[_, _, _ <: Tuple, _ <: Tuple, _ <: Tuple, _ <: Tuple],
+    From,
+    To,
+    FromSubcases <: Tuple,
+    ToSubcases <: Tuple,
+    DerivedFromSubcases <: Tuple,
+    DerivedToSubcases <: Tuple,
+    ToFieldType,
+    FromFieldType
+  ](
+    inline builder: SpecificBuilder[From, To, FromSubcases, ToSubcases, DerivedFromSubcases, DerivedToSubcases],
+    inline toSelector: To => ToFieldType,
+    inline fromSelector: From => FromFieldType
+  ) = ${ dropCompiletimeFieldsForRenameMacro('builder, 'toSelector, 'fromSelector) }
+
   inline def selectedField[From, FieldType](inline selector: From => FieldType): String =
     ${ selectedFieldMacro[From, FieldType]('selector) }
 
   def selectedFieldMacro[From: Type, FieldType: Type](selector: Expr[From => FieldType])(using Quotes) =
     Expr(BuilderMacros().selectedField(selector))
-
+    
   def dropCompiletimeFieldMacro[
     SpecificBuilder[_, _, _ <: Tuple, _ <: Tuple, _ <: Tuple, _ <: Tuple]: Type,
     From: Type,
@@ -40,6 +57,22 @@ private[ducktape] object BuilderMacros {
     builder: Expr[SpecificBuilder[From, To, FromSubcases, ToSubcases, DerivedFromSubcases, DerivedToSubcases]],
     selector: Expr[To => FieldType]
   )(using Quotes) = BuilderMacros().dropCompiletimeField(builder, selector)
+
+  def dropCompiletimeFieldsForRenameMacro[
+    SpecificBuilder[_, _, _ <: Tuple, _ <: Tuple, _ <: Tuple, _ <: Tuple]: Type,
+    From: Type,
+    To: Type,
+    FromSubcases <: Tuple: Type,
+    ToSubcases <: Tuple: Type,
+    DerivedFromSubcases <: Tuple: Type,
+    DerivedToSubcases <: Tuple: Type,
+    ToFieldType: Type,
+    FromFieldType: Type
+  ](
+    builder: Expr[SpecificBuilder[From, To, FromSubcases, ToSubcases, DerivedFromSubcases, DerivedToSubcases]],
+    toSelector: Expr[To => ToFieldType],
+    fromSelector: Expr[From => FromFieldType]
+  )(using Quotes) = BuilderMacros().dropCompiletimeFieldsForRename(builder, toSelector, fromSelector)
 
 }
 
@@ -67,9 +100,8 @@ class BuilderMacros(using val quotes: Quotes) {
     builder: Expr[SpecificBuilder[From, To, FromSubcases, ToSubcases, DerivedFromSubcases, DerivedToSubcases]],
     selector: Expr[To => FieldType]
   ) = {
-    val selectedFieldName = selectedField[To, FieldType](selector)
-    val fieldNameType = ConstantType(StringConstant(selectedFieldName)).asType
-    fieldNameType match {
+    val selectedFieldName = selectedField(selector)
+    constantString(selectedFieldName) match {
       case '[field] =>
         '{
           $builder.asInstanceOf[
@@ -85,6 +117,43 @@ class BuilderMacros(using val quotes: Quotes) {
         }
     }
   }
+
+  def dropCompiletimeFieldsForRename[
+    SpecificBuilder[_, _, _ <: Tuple, _ <: Tuple, _ <: Tuple, _ <: Tuple]: Type,
+    From: Type,
+    To: Type,
+    FromSubcases <: Tuple: Type,
+    ToSubcases <: Tuple: Type,
+    DerivedFromSubcases <: Tuple: Type,
+    DerivedToSubcases <: Tuple: Type,
+    ToFieldType: Type,
+    FromFieldType: Type
+  ](
+    builder: Expr[SpecificBuilder[From, To, FromSubcases, ToSubcases, DerivedFromSubcases, DerivedToSubcases]],
+    toSelector: Expr[To => ToFieldType],
+    fromSelector: Expr[From => FromFieldType]
+  ) = {
+    val selectedToFieldName = selectedField(toSelector)
+    val selectedFromFieldName = selectedField(fromSelector)
+    (constantString(selectedToFieldName) -> constantString(selectedFromFieldName)) match {
+      case ('[toField], '[fromField]) =>
+        '{
+          $builder.asInstanceOf[
+            SpecificBuilder[
+              From,
+              To,
+              FromSubcases,
+              ToSubcases,
+              Field.DropByLabel[fromField, DerivedFromSubcases],
+              Field.DropByLabel[toField, DerivedToSubcases]
+            ]
+          ]
+        }
+    }
+  }
+
+  private def constantString(value: String) =
+    ConstantType(StringConstant(value)).asType
 
   object FieldSelector:
     private object SelectorLambda:

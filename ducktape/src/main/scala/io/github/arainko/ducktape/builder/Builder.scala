@@ -39,7 +39,8 @@ trait Builder[
     const: Provided
   )(using Provided <:< FieldType) = {
     val selectedField = BuilderMacros.selectedField(selector)
-    val modifiedBuilder = this.constructWithSameTypes(constants = constants + (FieldName(selectedField) -> const))
+    val constantField = FieldName(selectedField) -> const
+    val modifiedBuilder = this.constructWithSameTypes(constants = constants + constantField)
     BuilderMacros.dropCompiletimeField(modifiedBuilder, selector)
   }
 
@@ -53,32 +54,17 @@ trait Builder[
     BuilderMacros.dropCompiletimeField(modifiedBuilder, selector)
   }
 
-  // final inline def withFieldRenamed[
-  //   FromLabel <: String,
-  //   ToLabel <: String
-  // ]: SpecificBuilder[
-  //   From,
-  //   To,
-  //   FromSubcases,
-  //   ToSubcases,
-  //   Field.DropByLabel[FromLabel, DerivedFromSubcases],
-  //   Field.DropByLabel[ToLabel, DerivedToSubcases]
-  // ] = {
-  //   Macros.verifyFieldExists[FromLabel, FromSubcases, From]
-  //   Macros.verifyFieldExists[ToLabel, ToSubcases, To]
-
-  //   val transformer = summonInline[
-  //     Transformer[
-  //       Field.TypeForLabel[FromLabel, FromSubcases],
-  //       Field.TypeForLabel[ToLabel, ToSubcases],
-  //     ]
-  //   ].asInstanceOf[Transformer[Any, Any]]
-
-  //   val fromLabel = FieldName(constValue[FromLabel])
-  //   val toLabel = FieldName(constValue[ToLabel])
-  //   val renamedField = RenamedField(fromLabel, transformer)
-  //   this.construct(renameTransformers = renameTransformers + (toLabel -> renamedField))
-  // }
+  final transparent inline def withFieldRenamed[FromFieldType, ToFieldType](
+    inline toSelector: To => ToFieldType,
+    inline fromSelector: From => FromFieldType
+  )(using FromFieldType <:< ToFieldType) = {
+    val selectedToField = BuilderMacros.selectedField(toSelector)
+    val selectedFromField = BuilderMacros.selectedField(fromSelector)
+    val transformer = summonInline[Transformer[FromFieldType, ToFieldType]].asInstanceOf[Transformer[Any, Any]]
+    val renamedField = FieldName(selectedToField) -> RenamedField(FieldName(selectedFromField), transformer)
+    val modifiedBuilder = this.constructWithSameTypes(renameTransformers = renameTransformers + renamedField)
+    BuilderMacros.dropCompiletimeFieldsForRename(modifiedBuilder, toSelector, fromSelector)
+  }
 
   final inline def build: Transformer[From, To] =
     summonFrom {
@@ -136,7 +122,7 @@ trait Builder[
     coprodInstances: Map[Ordinal, From => To] = this.coprodInstances
   ): SpecificBuilder[From, To, FromSubcases, ToSubcases, DerivedFromSubcases, DerivedToSubcases]
 
-  private[ducktape] def constructWithSameTypes(
+  final private[ducktape] def constructWithSameTypes(
     computeds: Map[FieldName, From => Any] = this.computeds,
     constants: Map[FieldName, Any] = this.constants,
     renameTransformers: Map[FieldName, RenamedField] = this.renameTransformers,

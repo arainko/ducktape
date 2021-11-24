@@ -33,8 +33,8 @@ object DerivedTransformerSuite:
 
 end DerivedTransformerSuite
 
-final case class Basic1(value: Int)
-final case class Basic2(value: Int, extra: String)
+final case class Basic1(value: Int, value1: Int)
+final case class Basic2(value: Int, value2: Int, extra: String)
 
 class DerivedTransformerSuite extends FunSuite {
   import DerivedTransformerSuite.*
@@ -57,8 +57,9 @@ class DerivedTransformerSuite extends FunSuite {
     )
 
     
-    val aa = Basic1(1).into[Basic2]
+    val aa = Basic1(1, 2).into[Basic2]
       .withFieldComputed(_.extra, _.value.toString)
+      .withFieldRenamed(_.value2, _.value1)
       .transform
 
     println(aa)
