@@ -34,7 +34,7 @@ object DerivedTransformerSuite:
 end DerivedTransformerSuite
 
 final case class Basic1(value: Int, value1: Int)
-final case class Basic2(value: Int, value2: Int, extra: String)
+final case class Basic2(value2: Int, value: Int, extra: String)
 
 class DerivedTransformerSuite extends FunSuite {
   import DerivedTransformerSuite.*
@@ -55,18 +55,6 @@ class DerivedTransformerSuite extends FunSuite {
       Vector(Hobby("cycling")),
       ComplexCoolnessFactor.Cool
     )
-
-    
-    val aa = Basic1(1, 2).into[Basic2]
-      .withFieldComputed(_.extra, _.value.toString)
-      .withFieldRenamed(_.value2, _.value1)
-      .transform
-
-    println(aa)
-    // expectedPrimitive
-    // .into[ComplexPerson]
-    // .withFieldConst2(_.coolnessFactor, ComplexCoolnessFactor.Cool)
-    // .build
 
     val actualComplex = expectedPrimitive.to[ComplexPerson]
     val actualPrimitive = actualComplex.to[PrimitivePerson]
