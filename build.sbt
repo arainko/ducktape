@@ -14,9 +14,9 @@ sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 sonatypeCredentialHost := "s01.oss.sonatype.org"
 publishTo := sonatypePublishToBundle.value
 
-lazy val root =
+lazy val ducktape =
   project
-    .in(file("ducktape"))
+    .in(file("."))
     .settings(
       scalaVersion := "3.1.0",
       scalacOptions ++= Seq("-Xmax-inlines", "64"),
