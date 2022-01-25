@@ -1,5 +1,7 @@
 import xerial.sbt.Sonatype._
 
+ThisBuild / dynverSonatypeSnapshots := true
+
 name := "ducktape"
 organization := "io.github.arainko"
 licenses := Seq("APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0.txt"))
