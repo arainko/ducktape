@@ -61,7 +61,7 @@ private[ducktape] object Derivation:
     inline erasedValue[FromCases] match {
       case _: EmptyTuple => Map.empty
       case _: (Case[label, tpe, ordinal] *: tail) =>
-        ordinalsForMatchingSingletons[tail, ToCases] + 
+        ordinalsForMatchingSingletons[tail, ToCases] +
           (Ordinal(constValue[ordinal]) -> singletonWithLabel[label, tpe, ToCases])
     }
 

@@ -21,7 +21,7 @@ class FieldSuite extends FunSuite {
         EmptyTuple
 
     type Actual = Field.FromLabelsAndTypes[mirror.MirroredElemLabels, mirror.MirroredElemTypes]
-    
+
     summon[Actual =:= Expected]
   }
 
