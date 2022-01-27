@@ -43,7 +43,7 @@ object BuilderMacros {
 
   def selectedFieldMacro[From: Type, FieldType: Type](selector: Expr[From => FieldType])(using Quotes) =
     Expr(BuilderMacros().selectedField(selector))
-    
+
   def dropCompiletimeFieldMacro[
     SpecificBuilder[_, _, _ <: Tuple, _ <: Tuple, _ <: Tuple, _ <: Tuple]: Type,
     From: Type,

@@ -50,8 +50,8 @@ class CaseSuite extends FunSuite {
   }
 
   test("Case.DropByType drops an element of a tuple based on its type") {
-    type Expected = 
-       Case["Case1", Enum.Case1.type, 0] *:
+    type Expected =
+      Case["Case1", Enum.Case1.type, 0] *:
         Case["Case2", Enum.Case2.type, 1] *:
         Case["Case4", Enum.Case4.type, 3] *:
         Case["Case5", Enum.Case5.type, 4] *:
@@ -65,7 +65,7 @@ class CaseSuite extends FunSuite {
 
   test("Case.OrdinalForType returns a compiletime ordinal for a given type") {
     type Expected = 2
-    
+
     type Cases = Case.FromLabelsAndTypes[mirror.MirroredElemLabels, mirror.MirroredElemTypes]
     type Actual = Case.OrdinalForType[Enum.Case3.type, Cases]
 
@@ -77,7 +77,7 @@ class CaseSuite extends FunSuite {
 
     type Cases = Case.FromLabelsAndTypes[mirror.MirroredElemLabels, mirror.MirroredElemTypes]
     type Actual = Case.OrdinalForType[Int, Cases]
-    
+
     summon[Actual =:= Expected]
   }
 

@@ -5,7 +5,7 @@ opaque type FieldName <: String = String
 
 object Ordinal:
   def apply(value: Int): Ordinal = value
-  
+
 end Ordinal
 
 object FieldName:
