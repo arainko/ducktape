@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.model
+package io.github.arainko.ducktapetest.model
 
 final case class PrimitivePerson(
   name: String,

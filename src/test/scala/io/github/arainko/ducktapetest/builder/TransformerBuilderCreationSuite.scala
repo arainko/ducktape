@@ -1,7 +1,8 @@
-package io.github.arainko.ducktape.builder
+package io.github.arainko.ducktapetest.builder
 
 import io.github.arainko.ducktape.*
 import munit.*
+import io.github.arainko.ducktape.builder.TransformerBuilder
 
 case class ProductCase(int: Int, str: String, list: List[Int])
 

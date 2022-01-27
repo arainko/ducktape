@@ -1,7 +1,7 @@
-package io.github.arainko.ducktape.derivation
+package io.github.arainko.ducktapetest.derivation
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.model.*
+import io.github.arainko.ducktapetest.model.*
 import munit.FunSuite
 
 import scala.compiletime.testing.*
@@ -130,7 +130,7 @@ class DerivedTransformerSuite extends FunSuite {
 
     assertEquals(
       errors,
-      "Singleton Transformer not found for case: io.github.arainko.ducktape.derivation.DerivedTransformerSuite.MoreCases.Case4.type"
+      "Singleton Transformer not found for case: io.github.arainko.ducktapetest.derivation.DerivedTransformerSuite.MoreCases.Case4.type"
     )
   }
 }

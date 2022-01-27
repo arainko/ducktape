@@ -6,7 +6,7 @@ import io.github.arainko.ducktape.Field
 import scala.deriving.Mirror
 import io.github.arainko.ducktape.builder.Builder
 
-private[ducktape] object BuilderMacros {
+object BuilderMacros {
 
   transparent inline def dropCompiletimeField[
     SpecificBuilder[_, _, _ <: Tuple, _ <: Tuple, _ <: Tuple, _ <: Tuple],

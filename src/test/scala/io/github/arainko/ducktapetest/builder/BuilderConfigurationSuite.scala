@@ -1,7 +1,7 @@
-package io.github.arainko.ducktape.builder
+package io.github.arainko.ducktapetest.builder
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.model.*
+import io.github.arainko.ducktapetest.model.*
 import munit.FunSuite
 import scala.compiletime.testing.*
 
@@ -43,7 +43,9 @@ class BuilderConfigurationSuite extends FunSuite {
     assertEquals(actual, expected)
   }
 
-  test("transforming into a case class with less fields into a case classwith more fields should fail to compile if not configured properly") {
+  test(
+    "transforming into a case class with less fields into a case classwith more fields should fail to compile if not configured properly"
+  ) {
 
     val errors = typeCheckErrors {
       """

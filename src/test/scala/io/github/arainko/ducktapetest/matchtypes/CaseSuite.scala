@@ -1,11 +1,11 @@
-package io.github.arainko.ducktape.matchtypes
+package io.github.arainko.ducktapetest.matchtypes
 
 import scala.compiletime.*
 import scala.compiletime.ops.*
 import munit.FunSuite
 import io.github.arainko.ducktape.Case
 import scala.deriving.Mirror
-import io.github.arainko.ducktape.matchtypes.CaseSuite
+import io.github.arainko.ducktapetest.matchtypes.CaseSuite
 
 object CaseSuite:
   enum Enum:

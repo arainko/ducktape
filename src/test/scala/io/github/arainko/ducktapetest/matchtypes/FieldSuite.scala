@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.matchtypes
+package io.github.arainko.ducktapetest.matchtypes
 
 import munit.FunSuite
 import io.github.arainko.ducktape.*
