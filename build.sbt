@@ -1,6 +1,5 @@
 import xerial.sbt.Sonatype._
 
-ThisBuild / dynverSonatypeSnapshots := true
 ThisBuild / versionScheme := Some("early-semver")
 
 name := "ducktape"
