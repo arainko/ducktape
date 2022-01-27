@@ -2,11 +2,23 @@ import xerial.sbt.Sonatype._
 
 ThisBuild / versionScheme := Some("early-semver")
 
-name := "ducktape"
-organization := "io.github.arainko"
-licenses := Seq("APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0.txt"))
-description := "Boilerplate-free transformations"
+inThisBuild(
+  List(
+    organization := "io.github.arainko",
+    homepage := Some(url("https://github.com/arainko/ducktape")),
+    licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+    developers := List(
+      Developer(
+        "arainko",
+        "Aleksander Rainko",
+        "aleksander.rainko99@gmail.com",
+        url("https://github.com/arainko")
+      )
+    )
+  )
+)
 
+name := "ducktape"
 sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 sonatypeCredentialHost := "s01.oss.sonatype.org"
 
