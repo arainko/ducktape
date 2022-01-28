@@ -1,8 +1,10 @@
-## sbt project compiled with Scala 3
+## Ducktape
 
-### Usage
+[![Maven Central]](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape/badge.svg?style=flat-square)
 
-This is a normal sbt project. You can compile code with `sbt compile`, run it with `sbt run`, and `sbt console` will start a Scala 3 REPL.
+TODO
 
-For more information on the sbt-dotty plugin, see the
-[scala3-example-project](https://github.com/scala/scala3-example-project/blob/main/README.md).
+
+### Aknowledgements
+TODO:
+chimney, chimney for Scala 3 (grab link from discussion)
