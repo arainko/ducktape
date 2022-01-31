@@ -5,6 +5,6 @@
 TODO
 
 
-### Aknowledgements
+### Acknowledgements
 TODO:
 chimney, chimney for Scala 3 (grab link from discussion)
