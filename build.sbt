@@ -22,11 +22,15 @@ name := "ducktape"
 sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 sonatypeCredentialHost := "s01.oss.sonatype.org"
 
+lazy val root = project
+  .in(file("."))
+  .settings(publish / skip := true)
+  .aggregate(ducktape)
+
 lazy val ducktape =
   project
-    .in(file("."))
+    .in(file("ducktape"))
     .settings(
-      scalaVersion := "3.1.0",
-      scalacOptions ++= Seq("-Xmax-inlines", "64"),
+      scalaVersion := "3.1.1",
       libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test
     )
