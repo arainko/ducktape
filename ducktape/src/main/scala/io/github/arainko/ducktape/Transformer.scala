@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.collection.{ BuildFrom, Factory }
 import scala.deriving.Mirror
+import scala.util.NotGiven
 
 @FunctionalInterface
 trait Transformer[From, To] {
@@ -55,19 +56,19 @@ object Transformer:
     fac: Factory[B, CollTo[B]]
   ): Transformer[CollFrom[A], CollTo[B]] = from => from.foldLeft(fac.newBuilder)(_ += trans.transform(_)).result
 
-  type ValueMirror[T, A] = Mirror.Product {
-    type MirroredType = T
-    type MirroredMonoType = T
-    type MirroredElemTypes = A *: EmptyTuple
-  }
-
   inline given [A <: Product, SimpleType](using
-    A: ValueMirror[A, SimpleType]
+    A: Mirror.ProductOf[A]
+  )(using
+    A.MirroredElemLabels <:< NonEmptyTuple,
+    A.MirroredElemTypes =:= (SimpleType *: EmptyTuple)
   ): Transformer[A, SimpleType] =
-    from => from.productElement(0).asInstanceOf[SimpleType]
+    from => Tuple.fromProductTyped(from).head
 
   inline given [A <: Product, SimpleType](using
-    A: ValueMirror[A, SimpleType]
+    A: Mirror.ProductOf[A]
+  )(using
+    A.MirroredElemLabels <:< NonEmptyTuple,
+    A.MirroredElemTypes =:= (SimpleType *: EmptyTuple)
   ): Transformer[SimpleType, A] =
     from => A.fromProduct(Tuple(from))
 

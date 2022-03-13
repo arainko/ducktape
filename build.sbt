@@ -1,5 +1,6 @@
 import xerial.sbt.Sonatype._
 
+Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / versionScheme := Some("early-semver")
 
 inThisBuild(
@@ -34,3 +35,13 @@ lazy val ducktape =
       scalaVersion := "3.1.1",
       libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test
     )
+
+lazy val docs =
+  project
+    .in(file("documentation"))
+    .settings(
+      scalaVersion := "3.1.1",
+      mdocVariables := Map("VERSION" -> version.value)
+    )
+    .dependsOn(ducktape)
+    .enablePlugins(MdocPlugin)
