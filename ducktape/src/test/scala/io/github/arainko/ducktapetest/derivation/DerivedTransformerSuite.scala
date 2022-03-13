@@ -7,6 +7,7 @@ import munit.FunSuite
 import scala.compiletime.testing.*
 import io.github.arainko.ducktape.internal.BuilderMacros
 import io.github.arainko.ducktape.builder.Builder
+import scala.deriving.Mirror
 
 object DerivedTransformerSuite:
 // If these are declared inside their tests the compiler crashes 🤔
@@ -84,7 +85,7 @@ class DerivedTransformerSuite extends FunSuite {
   }
 
   test("derived value class transformer roundtrip") {
-    final case class Value(whatever: Int)
+    final case class Value(value: Int)
 
     val expectedUnwrapped = Value(5).to[Int]
     val expectedWrapped = 5.to[Value]
