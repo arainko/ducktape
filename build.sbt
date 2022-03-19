@@ -45,3 +45,12 @@ lazy val docs =
     )
     .dependsOn(ducktape)
     .enablePlugins(MdocPlugin)
+
+lazy val playground =
+  project
+    .in(file("playground"))
+    .settings(
+      (
+        scalaVersion := "3.1.1"
+      )
+    )
