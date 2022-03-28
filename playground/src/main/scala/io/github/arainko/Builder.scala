@@ -35,7 +35,7 @@ final case class Builder[From, To, Config <: Tuple](
     BuilderMacros.withConfigEntryForFields[Builder, From, To, Config, Renamed](withRenamed, toSelector, fromSelector)
   }
 
-  inline def run(source: From): To = Macros.transformWithBuilder(source, this)
+  // inline def run(source: From): To = Macros.transformWithBuilder(source, this)
 }
 
 @main def main = {

@@ -2,6 +2,8 @@ package io.github.arainko
 
 import scala.quoted.*
 import io.github.arainko.Configuration.*
+import io.github.arainko.internal.*
+import scala.deriving.Mirror as DerivingMirror
 
 /*
   General idea:
@@ -13,7 +15,7 @@ import io.github.arainko.Configuration.*
     6. Apply transformers
  */
 
-class TransformerMacros(using val quotes: Quotes) {
+class TransformerMacros(using val quotes: Quotes) extends Module, FieldModule, MirrorModule, SelectorModule, ConfigurationModule {
   import quotes.reflect.*
 
   /*
@@ -40,101 +42,81 @@ class TransformerMacros(using val quotes: Quotes) {
           else throw new Exception("Unknown case")
 
    */
-  def transformCoproduct[A: Type, B: Type](
-    source: Expr[A]
-  ) = {
-    val destTpe = TypeRepr.of[B]
-    val sourceTpe = TypeRepr.of[A]
-    val destCases = destTpe.typeSymbol.children.map(sym => sym.name -> sym).toMap
-    val sourceCases = sourceTpe.typeSymbol.children.map(sym => sym.name -> sym).toMap
+  def transformCoproduct[A: Type] = {
+    given Printer[TypeRepr] = Printer.TypeReprShortCode
 
-    val associated = destCases.map { (name, dest) => dest -> sourceCases.get(name).getOrElse(report.errorAndAbort("HERE")) }.map { (destCase, sourceCase) =>
-      val sourceCaseTpe = TypeIdent(sourceCase)
-      val condition = TypeApply(Select.unique(source.asTerm, "isInstanceOf"), sourceCaseTpe :: Nil)
-      val action = destTpe.memberType(destCase).asType match {
-        case '[destCase] => 
-          val valueOf = Expr.summon[ValueOf[destCase]].getOrElse(report.errorAndAbort("BARF"))
-          '{ $valueOf.value }.asTerm
-      }
-      condition -> action
-    }
+    val sourceTpe = TypeTree.of[A]
+    println("Childen of Source:")
+    val show = sourceTpe.symbol.children
+      .map(sym => sym.tree.show)
 
-    mkIfStatement(associated.toList).asExprOf[B]
+    '{ ${ Expr(show) }.mkString(", ") }
   }
 
-  def mkIfStatement(branches: List[(Term, Term)]): Term = {
-    branches match
-      case (p1, a1) :: xs =>
-        If(p1, a1, mkIfStatement(xs))
-      case Nil => ('{ throw RuntimeException("Unhandled condition encountered during derivation") }).asTerm
-  }
+  // def transformWithBuilder[A: Type, B: Type, Config <: Tuple: Type](
+  //   sourceValue: Expr[A],
+  //   builder: Expr[Builder[A, B, Config]]
+  // ) = {
+  //   val destTpe = TypeRepr.of[B]
+  //   val constructor = destTpe.typeSymbol.primaryConstructor
 
-  def transformWithBuilder[A: Type, B: Type, Config <: Tuple: Type](
+  //   val sourceFields = fields[A].map(field => field.name -> field).toMap
+  //   val destinationFields = fields[B].map(field => field.name -> field).toMap
+  //   val config = materializeConfig[Config]
+
+  //   val nonConfiguredFields = destinationFields -- config.map(_.name)
+
+  //   val accessedNonConfiguredFields = nonConfiguredFields
+  //     .map((name, field) => field -> sourceFields.get(name).getOrElse(report.errorAndAbort(s"Not found for $name")))
+  //     .map { (dest, source) =>
+  //       val call = resolveTransformer(source.tpe, dest.tpe) match {
+  //         case '{ $transformer: Transformer.Identity[source] } => accessField(sourceValue, source.name)
+  //         case '{ $transformer: Transformer[source, dest] } =>
+  //           val field = accessField(sourceValue, source.name).asExprOf[source]
+  //           '{ $transformer.transform($field) }.asTerm
+  //       }
+
+  //       NamedArg(dest.name, call)
+  //     }
+
+  //   val configuredFields =
+  //     config
+  //       .map(cfg => destinationFields(cfg.name) -> cfg)
+  //       .map { (field, cfg) =>
+  //         val call = cfg match {
+  //           case Const(label)          => '{ $builder.constants(${ Expr(field.name) }) }
+  //           case Computed(label)       => '{ $builder.computeds(${ Expr(field.name) })($sourceValue) }
+  //           case Renamed(dest, source) => accessField(sourceValue, source).asExpr
+  //         }
+
+  //         val castedCall = field.tpe.asType match {
+  //           case '[fieldTpe] => '{ $call.asInstanceOf[fieldTpe] }
+  //         }
+
+  //         NamedArg(field.name, castedCall.asTerm)
+  //       }
+
+  //   New(Inferred(destTpe))
+  //     .select(constructor)
+  //     .appliedToArgs(accessedNonConfiguredFields.toList ++ configuredFields)
+  //     .asExprOf[B]
+  // }
+
+  def transform[A: Type, B: Type](
     sourceValue: Expr[A],
-    builder: Expr[Builder[A, B, Config]]
-  ) = {
+    A: Expr[DerivingMirror.ProductOf[A]],
+    B: Expr[DerivingMirror.ProductOf[B]]
+  ): Expr[B] = {
     val destTpe = TypeRepr.of[B]
     val constructor = destTpe.typeSymbol.primaryConstructor
 
-    val sourceFields = fields[A].map(field => field.name -> field).toMap
-    val destinationFields = fields[B].map(field => field.name -> field).toMap
-    val config = materializeConfig[Config]
-
-    val nonConfiguredFields = destinationFields -- config.map(_.name)
-
-    val accessedNonConfiguredFields = nonConfiguredFields
-      .map((name, field) => field -> sourceFields.get(name).getOrElse(report.errorAndAbort(s"Not found for $name")))
-      .map { (dest, source) =>
-        val call = resolveTransformer(source.tpe, dest.tpe) match {
-          case '{ $transformer: Transformer.Identity[source] } => accessField(sourceValue, source.name)
-          case '{ $transformer: Transformer[source, dest] } =>
-            val field = accessField(sourceValue, source.name).asExprOf[source]
-            '{ $transformer.transform($field) }.asTerm
-        }
-
-        NamedArg(dest.name, call)
-      }
-
-    val configuredFields =
-      config
-        .map(cfg => destinationFields(cfg.name) -> cfg)
-        .map { (field, cfg) =>
-          val call = cfg match {
-            case Const(label)          => '{ $builder.constants(${ Expr(field.name) }) }
-            case Computed(label)       => '{ $builder.computeds(${ Expr(field.name) })($sourceValue) }
-            case Renamed(dest, source) => accessField(sourceValue, source).asExpr
-          }
-
-          val castedCall = field.tpe.asType match {
-            case '[fieldTpe] => '{ $call.asInstanceOf[fieldTpe] }
-          }
-
-          NamedArg(field.name, castedCall.asTerm)
-        }
-
-    New(Inferred(destTpe))
-      .select(constructor)
-      .appliedToArgs(accessedNonConfiguredFields.toList ++ configuredFields)
-      .asExprOf[B]
-  }
-
-  def transform[A: Type, B: Type](sourceValue: Expr[A]): Expr[B] = {
-    val destTpe = TypeRepr.of[B]
-    val constructor = destTpe.typeSymbol.primaryConstructor
-
-    val sourceFields = fields[A].map(field => field.name -> field).toMap
-    val destinationFields = fields[B].map(field => field.name -> field).toMap
+    val destinationFields = Field.fromMirror(B)
+    val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
 
     val accessedFields = destinationFields
-      .map((name, field) => field -> sourceFields.get(name).getOrElse(report.errorAndAbort(s"Not found for $name")))
+      .map(field => field -> sourceFields.get(field.name).getOrElse(report.errorAndAbort(s"Not found for ${field.name}")))
       .map { (dest, source) =>
-        val call = resolveTransformer(source.tpe, dest.tpe) match {
-          case '{ $transformer: Transformer.Identity[source] } => accessField(sourceValue, source.name)
-          case '{ $transformer: Transformer[source, dest] } =>
-            val field = accessField(sourceValue, source.name).asExprOf[source]
-            '{ $transformer.transform($field) }.asTerm
-        }
-
+        val call = resolveTransformer(sourceValue, source, dest)
         NamedArg(dest.name, call)
       }
 
@@ -144,43 +126,21 @@ class TransformerMacros(using val quotes: Quotes) {
       .asExprOf[B]
   }
 
-  private def fields[A: Type]: List[Field] = {
-    val tpe = TypeRepr.of[A]
-    tpe.classSymbol.get.caseFields.zipWithIndex.map((symbol, idx) => Field(tpe, symbol, idx))
-  }
-
   private def accessField[A: Type](value: Expr[A], fieldName: String) = Select.unique(value.asTerm, fieldName)
 
-  private def resolveTransformer(source: TypeRepr, destination: TypeRepr) =
-    (source.asType, destination.asType) match {
+  private def resolveTransformer[A: Type](sourceValue: Expr[A], source: Field, destination: Field) =
+    (source.tpe.asType, destination.tpe.asType) match {
       case ('[source], '[dest]) =>
         Expr
           .summon[Transformer[source, dest]]
+          .map {
+            case '{ $transformer: Transformer.Identity[source] } => accessField(sourceValue, source.name)
+            case '{ $transformer: Transformer[source, dest] } =>
+              val field = accessField(sourceValue, source.name).asExprOf[source]
+              '{ $transformer.transform($field) }.asTerm
+          }
           .getOrElse(report.errorAndAbort(s"Transformer not found ###"))
     }
-
-  def materializeConfig[Config <: Tuple: Type]: List[Configuration] = {
-    TypeRepr.of[Config].asType match {
-      case '[EmptyTuple] =>
-        List.empty
-      case '[Const[field] *: tail] =>
-        Const(materializeConstantString[field]) :: materializeConfig[tail]
-      case '[Computed[field] *: tail] =>
-        Computed(materializeConstantString[field]) :: materializeConfig[tail]
-      case '[Renamed[dest, source] *: tail] =>
-        Renamed(materializeConstantString[dest], materializeConstantString[source]) :: materializeConfig[tail]
-    }
-  }
-
-  private def materializeConstantString[A <: String: Type] = TypeRepr.of[A] match {
-    case ConstantType(StringConstant(value)) => value
-    case other                               => report.errorAndAbort("Type is not a String!")
-  }
-
-  private final class Field(parentTpe: TypeRepr, symbol: Symbol, index: Int) {
-    val name: String = symbol.name
-    val tpe: TypeRepr = parentTpe.memberType(symbol)
-  }
 }
 
 object Macros {
@@ -194,21 +154,39 @@ object Macros {
     }
   }
 
-  inline def transform[A, B](source: A): B = ${ transformMacro[A, B]('source) }
-  def transformMacro[A: Type, B: Type](source: Expr[A])(using Quotes): Expr[B] = TransformerMacros().transform(source)
+  inline def code[A](inline value: A) = ${ codeMacro('value) }
+  def codeMacro[A: Type](value: Expr[A])(using Quotes) = {
+    import quotes.reflect.*
+    val struct = Printer.TreeAnsiCode.show(value.asTerm)
+    '{
+      println(${ Expr(struct) })
+      $value
+    }
+  }
 
-  inline def transformWithBuilder[A, B, Config <: Tuple](source: A, builder: Builder[A, B, Config]): B =
-    ${ transformWithBuilderMacro('source, 'builder) }
+  inline def transform[A, B](source: A)(using
+    A: DerivingMirror.ProductOf[A],
+    B: DerivingMirror.ProductOf[B]
+  ): B = ${ transformMacro[A, B]('source, 'A, 'B) }
 
-  def transformWithBuilderMacro[A: Type, B: Type, Config <: Tuple: Type](
+  def transformMacro[A: Type, B: Type](
     source: Expr[A],
-    builder: Expr[Builder[A, B, Config]]
-  )(using Quotes): Expr[B] =
-    TransformerMacros().transformWithBuilder(source, builder)
+    A: Expr[DerivingMirror.ProductOf[A]],
+    B: Expr[DerivingMirror.ProductOf[B]]
+  )(using Quotes): Expr[B] = TransformerMacros().transform(source, A, B)
+
+  // inline def transformWithBuilder[A, B, Config <: Tuple](source: A, builder: Builder[A, B, Config]): B =
+  //   ${ transformWithBuilderMacro('source, 'builder) }
+
+  // def transformWithBuilderMacro[A: Type, B: Type, Config <: Tuple: Type](
+  //   source: Expr[A],
+  //   builder: Expr[Builder[A, B, Config]]
+  // )(using Quotes): Expr[B] =
+  //   TransformerMacros().transformWithBuilder(source, builder)
 
   // coprod tests
-  inline def transformCoproduct[A, B](source: A): B = ${ transformCoproductMacro[A, B]('source) }
+  // inline def transformCoproduct[A] = ${ transformCoproductMacro[A] }
 
-  def transformCoproductMacro[A: Type, B: Type](source: Expr[A])(using Quotes): Expr[B] =
-    TransformerMacros().transformCoproduct(source)
+  // def transformCoproductMacro[A: Type](using Quotes) =
+  // TransformerMacros().transformCoproduct
 }
