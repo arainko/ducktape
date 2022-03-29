@@ -1,18 +1,36 @@
 package io.github.arainko
 
-sealed abstract class Configuration(val name: String)
+sealed trait Configuration
 
 object Configuration {
-  final case class Const[Label <: String](label: Label) extends Configuration(label)
-  final case class Computed[Label <: String](label: Label) extends Configuration(label)
-  final case class Renamed[Dest <: String, Source <: String](dest: Dest, source: Source) extends Configuration(dest)
 
-  type RemoveByLabel[Label <: String, Config <: Tuple] <: Tuple =
-    Config match {
-      case EmptyTuple                => EmptyTuple
-      case Const[Label] *: tail      => RemoveByLabel[Label, tail]
-      case Computed[Label] *: tail   => RemoveByLabel[Label, tail]
-      case Renamed[Label, _] *: tail => RemoveByLabel[Label, tail]
-      case head *: tail              => head *: RemoveByLabel[Label, tail]
-    }
+  sealed trait Product extends Configuration
+
+  object Product {
+    sealed trait Const[Label <: String] extends Configuration.Product
+    sealed trait Computed[Label <: String] extends Configuration.Product
+    sealed trait Renamed[Dest <: String, Source <: String] extends Configuration.Product
+
+    type RemoveByLabel[Label <: String, Config <: Tuple] <: Tuple =
+      Config match {
+        case EmptyTuple                        => EmptyTuple
+        case Product.Const[Label] *: tail      => RemoveByLabel[Label, tail]
+        case Product.Computed[Label] *: tail   => RemoveByLabel[Label, tail]
+        case Product.Renamed[Label, _] *: tail => RemoveByLabel[Label, tail]
+        case head *: tail                      => head *: RemoveByLabel[Label, tail]
+      }
+  }
+
+  sealed trait Coproduct extends Configuration
+
+  object Coproduct {
+    sealed trait Instance[Type] extends Configuration.Coproduct
+
+    type RemoveByType[Type, Config <: Tuple] <: Tuple =
+      Config match {
+        case EmptyTuple                          => EmptyTuple
+        case Coproduct.Instance[Type] *: tail    => RemoveByType[Type, tail]
+        case head *: tail                        => head *: RemoveByType[Type, tail]
+      }
+  }
 }

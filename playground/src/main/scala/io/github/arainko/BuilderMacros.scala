@@ -17,7 +17,7 @@ class BuilderMacros[
   def withConfigEntryForField[ConfigEntry[_ <: String]: Type](lambdaSelector: Expr[To => ?]) = {
     selector.selectedField(lambdaSelector).asConstantType match {
       case '[IsString[selectedField]] =>
-        '{ $builder.asInstanceOf[F[From, To, ConfigEntry[selectedField] *: RemoveByLabel[selectedField, Config]]] }
+        '{ $builder.asInstanceOf[F[From, To, ConfigEntry[selectedField] *: Product.RemoveByLabel[selectedField, Config]]] }
     }
   }
 
@@ -26,9 +26,13 @@ class BuilderMacros[
     val secondField = selector.selectedField(to).asConstantType
     (secondField, firstField) match {
       case ('[IsString[firstField]], '[IsString[secondField]]) =>
-        '{ $builder.asInstanceOf[F[From, To, ConfigEntry[firstField, secondField] *: RemoveByLabel[firstField, Config]]] }
+        '{ $builder.asInstanceOf[F[From, To, ConfigEntry[firstField, secondField] *: Product.RemoveByLabel[firstField, Config]]] }
     }
   }
+
+  def withConfigEntryForInstance[Instance: Type] = 
+    '{ $builder.asInstanceOf[F[From, To, Coproduct.Instance[Instance] *: Coproduct.RemoveByType[Instance, Config]]] }
+  
 
   private val selector = SelectorMacros()
 
