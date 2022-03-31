@@ -15,7 +15,12 @@ import scala.deriving.Mirror as DerivingMirror
     6. Apply transformers
  */
 
-class ProductTransformerMacros(using val quotes: Quotes) extends Module, FieldModule, MirrorModule, SelectorModule, ConfigurationModule {
+class ProductTransformerMacros(using val quotes: Quotes)
+    extends Module,
+      FieldModule,
+      MirrorModule,
+      SelectorModule,
+      ConfigurationModule {
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
@@ -60,7 +65,7 @@ class ProductTransformerMacros(using val quotes: Quotes) extends Module, FieldMo
     val nonConfiguredFields = destinationFields -- config.map(_.name)
     val transformedFields = fieldTransformers(sourceValue, nonConfiguredFields.values.toList, sourceFields)
     val configuredFields = fieldConfigurations(config, sourceValue, builder, destinationFields)
-      
+
     New(Inferred(destTpe))
       .select(constructor)
       .appliedToArgs(transformedFields ++ configuredFields)
@@ -167,6 +172,8 @@ object Macros {
     A: Expr[DerivingMirror.ProductOf[A]],
     B: Expr[DerivingMirror.ProductOf[B]]
   )(using Quotes): Expr[B] = ProductTransformerMacros().transform(source, A, B)
+
+  
 
   // inline def transformWithBuilder[A, B, Config <: Tuple](source: A, builder: Builder[A, B, Config]): B =
   //   ${ transformWithBuilderMacro('source, 'builder) }

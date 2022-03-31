@@ -23,14 +23,12 @@ object TraitColor {
 @main def run = {
   val secondPerson = SecondPerson(1, "", "")
 
-  // val res = 
-
-  Macros.code {
-    Transformer[SecondPerson, Person]
+  println {
+    Macros.code {
+      CoproductTransformerMacros.transform[Color, TraitColor](Color.Blue)
+    }
   }
 
   // println(res)
-
-  Macro.call[Color].foreach(println)
 
 }

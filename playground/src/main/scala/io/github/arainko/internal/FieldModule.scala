@@ -18,11 +18,13 @@ trait FieldModule { self: Module & MirrorModule =>
     }
   }
 
-  case class Case(name: String, tpe: TypeRepr) {
+  case class Case(name: String, tpe: TypeRepr, ordinal: Int) {
 
-    def materializeSingleton: Option[Term] = tpe.asType match {
-      case '[caseTpe] => Expr.summon[ValueOf[caseTpe]].map { case '{ $valueOf } => '{ $valueOf.value }.asTerm }
-    }
+    def materializeSingleton: Option[Term] =
+      tpe.asType match {
+        case '[caseTpe] => Type.valueOfConstant[caseTpe]
+          Expr.summon[ValueOf[caseTpe]].map { case '{ $valueOf } => '{ $valueOf.value }.asTerm }
+      }
   }
 
   object Case {
@@ -31,7 +33,8 @@ trait FieldModule { self: Module & MirrorModule =>
 
       materializedMirror.mirroredElemLabels
         .zip(materializedMirror.mirroredElemTypes)
-        .map(Case.apply)
+        .zipWithIndex
+        .map { case ((name, tpe), ordinal) => Case(name, tpe, ordinal) }
     }
   }
 
