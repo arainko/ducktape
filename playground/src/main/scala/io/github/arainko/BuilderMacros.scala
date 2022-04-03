@@ -1,7 +1,7 @@
 package io.github.arainko
 
 import scala.compiletime.*
-import scala.deriving.Mirror
+import scala.deriving.Mirror as DerivingMirror
 import scala.quoted.*
 import io.github.arainko.Configuration.*
 import io.github.arainko.internal.*
@@ -19,14 +19,19 @@ class BuilderMacros[
   import quotes.reflect.*
   import BuilderMacros.*
 
-  def withConfigEntryForField[ConfigEntry[_ <: String]: Type](lambdaSelector: Expr[To => ?]) = {
+  def withConfigEntryForField[ConfigEntry[_ <: String]: Type](
+    lambdaSelector: Expr[To => ?]
+  )(using DerivingMirror.ProductOf[To]) = {
     selectedField(lambdaSelector).asConstantType match {
       case '[IsString[selectedField]] =>
         '{ $builder.asInstanceOf[F[From, To, ConfigEntry[selectedField] *: Product.RemoveByLabel[selectedField, Config]]] }
     }
   }
 
-  def withConfigEntryForFields[ConfigEntry[_ <: String, _ <: String]: Type](to: Expr[To => ?], from: Expr[From => ?]) = {
+  def withConfigEntryForFields[ConfigEntry[_ <: String, _ <: String]: Type](to: Expr[To => ?], from: Expr[From => ?])(using
+    DerivingMirror.ProductOf[From],
+    DerivingMirror.ProductOf[To]
+  ) = {
     val firstField = selectedField(from).asConstantType
     val secondField = selectedField(to).asConstantType
     (secondField, firstField) match {
@@ -35,16 +40,8 @@ class BuilderMacros[
     }
   }
 
-  // def withConfigEntryForInstance[Instance: Type](f: Expr[From => To], mirror: Expr[Mirror.SumOf[From]]) = {
-  //   val instanceTpe = TypeRepr.of[Instance]
-  //   val cases = Case.fromMirror(mirror)
-  //   val ordinal = cases
-  //     .find(_.tpe =:= instanceTpe)
-  //     .getOrElse(report.errorAndAbort("Couldn't get case"))
-  //     .ordinal
-
-  //   '{ $builder.asInstanceOf[F[From, To, Coproduct.Instance[Instance] *: Coproduct.RemoveByType[Instance, Config]]] }
-  // }
+  def withConfigEntryForInstance[Instance: Type](using DerivingMirror.SumOf[From]) =
+    '{ $builder.asInstanceOf[F[From, To, Coproduct.Instance[Instance] *: Coproduct.RemoveByType[Instance, Config]]] }
 
   extension (value: String) {
     def asConstantType: Type[? <: AnyKind] = ConstantType(StringConstant(value)).asType
@@ -63,7 +60,9 @@ object BuilderMacros {
   ](
     builder: F[From, To, Config],
     inline selector: To => ?
-  ) = ${ withConfigEntryForFieldMacro[F, From, To, Config, ConfigEntry]('builder, 'selector) }
+  )(using To: DerivingMirror.ProductOf[To]) = ${
+    withConfigEntryForFieldMacro[F, From, To, Config, ConfigEntry]('builder, 'selector)(using 'To)
+  }
 
   transparent inline def withConfigEntryForFields[
     F[_, _, _ <: Tuple],
@@ -75,7 +74,17 @@ object BuilderMacros {
     builder: F[From, To, Config],
     inline to: To => ?,
     inline from: From => ?
-  ) = ${ withConfigEntryForFieldsMacro[F, From, To, Config, ConfigEntry]('builder, 'to, 'from) }
+  )(using From: DerivingMirror.ProductOf[From], To: DerivingMirror.ProductOf[To]) =
+    ${ withConfigEntryForFieldsMacro[F, From, To, Config, ConfigEntry]('builder, 'to, 'from)(using 'From, 'To) }
+
+  transparent inline def withConfigEntryForInstance[
+    F[_, _, _ <: Tuple],
+    From,
+    To,
+    Config <: Tuple,
+    Instance <: From
+  ](builder: F[From, To, Config])(using From: DerivingMirror.SumOf[From]) =
+    ${ withConfigEntryForInstanceMacro[F, From, To, Config, Instance]('builder)(using 'From) }
 
   def withConfigEntryForFieldsMacro[
     F[_, _, _ <: Tuple]: Type,
@@ -87,7 +96,8 @@ object BuilderMacros {
     builder: Expr[F[From, To, Config]],
     to: Expr[To => ?],
     from: Expr[From => ?]
-  )(using q: Quotes) = BuilderMacros(builder).withConfigEntryForFields[ConfigEntry](to, from)
+  )(using Expr[DerivingMirror.ProductOf[From]], Expr[DerivingMirror.ProductOf[To]])(using Quotes) =
+    BuilderMacros(builder).withConfigEntryForFields[ConfigEntry](to, from)
 
   def withConfigEntryForFieldMacro[
     F[_, _, _ <: Tuple]: Type,
@@ -98,5 +108,17 @@ object BuilderMacros {
   ](
     builder: Expr[F[From, To, Config]],
     lambda: Expr[To => ?]
-  )(using Quotes) = BuilderMacros(builder).withConfigEntryForField[ConfigEntry](lambda)
+  )(using Expr[DerivingMirror.ProductOf[To]])(using Quotes) =
+    BuilderMacros(builder).withConfigEntryForField[ConfigEntry](lambda)
+
+  def withConfigEntryForInstanceMacro[
+    F[_, _, _ <: Tuple]: Type,
+    From: Type,
+    To: Type,
+    Config <: Tuple: Type,
+    Instance: Type
+  ](
+    builder: Expr[F[From, To, Config]]
+  )(using Expr[DerivingMirror.SumOf[From]])(using Quotes) =
+    BuilderMacros(builder).withConfigEntryForInstance[Instance]
 }

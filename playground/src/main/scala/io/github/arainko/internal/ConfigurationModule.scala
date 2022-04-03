@@ -19,6 +19,8 @@ trait ConfigurationModule { self: Module =>
     }
 
     enum Coproduct extends MaterializedConfiguration {
+      val tpe: TypeRepr
+
       case Instance(tpe: TypeRepr)
     }
   }

@@ -24,39 +24,13 @@ class ProductTransformerMacros(using val quotes: Quotes)
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
-  /*
-    Idea:
-      1. Associate by name
-      2. Try to resolve singletons for destination and source types
-      3. Construct one big if statement that the associated by name symbol types and matches it to the other one
-
-      enum Enum1:
-        case Case1
-        case Case2
-        case Case3
-
-      enum Enum2:
-        case Case1
-        case Case2
-        case Case3
-
-      Enum1 to Enum2:
-        def transform(value: Enum1): Enum2 =
-          if (value.isInstanceOf[Enum1.Case1]) Enum2.Case1
-          else if (value.isInstanceOf[Enum1.Case2]) Enum2.Case2
-          else if (value.isInstanceOf[Enum1.Case3]) Enum2.Case3
-          else throw new Exception("Unknown case")
-
-   */
-
   def transformConfigured[A: Type, B: Type, Config <: Tuple: Type](
     sourceValue: Expr[A],
     builder: Expr[Builder[A, B, Config]],
-    A: Expr[DerivingMirror.ProductOf[A]],
-    B: Expr[DerivingMirror.ProductOf[B]]
+    A: DerivingMirror.ProductOf[A],
+    B: DerivingMirror.ProductOf[B]
   ): Expr[B] = {
     val destTpe = TypeRepr.of[B]
-    val constructor = destTpe.typeSymbol.primaryConstructor
     val config = materializeProductConfig[Config]
 
     val destinationFields = Field.fromMirror(B).map(field => field.name -> field).toMap
@@ -66,27 +40,24 @@ class ProductTransformerMacros(using val quotes: Quotes)
     val transformedFields = fieldTransformers(sourceValue, nonConfiguredFields.values.toList, sourceFields)
     val configuredFields = fieldConfigurations(config, sourceValue, builder, destinationFields)
 
-    New(Inferred(destTpe))
-      .select(constructor)
+    Constructor(destTpe)
       .appliedToArgs(transformedFields ++ configuredFields)
       .asExprOf[B]
   }
 
   def transform[A: Type, B: Type](
     sourceValue: Expr[A],
-    A: Expr[DerivingMirror.ProductOf[A]],
-    B: Expr[DerivingMirror.ProductOf[B]]
+    A: DerivingMirror.ProductOf[A],
+    B: DerivingMirror.ProductOf[B]
   ): Expr[B] = {
     val destTpe = TypeRepr.of[B]
-    val constructor = destTpe.typeSymbol.primaryConstructor
 
     val destinationFields = Field.fromMirror(B)
     val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
-    val accessedFields = fieldTransformers(sourceValue, destinationFields, sourceFields)
+    val transformerFields = fieldTransformers(sourceValue, destinationFields, sourceFields)
 
-    New(Inferred(destTpe))
-      .select(constructor)
-      .appliedToArgs(accessedFields.toList)
+    Constructor(destTpe)
+      .appliedToArgs(transformerFields.toList)
       .asExprOf[B]
   }
 
@@ -143,6 +114,7 @@ class ProductTransformerMacros(using val quotes: Quotes)
 
 object Macros {
   inline def structure[A](inline value: A) = ${ structureMacro('value) }
+
   def structureMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*
     val struct = Printer.TreeStructure.show(value.asTerm)
@@ -153,9 +125,10 @@ object Macros {
   }
 
   inline def code[A](inline value: A) = ${ codeMacro('value) }
+
   def codeMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*
-    val struct = Printer.TreeAnsiCode.show(value.asTerm)
+    val struct = Printer.TreeShortCode.show(value.asTerm)
     '{
       println(${ Expr(struct) })
       $value
@@ -167,26 +140,22 @@ object Macros {
     B: DerivingMirror.ProductOf[B]
   ): B = ${ transformMacro[A, B]('source, 'A, 'B) }
 
+  inline def transformWithBuilder[A, B, Config <: Tuple](source: A, builder: Builder[A, B, Config])(using
+    A: DerivingMirror.ProductOf[A],
+    B: DerivingMirror.ProductOf[B]
+  ): B =
+    ${ transformWithBuilderMacro[A, B, Config]('source, 'builder, 'A, 'B) }
+
   def transformMacro[A: Type, B: Type](
     source: Expr[A],
     A: Expr[DerivingMirror.ProductOf[A]],
     B: Expr[DerivingMirror.ProductOf[B]]
   )(using Quotes): Expr[B] = ProductTransformerMacros().transform(source, A, B)
 
-  
-
-  // inline def transformWithBuilder[A, B, Config <: Tuple](source: A, builder: Builder[A, B, Config]): B =
-  //   ${ transformWithBuilderMacro('source, 'builder) }
-
-  // def transformWithBuilderMacro[A: Type, B: Type, Config <: Tuple: Type](
-  //   source: Expr[A],
-  //   builder: Expr[Builder[A, B, Config]]
-  // )(using Quotes): Expr[B] =
-  //   TransformerMacros().transformWithBuilder(source, builder)
-
-  // coprod tests
-  // inline def transformCoproduct[A] = ${ transformCoproductMacro[A] }
-
-  // def transformCoproductMacro[A: Type](using Quotes) =
-  // TransformerMacros().transformCoproduct
+  def transformWithBuilderMacro[A: Type, B: Type, Config <: Tuple: Type](
+    source: Expr[A],
+    builder: Expr[Builder[A, B, Config]],
+    A: Expr[DerivingMirror.ProductOf[A]],
+    B: Expr[DerivingMirror.ProductOf[B]]
+  )(using Quotes): Expr[B] = ProductTransformerMacros().transformConfigured(source, builder, A, B)
 }

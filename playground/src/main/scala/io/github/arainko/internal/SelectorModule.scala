@@ -2,15 +2,23 @@ package io.github.arainko.internal
 
 import scala.quoted.*
 
-trait SelectorModule { self: Module =>
+trait SelectorModule { self: Module & MirrorModule & FieldModule =>
   import quotes.reflect.*
 
-  def selectedField[From: Type, FieldType](lambda: Expr[From => FieldType]): String = {
-    val validFields = TypeRepr.of[From].typeSymbol.caseFields.map(_.name)
+  def selectedField[From: Type, FieldType](
+    lambda: Expr[From => FieldType],
+  )(using From: DerivingMirror.ProductOf[From]): String = {
+    val validFields = Field.fromMirror(From).map(_.name)
     lambda.asTerm match {
       case FieldSelector(fieldName) if validFields.contains(fieldName) => fieldName
       case _                                                           => report.errorAndAbort("Not a field selector!")
     }
+  }
+
+  def caseOrdinal[From: Type, Case <: From: Type](using From: DerivingMirror.SumOf[From]): Int = {
+    val caseRepr = TypeRepr.of[Case]
+    val cases = Case.fromMirror(From)
+    cases.find(c => c.tpe =:= caseRepr).getOrElse(report.errorAndAbort("Not a case!")).ordinal
   }
 
   object FieldSelector:

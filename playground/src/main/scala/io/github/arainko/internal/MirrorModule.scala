@@ -16,7 +16,7 @@ trait MirrorModule { self: Module =>
   )
 
   object Mirror {
-    def apply(mirror: Expr[scala.deriving.Mirror]): Option[Mirror] = {
+    def apply(mirror: Expr[deriving.Mirror]): Option[Mirror] = {
       val mirrorTpe = mirror.asTerm.tpe.widen
       for {
         mirroredType <- findMemberType(mirrorTpe, "MirroredType")
@@ -30,17 +30,6 @@ trait MirrorModule { self: Module =>
         val elemLabels = tupleTypeElements(mirroredElemLabels).map { case ConstantType(StringConstant(l)) => l }
         Mirror(mirroredType, mirroredMonoType, elemTypes, label, elemLabels)
       }
-    }
-
-    def apply(tpe: TypeRepr): Option[Mirror] = {
-      val MirrorType = TypeRepr.of[scala.deriving.Mirror]
-
-      val mirroredType = Refinement(MirrorType, "MirroredType", TypeBounds(tpe, tpe))
-      val instance = Implicits.search(mirroredType) match {
-        case iss: ImplicitSearchSuccess => Some(iss.tree.asExprOf[scala.deriving.Mirror])
-        case _: ImplicitSearchFailure   => None
-      }
-      instance.flatMap(Mirror(_))
     }
   }
 
