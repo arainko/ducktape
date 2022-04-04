@@ -18,6 +18,8 @@ object Transformer {
 
   inline given [A, B](using Mirror.ProductOf[A], Mirror.ProductOf[B]): Transformer[A, B] = Macros.transform(_)
 
+  inline given [A, B](using Mirror.SumOf[A], Mirror.SumOf[B]): Transformer[A, B] = CoproductTransformerMacros.transform(_)
+
   given [A, B](using Transformer[A, B]): Transformer[A, Option[B]] =
     Transformer[A, B].transform.andThen(Some.apply)(_)
 

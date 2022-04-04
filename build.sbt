@@ -50,7 +50,6 @@ lazy val playground =
   project
     .in(file("playground"))
     .settings(
-      (
-        scalaVersion := "3.1.1"
-      )
+      scalaVersion := "3.1.1",
+      scalacOptions += "-Xcheck-macros"
     )

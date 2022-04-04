@@ -135,6 +135,21 @@ object Macros {
     }
   }
 
+  inline def symbols[A] = ${ enumOrSealedTraitSymbolTpe[A] }
+
+  def enumOrSealedTraitSymbolTpe[A: Type](using Quotes)= {
+    import quotes.reflect.*
+
+    val children = TypeRepr.of[A].typeSymbol.children // chekc if enum, sealed trait etc. first
+    val childrenTpes = children
+    .filterNot(_.isType)
+    .map { childSymbol =>
+      Ref(childSymbol).asExprOf[A] //this will work for singletons
+    }
+
+    childrenTpes.head
+  }
+
   inline def transform[A, B](source: A)(using
     A: DerivingMirror.ProductOf[A],
     B: DerivingMirror.ProductOf[B]

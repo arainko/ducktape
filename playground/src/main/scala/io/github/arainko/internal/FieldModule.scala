@@ -21,9 +21,8 @@ trait FieldModule { self: Module & MirrorModule =>
   case class Case(name: String, tpe: TypeRepr, ordinal: Int) {
 
     def materializeSingleton: Option[Term] =
-      tpe.asType match {
-        case '[caseTpe] => Type.valueOfConstant[caseTpe]
-          Expr.summon[ValueOf[caseTpe]].map { case '{ $valueOf } => '{ $valueOf.value }.asTerm }
+      Option.when(tpe.isSingleton) {
+        tpe match { case TermRef(a, b) => Ident(TermRef(a, b)) }
       }
   }
 

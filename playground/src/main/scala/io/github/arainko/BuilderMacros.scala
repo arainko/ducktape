@@ -121,4 +121,5 @@ object BuilderMacros {
     builder: Expr[F[From, To, Config]]
   )(using Expr[DerivingMirror.SumOf[From]])(using Quotes) =
     BuilderMacros(builder).withConfigEntryForInstance[Instance]
+
 }

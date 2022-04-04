@@ -2,9 +2,9 @@ package io.github.arainko
 
 import scala.util.NotGiven
 import scala.deriving.Mirror as DerivingMirror
-import scala.compiletime.summonInline
+import scala.compiletime.*
 
-final case class Builder[From, To, Config <: Tuple](
+final case class Builder[From, To, Config <: Tuple] private (
   val constants: Map[String, Any],
   val computeds: Map[String, From => Any],
   val caseInstances: Map[Int, From => To]
@@ -43,28 +43,39 @@ final case class Builder[From, To, Config <: Tuple](
   )(using From: DerivingMirror.ProductOf[From], To: DerivingMirror.ProductOf[To])(using FromField <:< ToField) =
     BuilderMacros.withConfigEntryForFields[Builder, From, To, Config, Product.Renamed](this, toSelector, fromSelector)
 
-  inline def run(source: From)(using From: DerivingMirror.Of[From]): To =
-    inline From match {
-      case given DerivingMirror.ProductOf[From] =>
-        given DerivingMirror.ProductOf[To] = summonInline
-        Macros.transformWithBuilder(source, this)
+  inline def run(source: From): To =
+    summonFrom {
       case given DerivingMirror.SumOf[From] =>
-        given DerivingMirror.SumOf[To] = summonInline
-        CoproductTransformerMacros.transformWithBuilder(source, this)
+        summonFrom {
+          case given DerivingMirror.SumOf[To] =>
+            CoproductTransformerMacros.transformWithBuilder(source, this)
+        }
+      case given DerivingMirror.ProductOf[From] =>
+        summonFrom {
+          case given DerivingMirror.ProductOf[To] =>
+            Macros.transformWithBuilder(source, this)
+        }
     }
 }
 
-@main def main = {
-  // Macros.code {
+object Builder {
+  def create[From, To]: Builder[TraitColor, Color, EmptyTuple] =
     Builder[TraitColor, Color, EmptyTuple](Map.empty, Map.empty, Map.empty)
-      .withCaseInstance[TraitColor.Red.type](_ => Color.Blue)
-      .withCaseInstance[TraitColor.Blue.type](_ => Color.Blue)
-      .run(TraitColor.Red)
-  // }
+}
 
-  // .withFieldConstant(_.age, 1)
-  // .withFieldComputed(_.name, _.name)
-  // .withFieldRenamed(_.costam, _.name)
-  // .withFieldComputed(_.age, _ => 1)
+@main def main = {
+
+  val b = Builder
+    .create[TraitColor, Color]
+    .withCaseInstance[TraitColor.Green.type](_ => Color.Blue)
+    .withCaseInstance[TraitColor.Blue.type](_ => Color.Blue)
+
+  // Macros.code {
+  //   Builder
+  //     .create[TraitColor, Color]
+  //     .withCaseInstance[TraitColor.Green.type](_ => Color.Blue)
+  //     .withCaseInstance[TraitColor.Blue.type](_ => Color.Blue)
+  //     .run(TraitColor.Blue)
+  // }
 
 }
