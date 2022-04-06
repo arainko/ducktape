@@ -11,7 +11,7 @@ class BuilderMacros[
   From: Type,
   To: Type,
   Config <: Tuple: Type
-](val builder: Expr[F[From, To, Config]])(using val quotes: Quotes)
+](private val builder: Expr[F[From, To, Config]])(using val quotes: Quotes)
     extends Module,
       MirrorModule,
       FieldModule,

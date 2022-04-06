@@ -16,7 +16,6 @@ object TraitColor {
   case object Green extends TraitColor
   case object Red extends TraitColor
   case object Blue extends TraitColor
-  case object Costam extends TraitColor
 }
 
 final case class Generic[A](costam: Int, gen: Option[Generic[A]])

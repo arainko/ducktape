@@ -26,11 +26,10 @@ class ProductTransformerMacros(using val quotes: Quotes)
 
   def transformConfigured[A: Type, B: Type, Config <: Tuple: Type](
     sourceValue: Expr[A],
-    builder: Expr[Builder[A, B, Config]],
+    builder: Expr[Builder[?, A, B, Config]],
     A: DerivingMirror.ProductOf[A],
     B: DerivingMirror.ProductOf[B]
   ): Expr[B] = {
-    val destTpe = TypeRepr.of[B]
     val config = materializeProductConfig[Config]
 
     val destinationFields = Field.fromMirror(B).map(field => field.name -> field).toMap
@@ -40,7 +39,7 @@ class ProductTransformerMacros(using val quotes: Quotes)
     val transformedFields = fieldTransformers(sourceValue, nonConfiguredFields.values.toList, sourceFields)
     val configuredFields = fieldConfigurations(config, sourceValue, builder, destinationFields)
 
-    Constructor(destTpe)
+    Constructor(TypeRepr.of[B])
       .appliedToArgs(transformedFields ++ configuredFields)
       .asExprOf[B]
   }
@@ -50,13 +49,11 @@ class ProductTransformerMacros(using val quotes: Quotes)
     A: DerivingMirror.ProductOf[A],
     B: DerivingMirror.ProductOf[B]
   ): Expr[B] = {
-    val destTpe = TypeRepr.of[B]
-
     val destinationFields = Field.fromMirror(B)
     val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
     val transformerFields = fieldTransformers(sourceValue, destinationFields, sourceFields)
 
-    Constructor(destTpe)
+    Constructor(TypeRepr.of[B])
       .appliedToArgs(transformerFields.toList)
       .asExprOf[B]
   }
@@ -76,7 +73,7 @@ class ProductTransformerMacros(using val quotes: Quotes)
   private def fieldConfigurations[A: Type, B: Type, Config <: Tuple: Type](
     config: List[MaterializedConfiguration.Product],
     sourceValue: Expr[A],
-    builder: Expr[Builder[A, B, Config]],
+    builder: Expr[Builder[?, A, B, Config]],
     destinationFieldMapping: Map[String, Field]
   ) = config
     .map(cfg => destinationFieldMapping(cfg.name) -> cfg)
@@ -135,27 +132,12 @@ object Macros {
     }
   }
 
-  inline def symbols[A] = ${ enumOrSealedTraitSymbolTpe[A] }
-
-  def enumOrSealedTraitSymbolTpe[A: Type](using Quotes)= {
-    import quotes.reflect.*
-
-    val children = TypeRepr.of[A].typeSymbol.children // chekc if enum, sealed trait etc. first
-    val childrenTpes = children
-    .filterNot(_.isType)
-    .map { childSymbol =>
-      Ref(childSymbol).asExprOf[A] //this will work for singletons
-    }
-
-    childrenTpes.head
-  }
-
   inline def transform[A, B](source: A)(using
     A: DerivingMirror.ProductOf[A],
     B: DerivingMirror.ProductOf[B]
   ): B = ${ transformMacro[A, B]('source, 'A, 'B) }
 
-  inline def transformWithBuilder[A, B, Config <: Tuple](source: A, builder: Builder[A, B, Config])(using
+  inline def transformWithBuilder[A, B, Config <: Tuple](source: A, builder: Builder[?, A, B, Config])(using
     A: DerivingMirror.ProductOf[A],
     B: DerivingMirror.ProductOf[B]
   ): B =
@@ -169,7 +151,7 @@ object Macros {
 
   def transformWithBuilderMacro[A: Type, B: Type, Config <: Tuple: Type](
     source: Expr[A],
-    builder: Expr[Builder[A, B, Config]],
+    builder: Expr[Builder[?, A, B, Config]],
     A: Expr[DerivingMirror.ProductOf[A]],
     B: Expr[DerivingMirror.ProductOf[B]]
   )(using Quotes): Expr[B] = ProductTransformerMacros().transformConfigured(source, builder, A, B)

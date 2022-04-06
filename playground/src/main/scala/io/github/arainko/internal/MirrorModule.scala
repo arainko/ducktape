@@ -3,7 +3,8 @@ package io.github.arainko.internal
 import scala.quoted.*
 import scala.annotation.tailrec
 
-//Taken from shapeless 3: https://github.com/typelevel/shapeless-3/blob/main/modules/deriving/src/main/scala/shapeless3/deriving/internals/reflectionutils.scala
+// Taken from shapeless 3: 
+// https://github.com/typelevel/shapeless-3/blob/main/modules/deriving/src/main/scala/shapeless3/deriving/internals/reflectionutils.scala
 trait MirrorModule { self: Module =>
   import quotes.reflect.*
 

@@ -1,22 +1,25 @@
 package io.github.arainko
 
-import scala.util.NotGiven
-import scala.deriving.Mirror as DerivingMirror
-import scala.compiletime.*
+import io.github.arainko.Builder.Applied
+import io.github.arainko.Builder.Definition
 
-final case class Builder[From, To, Config <: Tuple] private (
-  val constants: Map[String, Any],
-  val computeds: Map[String, From => Any],
-  val caseInstances: Map[Int, From => To]
-) {
+import scala.compiletime.*
+import scala.deriving.Mirror as DerivingMirror
+import scala.util.NotGiven
+
+sealed trait Builder[F[_, _, _ <: Tuple], From, To, Config <: Tuple] { self =>
   import Configuration.*
+
+  val constants: Map[String, Any]
+  val computeds: Map[String, From => Any]
+  val caseInstances: Map[Int, From => To]
 
   transparent inline def withCaseInstance[Type <: From](
     f: Type => To
   )(using DerivingMirror.SumOf[From], NotGiven[Type =:= From]) = {
     val ordinal = SelectorMacros.caseOrdinal[From, Type]
-    val withCaseInstance = this.copy[From, To, Config](caseInstances = caseInstances + (ordinal -> f.asInstanceOf[From => To]))
-    BuilderMacros.withConfigEntryForInstance[Builder, From, To, Config, Type](withCaseInstance)
+    val withCaseInstance = self.construct(caseInstances = caseInstances + (ordinal -> f.asInstanceOf[From => To]))
+    BuilderMacros.withConfigEntryForInstance[F, From, To, Config, Type](withCaseInstance)
   }
 
   transparent inline def withFieldConstant[FieldType, ConstType](
@@ -24,8 +27,8 @@ final case class Builder[From, To, Config <: Tuple] private (
     const: ConstType
   )(using DerivingMirror.ProductOf[From], DerivingMirror.ProductOf[To], ConstType <:< FieldType) = {
     val fieldName = SelectorMacros.selectedField(selector)
-    val withConst = this.copy[From, To, Config](constants = constants + (fieldName -> const))
-    BuilderMacros.withConfigEntryForField[Builder, From, To, Config, Product.Const](withConst, selector)
+    val withConst = self.construct(constants = constants + (fieldName -> const))
+    BuilderMacros.withConfigEntryForField[F, From, To, Config, Product.Const](withConst, selector)
   }
 
   transparent inline def withFieldComputed[FieldType, ComputedType](
@@ -33,49 +36,83 @@ final case class Builder[From, To, Config <: Tuple] private (
     computed: From => ComputedType
   )(using From: DerivingMirror.ProductOf[From], To: DerivingMirror.ProductOf[To])(using ComputedType <:< FieldType) = {
     val fieldName = SelectorMacros.selectedField(selector)
-    val withComputed = this.copy[From, To, Config](computeds = computeds + (fieldName -> computed.asInstanceOf[Any => Any]))
-    BuilderMacros.withConfigEntryForField[Builder, From, To, Config, Product.Computed](withComputed, selector)
+    val withComputed = self.construct(computeds = computeds + (fieldName -> computed.asInstanceOf[Any => Any]))
+    BuilderMacros.withConfigEntryForField[F, From, To, Config, Product.Computed](withComputed, selector)
   }
 
   transparent inline def withFieldRenamed[FromField, ToField](
     inline toSelector: To => FromField,
     inline fromSelector: From => ToField
   )(using From: DerivingMirror.ProductOf[From], To: DerivingMirror.ProductOf[To])(using FromField <:< ToField) =
-    BuilderMacros.withConfigEntryForFields[Builder, From, To, Config, Product.Renamed](this, toSelector, fromSelector)
+    BuilderMacros.withConfigEntryForFields[F, From, To, Config, Product.Renamed](self.instance, toSelector, fromSelector)
 
-  inline def run(source: From): To =
-    summonFrom {
-      case given DerivingMirror.SumOf[From] =>
-        summonFrom {
-          case given DerivingMirror.SumOf[To] =>
-            CoproductTransformerMacros.transformWithBuilder(source, this)
-        }
-      case given DerivingMirror.ProductOf[From] =>
-        summonFrom {
-          case given DerivingMirror.ProductOf[To] =>
-            Macros.transformWithBuilder(source, this)
-        }
-    }
+  protected def construct(
+    constants: Map[String, Any] = constants,
+    computeds: Map[String, From => Any] = computeds,
+    caseInstances: Map[Int, From => To] = caseInstances
+  ): F[From, To, Config]
+
+  protected def instance: F[From, To, Config]
+
 }
 
 object Builder {
-  def create[From, To]: Builder[TraitColor, Color, EmptyTuple] =
-    Builder[TraitColor, Color, EmptyTuple](Map.empty, Map.empty, Map.empty)
-}
 
-@main def main = {
+  def definition[From, To]: Definition[From, To, EmptyTuple] =
+    Definition[From, To, EmptyTuple](Map.empty, Map.empty, Map.empty)
 
-  val b = Builder
-    .create[TraitColor, Color]
-    .withCaseInstance[TraitColor.Green.type](_ => Color.Blue)
-    .withCaseInstance[TraitColor.Blue.type](_ => Color.Blue)
+  def applied[From, To](source: From): Applied[From, To, EmptyTuple] =
+    Applied[From, To, EmptyTuple](source, Map.empty, Map.empty, Map.empty)
 
-  // Macros.code {
-  //   Builder
-  //     .create[TraitColor, Color]
-  //     .withCaseInstance[TraitColor.Green.type](_ => Color.Blue)
-  //     .withCaseInstance[TraitColor.Blue.type](_ => Color.Blue)
-  //     .run(TraitColor.Blue)
-  // }
+  final case class Definition[From, To, Config <: Tuple] private[Builder] (
+    constants: Map[String, Any],
+    computeds: Map[String, From => Any],
+    caseInstances: Map[Int, From => To]
+  ) extends Builder[Definition, From, To, Config] { self =>
 
+    inline def build(using From: DerivingMirror.Of[From], To: DerivingMirror.Of[To]): Transformer[From, To] =
+      new {
+        def transform(from: From): To =
+          inline erasedValue[(From.type, To.type)] match {
+            case (_: DerivingMirror.SumOf[From], _: DerivingMirror.SumOf[To]) =>
+              CoproductTransformerMacros.transformWithBuilder(from, self)(using summonInline, summonInline)
+            case (_: DerivingMirror.ProductOf[From], _: DerivingMirror.ProductOf[To]) =>
+              Macros.transformWithBuilder(from, self)(using summonInline, summonInline)
+          }
+      }
+
+    override protected def construct(
+      constants: Map[String, Any],
+      computeds: Map[String, From => Any],
+      caseInstances: Map[Int, From => To]
+    ): Definition[From, To, Config] =
+      this.copy[From, To, Config](constants = constants, computeds = computeds, caseInstances = caseInstances)
+
+    override protected def instance: Definition[From, To, Config] = this
+  }
+
+  final case class Applied[From, To, Config <: Tuple] private[Builder] (
+    private val appliedTo: From,
+    constants: Map[String, Any],
+    computeds: Map[String, From => Any],
+    caseInstances: Map[Int, From => To]
+  ) extends Builder[Applied, From, To, Config] { self =>
+
+    inline def transform(using From: DerivingMirror.Of[From], To: DerivingMirror.Of[To]): To =
+      inline erasedValue[(From.type, To.type)] match {
+        case (_: DerivingMirror.SumOf[From], _: DerivingMirror.SumOf[To]) =>
+          CoproductTransformerMacros.transformWithBuilder(appliedTo, self)(using summonInline, summonInline)
+        case (_: DerivingMirror.ProductOf[From], _: DerivingMirror.ProductOf[To]) =>
+          Macros.transformWithBuilder(appliedTo, self)(using summonInline, summonInline)
+      }
+
+    override protected def construct(
+      constants: Map[String, Any],
+      computeds: Map[String, From => Any],
+      caseInstances: Map[Int, From => To]
+    ): Applied[From, To, Config] =
+      this.copy[From, To, Config](constants = constants, computeds = computeds, caseInstances = caseInstances)
+
+    override protected def instance: Applied[From, To, Config] = this
+  }
 }

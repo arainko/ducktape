@@ -2,6 +2,7 @@ package io.github.arainko.internal
 
 import scala.quoted.*
 import scala.deriving.*
+import io.github.arainko.Transformer
 
 trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
