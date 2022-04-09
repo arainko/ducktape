@@ -1,8 +1,8 @@
-package io.github.arainko.internal
+package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 
-trait SelectorModule { self: Module & MirrorModule & FieldModule =>
+private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModule =>
   import quotes.reflect.*
 
   def selectedField[From: Type, FieldType](

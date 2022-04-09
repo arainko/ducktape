@@ -1,10 +1,10 @@
-package io.github.arainko.internal
+package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 import scala.deriving.*
-import io.github.arainko.Transformer
+import io.github.arainko.ducktape.Transformer
 
-trait FieldModule { self: Module & MirrorModule =>
+private[internal] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
 
   case class Field(name: String, tpe: TypeRepr)

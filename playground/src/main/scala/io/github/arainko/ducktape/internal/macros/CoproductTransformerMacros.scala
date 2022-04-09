@@ -1,11 +1,12 @@
-package io.github.arainko
+package io.github.arainko.ducktape.internal.macros
 
 import scala.quoted.*
-import io.github.arainko.Configuration.*
-import io.github.arainko.internal.*
+import io.github.arainko.ducktape.Configuration.*
+import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.internal.modules.*
 import scala.deriving.Mirror as DerivingMirror
 
-class CoproductTransformerMacros(using val quotes: Quotes)
+private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     extends Module,
       FieldModule,
       MirrorModule,
@@ -82,7 +83,7 @@ class CoproductTransformerMacros(using val quotes: Quotes)
   }
 }
 
-object CoproductTransformerMacros {
+private[ducktape] object CoproductTransformerMacros {
   inline def transform[A, B](source: A)(using
     A: DerivingMirror.SumOf[A],
     B: DerivingMirror.SumOf[B]

@@ -1,7 +1,7 @@
-package io.github.arainko
+package io.github.arainko.ducktape
 
-import io.github.arainko.Builder.Applied
-import io.github.arainko.Builder.Definition
+import io.github.arainko.ducktape.Builder.*
+import io.github.arainko.ducktape.internal.macros.*
 
 import scala.compiletime.*
 import scala.deriving.Mirror as DerivingMirror
@@ -22,7 +22,7 @@ sealed trait Builder[F[_, _, _ <: Tuple], From, To, Config <: Tuple] { self =>
     BuilderMacros.withConfigEntryForInstance[F, From, To, Config, Type](withCaseInstance)
   }
 
-  transparent inline def withFieldConstant[FieldType, ConstType](
+  transparent inline def withFieldConst[FieldType, ConstType](
     inline selector: To => FieldType,
     const: ConstType
   )(using DerivingMirror.ProductOf[From], DerivingMirror.ProductOf[To], ConstType <:< FieldType) = {
@@ -77,7 +77,7 @@ object Builder {
             case (_: DerivingMirror.SumOf[From], _: DerivingMirror.SumOf[To]) =>
               CoproductTransformerMacros.transformWithBuilder(from, self)(using summonInline, summonInline)
             case (_: DerivingMirror.ProductOf[From], _: DerivingMirror.ProductOf[To]) =>
-              Macros.transformWithBuilder(from, self)(using summonInline, summonInline)
+              ProductTransformerMacros.transformWithBuilder(from, self)(using summonInline, summonInline)
           }
       }
 
@@ -103,7 +103,7 @@ object Builder {
         case (_: DerivingMirror.SumOf[From], _: DerivingMirror.SumOf[To]) =>
           CoproductTransformerMacros.transformWithBuilder(appliedTo, self)(using summonInline, summonInline)
         case (_: DerivingMirror.ProductOf[From], _: DerivingMirror.ProductOf[To]) =>
-          Macros.transformWithBuilder(appliedTo, self)(using summonInline, summonInline)
+          ProductTransformerMacros.transformWithBuilder(appliedTo, self)(using summonInline, summonInline)
       }
 
     override protected def construct(

@@ -1,10 +1,10 @@
-package io.github.arainko.internal
+package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
-import io.github.arainko.Configuration
-import io.github.arainko.Configuration.*
+import io.github.arainko.ducktape.Configuration
+import io.github.arainko.ducktape.Configuration.*
 
-trait ConfigurationModule { self: Module =>
+private[internal] trait ConfigurationModule { self: Module =>
   import quotes.reflect.*
 
   sealed trait MaterializedConfiguration

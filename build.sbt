@@ -51,5 +51,6 @@ lazy val playground =
     .in(file("playground"))
     .settings(
       scalaVersion := "3.1.1",
-      scalacOptions += "-Xcheck-macros"
+      scalacOptions += "-Xcheck-macros",
+      libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test
     )

@@ -1,12 +1,12 @@
-package io.github.arainko
+package io.github.arainko.ducktape.internal.macros
 
 import scala.compiletime.*
 import scala.deriving.Mirror as DerivingMirror
 import scala.quoted.*
-import io.github.arainko.Configuration.*
-import io.github.arainko.internal.*
+import io.github.arainko.ducktape.Configuration.*
+import io.github.arainko.ducktape.internal.modules.*
 
-class BuilderMacros[
+private[ducktape] class BuilderMacros[
   F[_, _, _ <: Tuple]: Type,
   From: Type,
   To: Type,
@@ -48,7 +48,7 @@ class BuilderMacros[
   }
 }
 
-object BuilderMacros {
+private[ducktape] object BuilderMacros {
   private type IsString[S <: String] = S
 
   transparent inline def withConfigEntryForField[

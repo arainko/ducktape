@@ -1,12 +1,12 @@
-package io.github.arainko
+package io.github.arainko.ducktape.internal.macros
 
 import scala.quoted.*
-import io.github.arainko.internal.*
+import io.github.arainko.ducktape.internal.modules.*
 import scala.deriving.Mirror as DerivingMirror
 
-class SelectorMacros(using val quotes: Quotes) extends Module, MirrorModule, FieldModule, SelectorModule
+private[ducktape] class SelectorMacros(using val quotes: Quotes) extends Module, MirrorModule, FieldModule, SelectorModule
 
-object SelectorMacros {
+private[ducktape] object SelectorMacros {
   inline def selectedField[From, FieldType](inline selector: From => FieldType)(using
     From: DerivingMirror.ProductOf[From]
   ): String =

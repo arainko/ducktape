@@ -1,11 +1,11 @@
-package io.github.arainko.internal
+package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 import scala.annotation.tailrec
 
 // Taken from shapeless 3: 
 // https://github.com/typelevel/shapeless-3/blob/main/modules/deriving/src/main/scala/shapeless3/deriving/internals/reflectionutils.scala
-trait MirrorModule { self: Module =>
+private[internal] trait MirrorModule { self: Module =>
   import quotes.reflect.*
 
   case class Mirror(

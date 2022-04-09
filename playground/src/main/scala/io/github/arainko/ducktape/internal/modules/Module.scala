@@ -1,9 +1,8 @@
-package io.github.arainko.internal
+package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 
-
-trait Module {
+private[internal] trait Module {
   val quotes: Quotes
 
   given Quotes = quotes

@@ -1,21 +1,12 @@
-package io.github.arainko
+package io.github.arainko.ducktape.internal.macros
 
 import scala.quoted.*
-import io.github.arainko.Configuration.*
-import io.github.arainko.internal.*
+import io.github.arainko.ducktape.Configuration.*
+import io.github.arainko.ducktape.internal.modules.*
+import io.github.arainko.ducktape.*
 import scala.deriving.Mirror as DerivingMirror
 
-/*
-  General idea:
-    1. Resolve companion of destination type
-    2. Resolve set of fields of destination type
-    3. Resolve set of fields of source type
-    4. Resolve transformers for intersection of fields
-    5. Optimize indetity transformers to field accessors
-    6. Apply transformers
- */
-
-class ProductTransformerMacros(using val quotes: Quotes)
+private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     extends Module,
       FieldModule,
       MirrorModule,
@@ -102,36 +93,14 @@ class ProductTransformerMacros(using val quotes: Quotes)
               val field = accessField(sourceValue, source.name).asExprOf[source]
               '{ $transformer.transform($field) }.asTerm
           }
-          .getOrElse(report.errorAndAbort(s"Transformer not found ###"))
+          .getOrElse(report.errorAndAbort(s"Transformer[${Type.show[source]}, ${Type.show[dest]}] not found"))
     }
 
   private def accessField[A: Type](value: Expr[A], fieldName: String) = Select.unique(value.asTerm, fieldName)
 
 }
 
-object Macros {
-  inline def structure[A](inline value: A) = ${ structureMacro('value) }
-
-  def structureMacro[A: Type](value: Expr[A])(using Quotes) = {
-    import quotes.reflect.*
-    val struct = Printer.TreeStructure.show(value.asTerm)
-    '{
-      println(${ Expr(struct) })
-      $value
-    }
-  }
-
-  inline def code[A](inline value: A) = ${ codeMacro('value) }
-
-  def codeMacro[A: Type](value: Expr[A])(using Quotes) = {
-    import quotes.reflect.*
-    val struct = Printer.TreeShortCode.show(value.asTerm)
-    '{
-      println(${ Expr(struct) })
-      $value
-    }
-  }
-
+private[ducktape] object ProductTransformerMacros {
   inline def transform[A, B](source: A)(using
     A: DerivingMirror.ProductOf[A],
     B: DerivingMirror.ProductOf[B]

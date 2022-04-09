@@ -1,7 +1,8 @@
-package io.github.arainko
+package io.github.arainko.ducktape
 
 import scala.collection.Factory
 import scala.deriving.Mirror
+import io.github.arainko.ducktape.internal.macros.*
 
 @FunctionalInterface
 trait Transformer[From, To] {
@@ -16,9 +17,11 @@ object Transformer {
   given [A]: Identity[A] = new:
     def transform(from: A): A = from
 
-  inline given [A, B](using Mirror.ProductOf[A], Mirror.ProductOf[B]): Transformer[A, B] = Macros.transform(_)
+  inline given [A, B](using Mirror.ProductOf[A], Mirror.ProductOf[B]): Transformer[A, B] =
+    ProductTransformerMacros.transform(_)
 
-  inline given [A, B](using Mirror.SumOf[A], Mirror.SumOf[B]): Transformer[A, B] = CoproductTransformerMacros.transform(_)
+  inline given [A, B](using Mirror.SumOf[A], Mirror.SumOf[B]): Transformer[A, B] =
+    CoproductTransformerMacros.transform(_)
 
   given [A, B](using Transformer[A, B]): Transformer[A, Option[B]] =
     Transformer[A, B].transform.andThen(Some.apply)(_)
