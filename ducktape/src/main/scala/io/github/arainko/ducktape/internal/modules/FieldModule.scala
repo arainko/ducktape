@@ -15,6 +15,15 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
             .summon[Transformer[source, dest]]
             .orElse(derivedTransformer[source, dest])
       }
+
+    private def derivedTransformer[A: Type, B: Type]: Option[Expr[Transformer[A, B]]] =
+      DerivingMirror
+        .of[A]
+        .zip(DerivingMirror.of[B])
+        .map {
+          case ('{ $src: deriving.Mirror.Of[A] }, '{ $dest: deriving.Mirror.Of[B] }) =>
+            '{ Transformer.derived[A, B](using $src, $dest) }
+        }
   }
 
   object Field {

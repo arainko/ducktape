@@ -25,14 +25,7 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
 
     val ValReference(ordinalRef, ordinalStatement) = '{ val ordinal = $A.ordinal($sourceValue) }
     val ordinal = ordinalRef.asExprOf[Int]
-    val ifBranches =
-      sourceCases
-        .map(source => source -> destCases.get(source.name).getOrElse(report.errorAndAbort("SHITE")))
-        .map { (source, dest) =>
-          val cond = '{ $ordinal == ${ Expr(source.ordinal) } }
-          cond.asTerm -> dest.materializeSingleton.getOrElse(report.errorAndAbort("cannot materialize singleton"))
-        }
-
+    val ifBranches = singletonIfBranches[A, B](sourceValue, ordinal, sourceCases, destCases)
     Block(ordinalStatement :: Nil, ifStatement(ifBranches)).asExprOf[B]
   }
 
@@ -49,13 +42,7 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
 
     val ValReference(ordinalRef, ordinalStatement) = '{ val ordinal = $A.ordinal($sourceValue) }
     val ordinal = ordinalRef.asExprOf[Int]
-    val nonConfiguredIfBranches =
-      nonConfiguredCases
-        .map(source => source -> destCases.get(source.name).getOrElse(report.errorAndAbort("SHITE")))
-        .map { (source, dest) =>
-          val cond = '{ $ordinal == ${ Expr(source.ordinal) } }
-          cond.asTerm -> dest.materializeSingleton.getOrElse(report.errorAndAbort("cannot materialize singleton"))
-        }
+    val nonConfiguredIfBranches = singletonIfBranches[A, B](sourceValue, ordinal, sourceCases, destCases)
 
     val configuredIfBranches =
       configuredCases.map { source =>
@@ -67,12 +54,29 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     Block(ordinalStatement :: Nil, ifStatement(nonConfiguredIfBranches ++ configuredIfBranches)).asExprOf[B]
   }
 
+  private def singletonIfBranches[A: Type, B: Type](
+    sourceValue: Expr[A],
+    ordinalExpr: Expr[Int],
+    sourceCases: List[Case],
+    destinationCaseMapping: Map[String, Case]
+  ) = {
+    sourceCases.map { source =>
+      source -> destinationCaseMapping
+        .get(source.name)
+        .getOrElse(report.errorAndAbort(s"No child named '${source.name}' in ${TypeRepr.of[B].show}"))
+    }.map { (source, dest) =>
+      val cond = '{ $ordinalExpr == ${ Expr(source.ordinal) } }
+      cond.asTerm -> dest.materializeSingleton
+        .getOrElse(report.errorAndAbort(s"Cannot materialize singleton. Seems like ${dest.tpe.show} is not a singleton type."))
+    }
+  }
+
   private def ifStatement(branches: List[(Term, Term)]): Term = {
     branches match
       case (p1, a1) :: xs =>
         If(p1, a1, ifStatement(xs))
       case Nil =>
-        '{ throw RuntimeException("Unhandled condition encountered during Show derivation") }.asTerm
+        '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }.asTerm
   }
 
   private object ValReference {

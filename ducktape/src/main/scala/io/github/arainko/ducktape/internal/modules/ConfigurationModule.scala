@@ -46,7 +46,7 @@ private[internal] trait ConfigurationModule { self: Module =>
         MaterializedConfiguration.Coproduct.Instance(TypeRepr.of[tpe]) :: materializeConfig[tail]
 
       case '[head *: _] =>
-        report.errorAndAbort(s"Unsupported configuration type: ${TypeRepr.of[head].show(using Printer.TypeReprShortCode)}")
+        report.errorAndAbort(s"Unsupported configuration type: ${TypeRepr.of[head].show}")
     }
   }
 
@@ -62,6 +62,6 @@ private[internal] trait ConfigurationModule { self: Module =>
 
   private def materializeConstantString[A <: String: Type] = TypeRepr.of[A] match {
     case ConstantType(StringConstant(value)) => value
-    case other                               => report.errorAndAbort("Type is not a String!")
+    case other                               => report.errorAndAbort(s"Type '${other.show}' is not a String!")
   }
 }

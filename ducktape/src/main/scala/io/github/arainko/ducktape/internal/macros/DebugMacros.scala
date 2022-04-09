@@ -2,7 +2,7 @@ package io.github.arainko.ducktape.internal.macros
 
 import scala.quoted.*
 
-private[ducktape] object DebugMacros {
+object DebugMacros {
   inline def structure[A](inline value: A) = ${ structureMacro('value) }
 
   def structureMacro[A: Type](value: Expr[A])(using Quotes) = {
@@ -18,7 +18,7 @@ private[ducktape] object DebugMacros {
 
   def codeMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*
-    val struct = Printer.TreeShortCode.show(value.asTerm)
+    val struct = Printer.TreeAnsiCode.show(value.asTerm)
     '{
       println(${ Expr(struct) })
       $value

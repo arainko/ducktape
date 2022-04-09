@@ -30,7 +30,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     val transformedFields = fieldTransformers(sourceValue, nonConfiguredFields.values.toList, sourceFields)
     val configuredFields = fieldConfigurations(config, sourceValue, builder, destinationFields)
 
-    Constructor(TypeRepr.of[B])
+    constructor(TypeRepr.of[B])
       .appliedToArgs(transformedFields ++ configuredFields)
       .asExprOf[B]
   }
@@ -44,7 +44,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
     val transformerFields = fieldTransformers(sourceValue, destinationFields, sourceFields)
 
-    Constructor(TypeRepr.of[B])
+    constructor(TypeRepr.of[B])
       .appliedToArgs(transformerFields.toList)
       .asExprOf[B]
   }
@@ -54,12 +54,15 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     destinationFields: List[Field],
     sourceFieldMapping: Map[String, Field]
   ) =
-    destinationFields
-      .map(field => field -> sourceFieldMapping.get(field.name).getOrElse(report.errorAndAbort(s"Not found for ${field.name}")))
-      .map { (dest, source) =>
-        val call = resolveTransformer(sourceValue, source, dest)
-        NamedArg(dest.name, call)
-      }
+    destinationFields.map { field =>
+      field ->
+        sourceFieldMapping
+          .get(field.name)
+          .getOrElse(report.errorAndAbort(s"No field named '${field.name}' found in ${TypeRepr.of[A].show}"))
+    }.map { (dest, source) =>
+      val call = resolveTransformer(sourceValue, source, dest)
+      NamedArg(dest.name, call)
+    }
 
   private def fieldConfigurations[A: Type, B: Type, Config <: Tuple: Type](
     config: List[MaterializedConfiguration.Product],
@@ -94,6 +97,17 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       .getOrElse(report.errorAndAbort(s"Transformer[${source.tpe.show}, ${destination.tpe.show}] not found"))
 
   private def accessField[A: Type](value: Expr[A], fieldName: String) = Select.unique(value.asTerm, fieldName)
+
+  private def constructor(tpe: TypeRepr): Term = {
+    val (repr, constructor, tpeArgs) = tpe match {
+      case AppliedType(repr, reprArguments) => (repr, repr.typeSymbol.primaryConstructor, reprArguments)
+      case notApplied                       => (tpe, tpe.typeSymbol.primaryConstructor, Nil)
+    }
+
+    New(Inferred(repr))
+      .select(constructor)
+      .appliedToTypes(tpeArgs)
+  }
 
 }
 

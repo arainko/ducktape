@@ -1,44 +1,33 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.builder.*
-import io.github.arainko.ducktape.internal.*
-
-import scala.collection.{ BuildFrom, Factory }
+import scala.collection.Factory
 import scala.deriving.Mirror
-import scala.util.NotGiven
+import scala.compiletime.*
+import io.github.arainko.ducktape.internal.macros.*
+import scala.collection.BuildFrom
 
 @FunctionalInterface
 trait Transformer[From, To] {
   def transform(from: From): To
 }
 
-object Transformer:
-
+object Transformer {
   def apply[A, B](using trans: Transformer[A, B]): Transformer[A, B] = trans
 
-  transparent inline def define[A, B] = TransformerBuilder.create[A, B]
+  sealed trait Identity[A] extends Transformer[A, A]
 
-  given [A]: Transformer[A, A] = identity
+  given [A]: Identity[A] = new:
+    def transform(from: A): A = from
 
-  inline given [A, B](using A: Mirror.ProductOf[A], B: Mirror.ProductOf[B]): Transformer[A, B] = from => {
-    val transformers = Derivation.transformersForAllFields[
-      Field.FromLabelsAndTypes[A.MirroredElemLabels, A.MirroredElemTypes],
-      Field.FromLabelsAndTypes[B.MirroredElemLabels, B.MirroredElemTypes],
-    ]
-
-    Unsafe.constructInstance(from.asInstanceOf[Product], B) { (labelsToValuesOfA, label) =>
-      transformers(label).transform(labelsToValuesOfA(label))
+  inline given derived[A, B](using From: Mirror.Of[A], To: Mirror.Of[B]): Transformer[A, B] =
+    inline erasedValue[(From.type, To.type)] match {
+      case (_: Mirror.SumOf[A], _: Mirror.SumOf[B]) =>
+        CoproductTransformerMacros.transform[A, B](_)(using summonInline, summonInline)
+      case (_: Mirror.ProductOf[A], _: Mirror.ProductOf[B]) =>
+        ProductTransformerMacros.transform[A, B](_)(using summonInline, summonInline)
+      case other =>
+        error("Derived transformers are only supported for Product -> Product and Coproduct -> Coproduct transformations")
     }
-  }
-
-  inline given [A, B](using A: Mirror.SumOf[A], B: Mirror.SumOf[B]): Transformer[A, B] = from => {
-    val ordinalsOfAToSingletonsOfB = Derivation.ordinalsForMatchingSingletons[
-      Case.FromLabelsAndTypes[A.MirroredElemLabels, A.MirroredElemTypes],
-      Case.FromLabelsAndTypes[B.MirroredElemLabels, B.MirroredElemTypes]
-    ]
-    val fromOrdinal = Ordinal(A.ordinal(from))
-    ordinalsOfAToSingletonsOfB(fromOrdinal).asInstanceOf[B]
-  }
 
   given [A, B](using Transformer[A, B]): Transformer[A, Option[B]] =
     Transformer[A, B].transform.andThen(Some.apply)(_)
@@ -53,8 +42,8 @@ object Transformer:
 
   given [A, B, CollFrom[+elem] <: Iterable[elem], CollTo[+elem] <: Iterable[elem]](using
     trans: Transformer[A, B],
-    fac: Factory[B, CollTo[B]]
-  ): Transformer[CollFrom[A], CollTo[B]] = from => from.foldLeft(fac.newBuilder)(_ += trans.transform(_)).result
+    factory: Factory[B, CollTo[B]]
+  ): Transformer[CollFrom[A], CollTo[B]] = from => from.map(trans.transform).to(factory)
 
   inline given [A <: Product, SimpleType](using
     A: Mirror.ProductOf[A]
@@ -62,7 +51,7 @@ object Transformer:
     A.MirroredElemLabels <:< NonEmptyTuple,
     A.MirroredElemTypes =:= (SimpleType *: EmptyTuple)
   ): Transformer[A, SimpleType] =
-    from => Tuple.fromProductTyped(from).head
+    from => from.productElement(0).asInstanceOf[SimpleType]
 
   inline given [A <: Product, SimpleType](using
     A: Mirror.ProductOf[A]
@@ -72,4 +61,4 @@ object Transformer:
   ): Transformer[SimpleType, A] =
     from => A.fromProduct(Tuple(from))
 
-end Transformer
+}

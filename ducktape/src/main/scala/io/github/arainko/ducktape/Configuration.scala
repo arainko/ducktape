@@ -28,9 +28,9 @@ object Configuration {
 
     type RemoveByType[Type, Config <: Tuple] <: Tuple =
       Config match {
-        case EmptyTuple                          => EmptyTuple
-        case Coproduct.Instance[Type] *: tail    => RemoveByType[Type, tail]
-        case head *: tail                        => head *: RemoveByType[Type, tail]
+        case EmptyTuple                       => EmptyTuple
+        case Coproduct.Instance[Type] *: tail => RemoveByType[Type, tail]
+        case head *: tail                     => head *: RemoveByType[Type, tail]
       }
   }
 }

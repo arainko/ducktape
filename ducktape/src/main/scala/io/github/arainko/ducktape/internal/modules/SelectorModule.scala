@@ -6,7 +6,7 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
   import quotes.reflect.*
 
   def selectedField[From: Type, FieldType](
-    lambda: Expr[From => FieldType],
+    lambda: Expr[From => FieldType]
   )(using From: DerivingMirror.ProductOf[From]): String = {
     val validFields = Field.fromMirror(From).map(_.name)
     lambda.asTerm match {
