@@ -2,6 +2,7 @@ package io.github.arainko.ducktape
 
 import scala.collection.Factory
 import scala.deriving.Mirror
+import scala.compiletime.*
 import io.github.arainko.ducktape.internal.macros.*
 
 @FunctionalInterface
@@ -17,11 +18,14 @@ object Transformer {
   given [A]: Identity[A] = new:
     def transform(from: A): A = from
 
-  inline given [A, B](using Mirror.ProductOf[A], Mirror.ProductOf[B]): Transformer[A, B] =
-    ProductTransformerMacros.transform(_)
-
-  inline given [A, B](using Mirror.SumOf[A], Mirror.SumOf[B]): Transformer[A, B] =
-    CoproductTransformerMacros.transform(_)
+  inline given derived[A, B](using From: Mirror.Of[A], To: Mirror.Of[B]): Transformer[A, B] =
+    inline erasedValue[(From.type, To.type)] match {
+      case (_: Mirror.SumOf[A], _: Mirror.SumOf[B]) =>
+        CoproductTransformerMacros.transform[A, B](_)(using summonInline, summonInline)
+      case (_: Mirror.ProductOf[A], _: Mirror.ProductOf[B]) =>
+        ProductTransformerMacros.transform[A, B](_)(using summonInline, summonInline)
+      case other => error("Derived transformers are only supported for Product -> Product and Coproduct -> Coproduct transformations")
+    }
 
   given [A, B](using Transformer[A, B]): Transformer[A, Option[B]] =
     Transformer[A, B].transform.andThen(Some.apply)(_)

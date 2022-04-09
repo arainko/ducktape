@@ -83,18 +83,15 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     }
 
   private def resolveTransformer[A: Type](sourceValue: Expr[A], source: Field, destination: Field) =
-    (source.tpe.asType, destination.tpe.asType) match {
-      case ('[source], '[dest]) =>
-        Expr
-          .summon[Transformer[source, dest]]
-          .map {
-            case '{ $transformer: Transformer.Identity[source] } => accessField(sourceValue, source.name)
-            case '{ $transformer: Transformer[source, dest] } =>
-              val field = accessField(sourceValue, source.name).asExprOf[source]
-              '{ $transformer.transform($field) }.asTerm
-          }
-          .getOrElse(report.errorAndAbort(s"Transformer[${Type.show[source]}, ${Type.show[dest]}] not found"))
-    }
+    source
+      .transformerTo(destination)
+      .map {
+        case '{ $transformer: Transformer.Identity[source] } => accessField(sourceValue, source.name)
+        case '{ $transformer: Transformer[source, dest] } =>
+          val field = accessField(sourceValue, source.name).asExprOf[source]
+          '{ $transformer.transform($field) }.asTerm
+      }
+      .getOrElse(report.errorAndAbort(s"Transformer[${source.tpe.show}, ${destination.tpe.show}] not found"))
 
   private def accessField[A: Type](value: Expr[A], fieldName: String) = Select.unique(value.asTerm, fieldName)
 

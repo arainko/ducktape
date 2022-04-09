@@ -1,13 +1,21 @@
 package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
-import scala.deriving.*
+import scala.deriving.Mirror as DerMirror
 import io.github.arainko.ducktape.Transformer
 
 private[internal] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
 
-  case class Field(name: String, tpe: TypeRepr)
+  case class Field(name: String, tpe: TypeRepr) {
+    def transformerTo(that: Field): Option[Expr[Transformer[?, ?]]] =
+      (tpe.asType, that.tpe.asType) match {
+        case ('[source], '[dest]) =>
+          Expr
+            .summon[Transformer[source, dest]]
+            .orElse(derivedTransformer[source, dest])
+      }
+  }
 
   object Field {
     def fromMirror[A](mirror: DerivingMirror.ProductOf[A]): List[Field] = {

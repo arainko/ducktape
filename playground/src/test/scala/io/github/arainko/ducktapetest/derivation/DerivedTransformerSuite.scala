@@ -57,8 +57,9 @@ class DerivedTransformerSuite extends FunSuite {
     )
 
     val actualComplex = expectedPrimitive.to[ComplexPerson]
-    val actualPrimitive = actualComplex.to[PrimitivePerson]
 
+    val actualPrimitive = actualComplex.to[PrimitivePerson]
+    
     assertEquals(expectedComplex, actualComplex)
     assertEquals(expectedPrimitive, actualPrimitive)
   }
