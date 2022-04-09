@@ -6,7 +6,7 @@
 
 ### Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.0.11+0-9f259226+20220313-1330-SNAPSHOT"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.0.12"
 ```
 
 ### Examples
@@ -41,7 +41,7 @@ val person = Person("Jerry", "Smith", 20)
 person.to[PersonButMoreFields]
 
 // error:
-// Transformer not found for field 'socialSecurityNo' with type java.lang.String
+// No field named 'socialSecurityNo' found in Person
 // person.to[PersonButMoreFields]
 //                               ^
 ```

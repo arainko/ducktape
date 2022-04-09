@@ -21,7 +21,7 @@ case class MoreFields(
 )
 
 class BuilderConfigurationSuite extends FunSuite {
-  test("a case class with less fields should be transformable to a case class with more fields if configures") {
+  test("a case class with less fields should be transformable to a case class with more fields if configured properly") {
     val lessFields = LessFields(field1 = 1, field2 = "2", field3 = Inner(3, "3", 3d), extraField = List(4), renamedFromField = 5)
 
     val actual = lessFields
@@ -59,6 +59,6 @@ class BuilderConfigurationSuite extends FunSuite {
       """
     }.map(_.message).mkString
 
-    assertEquals(errors, "Transformer not found for field 'constantField' with type java.lang.String")
+    assertEquals(errors, "No field named 'constantField' found in LessFields")
   }
 }

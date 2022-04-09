@@ -5,8 +5,8 @@ import io.github.arainko.ducktapetest.model.*
 import munit.FunSuite
 
 import scala.compiletime.testing.*
-import io.github.arainko.ducktape.internal.BuilderMacros
-import io.github.arainko.ducktape.builder.Builder
+import io.github.arainko.ducktape.Builder
+import io.github.arainko.ducktape.internal.macros.*
 import scala.deriving.Mirror
 
 object DerivedTransformerSuite:
@@ -58,6 +58,7 @@ class DerivedTransformerSuite extends FunSuite {
     )
 
     val actualComplex = expectedPrimitive.to[ComplexPerson]
+
     val actualPrimitive = actualComplex.to[PrimitivePerson]
 
     assertEquals(expectedComplex, actualComplex)
@@ -115,7 +116,7 @@ class DerivedTransformerSuite extends FunSuite {
       """
     }.map(_.message).mkString
 
-    assertEquals(errors, "Transformer not found for field 'field4' with type scala.Int")
+    assertEquals(errors, "No field named 'field4' found in LessFields")
   }
 
   test("derivation succeeds when going from a sum with less cases to a sum with more cases") {
@@ -131,7 +132,7 @@ class DerivedTransformerSuite extends FunSuite {
 
     assertEquals(
       errors,
-      "Singleton Transformer not found for case: io.github.arainko.ducktapetest.derivation.DerivedTransformerSuite.MoreCases.Case4.type"
+      "No child named 'Case4' in LessCases"
     )
   }
 }
