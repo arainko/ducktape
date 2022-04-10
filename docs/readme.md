@@ -26,9 +26,9 @@ val transformed = personWithMoreFields.to[Person]
 ```
 
 Automatic case class to case class transformations are supported given that
-the type you are transforming from has all the fields of a case class you are transforming to and the types corresponding to these fields have an instance of `Transformer` in scope.
+the source type has all the fields of a the destination case class and the types corresponding to these fields have an instance of `Transformer` in scope.
 
-If these are not met a compiletime error is issued:
+If these are not met, a compiletime error is issued:
 ```scala mdoc:fail
 val person = Person("Jerry", "Smith", 20)
 
@@ -51,6 +51,111 @@ val transformed = Size.Small.to[ExtraSize]
 // transformed: ExtraSize = Small
 ```
 
-Automatic enum to enum transformations are supported given that the enum we transform contains a subset of cases
+We can't go to a coproduct that doesn't contain all of our cases (name wise):
+
+```scala
+val size = ExtraSize.Small.to[Size]
+// error:
+// No child named 'ExtraSmall' in Size
+```
+
+Automatic enum to enum transformations are supported given that the destination enum contains a subset of cases
 we transform into, otherwise a compiletime errors is issued.
 
+#### 3. *Case class to case class with config*
+
+As we established earlier, going from `Person` to a `PersonButMoreFields` cannot happen automatically as the former
+doesn't have the `socialSecurityNo` field, but it has all the other fields so it's almost there, we just have to nudge it a lil' bit.
+
+We can do so with field configurations in 3 ways:
+  1. Set a constant to a specific field
+  2. Compute the value for a specific field by applying a function
+  3. Use a different field in its place - 'rename' it
+
+```scala mdoc:reset
+import io.github.arainko.ducktape.*
+
+final case class Person(firstName: String, lastName: String, age: Int)
+final case class PersonButMoreFields(firstName: String, lastName: String, age: Int, socialSecurityNo: String)
+
+val person = Person("Jerry", "Smith", 20)
+
+// 1. Set a constant to a specific field
+val withConstant = 
+  person
+    .into[PersonButMoreFields]
+    .withFieldConst(_.socialSecurityNo, "CONSTANT-SSN")
+    .transform
+
+// 2. Compute the value for a specific field by applying a function
+val withComputed = 
+  person
+    .into[PersonButMoreFields]
+    .withFieldComputed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN")
+    .transform
+
+// 3. Use a different field in its place - 'rename' it
+val withRename = 
+  person
+    .into[PersonButMoreFields]
+    .withFieldRenamed(_.socialSecurityNo, _.firstName)
+    .transform
+```
+
+In case we repeatedly apply configurations to the same field, the latest one is chosen:
+
+```scala mdoc
+
+val withRepeatedConfig =
+  person
+    .into[PersonButMoreFields]
+    .withFieldRenamed(_.socialSecurityNo, _.firstName)
+    .withFieldComputed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN")
+    .withFieldConst(_.socialSecurityNo, "CONSTANT-SSN")
+    .transform
+
+```
+
+Of course we can use this to override the automatic derivation per field:
+
+```scala mdoc
+
+val withEverythingOverriden = 
+  person
+    .into[PersonButMoreFields]
+    .withFieldConst(_.socialSecurityNo, "CONSTANT-SSN")
+    .withFieldConst(_.age, 100)
+    .withFieldConst(_.firstName, "OVERRIDEN-FIRST-NAME")
+    .withFieldConst(_.lastName, "OVERRIDEN-LAST-NAME")
+    .transform
+
+```
+
+#### 4. Enum to enum with config
+
+Enum transformations, just like case class transformations, can be configured - but only in one way, by applying a function to a specific subtype:
+
+```scala
+import io.github.arainko.ducktape.*
+
+enum Size:
+  case Small, Medium, Large
+
+enum ExtraSize:
+  case ExtraSmall, Small, Medium, Large, ExtraLarge
+
+val transformed = Size.Small.to[ExtraSize]
+
+// Apply a function for the specified subtype
+val size = 
+  ExtraSize.ExtraSmall
+    .into[Size]
+    .withCaseInstance[ExtraSize.ExtraSmall.type](_ => Size.Small)
+    .withCaseInstance[ExtraSize.ExtraLarge.type](_ => Size.Large)
+    .transform
+// size: ExtraSize = Small
+```
+
+### A look at the generated code
+
+#### -- TODO --

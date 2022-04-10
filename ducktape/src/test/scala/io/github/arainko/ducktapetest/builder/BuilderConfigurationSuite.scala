@@ -11,6 +11,12 @@ case class InnerTransformed(field3: Double, field2: String, field1: Int)
 
 case class LessFields(field1: Int, field2: String, field3: Inner, extraField: List[Int], renamedFromField: Int)
 
+enum Size:
+  case Small, Medium, Large
+
+enum ExtraSize:
+  case ExtraSmall, Small, Medium, Large, ExtraLarge
+
 case class MoreFields(
   field3: InnerTransformed,
   field1: Int,
@@ -41,6 +47,17 @@ class BuilderConfigurationSuite extends FunSuite {
     )
 
     assertEquals(actual, expected)
+  }
+
+  test("an enum with more children can be transformed to a one with less children if configured properly") {
+    val size =
+      ExtraSize.ExtraSmall
+        .into[Size]
+        .withCaseInstance[ExtraSize.ExtraSmall.type](_ => Size.Small)
+        .withCaseInstance[ExtraSize.ExtraLarge.type](_ => Size.Large)
+        .transform
+
+    assertEquals(size, Size.Small)
   }
 
   test(
