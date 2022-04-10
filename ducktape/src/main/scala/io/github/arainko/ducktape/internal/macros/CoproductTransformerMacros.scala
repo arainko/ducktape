@@ -42,7 +42,7 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
 
     val ValReference(ordinalRef, ordinalStatement) = '{ val ordinal = $A.ordinal($sourceValue) }
     val ordinal = ordinalRef.asExprOf[Int]
-    val nonConfiguredIfBranches = singletonIfBranches[A, B](sourceValue, ordinal, sourceCases, destCases)
+    val nonConfiguredIfBranches = singletonIfBranches[A, B](sourceValue, ordinal, nonConfiguredCases, destCases)
 
     val configuredIfBranches =
       configuredCases.map { source =>

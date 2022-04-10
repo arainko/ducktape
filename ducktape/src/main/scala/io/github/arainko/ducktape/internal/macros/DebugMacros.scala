@@ -18,7 +18,7 @@ object DebugMacros {
 
   def codeMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*
-    val struct = Printer.TreeAnsiCode.show(value.asTerm)
+    val struct = Printer.TreeShortCode.show(value.asTerm)
     '{
       println(${ Expr(struct) })
       $value
