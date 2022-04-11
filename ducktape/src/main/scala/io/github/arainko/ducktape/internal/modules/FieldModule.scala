@@ -34,6 +34,8 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
         .zip(materializedMirror.mirroredElemTypes)
         .map(Field.apply)
     }
+
+    def fromValDef(valDef: ValDef): Field = Field(valDef.name, valDef.tpt.tpe)
   }
 
   case class Case(name: String, tpe: TypeRepr, ordinal: Int) {

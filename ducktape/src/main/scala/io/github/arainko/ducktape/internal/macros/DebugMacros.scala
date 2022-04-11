@@ -32,6 +32,8 @@ object DebugMacros {
   def methodParamsMacro(function: Expr[Any])(using Quotes) = {
     import quotes.reflect.*
 
+    println(function.asTerm.show(using Printer.TreeStructure))
+
     function.asTerm match {
       case b @ Inlined(_, _, l @ Lambda(vals, body)) =>
         vals.map(_.tpt.tpe)

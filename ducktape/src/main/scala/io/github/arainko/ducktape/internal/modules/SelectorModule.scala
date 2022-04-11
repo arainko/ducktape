@@ -22,7 +22,7 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
   }
 
   object FieldSelector:
-    private object SelectorLambda:
+    object SelectorLambda:
       def unapply(arg: Term): Option[(List[ValDef], Term)] =
         arg match {
           case Inlined(_, _, Lambda(vals, term)) => Some((vals, term))

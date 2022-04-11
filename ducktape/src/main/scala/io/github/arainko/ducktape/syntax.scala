@@ -1,17 +1,21 @@
 package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.Builder.Applied
-import io.github.arainko.ducktape.internal.macros.DebugMacros
+import io.github.arainko.ducktape.internal.macros.*
 import scala.runtime.FunctionXXL
 import javax.swing.DebugGraphics
+import scala.deriving.Mirror
 
 extension [From](value: From) {
   def into[To]: Applied[From, To, EmptyTuple] = Builder.applied[From, To](value)
 
   def to[To](using Transformer[From, To]): To = Transformer[From, To].transform(value)
+
+  transparent inline def via[F](inline f: F)(using F: FunctionMirror[F], A: Mirror.ProductOf[From]) =
+    ProductTransformerMacros.via(value, f)
 }
 
-final case class Costam(int: Int, value: String)
+final case class Costam(int: Int)
 
 trait FunctionMirror[F] {
   type Args
@@ -19,31 +23,24 @@ trait FunctionMirror[F] {
 }
 
 object FunctionMirror {
-  transparent inline def values[F] = DebugMacros.functionMirror[F]
-}
-
-
-@main def run = {
-
-  DebugMacros.structure {
-    new Function1[Int, Int] {
-      def apply(int: Int): Int = int
-    }
+  type Aux[F, A, R] = FunctionMirror[F] {
+    type Args = A
+    type Return = R
   }
 
-  // DebugMacros.code {
+  transparent inline given [F]: FunctionMirror[F] = DebugMacros.functionMirror[F]
+}
 
-  // }
+@main def run = {
+  import io.github.arainko.ducktape.*
 
+  val costam = [A] => (int: A) => int.toString
 
+  DebugMacros.code {
+    val asd = Costam(1).via(costam[Int])
+  }
 
-  // summon[cos.sReturn =:= Int]
-  // summon[cos.Args =:= (Int, String)]
+  // val cos = DebugMacros.methodParams(Costam.apply)
 
-  // val res: Costam = cos.tupled((1, "asd"))
-
-
-  // println(res)
-  // val res = DebugMacros.methodParams(Costam.apply)
-  // println(res)
+  // val cos = func(Costam.apply)
 }
