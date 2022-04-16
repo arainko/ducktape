@@ -11,36 +11,8 @@ extension [From](value: From) {
 
   def to[To](using Transformer[From, To]): To = Transformer[From, To].transform(value)
 
-  transparent inline def via[F](inline f: F)(using F: FunctionMirror[F], A: Mirror.ProductOf[From]) =
-    ProductTransformerMacros.via(value, f)
-}
-
-final case class Costam(int: Int)
-
-trait FunctionMirror[F] {
-  type Args
-  type Return
-}
-
-object FunctionMirror {
-  type Aux[F, A, R] = FunctionMirror[F] {
-    type Args = A
-    type Return = R
-  }
-
-  transparent inline given [F]: FunctionMirror[F] = DebugMacros.functionMirror[F]
-}
-
-@main def run = {
-  import io.github.arainko.ducktape.*
-
-  val costam = [A] => (int: A) => int.toString
-
-  DebugMacros.code {
-    val asd = Costam(1).via(costam[Int])
-  }
-
-  // val cos = DebugMacros.methodParams(Costam.apply)
-
-  // val cos = func(Costam.apply)
+  //TODO: Figure out stale symbol compiler crash when 
+  // using F.Return as return type instead of binding a variable to the return type
+  inline def via[Func, To](inline function: Func)(using Func: FunctionMirror.Aux[Func, ?, To], A: Mirror.ProductOf[From]): To =
+    ProductTransformerMacros.via(value, function)
 }

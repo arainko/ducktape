@@ -44,28 +44,5 @@ object DebugMacros {
     }
   }
 
-  transparent inline def functionMirror[A] = ${ functionMirrorMacro[A] }
-
-  def functionMirrorMacro[A: Type](using Quotes) = {
-    import quotes.reflect.*
-    val tpe = TypeRepr.of[A]
-    if (!tpe.isFunctionType) report.errorAndAbort("NOT A FUNCTION!")
-    val cons = TypeRepr.of[*:]
-    val AppliedType(_, tpeArgs) = tpe
-
-    val returnTpe = tpeArgs.last
-    val args = tpeArgs.init
-
-    val argsTuple = args.foldRight(TypeRepr.of[EmptyTuple])((curr, acc) => cons.appliedTo(curr :: acc :: Nil))
-
-    (returnTpe.asType -> argsTuple.asType) match {
-      case ('[ret], '[args]) =>
-        '{
-          new FunctionMirror[A] {
-            type Return = ret
-            type Args = args
-          }
-        }
-    }
-  }
+  
 }

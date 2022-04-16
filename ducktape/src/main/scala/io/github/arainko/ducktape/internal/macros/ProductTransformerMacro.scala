@@ -15,16 +15,19 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
-  def via[A: Type, Func](sourceValue: Expr[A], function: Expr[Func], A: DerivingMirror.ProductOf[A]) = {
-    function.asTerm match {
-      case func @ FieldSelector.SelectorLambda(vals, body) =>
-        val lambdaFields = vals.map(Field.fromValDef)
-        val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
-        val calls = fieldTransformers(sourceValue, lambdaFields, sourceFields).map(_.value)
-        
-        Select.unique(func, "apply").appliedToArgs(calls).asExpr
-      case other => report.errorAndAbort(other.show(using Printer.TreeStructure))
-    }
+  def via[A: Type, B: Type, Func](
+    sourceValue: Expr[A],
+    function: Expr[Func],
+    A: DerivingMirror.ProductOf[A],
+    Func: Expr[FunctionMirror.Aux[Func, ?, B]]
+  ) = function.asTerm match {
+    case func @ FieldSelector.SelectorLambda(vals, body) =>
+      val lambdaFields = vals.map(Field.fromValDef)
+      val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
+      val calls = fieldTransformers(sourceValue, lambdaFields, sourceFields).map(_.value)
+
+      Select.unique(func, "apply").appliedToArgs(calls).asExprOf[B]
+    case other => report.errorAndAbort(other.show(using Printer.TreeStructure))
   }
 
   def transformConfigured[A: Type, B: Type, Config <: Tuple: Type](
@@ -148,9 +151,16 @@ private[ducktape] object ProductTransformerMacros {
     B: Expr[DerivingMirror.ProductOf[B]]
   )(using Quotes): Expr[B] = ProductTransformerMacros().transformConfigured(source, builder, A, B)
 
-  transparent inline def via[A, Func](source: A, inline function: Func)(using A: DerivingMirror.ProductOf[A]) =
-    ${ viaMacro('source, 'function, 'A) }
+  inline def via[A, B, Func](source: A, inline function: Func)(using
+    A: DerivingMirror.ProductOf[A],
+    Func: FunctionMirror.Aux[Func, ?, B]
+  ): B = ${ viaMacro('source, 'function, 'A, 'Func) }
 
-  def viaMacro[A: Type, Func](source: Expr[A], func: Expr[Func], A: Expr[DerivingMirror.ProductOf[A]])(using Quotes) =
-    ProductTransformerMacros().via[A, Func](source, func, A)
+  def viaMacro[A: Type, B: Type, Func](
+    source: Expr[A],
+    func: Expr[Func],
+    A: Expr[DerivingMirror.ProductOf[A]],
+    Func: Expr[FunctionMirror.Aux[Func, ?, B]]
+  )(using Quotes) =
+    ProductTransformerMacros().via[A, B, Func](source, func, A, Func)
 }
