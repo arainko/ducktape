@@ -11,8 +11,14 @@ extension [From](value: From) {
 
   def to[To](using Transformer[From, To]): To = Transformer[From, To].transform(value)
 
-  //TODO: Figure out stale symbol compiler crash when 
-  // using F.Return as return type instead of binding a variable to the return type
-  inline def via[Func, To](inline function: Func)(using Func: FunctionMirror.Aux[Func, ?, To], A: Mirror.ProductOf[From]): To =
-    ProductTransformerMacros.via(value, function)
+  /*
+    TODO: This should NOT be `transparent` by using a path dependent type of FunctionMirror#Return
+    but the compiler (sometimes) crashes with a `StaleSymbol` error when doing this.
+    A workaround to this is binding another type variable `B` to FunctionMirror.Aux[Func, ?, B]
+    but that requires us to introduce another type variable and can mislead users (despite it being inferred)
+   */
+  transparent inline def via[Func](inline function: Func)(using
+    Func: FunctionMirror[Func],
+    A: Mirror.ProductOf[From]
+  ) = ProductTransformerMacros.via(value, function)
 }
