@@ -1,28 +1,51 @@
 package io.github.arainko.ducktape
 
-import scala.language.dynamics
 import scala.util.NotGiven
 import scala.annotation.implicitNotFound
+import scala.language.dynamics
+import io.github.arainko.ducktape.ViaBuilder.NamedArg
+import io.github.arainko.ducktape.internal.macros.DebugMacros
 
-final case class ViaBuilder[From, To, NamedArgs <: Tuple, Config <: Tuple](
-  val constants: Map[String, Any],
+sealed trait ViaBuilder[
+  F[_, _, _ <: Tuple, _ <: Tuple],
+  From,
+  To,
+  NamedArgs <: Tuple,
+  Config <: Tuple
+] {
+  import ViaBuilder.*
+
+  val constants: Map[String, Any]
   val computeds: Map[String, From => Any]
-) {
 
-  def withFieldConst[FieldType, ConstType](
-    selector: ViaBuilder.Selector[NamedArgs] => FieldType,
+  transparent inline def withArgConst[ArgType, ConstType](
+    inline selector: FunctionArgs[NamedArgs] => ArgType,
     const: ConstType
-  )(using FieldType <:< ConstType) = ???
+  )(using ArgType <:< ConstType) = ???
+
+  transparent inline def withArgComputed[ArgType, ComputedType](
+    inline selector: FunctionArgs[NamedArgs] => ArgType,
+    computed: From => ComputedType
+  )(using ComputedType <:< ArgType) = ???
+
+  transparent inline def withArgRenamed[ArgType, FieldType](
+    inline destSelector: FunctionArgs[NamedArgs] => ArgType,
+    inline sourceSelector: From => FieldType
+  )(using FieldType <:< ArgType) = ???
+
+  protected def construct(
+    constants: Map[String, Any] = constants,
+    computeds: Map[String, From => Any] = computeds
+  ): F[From, To, NamedArgs, Config]
+
+  protected def instance: F[From, To, NamedArgs, Config]
+
 }
 
 object ViaBuilder {
-  import scala.compiletime.ops.string.*
+  infix type =!:=[A, B] = NotGiven[A =:= B]
 
   sealed trait NamedArg[Name <: String, Type]
-
-  sealed trait FindError[Msg <: String]
-
-  type Err[Msg]
 
   object NamedArg {
     type FindByName[Name <: String, NamedArgs <: Tuple] =
@@ -33,21 +56,20 @@ object ViaBuilder {
       }
   }
 
-  sealed trait Selector[NamedArgs <: Tuple] extends Dynamic {
+  sealed trait FunctionArgs[NamedArgs <: Tuple] extends Dynamic {
+    import NamedArg.*
+
     def selectDynamic(value: String)(using
-      @implicitNotFound("No such field found in the function")
-      ev: NotGiven[NamedArg.FindByName[value.type, NamedArgs] =:= Nothing]
-    ): NamedArg.FindByName[value.type, NamedArgs]
+      @implicitNotFound("No argument with this name found")
+      ev: FindByName[value.type, NamedArgs] =!:= Nothing
+    ): FindByName[value.type, NamedArgs]
   }
 
-  val builder =
-    ViaBuilder[
-      String,
-      Int,
-      NamedArg["int", Int] *: NamedArg["string", String] *: EmptyTuple,
-      EmptyTuple
-    ](Map.empty, Map.empty)
+}
 
-  builder.withFieldConst(_.int, 1)
+@main def run = {
 
+  DebugMacros.structure {
+    val cos: ViaBuilder.FunctionArgs[NamedArg["int", Int] *: NamedArg["string", String] *: EmptyTuple] => Int = _.int
+  }
 }
