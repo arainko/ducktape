@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
+import io.github.arainko.ducktape.ViaBuilder.FunctionArgs
 
 private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModule =>
   import quotes.reflect.*
@@ -14,6 +15,14 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
       case _                                                           => report.errorAndAbort("Not a field selector!")
     }
   }
+
+  def selectedArg[NamedArgs <: Tuple: Type, ArgType](
+    selector: Expr[FunctionArgs[NamedArgs] => ArgType]
+  ): String = selector match {
+      case '{ (s: FunctionArgs[NamedArgs]) => s.selectDynamic($name) } => name.valueOrAbort
+      case other => report.errorAndAbort("Not an argument selector! " + other.show)
+    }
+  
 
   def caseOrdinal[From: Type, Case <: From: Type](using From: DerivingMirror.SumOf[From]): Int = {
     val caseRepr = TypeRepr.of[Case]

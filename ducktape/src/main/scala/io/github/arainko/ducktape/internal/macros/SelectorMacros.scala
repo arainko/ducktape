@@ -3,6 +3,7 @@ package io.github.arainko.ducktape.internal.macros
 import scala.quoted.*
 import io.github.arainko.ducktape.internal.modules.*
 import scala.deriving.Mirror as DerivingMirror
+import io.github.arainko.ducktape.ViaBuilder.FunctionArgs
 
 private[ducktape] class SelectorMacros(using val quotes: Quotes) extends Module, MirrorModule, FieldModule, SelectorModule
 
@@ -22,4 +23,10 @@ private[ducktape] object SelectorMacros {
 
   def caseOrdinalMacro[From: Type, Case <: From: Type](using From: Expr[DerivingMirror.SumOf[From]])(using Quotes) =
     Expr(SelectorMacros().caseOrdinal[From, Case])
+
+  inline def selectedArg[NamedArgs <: Tuple, ArgType](inline selector: FunctionArgs[NamedArgs] => ArgType): String =
+    ${ selectedArgMacro[NamedArgs, ArgType]('selector) }
+
+  def selectedArgMacro[NamedArgs <: Tuple: Type, ArgType](selector: Expr[FunctionArgs[NamedArgs] => ArgType])(using Quotes) =
+    Expr(SelectorMacros().selectedArg(selector))
 }
