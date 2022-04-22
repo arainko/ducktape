@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.function
 
 import io.github.arainko.ducktape.internal.macros.*
 
@@ -13,5 +13,5 @@ object FunctionMirror {
     type Return = R
   }
 
-  transparent inline given [F]: FunctionMirror[F] = FunctionMirrorMacros.create[F]
+  transparent inline given [F]: FunctionMirror[F] = FunctionMacros.createMirror[F]
 }

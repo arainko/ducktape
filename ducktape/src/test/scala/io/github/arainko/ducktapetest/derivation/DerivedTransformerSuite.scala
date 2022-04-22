@@ -1,6 +1,5 @@
 package io.github.arainko.ducktapetest.derivation
 
-import io.github.arainko.ducktape.FunctionMirror
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktapetest.model.*
 import munit.FunSuite

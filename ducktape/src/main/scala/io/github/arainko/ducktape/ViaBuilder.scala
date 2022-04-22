@@ -3,7 +3,7 @@ package io.github.arainko.ducktape
 import scala.util.NotGiven
 import scala.annotation.implicitNotFound
 import scala.language.dynamics
-import io.github.arainko.ducktape.ViaBuilder.NamedArg
+import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.macros.*
 import io.github.arainko.ducktape.Configuration.Product.*
 import scala.deriving.Mirror as DerivingMirror
@@ -15,13 +15,11 @@ sealed trait ViaBuilder[
   NamedArgs <: Tuple,
   Config <: Tuple
 ] { self =>
-  import ViaBuilder.*
-
   val constants: Map[String, Any]
   val computeds: Map[String, From => Any]
 
   transparent inline def withArgConst[ArgType, ConstType](
-    inline selector: FunctionArgs[NamedArgs] => ArgType,
+    inline selector: FunctionArguments[NamedArgs] => ArgType,
     const: ConstType
   )(using ArgType <:< ConstType) = {
     val selectedArg = SelectorMacros.selectedArg(selector)
@@ -38,7 +36,7 @@ sealed trait ViaBuilder[
   }
 
   transparent inline def withArgComputed[ArgType, ComputedType](
-    inline selector: FunctionArgs[NamedArgs] => ArgType,
+    inline selector: FunctionArguments[NamedArgs] => ArgType,
     computed: From => ComputedType
   )(using ComputedType <:< ArgType) = {
     val selectedArg = SelectorMacros.selectedArg(selector)
@@ -55,7 +53,7 @@ sealed trait ViaBuilder[
   }
 
   transparent inline def withArgRenamed[ArgType, FieldType](
-    inline destSelector: FunctionArgs[NamedArgs] => ArgType,
+    inline destSelector: FunctionArguments[NamedArgs] => ArgType,
     inline sourceSelector: From => FieldType
   )(using FieldType <:< ArgType, DerivingMirror.ProductOf[From]) =
     BuilderMacros.withConfigEntryForArgAndField[
@@ -77,41 +75,57 @@ sealed trait ViaBuilder[
 }
 
 object ViaBuilder {
-  infix type =!:=[A, B] = NotGiven[A =:= B]
-
-  sealed trait NamedArg[Name <: String, Type]
-
-  object NamedArg {
-    type FindByName[Name <: String, NamedArgs <: Tuple] =
-      NamedArgs match {
-        case EmptyTuple               => Nothing
-        case NamedArg[Name, tpe] *: _ => tpe
-        case head *: tail             => FindByName[Name, tail]
-      }
+  transparent inline def applied[From, Func](
+    sourceValue: From,
+    inline function: Func
+  )(using Func: FunctionMirror[Func]) = {
+    val initial = Applied[From, Func.Return, Nothing, EmptyTuple](sourceValue, Map.empty, Map.empty)
+    FunctionMacros.namedArguments[
+      Func,
+      [NamedArgs <: Tuple] =>> Applied[From, Func.Return, NamedArgs, EmptyTuple]
+    ](function, initial)
   }
 
-  sealed trait FunctionArgs[NamedArgs <: Tuple] extends Dynamic {
-    import NamedArg.*
+  final case class Applied[From, To, NamedArgs <: Tuple, Config <: Tuple] private[ViaBuilder] (
+    private val sourceValue: From,
+    constants: Map[String, Any],
+    computeds: Map[String, From => Any]
+  ) extends ViaBuilder[Applied, From, To, NamedArgs, Config] { self =>
 
-    def selectDynamic(value: String)(using
-      @implicitNotFound("No argument with this name found")
-      ev: FindByName[value.type, NamedArgs] =!:= Nothing
-    ): FindByName[value.type, NamedArgs]
+    override protected def construct(
+      constants: Map[String, Any] = constants,
+      computeds: Map[String, From => Any] = computeds
+    ): Applied[From, To, NamedArgs, Config] =
+      self.copy(constants = constants, computeds = computeds)
+
+    override protected def instance: Applied[From, To, NamedArgs, Config] = self
   }
-
 }
 
 @main def run = {
+  final case class Costam(int: Int, str: String)
 
-  inline def cos: ViaBuilder.FunctionArgs[NamedArg["int", Int] *: NamedArg["string", String] *: EmptyTuple] => Int = _.int
+  val from = Costam(1, "")
+  def func(str: String, int: Int, int2: Int, int3: Int) = s"$str $int"
 
-  val costam =
-    SelectorMacros
-      .selectedArg[
-        NamedArg["int", Int] *: NamedArg["string", String] *: EmptyTuple,
-        Int
-      ](_.int)
+  // val cos = FunctionMacros.namedArguments[
+  //   (String, Int) => String,
+  //   [NamedArgs <: Tuple] =>> NamedArgs
+  // ](func, ???)
 
-  println(costam)
+  val cos: FunctionArguments[NamedArgument["int", Int] *: EmptyTuple] = ???
 
+
+  DebugMacros.structure {
+    cos.int
+  }
+
+  val c = cos.int
+
+  val builder = ViaBuilder
+    .applied(from, func)
+    // .withArgRenamed(_.int, _.int)
+    
+
+  println(builder)
 }

@@ -4,6 +4,7 @@ import scala.quoted.*
 import io.github.arainko.ducktape.Configuration.*
 import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.function.*
 import scala.deriving.Mirror as DerivingMirror
 
 private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
@@ -15,17 +16,18 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
-  def via[A: Type, Func](
+  def via[A: Type, B: Type, Func](
     sourceValue: Expr[A],
     function: Expr[Func],
+    Func: Expr[FunctionMirror.Aux[Func, ?, B]],
     A: DerivingMirror.ProductOf[A],
-  ) = function.asTerm match {
+  ): Expr[B] = function.asTerm match {
     case func @ FieldSelector.SelectorLambda(vals, body) =>
       val lambdaFields = vals.map(Field.fromValDef)
       val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
       val calls = fieldTransformers(sourceValue, lambdaFields, sourceFields).map(_.value)
 
-      Select.unique(func, "apply").appliedToArgs(calls).asExpr
+      Select.unique(func, "apply").appliedToArgs(calls).asExprOf[B]
     case other => report.errorAndAbort(other.show)
   }
 
@@ -150,15 +152,16 @@ private[ducktape] object ProductTransformerMacros {
     B: Expr[DerivingMirror.ProductOf[B]]
   )(using Quotes): Expr[B] = ProductTransformerMacros().transformConfigured(source, builder, A, B)
 
-  transparent inline def via[A, B, Func](source: A, inline function: Func)(using
+  inline def via[A, B, Func](source: A, inline function: Func)(using
     A: DerivingMirror.ProductOf[A],
     Func: FunctionMirror.Aux[Func, ?, B]
-  ) = ${ viaMacro('source, 'function, 'A) }
+  ): B = ${ viaMacro('source, 'function, 'Func, 'A) }
 
   def viaMacro[A: Type, B: Type, Func](
     source: Expr[A],
     func: Expr[Func],
+    Func: Expr[FunctionMirror.Aux[Func, ?, B]],
     A: Expr[DerivingMirror.ProductOf[A]]
   )(using Quotes) =
-    ProductTransformerMacros().via[A, Func](source, func, A)
+    ProductTransformerMacros().via(source, func, Func, A)
 }

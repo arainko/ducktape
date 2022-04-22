@@ -5,7 +5,7 @@ import scala.deriving.Mirror as DerivingMirror
 import scala.quoted.*
 import io.github.arainko.ducktape.Configuration.*
 import io.github.arainko.ducktape.internal.modules.*
-import io.github.arainko.ducktape.ViaBuilder.FunctionArgs
+import io.github.arainko.ducktape.function.*
 
 private[ducktape] class BuilderMacros[
   F[_, _, _ <: Tuple]: Type,
@@ -45,14 +45,14 @@ private[ducktape] class BuilderMacros[
     '{ $builder.asInstanceOf[F[From, To, Coproduct.Instance[Instance] *: Coproduct.RemoveByType[Instance, Config]]] }
 
   def withConfigEntryForArg[NamedArgs <: Tuple: Type, ConfigEntry[_ <: String]: Type](
-    argSelector: Expr[FunctionArgs[NamedArgs] => ?]
+    argSelector: Expr[FunctionArguments[NamedArgs] => ?]
   ) = selectedArg(argSelector).asConstantType match {
     case '[IsString[selectedArg]] =>
       '{ $builder.asInstanceOf[F[From, To, ConfigEntry[selectedArg] *: Product.RemoveByLabel[selectedArg, Config]]] }
   }
 
   def withConfigEntryForArgAndField[NamedArgs <: Tuple: Type, ConfigEntry[_ <: String, _ <: String]: Type](
-    argSelector: Expr[FunctionArgs[NamedArgs] => ?],
+    argSelector: Expr[FunctionArguments[NamedArgs] => ?],
     lambdaSelector: Expr[From => ?]
   )(using DerivingMirror.ProductOf[From]) = {
     val arg = selectedArg(argSelector).asConstantType
@@ -151,7 +151,7 @@ private[ducktape] object BuilderMacros {
     ConfigEntry[_ <: String]
   ](
     builder: F[From, To, Config],
-    inline argSelector: FunctionArgs[NamedArgs] => ?
+    inline argSelector: FunctionArguments[NamedArgs] => ?
   ) =
     ${ withConfigEntryForArgMacro[F, From, To, Config, NamedArgs, ConfigEntry]('builder, 'argSelector) }
 
@@ -164,7 +164,7 @@ private[ducktape] object BuilderMacros {
     ConfigEntry[_ <: String]: Type
   ](
     builder: Expr[F[From, To, Config]],
-    argSelector: Expr[FunctionArgs[NamedArgs] => ?]
+    argSelector: Expr[FunctionArguments[NamedArgs] => ?]
   )(using Quotes) =
     BuilderMacros(builder).withConfigEntryForArg[NamedArgs, ConfigEntry](argSelector)
 
@@ -177,7 +177,7 @@ private[ducktape] object BuilderMacros {
     ConfigEntry[_ <: String, _ <: String]
   ](
     builder: F[From, To, Config],
-    inline argSelector: FunctionArgs[NamedArgs] => ?,
+    inline argSelector: FunctionArguments[NamedArgs] => ?,
     inline fieldSelector: From => ?
   )(using From: DerivingMirror.ProductOf[From]) =
     ${
@@ -197,7 +197,7 @@ private[ducktape] object BuilderMacros {
     ConfigEntry[_ <: String, _ <: String]: Type
   ](
     builder: Expr[F[From, To, Config]],
-    argSelector: Expr[FunctionArgs[NamedArgs] => ?],
+    argSelector: Expr[FunctionArguments[NamedArgs] => ?],
     fieldSelector: Expr[From => ?]
   )(using Expr[DerivingMirror.ProductOf[From]])(using Quotes) =
     BuilderMacros(builder).withConfigEntryForArgAndField[NamedArgs, ConfigEntry](argSelector, fieldSelector)
