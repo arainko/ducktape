@@ -31,7 +31,7 @@ class FunctionMacros(using val quotes: Quotes) extends Module, SelectorModule, F
 
   def namedArguments[Func: Type, F[_ <: Tuple]: Type](function: Expr[Func], initial: Expr[F[Nothing]]) =
     function.asTerm match {
-      case func @ FieldSelector.SelectorLambda(vals, body) =>
+      case func @ SelectorLambda(vals, body) =>
         val namedArg = TypeRepr.of[NamedArgument]
         val args = vals.map(valdef => namedArg.appliedTo(ConstantType(StringConstant(valdef.name)) :: valdef.tpt.tpe :: Nil))
         tupleify(args).asType match {

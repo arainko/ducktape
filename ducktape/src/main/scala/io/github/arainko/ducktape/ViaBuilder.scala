@@ -7,6 +7,7 @@ import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.macros.*
 import io.github.arainko.ducktape.Configuration.Product.*
 import scala.deriving.Mirror as DerivingMirror
+import io.github.arainko.ducktape.ViaBuilder.Applied
 
 sealed trait ViaBuilder[
   F[_, _, _ <: Tuple, _ <: Tuple],
@@ -113,19 +114,16 @@ object ViaBuilder {
   //   [NamedArgs <: Tuple] =>> NamedArgs
   // ](func, ???)
 
-  val cos: FunctionArguments[NamedArgument["int", Int] *: EmptyTuple] = ???
-
-
-  DebugMacros.structure {
-    cos.int
-  }
-
-  val c = cos.int
-
-  val builder = ViaBuilder
-    .applied(from, func)
-    // .withArgRenamed(_.int, _.int)
-    
+  val builder: Applied[
+    Costam,
+    String,
+    (NamedArgument["str", String], NamedArgument["int", Int], NamedArgument["int2", Int], NamedArgument["int3", Int]),
+    EmptyTuple
+  ] =
+    ViaBuilder
+      .applied(from, func)
+      .withArgConst(_.int, 1)
+      .withArgComputed(_.int, _.int)
 
   println(builder)
 }

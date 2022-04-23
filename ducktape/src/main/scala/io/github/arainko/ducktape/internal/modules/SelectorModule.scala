@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 import io.github.arainko.ducktape.function.*
+import scala.util.NotGiven
 
 private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModule =>
   import quotes.reflect.*
@@ -18,11 +19,15 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
 
   def selectedArg[NamedArgs <: Tuple: Type, ArgType](
     selector: Expr[FunctionArguments[NamedArgs] => ArgType]
-  ): String =
-    selector match {
-      case '{ (s: FunctionArguments[NamedArgs]) => s.selectDynamic($name)(using $ev) } => name.valueOrAbort
-      case other => report.errorAndAbort("Not an argument selector! \n" + other.show)
+  ): String = {
+    val arguments = argNames[NamedArgs]
+    selector.asTerm match {
+      case ArgSelector(argumentName) if arguments.contains(argumentName) => argumentName
+      case other                     => 
+        val suggestions = arguments.map(arg => s"'_.$arg'").mkString(", ")
+        report.errorAndAbort(s"Not an argument selector! Try one of these: $suggestions")
     }
+  }
 
   def caseOrdinal[From: Type, Case <: From: Type](using From: DerivingMirror.SumOf[From]): Int = {
     val caseRepr = TypeRepr.of[Case]
@@ -30,20 +35,42 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
     cases.find(c => c.tpe =:= caseRepr).getOrElse(report.errorAndAbort("Not a case!")).ordinal
   }
 
-  object FieldSelector:
-    object SelectorLambda:
-      def unapply(arg: Term): Option[(List[ValDef], Term)] =
-        arg match {
-          case Inlined(_, _, Lambda(vals, term)) => Some((vals, term))
-          case Inlined(_, _, nested)             => SelectorLambda.unapply(nested)
-          case t                                 => None
-        }
-    end SelectorLambda
+  private def argNames[NamedArgs <: Tuple: Type]: List[String] =
+    Type.of[NamedArgs] match {
+      case '[EmptyTuple] => List.empty
+      case '[NamedArgument[name, ?] *: tail] => 
+        Type.valueOfConstant[name].getOrElse(report.errorAndAbort("Not a constant named arg name")) :: argNames[tail]
+    } 
 
-    def unapply(arg: Term): Option[String] =
+  object SelectorLambda {
+    def unapply(arg: Term): Option[(List[ValDef], Term)] =
       arg match {
-        case SelectorLambda(_, Select(Ident(_), fieldName)) => Some(fieldName)
-        case _                                              => None
+        case Inlined(_, _, Lambda(vals, term)) => Some((vals, term))
+        case Inlined(_, _, nested)             => SelectorLambda.unapply(nested)
+        case _                                 => None
       }
-  end FieldSelector
+  }
+
+  object FieldSelector {
+    def unapply(arg: Term): Option[String] =
+      PartialFunction.condOpt(arg) {
+        case SelectorLambda(_, Select(Ident(_), fieldName)) => fieldName
+      }
+  }
+
+  object ArgSelector {
+    def unapply(arg: Term): Option[String] =
+      PartialFunction.condOpt(arg) {
+        case SelectorLambda(_, DynamicSelector(argumentName)) =>
+          argumentName
+      }
+
+    private object DynamicSelector {
+      def unapply(arg: Term): Option[String] =
+        PartialFunction.condOpt(arg) {
+          case Apply(Select(Ident(_), "selectDynamic"), List(Literal(StringConstant(argumentName)))) => argumentName
+        }
+
+    }
+  }
 }
