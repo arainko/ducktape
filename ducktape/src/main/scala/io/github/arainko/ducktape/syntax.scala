@@ -10,6 +10,9 @@ extension [From](value: From) {
 
   def to[To](using Transformer[From, To]): To = Transformer[From, To].transform(value)
 
+  transparent inline def intoVia[Func](inline function: Func)(using From: Mirror.ProductOf[From], Func: FunctionMirror[Func]) =
+    ViaBuilder.applied(value, function)
+
   inline def via[Func](inline function: Func)(using
     Func: FunctionMirror[Func],
     A: Mirror.ProductOf[From]

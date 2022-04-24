@@ -20,7 +20,7 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
   def selectedArg[NamedArgs <: Tuple: Type, ArgType](
     selector: Expr[FunctionArguments[NamedArgs] => ArgType]
   ): String = {
-    val arguments = argNames[NamedArgs]
+    val arguments = Field.fromNamedArguments[NamedArgs].map(_.name)
     selector.asTerm match {
       case ArgSelector(argumentName) if arguments.contains(argumentName) => argumentName
       case other                     => 
@@ -34,13 +34,6 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
     val cases = Case.fromMirror(From)
     cases.find(c => c.tpe =:= caseRepr).getOrElse(report.errorAndAbort("Not a case!")).ordinal
   }
-
-  private def argNames[NamedArgs <: Tuple: Type]: List[String] =
-    Type.of[NamedArgs] match {
-      case '[EmptyTuple] => List.empty
-      case '[NamedArgument[name, ?] *: tail] => 
-        Type.valueOfConstant[name].getOrElse(report.errorAndAbort("Not a constant named arg name")) :: argNames[tail]
-    } 
 
   object SelectorLambda {
     def unapply(arg: Term): Option[(List[ValDef], Term)] =

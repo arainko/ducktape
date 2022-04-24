@@ -3,6 +3,7 @@ package io.github.arainko.ducktape.internal.modules
 import scala.quoted.*
 import scala.deriving.Mirror as DerMirror
 import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.function.NamedArgument
 
 private[internal] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
@@ -34,6 +35,15 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
         .zip(materializedMirror.mirroredElemTypes)
         .map(Field.apply)
     }
+
+    def fromNamedArguments[NamedArgs <: Tuple: Type]: List[Field] =
+      Type.of[NamedArgs] match {
+        case '[EmptyTuple] => List.empty
+        case '[NamedArgument[name, tpe] *: tail] =>
+          val name = Type.valueOfConstant[name].getOrElse(report.errorAndAbort("Not a constant named arg name"))
+          val field = Field(name, TypeRepr.of[tpe])
+          field :: fromNamedArguments[tail]
+      }
 
     def fromValDef(valDef: ValDef): Field = Field(valDef.name, valDef.tpt.tpe)
   }
