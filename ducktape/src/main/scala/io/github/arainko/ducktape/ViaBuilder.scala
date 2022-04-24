@@ -90,6 +90,29 @@ object ViaBuilder {
     ](function, initial)
   }
 
+  transparent inline def definition[From, Func](
+    inline function: Func
+  )(using From: DerivingMirror.ProductOf[From], Func: FunctionMirror[Func]) = {
+    val initial = Definition[From, Func.Return, Func, Nothing, EmptyTuple](function, Map.empty, Map.empty)
+    FunctionMacros.namedArguments[
+      Func,
+      [NamedArgs <: Tuple] =>> Definition[From, Func.Return, Func, NamedArgs, EmptyTuple]
+    ](function, initial)
+  }
+
+  opaque type DefinitionViaPartiallyApplied[From] = Unit
+
+  object DefinitionViaPartiallyApplied {
+    def apply[From]: DefinitionViaPartiallyApplied[From] = ()
+
+    extension [From](partial: DefinitionViaPartiallyApplied[From]) {
+      transparent inline def apply[Func](
+        inline function: Func
+      )(using From: DerivingMirror.ProductOf[From], Func: FunctionMirror[Func]) =
+        ViaBuilder.definition[From, Func](function)
+    }
+  }
+
   final case class Applied[From, To, Func, NamedArgs <: Tuple, Config <: Tuple] private[ViaBuilder] (
     private val sourceValue: From,
     function: Func,
@@ -107,7 +130,7 @@ object ViaBuilder {
     override protected def instance: Applied[From, To, Func, NamedArgs, Config] = self
 
     inline def transform: To =
-      ProductTransformerMacros.viaWithBuilder(sourceValue, self, function)(using summonInline, Func)
+      ProductTransformerMacros.viaWithBuilder(sourceValue, self)(using summonInline, Func)
   }
 
   final case class Definition[From, To, Func, NamedArgs <: Tuple, Config <: Tuple] private[ViaBuilder] (
@@ -126,24 +149,6 @@ object ViaBuilder {
     override protected def instance: Definition[From, To, Func, NamedArgs, Config] = self
 
     inline def build: Transformer[From, To] =
-      ProductTransformerMacros.viaWithBuilder(_, self, function)(using summonInline, Func)
+      ProductTransformerMacros.viaWithBuilder(_, self)(using summonInline, Func)
   }
-}
-
-@main def run = {
-  final case class Costam(int: Int, str: String)
-
-  val from = Costam(1, "str")
-  def func(str: String, int: Int, int2: Int, int3: Int) = s"$str $int $int2 $int3"
-
-  val builder =
-    DebugMacros.code {
-      from
-        .intoVia(func)
-        .withArgConst(_.int2, 2)
-        .withArgComputed(_.int3, _.int)
-        .transform
-    }
-
-  println(builder)
 }

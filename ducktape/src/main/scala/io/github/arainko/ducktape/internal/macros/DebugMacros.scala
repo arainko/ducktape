@@ -25,24 +25,5 @@ object DebugMacros {
       println(${ Expr(struct) })
       $value
     }
-  }
-
-  transparent inline def methodParams(inline func: Any) = ${ methodParamsMacro('func) }
-
-  def methodParamsMacro(function: Expr[Any])(using Quotes) = {
-    import quotes.reflect.*
-
-    println(function.asTerm.show(using Printer.TreeStructure))
-
-    function.asTerm match {
-      case b @ Inlined(_, _, l @ Lambda(vals, body)) =>
-        vals.map(_.tpt.tpe)
-
-        Select.unique(b, "apply").appliedTo(Literal(IntConstant(1))).asExpr
-      // b.appliedTo(Literal(IntConstant(1))).asExpr
-      // Expr(vals.map(v => v.name -> v.tpt.tpe.show).map(_.toString))
-    }
-  }
-
-  
+  }  
 }

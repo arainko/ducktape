@@ -33,7 +33,6 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 
   def viaConfigured[A: Type, B: Type, Func: Type, NamedArgs <: Tuple: Type, Config <: Tuple: Type](
     sourceValue: Expr[A],
-    function: Expr[Func],
     builder: Expr[ViaBuilder[?, A, B, Func, NamedArgs, Config]],
     Func: Expr[FunctionMirror.Aux[Func, ?, B]],
     A: DerivingMirror.ProductOf[A]
@@ -65,7 +64,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     }
 
     Select
-      .unique(function.asTerm, "apply")
+      .unique('{ $builder.function }.asTerm, "apply")
       .appliedToArgs(callsInOrder.toList)
       .asExprOf[B]
   }
@@ -215,18 +214,16 @@ private[ducktape] object ProductTransformerMacros {
   inline def viaWithBuilder[A, B, Func, NamedArgs <: Tuple, Config <: Tuple](
     source: A,
     builder: ViaBuilder[?, A, B, Func, NamedArgs, Config],
-    function: Func
   )(using
     A: DerivingMirror.ProductOf[A],
     Func: FunctionMirror.Aux[Func, ?, B]
-  ): B = ${ viaWithBuilderMacro('source, 'builder, 'function, 'A, 'Func) }
+  ): B = ${ viaWithBuilderMacro('source, 'builder, 'A, 'Func) }
 
   def viaWithBuilderMacro[A: Type, B: Type, Func: Type, NamedArgs <: Tuple: Type, Config <: Tuple: Type](
     source: Expr[A],
     builder: Expr[ViaBuilder[?, A, B, Func, NamedArgs, Config]],
-    function: Expr[Func],
     A: Expr[DerivingMirror.ProductOf[A]],
     Func: Expr[FunctionMirror.Aux[Func, ?, B]]
   )(using Quotes) =
-    ProductTransformerMacros().viaConfigured(source, function, builder, Func, A)
+    ProductTransformerMacros().viaConfigured(source, builder, Func, A)
 }
