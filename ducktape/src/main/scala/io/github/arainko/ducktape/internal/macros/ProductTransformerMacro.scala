@@ -28,7 +28,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       val calls = fieldTransformers(sourceValue, functionFields, sourceFields).map(_.value)
 
       Select.unique(func, "apply").appliedToArgs(calls).asExprOf[B]
-    case other => report.errorAndAbort(other.show)
+    case other => report.errorAndAbort(s"'via' is only supported on eta-expanded methods!")
   }
 
   def viaConfigured[A: Type, B: Type, Func: Type, NamedArgs <: Tuple: Type, Config <: Tuple: Type](
