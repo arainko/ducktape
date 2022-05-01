@@ -25,5 +25,5 @@ object DebugMacros {
       println(${ Expr(struct) })
       $value
     }
-  }  
+  }
 }

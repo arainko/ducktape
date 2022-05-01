@@ -23,7 +23,7 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
     val arguments = Field.fromNamedArguments[NamedArgs].map(_.name)
     selector.asTerm match {
       case ArgSelector(argumentName) if arguments.contains(argumentName) => argumentName
-      case other                     => 
+      case other =>
         val suggestions = arguments.map(arg => s"'_.$arg'").mkString(", ")
         report.errorAndAbort(s"Not an argument selector! Try one of these: $suggestions")
     }
