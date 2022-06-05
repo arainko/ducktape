@@ -25,5 +25,15 @@ object DebugMacros {
       println(${ Expr(struct) })
       $value
     }
-  }  
+  }
+}
+
+object Config
+
+opaque type TypedConfig[A] = Config.type
+
+object TypedConfig {
+  def const[Source, FieldType, Actual](selector: Source => FieldType, const: Actual)(using
+    Actual <:< FieldType
+  ): TypedConfig[Source] = Config
 }
