@@ -4,6 +4,7 @@ import scala.quoted.*
 import io.github.arainko.ducktape.Configuration.*
 import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.function.*
 import scala.deriving.Mirror as DerivingMirror
 
 private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
@@ -14,6 +15,59 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       ConfigurationModule {
   import quotes.reflect.*
   import MaterializedConfiguration.*
+
+  def via[A: Type, B: Type, Func](
+    sourceValue: Expr[A],
+    function: Expr[Func],
+    Func: Expr[FunctionMirror.Aux[Func, ?, B]],
+    A: DerivingMirror.ProductOf[A]
+  ): Expr[B] = function.asTerm match {
+    case func @ SelectorLambda(vals, body) =>
+      val functionFields = vals.map(Field.fromValDef)
+      val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
+      val calls = fieldTransformers(sourceValue, functionFields, sourceFields).map(_.value)
+
+      Select.unique(func, "apply").appliedToArgs(calls).asExprOf[B]
+    case other => report.errorAndAbort(s"'via' is only supported on eta-expanded methods!")
+  }
+
+  def viaConfigured[A: Type, B: Type, Func: Type, NamedArgs <: Tuple: Type, Config <: Tuple: Type](
+    sourceValue: Expr[A],
+    builder: Expr[ViaBuilder[?, A, B, Func, NamedArgs, Config]],
+    Func: Expr[FunctionMirror.Aux[Func, ?, B]],
+    A: DerivingMirror.ProductOf[A]
+  ): Expr[B] = {
+    val config = materializeProductConfig[Config]
+    val functionFields = Field.fromNamedArguments[NamedArgs].map(field => field.name -> field).toMap
+    val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
+
+    val nonConfiguredFields = functionFields -- config.map(_.name)
+    val transformedFields =
+      fieldTransformers(sourceValue, nonConfiguredFields.values.toList, sourceFields)
+        .map(field => field.name -> field)
+        .toMap
+
+    val configuredFields =
+      fieldConfigurations[A, B](
+        config,
+        sourceValue,
+        '{ $builder.constants },
+        '{ $builder.computeds },
+        functionFields
+      ).map(field => field.name -> field).toMap
+
+    val callsInOrder = functionFields.map { (name, field) =>
+      transformedFields
+        .get(name)
+        .getOrElse(configuredFields(name))
+        .value
+    }
+
+    Select
+      .unique('{ $builder.function }.asTerm, "apply")
+      .appliedToArgs(callsInOrder.toList)
+      .asExprOf[B]
+  }
 
   def transformConfigured[A: Type, B: Type, Config <: Tuple: Type](
     sourceValue: Expr[A],
@@ -28,7 +82,14 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 
     val nonConfiguredFields = destinationFields -- config.map(_.name)
     val transformedFields = fieldTransformers(sourceValue, nonConfiguredFields.values.toList, sourceFields)
-    val configuredFields = fieldConfigurations(config, sourceValue, builder, destinationFields)
+    val configuredFields =
+      fieldConfigurations[A, B](
+        config,
+        sourceValue,
+        '{ $builder.constants },
+        '{ $builder.computeds },
+        destinationFields
+      )
 
     constructor(TypeRepr.of[B])
       .appliedToArgs(transformedFields ++ configuredFields)
@@ -64,17 +125,18 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       NamedArg(dest.name, call)
     }
 
-  private def fieldConfigurations[A: Type, B: Type, Config <: Tuple: Type](
+  private def fieldConfigurations[A: Type, B: Type](
     config: List[MaterializedConfiguration.Product],
     sourceValue: Expr[A],
-    builder: Expr[Builder[?, A, B, Config]],
+    constants: Expr[Map[String, Any]],
+    computeds: Expr[Map[String, A => Any]],
     destinationFieldMapping: Map[String, Field]
   ) = config
     .map(cfg => destinationFieldMapping(cfg.name) -> cfg)
     .map { (field, cfg) =>
       val call = cfg match {
-        case Product.Const(label)          => '{ $builder.constants(${ Expr(field.name) }) }
-        case Product.Computed(label)       => '{ $builder.computeds(${ Expr(field.name) })($sourceValue) }
+        case Product.Const(label)          => '{ $constants(${ Expr(field.name) }) }
+        case Product.Computed(label)       => '{ $computeds(${ Expr(field.name) })($sourceValue) }
         case Product.Renamed(dest, source) => accessField(sourceValue, source).asExpr
       }
 
@@ -135,4 +197,33 @@ private[ducktape] object ProductTransformerMacros {
     A: Expr[DerivingMirror.ProductOf[A]],
     B: Expr[DerivingMirror.ProductOf[B]]
   )(using Quotes): Expr[B] = ProductTransformerMacros().transformConfigured(source, builder, A, B)
+
+  inline def via[A, B, Func](source: A, inline function: Func)(using
+    A: DerivingMirror.ProductOf[A],
+    Func: FunctionMirror.Aux[Func, ?, B]
+  ): B = ${ viaMacro('source, 'function, 'Func, 'A) }
+
+  def viaMacro[A: Type, B: Type, Func](
+    source: Expr[A],
+    function: Expr[Func],
+    Func: Expr[FunctionMirror.Aux[Func, ?, B]],
+    A: Expr[DerivingMirror.ProductOf[A]]
+  )(using Quotes) =
+    ProductTransformerMacros().via(source, function, Func, A)
+
+  inline def viaWithBuilder[A, B, Func, NamedArgs <: Tuple, Config <: Tuple](
+    source: A,
+    builder: ViaBuilder[?, A, B, Func, NamedArgs, Config]
+  )(using
+    A: DerivingMirror.ProductOf[A],
+    Func: FunctionMirror.Aux[Func, ?, B]
+  ): B = ${ viaWithBuilderMacro('source, 'builder, 'A, 'Func) }
+
+  def viaWithBuilderMacro[A: Type, B: Type, Func: Type, NamedArgs <: Tuple: Type, Config <: Tuple: Type](
+    source: Expr[A],
+    builder: Expr[ViaBuilder[?, A, B, Func, NamedArgs, Config]],
+    A: Expr[DerivingMirror.ProductOf[A]],
+    Func: Expr[FunctionMirror.Aux[Func, ?, B]]
+  )(using Quotes) =
+    ProductTransformerMacros().viaConfigured(source, builder, Func, A)
 }
