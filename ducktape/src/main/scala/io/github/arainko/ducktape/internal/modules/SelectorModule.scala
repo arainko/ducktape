@@ -45,8 +45,8 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
   }
 
   object FieldSelector {
-    def unapply(arg: Term): Option[String] =
-      PartialFunction.condOpt(arg) {
+    def unapply(arg: Expr[Any]): Option[String] =
+      PartialFunction.condOpt(arg.asTerm) {
         case SelectorLambda(_, Select(Ident(_), fieldName)) => fieldName
       }
   }

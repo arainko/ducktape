@@ -110,6 +110,50 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       .asExprOf[B]
   }
 
+  def transformNewConfig[A: Type, B: Type](
+    sourceValue: Expr[A],
+    config: Expr[Seq[FieldConfig[A, B]]],
+    A: DerivingMirror.ProductOf[A],
+    B: DerivingMirror.ProductOf[B]
+  ) = {
+    val unpacked = config match {
+      case Varargs(args) => args
+    }
+
+    val fields = unpacked.map {
+      case '{
+            const[source, dest, fieldType, actualType](
+              $selector,
+              $value
+            )(using $ev1, $ev2, $ev3)
+          } =>
+        s"selector ${selector.asTerm.show}"
+
+      case '{
+            computed[source, dest, fieldType, actualType](
+              $selector,
+              $f
+            )(using $ev1, $ev2, $ev3)
+          } =>
+        "computed"
+
+      case '{
+            renamed[source, dest, sourceFieldType, destFieldType](
+              $destField,
+              $sourceField,
+            )(using $ev1, $ev2, $ev3)
+          } =>
+        s"renamed"
+
+      case other => report.errorAndAbort(s"Unsupported field configuration: ${other.asTerm}")
+
+      // move to coproduct transformer macros
+      // case '{ instance[sourceSubtype][source, dest]($f)(using $ev1, $ev2) } => ???
+    }
+
+    Varargs(fields.map(Expr.apply))
+  }
+
   private def fieldTransformers[A: Type](
     sourceValue: Expr[A],
     destinationFields: List[Field],
@@ -213,7 +257,7 @@ private[ducktape] object ProductTransformerMacros {
 
   inline def viaWithBuilder[A, B, Func, NamedArgs <: Tuple, Config <: Tuple](
     source: A,
-    builder: ViaBuilder[?, A, B, Func, NamedArgs, Config],
+    builder: ViaBuilder[?, A, B, Func, NamedArgs, Config]
   )(using
     A: DerivingMirror.ProductOf[A],
     Func: FunctionMirror.Aux[Func, ?, B]
@@ -226,4 +270,18 @@ private[ducktape] object ProductTransformerMacros {
     Func: Expr[FunctionMirror.Aux[Func, ?, B]]
   )(using Quotes) =
     ProductTransformerMacros().viaConfigured(source, builder, Func, A)
+
+  inline def transformNewConfig[Source, Dest](sourceValue: Source, inline config: FieldConfig[Source, Dest]*)(using
+    S: DerivingMirror.ProductOf[Source],
+    D: DerivingMirror.ProductOf[Dest]
+  ) = ${ transformNewConfigMacro('sourceValue, 'config, 'S, 'D) }
+
+  def transformNewConfigMacro[Source: Type, Dest: Type](
+    sourceValue: Expr[Source],
+    config: Expr[Seq[FieldConfig[Source, Dest]]],
+    S: Expr[DerivingMirror.ProductOf[Source]],
+    D: Expr[DerivingMirror.ProductOf[Dest]]
+  )(using Quotes) =
+    ProductTransformerMacros().transformNewConfig(sourceValue, config, S, D)
+
 }
