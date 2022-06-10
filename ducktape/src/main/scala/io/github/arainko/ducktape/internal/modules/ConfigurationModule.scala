@@ -3,65 +3,61 @@ package io.github.arainko.ducktape.internal.modules
 import scala.quoted.*
 import io.github.arainko.ducktape.Configuration
 import io.github.arainko.ducktape.Configuration.*
+import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.Configuration.Product.Const
 
-private[internal] trait ConfigurationModule { self: Module =>
+private[internal] trait ConfigurationModule { self: Module & SelectorModule & MirrorModule & FieldModule =>
   import quotes.reflect.*
 
   sealed trait MaterializedConfiguration
 
   object MaterializedConfiguration {
     enum Product extends MaterializedConfiguration {
-      val name: String
+      val destFieldName: String
 
-      case Const(name: String)
-      case Computed(name: String)
-      case Renamed(name: String, source: String)
+      case Const(destFieldName: String, value: Expr[Any])
+      case Computed(destFieldName: String, fuction: Expr[Any => Any])
+      case Renamed(destFieldName: String, sourceFieldName: String)
     }
 
     enum Coproduct extends MaterializedConfiguration {
       val tpe: TypeRepr
 
-      case Instance(tpe: TypeRepr)
-    }
-  }
-
-  def materializeConfig[Config <: Tuple: Type]: List[MaterializedConfiguration] = {
-    TypeRepr.of[Config].asType match {
-      case '[EmptyTuple] =>
-        List.empty
-
-      case '[Product.Const[field] *: tail] =>
-        MaterializedConfiguration.Product.Const(materializeConstantString[field]) :: materializeConfig[tail]
-
-      case '[Product.Computed[field] *: tail] =>
-        MaterializedConfiguration.Product.Computed(materializeConstantString[field]) :: materializeConfig[tail]
-
-      case '[Product.Renamed[dest, source] *: tail] =>
-        MaterializedConfiguration.Product.Renamed(
-          materializeConstantString[dest],
-          materializeConstantString[source]
-        ) :: materializeConfig[tail]
-
-      case '[Coproduct.Instance[tpe] *: tail] =>
-        MaterializedConfiguration.Coproduct.Instance(TypeRepr.of[tpe]) :: materializeConfig[tail]
-
-      case '[head *: _] =>
-        report.errorAndAbort(s"Unsupported configuration type: ${TypeRepr.of[head].show}")
-    }
-  }
-
-  def materializeProductConfig[Config <: Tuple: Type]: List[MaterializedConfiguration.Product] =
-    materializeConfig.collect {
-      case config: MaterializedConfiguration.Product => config
+      case Instance(tpe: TypeRepr, function: Expr[Any => Any])
     }
 
-  def materializeCoproductConfig[Config <: Tuple: Type]: List[MaterializedConfiguration.Coproduct] =
-    materializeConfig.collect {
-      case config: MaterializedConfiguration.Coproduct => config
-    }
+    def materialize[Source, Dest](config: Seq[Expr[FieldConfig[Source, Dest]]]) = config.map(materializeSingle)
 
-  private def materializeConstantString[A <: String: Type] = TypeRepr.of[A] match {
-    case ConstantType(StringConstant(value)) => value
-    case other                               => report.errorAndAbort(s"Type '${other.show}' is not a String!")
+    private def materializeSingle[Source, Dest](config: Expr[FieldConfig[Source, Dest]]) =
+      config match {
+        case '{
+              const[source, dest, fieldType, actualType](
+                ${ FieldSelector(name) },
+                $value
+              )(using $ev1, $ev2, $ev3)
+            } =>
+          Product.Const(name, value)
+
+        case '{
+              computed[source, dest, fieldType, actualType](
+                ${ FieldSelector(name) },
+                $function
+              )(using $ev1, $ev2, $ev3)
+            } =>
+          Product.Computed(name, function.asInstanceOf[Expr[Any => Any]])// TODO: Type it properly
+
+        case '{
+              renamed[source, dest, sourceFieldType, destFieldType](
+                ${ FieldSelector(destFieldName) },
+                ${ FieldSelector(sourceFieldName) }
+              )(using $ev1, $ev2, $ev3)
+            } =>
+          Product.Renamed(destFieldName, sourceFieldName)
+
+        case other => report.errorAndAbort(s"Unsupported field configuration: ${other.asTerm}")
+
+        // case '{ instance[sourceSubtype][source, dest]($f)(using $ev1, $ev2) } => ???
+      }
+
   }
 }

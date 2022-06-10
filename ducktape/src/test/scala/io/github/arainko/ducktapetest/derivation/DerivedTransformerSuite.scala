@@ -5,7 +5,6 @@ import io.github.arainko.ducktapetest.model.*
 import munit.FunSuite
 
 import scala.compiletime.testing.*
-import io.github.arainko.ducktape.Builder
 import io.github.arainko.ducktape.internal.macros.*
 import scala.deriving.Mirror
 

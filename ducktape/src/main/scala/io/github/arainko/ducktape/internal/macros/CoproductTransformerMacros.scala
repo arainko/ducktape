@@ -29,30 +29,30 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     Block(ordinalStatement :: Nil, ifStatement(ifBranches)).asExprOf[B]
   }
 
-  def transformConfigured[A: Type, B: Type, Config <: Tuple: Type](
-    sourceValue: Expr[A],
-    builder: Expr[Builder[?, A, B, Config]],
-    A: DerivingMirror.SumOf[A],
-    B: DerivingMirror.SumOf[B]
-  ): Expr[B] = {
-    val sourceCases = Case.fromMirror(A)
-    val destCases = Case.fromMirror(B).map(c => c.name -> c).toMap
-    val config = materializeCoproductConfig[Config]
-    val (nonConfiguredCases, configuredCases) = sourceCases.partition(c => !config.exists(_.tpe =:= c.tpe)) //TODO: Optimize
+  // def transformConfigured[A: Type, B: Type, Config <: Tuple: Type](
+  //   sourceValue: Expr[A],
+  //   builder: Expr[Builder[?, A, B, Config]],
+  //   A: DerivingMirror.SumOf[A],
+  //   B: DerivingMirror.SumOf[B]
+  // ): Expr[B] = {
+  //   val sourceCases = Case.fromMirror(A)
+  //   val destCases = Case.fromMirror(B).map(c => c.name -> c).toMap
+  //   val config = materializeCoproductConfig[Config]
+  //   val (nonConfiguredCases, configuredCases) = sourceCases.partition(c => !config.exists(_.tpe =:= c.tpe)) //TODO: Optimize
 
-    val ValReference(ordinalRef, ordinalStatement) = '{ val ordinal = $A.ordinal($sourceValue) }
-    val ordinal = ordinalRef.asExprOf[Int]
-    val nonConfiguredIfBranches = singletonIfBranches[A, B](sourceValue, ordinal, nonConfiguredCases, destCases)
+  //   val ValReference(ordinalRef, ordinalStatement) = '{ val ordinal = $A.ordinal($sourceValue) }
+  //   val ordinal = ordinalRef.asExprOf[Int]
+  //   val nonConfiguredIfBranches = singletonIfBranches[A, B](sourceValue, ordinal, nonConfiguredCases, destCases)
 
-    val configuredIfBranches =
-      configuredCases.map { source =>
-        val cond = '{ $ordinal == ${ Expr(source.ordinal) } }
-        val value = '{ $builder.caseInstances($ordinal)($sourceValue) }
-        cond.asTerm -> value.asTerm
-      }
+  //   val configuredIfBranches =
+  //     configuredCases.map { source =>
+  //       val cond = '{ $ordinal == ${ Expr(source.ordinal) } }
+  //       val value = '{ $builder.caseInstances($ordinal)($sourceValue) }
+  //       cond.asTerm -> value.asTerm
+  //     }
 
-    Block(ordinalStatement :: Nil, ifStatement(nonConfiguredIfBranches ++ configuredIfBranches)).asExprOf[B]
-  }
+  //   Block(ordinalStatement :: Nil, ifStatement(nonConfiguredIfBranches ++ configuredIfBranches)).asExprOf[B]
+  // }
 
   private def singletonIfBranches[A: Type, B: Type](
     sourceValue: Expr[A],
@@ -93,11 +93,11 @@ private[ducktape] object CoproductTransformerMacros {
     B: DerivingMirror.SumOf[B]
   ): B = ${ transformMacro[A, B]('source, 'A, 'B) }
 
-  inline def transformWithBuilder[A, B, Config <: Tuple](source: A, builder: Builder[?, A, B, Config])(using
-    A: DerivingMirror.SumOf[A],
-    B: DerivingMirror.SumOf[B]
-  ): B =
-    ${ transformWithBuilderMacro[A, B, Config]('source, 'builder, 'A, 'B) }
+  // inline def transformWithBuilder[A, B, Config <: Tuple](source: A, builder: Builder[?, A, B, Config])(using
+  //   A: DerivingMirror.SumOf[A],
+  //   B: DerivingMirror.SumOf[B]
+  // ): B =
+  //   ${ transformWithBuilderMacro[A, B, Config]('source, 'builder, 'A, 'B) }
 
   def transformMacro[A: Type, B: Type](
     source: Expr[A],
@@ -105,10 +105,10 @@ private[ducktape] object CoproductTransformerMacros {
     B: Expr[DerivingMirror.SumOf[B]]
   )(using Quotes): Expr[B] = CoproductTransformerMacros().transform(source, A, B)
 
-  def transformWithBuilderMacro[A: Type, B: Type, Config <: Tuple: Type](
-    source: Expr[A],
-    builder: Expr[Builder[?, A, B, Config]],
-    A: Expr[DerivingMirror.SumOf[A]],
-    B: Expr[DerivingMirror.SumOf[B]]
-  )(using Quotes): Expr[B] = CoproductTransformerMacros().transformConfigured(source, builder, A, B)
+  // def transformWithBuilderMacro[A: Type, B: Type, Config <: Tuple: Type](
+  //   source: Expr[A],
+  //   builder: Expr[Builder[?, A, B, Config]],
+  //   A: Expr[DerivingMirror.SumOf[A]],
+  //   B: Expr[DerivingMirror.SumOf[B]]
+  // )(using Quotes): Expr[B] = CoproductTransformerMacros().transformConfigured(source, builder, A, B)
 }
