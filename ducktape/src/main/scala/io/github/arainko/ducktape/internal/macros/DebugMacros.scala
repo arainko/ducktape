@@ -26,6 +26,17 @@ object DebugMacros {
       $value
     }
   }
+
+  inline def codeCompiletime[A](inline value: A) = ${ codeCompiletimeMacro('value) }
+
+  def codeCompiletimeMacro[A: Type](value: Expr[A])(using Quotes) = {
+    import quotes.reflect.*
+
+    val struct = Printer.TreeShortCode.show(value.asTerm)
+    println(struct)
+
+    value
+  }
 }
 
 object Config

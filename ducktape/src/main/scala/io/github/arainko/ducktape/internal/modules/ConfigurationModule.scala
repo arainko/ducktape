@@ -26,7 +26,12 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
       case Instance(tpe: TypeRepr, function: Expr[Any => Any])
     }
 
-    def materialize[Source, Dest](config: Seq[Expr[FieldConfig[Source, Dest]]]) = config.map(materializeSingle)
+    def materialize[Source, Dest](config: Seq[Expr[FieldConfig[Source, Dest]]]) =
+      config
+        .map(materializeSingle)
+        .groupBy(_.destFieldName)
+        .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
+        .toList
 
     private def materializeSingle[Source, Dest](config: Expr[FieldConfig[Source, Dest]]) =
       config match {
@@ -44,7 +49,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
                 $function
               )(using $ev1, $ev2, $ev3)
             } =>
-          Product.Computed(name, function.asInstanceOf[Expr[Any => Any]])// TODO: Type it properly
+          Product.Computed(name, function.asInstanceOf[Expr[Any => Any]])
 
         case '{
               renamed[source, dest, sourceFieldType, destFieldType](
