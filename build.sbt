@@ -33,7 +33,7 @@ lazy val ducktape =
     .in(file("ducktape"))
     .settings(
       scalaVersion := "3.1.2",
-      scalacOptions += "-Xcheck-macros",
+      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax"),
       libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test
     )
 

@@ -63,7 +63,7 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
       materializedMirror.mirroredElemLabels
         .zip(materializedMirror.mirroredElemTypes)
         .zipWithIndex
-        .map { case ((name, tpe), ordinal) => Case(name, tpe, ordinal) }
+        .map { case name -> tpe -> ordinal => Case(name, tpe, ordinal) }
     }
   }
 

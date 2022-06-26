@@ -16,13 +16,14 @@ object Transformer {
 
   // def define[A, B]: Definition[A, B, EmptyTuple] = Builder.definition[A, B]
 
-  // def defineVia[A]: ViaBuilder.DefinitionViaPartiallyApplied[A] = 
+  // def defineVia[A]: ViaBuilder.DefinitionViaPartiallyApplied[A] =
   //   ViaBuilder.DefinitionViaPartiallyApplied[A]
 
   sealed trait Identity[A] extends Transformer[A, A]
 
-  given [A]: Identity[A] = new:
+  given [A]: Identity[A] = new {
     def transform(from: A): A = from
+  }
 
   inline given derived[A, B](using From: Mirror.Of[A], To: Mirror.Of[B]): Transformer[A, B] =
     inline erasedValue[(From.type, To.type)] match {

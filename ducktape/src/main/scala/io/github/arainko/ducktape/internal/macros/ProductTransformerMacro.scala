@@ -76,7 +76,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     B: DerivingMirror.ProductOf[B]
   ): Expr[B] = {
     val materializedConfig = config match {
-      case Varargs(config) => MaterializedConfiguration.materialize(config)
+      case Varargs(config) => MaterializedConfiguration.materializeProductConfig(config)
       case other           => report.errorAndAbort(s"Failed to materialize field config: ${other.show} ")
     }
 

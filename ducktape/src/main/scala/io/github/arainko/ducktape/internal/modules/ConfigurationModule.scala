@@ -26,14 +26,17 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
       case Instance(tpe: TypeRepr, function: Expr[Any => Any])
     }
 
-    def materialize[Source, Dest](config: Seq[Expr[FieldConfig[Source, Dest]]]) =
+    def materializeProductConfig[Source, Dest](config: Seq[Expr[FieldConfig[Source, Dest]]]): List[Product] =
       config
-        .map(materializeSingle)
+        .map(materializeSingleProductConfig)
         .groupBy(_.destFieldName)
         .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
         .toList
 
-    private def materializeSingle[Source, Dest](config: Expr[FieldConfig[Source, Dest]]) =
+    def materializeCoproductConfig[Source, Dest](config: Seq[Expr[FieldConfig[Source, Dest]]]): List[Coproduct] =
+      config.map(materializeSingleCoproductConfig).toList // TODO: figure out a way to keep the last applied config per subtype
+
+    private def materializeSingleProductConfig[Source, Dest](config: Expr[FieldConfig[Source, Dest]]) =
       config match {
         case '{
               const[source, dest, fieldType, actualType](
@@ -60,8 +63,13 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
           Product.Renamed(destFieldName, sourceFieldName)
 
         case other => report.errorAndAbort(s"Unsupported field configuration: ${other.asTerm}")
+      }
 
-        // case '{ instance[sourceSubtype][source, dest]($f)(using $ev1, $ev2) } => ???
+    private def materializeSingleCoproductConfig[Source, Dest](config: Expr[FieldConfig[Source, Dest]]) =
+      config match {
+        case '{ instance[sourceSubtype].apply[source, dest]($function)(using $ev1, $ev2, $ev3) } => 
+          Coproduct.Instance(TypeRepr.of[sourceSubtype], function.asInstanceOf[Expr[Any => Any]])
+        case other => report.errorAndAbort(s"Unsupported field configuration: ${other.asTerm.show}")
       }
 
   }

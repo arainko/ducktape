@@ -29,13 +29,12 @@ def renamed[Source, Dest, SourceFieldType, DestFieldType](
 def instance[SourceSubtype]: FieldConfig.Instance[SourceSubtype] = FieldConfig.Instance.instance
 
 object FieldConfig {
-  private[ducktape] val instance: FieldConfig[Nothing, Nothing] = ()
+  private[ducktape] def instance[Source, Dest]: FieldConfig[Source, Dest] = ()
 
-  opaque type Instance[-SourceSubtype] = Unit
+  opaque type Instance[SourceSubtype] = Unit
 
   object Instance {
-    // does this really need to be a val?
-    private[ducktape] val instance: Instance[Any] = ()
+    private[ducktape] def instance[SourceSubtype]: Instance[SourceSubtype] = ()
   }
 
   extension [SourceSubtype] (inst: Instance[SourceSubtype]) {
