@@ -5,19 +5,19 @@ import scala.util.NotGiven
 
 opaque type FieldConfig[Source, Dest] = Unit
 
-def const[Source, Dest, FieldType, ActualType](selector: Dest => FieldType, value: ActualType)(using
+def fieldConst[Source, Dest, FieldType, ActualType](selector: Dest => FieldType, value: ActualType)(using
   ActualType <:< FieldType,
   Mirror.ProductOf[Source],
   Mirror.ProductOf[Dest]
 ): FieldConfig[Source, Dest] = FieldConfig.instance
 
-def computed[Source, Dest, FieldType, ActualType](selector: Dest => FieldType, f: Source => ActualType)(using
+def fieldComputed[Source, Dest, FieldType, ActualType](selector: Dest => FieldType, f: Source => ActualType)(using
   ActualType <:< FieldType,
   Mirror.ProductOf[Source],
   Mirror.ProductOf[Dest]
 ): FieldConfig[Source, Dest] = FieldConfig.instance
 
-def renamed[Source, Dest, SourceFieldType, DestFieldType](
+def fieldRenamed[Source, Dest, SourceFieldType, DestFieldType](
   destSelector: Dest => DestFieldType,
   sourceSelector: Source => SourceFieldType
 )(using
@@ -26,22 +26,40 @@ def renamed[Source, Dest, SourceFieldType, DestFieldType](
   Mirror.ProductOf[Dest]
 ): FieldConfig[Source, Dest] = FieldConfig.instance
 
-def instance[SourceSubtype]: FieldConfig.Instance[SourceSubtype] = FieldConfig.Instance.instance
+def caseConst[SourceSubtype]: FieldConfig.CaseConst[SourceSubtype] = FieldConfig.CaseConst.instance
 
+def caseComputed[SourceSubtype]: FieldConfig.CaseComputed[SourceSubtype] = FieldConfig.CaseComputed.instance
+
+//TODO: Move these into separate files?
 object FieldConfig {
   private[ducktape] def instance[Source, Dest]: FieldConfig[Source, Dest] = ()
 
-  opaque type Instance[SourceSubtype] = Unit
+  opaque type CaseComputed[SourceSubtype] = Unit
 
-  object Instance {
-    private[ducktape] def instance[SourceSubtype]: Instance[SourceSubtype] = ()
+  object CaseComputed {
+    private[ducktape] def instance[SourceSubtype]: CaseComputed[SourceSubtype] = ()
   }
 
-  extension [SourceSubtype] (inst: Instance[SourceSubtype]) {
+  extension [SourceSubtype] (inst: CaseComputed[SourceSubtype]) {
     def apply[Source, Dest](f: SourceSubtype => Dest)(using
       Mirror.SumOf[Source],
       SourceSubtype <:< Source,
       NotGiven[SourceSubtype =:= Source]
     ): FieldConfig[Source, Dest] = FieldConfig.instance
   }
+
+  opaque type CaseConst[SourceSubtype] = Unit
+
+  object CaseConst {
+    private[ducktape] def instance[SourceSubtype]: CaseConst[SourceSubtype] = ()
+  }
+
+  extension [SourceSubtype] (inst: CaseConst[SourceSubtype]) {
+    def apply[Source, Dest](const: Dest)(using
+      Mirror.SumOf[Source],
+      SourceSubtype <:< Source,
+      NotGiven[SourceSubtype =:= Source]
+    ): FieldConfig[Source, Dest] = FieldConfig.instance
+  }
+
 }

@@ -5,6 +5,7 @@ import scala.deriving.Mirror
 import scala.compiletime.*
 import io.github.arainko.ducktape.internal.macros.*
 import scala.collection.BuildFrom
+import io.github.arainko.ducktape.builder.*
 
 @FunctionalInterface
 trait Transformer[From, To] {
@@ -14,7 +15,7 @@ trait Transformer[From, To] {
 object Transformer {
   def apply[A, B](using trans: Transformer[A, B]): Transformer[A, B] = trans
 
-  // def define[A, B]: Definition[A, B, EmptyTuple] = Builder.definition[A, B]
+  inline def define[A, B]: DefinitionBuilder[A, B] = DefinitionBuilder[A, B]
 
   // def defineVia[A]: ViaBuilder.DefinitionViaPartiallyApplied[A] =
   //   ViaBuilder.DefinitionViaPartiallyApplied[A]

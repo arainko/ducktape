@@ -56,6 +56,12 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
             }
             val value = '{ $function($castedSource) }
             cond.asTerm -> value.asTerm
+
+          case Coproduct.Const(tpe, value) =>
+            val cond = source.tpe.asType match {
+              case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
+            }
+            cond.asTerm -> value.asTerm
         }
       }
 
@@ -103,8 +109,8 @@ private[ducktape] object CoproductTransformerMacros {
   )(using Quotes): Expr[B] = CoproductTransformerMacros().transform(source, A, B)
 
   inline def transformConfigured[A, B](source: A, inline config: FieldConfig[A, B]*)(using
-    inline A: DerivingMirror.SumOf[A],
-    inline B: DerivingMirror.SumOf[B]
+    A: DerivingMirror.SumOf[A],
+    B: DerivingMirror.SumOf[B]
   ): B =
     ${ transformConfiguredMacro[A, B]('source, 'config, 'A, 'B) }
 

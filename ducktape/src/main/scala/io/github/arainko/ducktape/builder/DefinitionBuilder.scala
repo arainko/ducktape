@@ -9,7 +9,7 @@ import scala.deriving.Mirror
 opaque type DefinitionBuilder[Source, Dest] = Unit
 
 object DefinitionBuilder {
-  def apply[Source, Dest]: DefinitionBuilder[Source, Dest] = ()
+  inline def apply[Source, Dest]: DefinitionBuilder[Source, Dest] = ()
 
   extension [Source, Dest](builder: DefinitionBuilder[Source, Dest]) {
 
@@ -26,6 +26,26 @@ object DefinitionBuilder {
               CoproductTransformerMacros.transformConfigured(from, config*)(using summonInline, summonInline)
           }
       }
+  }
+
+}
+
+enum ColorLong {
+  case Red, Green, Blue, White, Black
+}
+
+enum ColorShort {
+  case Red, Green, Blue
+}
+
+@main def run = {
+  val redLong = ColorShort.Red
+
+  DebugMacros.code {
+    DefinitionBuilder[ColorShort, ColorLong].define(
+      caseConst[ColorShort.Blue.type](ColorLong.Black),
+      caseConst[ColorShort.Blue.type](ColorLong.Red),
+    )
   }
 
 }

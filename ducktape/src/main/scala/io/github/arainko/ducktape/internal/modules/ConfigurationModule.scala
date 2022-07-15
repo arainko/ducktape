@@ -5,6 +5,8 @@ import io.github.arainko.ducktape.Configuration
 import io.github.arainko.ducktape.Configuration.*
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.Configuration.Product.Const
+import scala.collection.immutable.SortedSet
+import scala.collection.immutable.SortedSetOps
 
 private[internal] trait ConfigurationModule { self: Module & SelectorModule & MirrorModule & FieldModule =>
   import quotes.reflect.*
@@ -24,6 +26,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
       val tpe: TypeRepr
 
       case Instance(tpe: TypeRepr, function: Expr[Any => Any])
+      case Const(tpe: TypeRepr, value: Expr[Any])
     }
 
     def materializeProductConfig[Source, Dest](config: Seq[Expr[FieldConfig[Source, Dest]]]): List[Product] =
@@ -34,12 +37,16 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
         .toList
 
     def materializeCoproductConfig[Source, Dest](config: Seq[Expr[FieldConfig[Source, Dest]]]): List[Coproduct] =
-      config.map(materializeSingleCoproductConfig).toList // TODO: figure out a way to keep the last applied config per subtype
+      config
+        .map(materializeSingleCoproductConfig)
+        .groupBy(_.tpe.typeSymbol.fullName) // TODO: Ths is probably not the best way to do this (?)
+        .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
+        .toList
 
     private def materializeSingleProductConfig[Source, Dest](config: Expr[FieldConfig[Source, Dest]]) =
       config match {
         case '{
-              const[source, dest, fieldType, actualType](
+              fieldConst[source, dest, fieldType, actualType](
                 ${ FieldSelector(name) },
                 $value
               )(using $ev1, $ev2, $ev3)
@@ -47,7 +54,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
           Product.Const(name, value)
 
         case '{
-              computed[source, dest, fieldType, actualType](
+              fieldComputed[source, dest, fieldType, actualType](
                 ${ FieldSelector(name) },
                 $function
               )(using $ev1, $ev2, $ev3)
@@ -55,7 +62,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
           Product.Computed(name, function.asInstanceOf[Expr[Any => Any]])
 
         case '{
-              renamed[source, dest, sourceFieldType, destFieldType](
+              fieldRenamed[source, dest, sourceFieldType, destFieldType](
                 ${ FieldSelector(destFieldName) },
                 ${ FieldSelector(sourceFieldName) }
               )(using $ev1, $ev2, $ev3)
@@ -67,8 +74,12 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
 
     private def materializeSingleCoproductConfig[Source, Dest](config: Expr[FieldConfig[Source, Dest]]) =
       config match {
-        case '{ instance[sourceSubtype].apply[source, dest]($function)(using $ev1, $ev2, $ev3) } => 
+        case '{ caseComputed[sourceSubtype][source, dest]($function)(using $ev1, $ev2, $ev3) } => 
           Coproduct.Instance(TypeRepr.of[sourceSubtype], function.asInstanceOf[Expr[Any => Any]])
+
+        case '{ caseConst[sourceSubtype][source, dest]($value)(using $ev1, $ev2, $ev3) } =>
+          Coproduct.Const(TypeRepr.of[sourceSubtype], value)
+
         case other => report.errorAndAbort(s"Unsupported field configuration: ${other.asTerm.show}")
       }
 
