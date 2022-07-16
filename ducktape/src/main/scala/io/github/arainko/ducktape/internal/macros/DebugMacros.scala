@@ -33,7 +33,7 @@ object DebugMacros {
     import quotes.reflect.*
 
     val struct = Printer.TreeShortCode.show(value.asTerm)
-    println(struct)
+    report.info(struct)
 
     value
   }

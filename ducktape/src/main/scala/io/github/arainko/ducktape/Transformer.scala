@@ -15,7 +15,7 @@ trait Transformer[From, To] {
 object Transformer {
   def apply[A, B](using trans: Transformer[A, B]): Transformer[A, B] = trans
 
-  inline def define[A, B]: DefinitionBuilder[A, B] = DefinitionBuilder[A, B]
+  def define[A, B]: DefinitionBuilder[A, B] = DefinitionBuilder[A, B]
 
   // def defineVia[A]: ViaBuilder.DefinitionViaPartiallyApplied[A] =
   //   ViaBuilder.DefinitionViaPartiallyApplied[A]

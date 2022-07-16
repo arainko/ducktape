@@ -34,7 +34,7 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
   ): Expr[B] = {
     val materializedConfig = config match {
       case Varargs(config) => MaterializedConfiguration.materializeCoproductConfig(config)
-      case other           => report.errorAndAbort(s"Failed to materialize field config: ${other.show} ")
+      case other           => report.errorAndAbort(s"Failed to materialize field config: ${other.asTerm.show} ")
     }
 
     val sourceCases = Case.fromMirror(A)

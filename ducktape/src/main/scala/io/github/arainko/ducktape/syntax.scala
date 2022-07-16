@@ -6,7 +6,7 @@ import scala.deriving.Mirror
 import io.github.arainko.ducktape.builder.*
 
 extension [Source](value: Source) {
-  inline def into[Dest]: AppliedBuilder[Source, Dest] = AppliedBuilder(value)
+  def into[Dest]: AppliedBuilder[Source, Dest] = AppliedBuilder(value)
 
   def to[Dest](using Transformer[Source, Dest]): Dest = Transformer[Source, Dest].transform(value)
 
@@ -15,6 +15,6 @@ extension [Source](value: Source) {
 
   inline def via[Func](inline function: Func)(using
     Func: FunctionMirror[Func],
-    A: Mirror.ProductOf[Source]
+    Source: Mirror.ProductOf[Source]
   ): Func.Return = ProductTransformerMacros.via(value, function)
 }
