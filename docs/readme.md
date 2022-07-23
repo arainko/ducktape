@@ -135,7 +135,7 @@ val withEverythingOverriden =
 
 Enum transformations, just like case class transformations, can be configured - but only in one way, by applying a function to a specific subtype:
 
-```scala
+```scala mdoc:reset-object
 import io.github.arainko.ducktape.*
 
 enum Size:
@@ -153,8 +153,56 @@ val size =
     .withCaseInstance[ExtraSize.ExtraSmall.type](_ => Size.Small)
     .withCaseInstance[ExtraSize.ExtraLarge.type](_ => Size.Large)
     .transform
-// size: ExtraSize = Small
 ```
+
+#### 5. Method to case class
+
+We can also let `ducktape` expand method incovations for us:
+
+```scala mdoc:reset
+import io.github.arainko.ducktape.*
+
+final case class Person1(firstName: String, lastName: String, age: Int)
+final case class Person2(firstName: String, lastName: String, age: Int)
+
+def methodToExpand(lastName: String, age: Int, firstName: String): Person2 =
+  Person2(firstName, lastName, age)
+
+val person1: Person1 = Person1("John", "Doe", 23)
+val person2: Person2 = person1.via(methodToExpand)
+```
+
+In this case, `ducktape` will match the fields from `Person` to parameter names of `methodToExpand` failing at compiletime if
+a parameter cannot be matched (be it there's no name correspondence or a `Transformer` between types of two fields named the same isn't available):
+
+```scala mdoc:fail:silent
+def methodToExpandButOneMoreArg(lastName: String, age: Int, firstName: String, additionalArg: String): Person2 =
+  Person2(firstName + additionalArg, lastName, age)
+
+person1.via(methodToExpandButOneMoreArg)
+// error:
+// No field named 'additionalArg' in Person
+```
+
+#### 6. Method to case class with config
+
+Just like transforming between case classes and coproducts we can nudge the derivation in some places to complete the puzzle, let's
+tackle the last example once again:
+
+```scala mdoc
+def methodToExpandButOneMoreArg(lastName: String, age: Int, firstName: String, additionalArg: String): Person2 =
+  Person2(firstName + additionalArg, lastName, age)
+
+person1
+  .intoVia(methodToExpandButOneMoreArg)
+  .withArgConst(_.additionalArg, "-CONST ARG")
+  .transform
+```
+
+We can configure method arguments in 3 ways:
+ - `withArgConst` - supply a constant value to a method argument
+ - `withArgComputed` - compute the argument with a function
+ - `withArgRenamed` - rename an argument so that it matches a different field
 
 ### A look at the generated code
 
