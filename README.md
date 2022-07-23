@@ -6,7 +6,7 @@
 
 ### Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.0.13"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.0.14"
 ```
 
 ### Examples
@@ -182,6 +182,7 @@ enum ExtraSize:
   case ExtraSmall, Small, Medium, Large, ExtraLarge
 
 val transformed = Size.Small.to[ExtraSize]
+// transformed: ExtraSize = Small
 
 // Apply a function for the specified subtype
 val size = 
@@ -190,8 +191,64 @@ val size =
     .withCaseInstance[ExtraSize.ExtraSmall.type](_ => Size.Small)
     .withCaseInstance[ExtraSize.ExtraLarge.type](_ => Size.Large)
     .transform
-// size: ExtraSize = Small
+// size: Size = Small
 ```
+
+#### 5. Method to case class
+
+We can also let `ducktape` expand method incovations for us:
+
+```scala
+import io.github.arainko.ducktape.*
+
+final case class Person1(firstName: String, lastName: String, age: Int)
+final case class Person2(firstName: String, lastName: String, age: Int)
+
+def methodToExpand(lastName: String, age: Int, firstName: String): Person2 =
+  Person2(firstName, lastName, age)
+
+val person1: Person1 = Person1("John", "Doe", 23)
+// person1: Person1 = Person1(firstName = "John", lastName = "Doe", age = 23)
+val person2: Person2 = person1.via(methodToExpand)
+// person2: Person2 = Person2(firstName = "John", lastName = "Doe", age = 23)
+```
+
+In this case, `ducktape` will match the fields from `Person` to parameter names of `methodToExpand` failing at compiletime if
+a parameter cannot be matched (be it there's no name correspondence or a `Transformer` between types of two fields named the same isn't available):
+
+```scala
+def methodToExpandButOneMoreArg(lastName: String, age: Int, firstName: String, additionalArg: String): Person2 =
+  Person2(firstName + additionalArg, lastName, age)
+
+person1.via(methodToExpandButOneMoreArg)
+// error:
+// No field named 'additionalArg' in Person
+```
+
+#### 6. Method to case class with config
+
+Just like transforming between case classes and coproducts we can nudge the derivation in some places to complete the puzzle, let's
+tackle the last example once again:
+
+```scala
+def methodToExpandButOneMoreArg(lastName: String, age: Int, firstName: String, additionalArg: String): Person2 =
+  Person2(firstName + additionalArg, lastName, age)
+
+person1
+  .intoVia(methodToExpandButOneMoreArg)
+  .withArgConst(_.additionalArg, "-CONST ARG")
+  .transform
+// res5: Person2 = Person2(
+//   firstName = "John-CONST ARG",
+//   lastName = "Doe",
+//   age = 23
+// )
+```
+
+We can configure method arguments in 3 ways:
+ - `withArgConst` - supply a constant value to a method argument
+ - `withArgComputed` - compute the argument with a function
+ - `withArgRenamed` - rename an argument so that it matches a different field
 
 ### A look at the generated code
 
