@@ -36,6 +36,15 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
         .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
         .toList
 
+    def materializeArgConfig[Source, Dest, NamedArguments <: Tuple](
+      config: Seq[Expr[ArgConfig[Source, Dest, NamedArguments]]]
+    ): List[Product] =
+      config
+        .map(materializeSingleArgConfig)
+        .groupBy(_.destFieldName)
+        .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
+        .toList
+
     def materializeCoproductConfig[Source, Dest](config: Seq[Expr[FieldConfig[Source, Dest]]]): List[Coproduct] =
       config
         .map(materializeSingleCoproductConfig)
@@ -74,7 +83,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
 
     private def materializeSingleCoproductConfig[Source, Dest](config: Expr[FieldConfig[Source, Dest]]) =
       config match {
-        case '{ caseComputed[sourceSubtype][source, dest]($function)(using $ev1, $ev2, $ev3) } => 
+        case '{ caseComputed[sourceSubtype][source, dest]($function)(using $ev1, $ev2, $ev3) } =>
           Coproduct.Instance(TypeRepr.of[sourceSubtype], function.asInstanceOf[Expr[Any => Any]])
 
         case '{ caseConst[sourceSubtype][source, dest]($value)(using $ev1, $ev2, $ev3) } =>
@@ -82,6 +91,19 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
 
         case other => report.errorAndAbort(s"Unsupported field configuration: ${other.asTerm.show}")
       }
+
+    private def materializeSingleArgConfig[Source, Dest, NamedArguments <: Tuple](
+      config: Expr[ArgConfig[Source, Dest, NamedArguments]]
+    ) = config match {
+      case '{
+            type namedArgs <: Tuple
+            argConst[source, dest, argType, actualType, `namedArgs`]($selector, $const)(using $ev1, $ev2)
+          } =>
+        val argName = selectedArg[`namedArgs`, argType](selector)
+        Product.Const(argName, const)
+        
+      case other => report.errorAndAbort(s"Unsupported field configuration: ${other.asTerm.show}")
+    }
 
   }
 }

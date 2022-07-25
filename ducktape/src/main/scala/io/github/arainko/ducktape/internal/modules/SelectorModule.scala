@@ -54,8 +54,7 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
   object ArgSelector {
     def unapply(arg: Term): Option[String] =
       PartialFunction.condOpt(arg) {
-        case SelectorLambda(_, DynamicSelector(argumentName)) =>
-          argumentName
+        case Lambda(_, DynamicSelector(argumentName)) => argumentName
       }
 
     private object DynamicSelector {

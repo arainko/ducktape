@@ -21,22 +21,3 @@ final class DefinitionBuilder[Source, Dest] {
         }
     }
 }
-
-enum ColorLong {
-  case Red, Green, Blue, White, Black
-}
-
-enum ColorShort {
-  case Red, Green, Blue
-}
-
-@main def run = {
-  import io.github.arainko.ducktape.*
-
-  val redLong = ColorShort.Red
-
-  DebugMacros.codeCompiletime {
-    Transformer.define[ColorShort, ColorLong](caseConst[ColorShort.Red.type](ColorLong.Black))
-  }
-
-}
