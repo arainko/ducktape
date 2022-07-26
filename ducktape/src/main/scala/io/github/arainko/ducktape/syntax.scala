@@ -10,11 +10,32 @@ extension [Source](value: Source) {
 
   def to[Dest](using Transformer[Source, Dest]): Dest = Transformer[Source, Dest].transform(value)
 
-  // transparent inline def intoVia[Func](inline function: Func)(using From: Mirror.ProductOf[From], Func: FunctionMirror[Func]) =
-  //   ViaBuilder.applied(value, function)
+  transparent inline def intoVia[Func](inline function: Func)(using Source: Mirror.ProductOf[Source], Func: FunctionMirror[Func]) =
+    AppliedViaBuilder.create(value, function)
 
   inline def via[Func](inline function: Func)(using
     Func: FunctionMirror[Func],
     Source: Mirror.ProductOf[Source]
   ): Func.Return = ProductTransformerMacros.via(value, function)
+}
+
+final case class Person(name: String, age: Int)
+
+@main def test = {
+  def someMethod(age: Int, name: String, addArg: String) =
+    Person("asd" + addArg, age)
+
+  val mirror = summon[FunctionMirror[Any => Any]]
+
+  val cos = Person("asd", 1)
+
+  val builder = AppliedViaBuilder.create(cos, someMethod)
+
+  DebugMacros.codeCompiletime {
+    val aaaa = cos.intoVia(someMethod)(argConst(_.addArg, "asd"))
+
+
+
+  }
+  
 }

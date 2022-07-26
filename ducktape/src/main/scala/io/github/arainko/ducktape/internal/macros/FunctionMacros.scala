@@ -17,7 +17,7 @@ class FunctionMacros(using val quotes: Quotes) extends Module, SelectorModule, F
         (returnTpe.asType -> args.asType) match {
           case ('[ret], '[IsTuple[args]]) =>
             '{
-              null.asInstanceOf[
+              FunctionMirror.asInstanceOf[
                 FunctionMirror[Func] {
                   type Return = ret
                   type Args = args

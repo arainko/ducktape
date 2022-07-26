@@ -59,8 +59,8 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
 
     private object DynamicSelector {
       def unapply(arg: Term): Option[String] =
-        PartialFunction.condOpt(arg) {
-          case Apply(Select(Ident(_), "selectDynamic"), List(Literal(StringConstant(argumentName)))) => argumentName
+        PartialFunction.condOpt(arg.asExpr) {
+          case '{ ($args: FunctionArguments[namedArgs]).selectDynamic($selectedArg) } => selectedArg.valueOrAbort
         }
 
     }

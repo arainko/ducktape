@@ -9,11 +9,15 @@ sealed trait FunctionMirror[F] {
   type Return
 }
 
-object FunctionMirror {
+object FunctionMirror extends FunctionMirror[Any => Any] {
   type Aux[F, A <: Tuple, R] = FunctionMirror[F] {
     type Args = A
     type Return = R
   }
+
+  override type Args = Tuple1[Any]
+
+  override type Return = Any
 
   transparent inline given [F]: FunctionMirror[F] = FunctionMacros.createMirror[F]
 }

@@ -27,6 +27,6 @@ private[ducktape] object SelectorMacros {
   inline def selectedArg[NamedArgs <: Tuple, ArgType](inline selector: FunctionArguments[NamedArgs] => ArgType): String =
     ${ selectedArgMacro[NamedArgs, ArgType]('selector) }
 
-  def selectedArgMacro[NamedArgs <: Tuple: Type, ArgType](selector: Expr[FunctionArguments[NamedArgs] => ArgType])(using Quotes) =
+  def selectedArgMacro[NamedArgs <: Tuple: Type, ArgType: Type](selector: Expr[FunctionArguments[NamedArgs] => ArgType])(using Quotes) =
     Expr(SelectorMacros().selectedArg(selector))
 }
