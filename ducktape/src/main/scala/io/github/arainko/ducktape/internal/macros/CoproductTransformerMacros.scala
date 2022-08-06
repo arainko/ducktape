@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape.internal.macros
 
 import scala.quoted.*
-import io.github.arainko.ducktape.Configuration.*
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.modules.*
 import scala.deriving.Mirror as DerivingMirror
@@ -28,7 +27,7 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
 
   def transformConfigured[A: Type, B: Type](
     sourceValue: Expr[A],
-    config: Expr[Seq[FieldConfig[A, B]]],
+    config: Expr[Seq[BuilderConfig[A, B]]],
     A: DerivingMirror.SumOf[A],
     B: DerivingMirror.SumOf[B]
   ): Expr[B] = {
@@ -47,7 +46,7 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     val configuredIfBranches =
       configuredCases.zip(materializedConfig).map { (source, config) =>
         config match {
-          case Coproduct.Instance(tpe, function) =>
+          case Coproduct.Computed(tpe, function) =>
             val cond = source.tpe.asType match {
               case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
             }
@@ -108,7 +107,7 @@ private[ducktape] object CoproductTransformerMacros {
     B: Expr[DerivingMirror.SumOf[B]]
   )(using Quotes): Expr[B] = CoproductTransformerMacros().transform(source, A, B)
 
-  inline def transformConfigured[A, B](source: A, inline config: FieldConfig[A, B]*)(using
+  inline def transformConfigured[A, B](source: A, inline config: BuilderConfig[A, B]*)(using
     A: DerivingMirror.SumOf[A],
     B: DerivingMirror.SumOf[B]
   ): B =
@@ -116,7 +115,7 @@ private[ducktape] object CoproductTransformerMacros {
 
   def transformConfiguredMacro[A: Type, B: Type](
     source: Expr[A],
-    config: Expr[Seq[FieldConfig[A, B]]],
+    config: Expr[Seq[BuilderConfig[A, B]]],
     A: Expr[DerivingMirror.SumOf[A]],
     B: Expr[DerivingMirror.SumOf[B]]
   )(using Quotes): Expr[B] = CoproductTransformerMacros().transformConfigured(source, config, A, B)

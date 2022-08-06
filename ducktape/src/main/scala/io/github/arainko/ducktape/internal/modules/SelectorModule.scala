@@ -8,12 +8,15 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
   import quotes.reflect.*
 
   def selectedField[From: Type, FieldType](
+    mirror: DerivingMirror.ProductOf[From],
     lambda: Expr[From => FieldType]
-  )(using From: DerivingMirror.ProductOf[From]): String = {
-    val validFields = Field.fromMirror(From).map(_.name)
-    lambda.asTerm match {
+  ): String = {
+    val validFields = Field.fromMirror(mirror).map(_.name)
+    lambda match {
       case FieldSelector(fieldName) if validFields.contains(fieldName) => fieldName
-      case _                                                           => report.errorAndAbort("Not a field selector!")
+      case other                                                           => 
+        val suggestions = validFields.map(arg => s"'_.$arg'").mkString(", ")
+        report.errorAndAbort(s"Not a field selector! Try one of these: $suggestions. $other")
     }
   }
 
@@ -27,12 +30,6 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
         val suggestions = arguments.map(arg => s"'_.$arg'").mkString(", ")
         report.errorAndAbort(s"Not an argument selector! Try one of these: $suggestions")
     }
-  }
-
-  def caseOrdinal[From: Type, Case <: From: Type](using From: DerivingMirror.SumOf[From]): Int = {
-    val caseRepr = TypeRepr.of[Case]
-    val cases = Case.fromMirror(From)
-    cases.find(c => c.tpe =:= caseRepr).getOrElse(report.errorAndAbort("Not a case!")).ordinal
   }
 
   object SelectorLambda {

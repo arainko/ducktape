@@ -21,6 +21,14 @@ extension [Source](value: Source) {
 
 final case class Person(name: String, age: Int)
 
+enum Color {
+  case Red, Green, Blue
+}
+
+enum ColorExtra {
+  case Red, Green, Blue, Orange
+}
+
 @main def test = {
   def someMethod(age: Int, name: String, addArg: String) =
     Person("asd" + addArg, age)
@@ -29,13 +37,14 @@ final case class Person(name: String, age: Int)
 
   val cos = Person("asd", 1)
 
+  DebugMacros.codeCompiletime {
+  ColorExtra.Red.into[Color](Case.const[ColorExtra.Orange.type](Color.Blue))
+  }
+
   val builder = AppliedViaBuilder.create(cos, someMethod)
 
   DebugMacros.codeCompiletime {
-    val aaaa = cos.intoVia(someMethod)(argConst(_.addArg, "asd"))
-
-
-
+    val aaaa = cos.intoVia(someMethod)(Arg.renamed(_.addArg, _.name))
   }
   
 }

@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape.internal.macros
 
 import scala.quoted.*
-import io.github.arainko.ducktape.Configuration.*
 import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.function.*
@@ -73,7 +72,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 
   def transformConfigured[A: Type, B: Type, Config <: Tuple: Type](
     sourceValue: Expr[A],
-    config: Expr[Seq[FieldConfig[A, B]]],
+    config: Expr[Seq[BuilderConfig[A, B]]],
     A: DerivingMirror.ProductOf[A],
     B: DerivingMirror.ProductOf[B]
   ): Expr[B] = {
@@ -210,17 +209,38 @@ private[ducktape] object ProductTransformerMacros {
   )(using Quotes) =
     ProductTransformerMacros().viaConfigured(sourceValue, function, config, A)
 
-  inline def transformConfigured[Source, Dest](sourceValue: Source, inline config: FieldConfig[Source, Dest]*)(using
+  inline def transformConfigured[Source, Dest](sourceValue: Source, inline config: BuilderConfig[Source, Dest]*)(using
     Source: DerivingMirror.ProductOf[Source],
     Dest: DerivingMirror.ProductOf[Dest]
   ) = ${ transformConfiguredMacro('sourceValue, 'config, 'Source, 'Dest) }
 
   def transformConfiguredMacro[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
-    config: Expr[Seq[FieldConfig[Source, Dest]]],
+    config: Expr[Seq[BuilderConfig[Source, Dest]]],
     Source: Expr[DerivingMirror.ProductOf[Source]],
     Dest: Expr[DerivingMirror.ProductOf[Dest]]
   )(using Quotes) =
     ProductTransformerMacros().transformConfigured(sourceValue, config, Source, Dest)
+
+
+  inline def transformWhateverConfigured[Source, Dest](sourceValue: Source, inline config: BuilderConfig[Source, Dest]*) =
+     ${ transformWhateverConfiguredMacro('sourceValue, 'config) }
+  
+     //TODO: Moove that into `TransformerMacros` and for the love of god name it somewhat else
+  def transformWhateverConfiguredMacro[Source: Type, Dest: Type](
+    sourceValue: Expr[Source],
+    config: Expr[Seq[BuilderConfig[Source, Dest]]]
+  )(using Quotes) = {
+    import quotes.reflect.*
+    val sourceMirror = Expr.summon[DerivingMirror.Of[Source]]
+    val destMirror = Expr.summon[DerivingMirror.Of[Dest]]
+
+    sourceMirror.zip(destMirror).collect {
+      case '{ $source: DerivingMirror.ProductOf[Source]} -> '{ $dest: DerivingMirror.ProductOf[Dest] } =>
+        ProductTransformerMacros.transformConfiguredMacro(sourceValue, config, source, dest)
+      case '{ $source: DerivingMirror.SumOf[Source] } -> '{ $dest: DerivingMirror.SumOf[Dest] } =>
+        CoproductTransformerMacros.transformConfiguredMacro(sourceValue, config, source, dest)
+    }.getOrElse(report.errorAndAbort("BARF"))
+  }
 
 }

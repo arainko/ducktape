@@ -32,7 +32,7 @@ lazy val ducktape =
   project
     .in(file("ducktape"))
     .settings(
-      scalaVersion := "3.1.2",
+      scalaVersion := "3.1.3",
       scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax"),
       libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test
     )
@@ -41,7 +41,7 @@ lazy val docs =
   project
     .in(file("documentation"))
     .settings(
-      scalaVersion := "3.1.2",
+      scalaVersion := "3.1.3",
       mdocVariables := Map("VERSION" -> version.value)
     )
     .dependsOn(ducktape)
