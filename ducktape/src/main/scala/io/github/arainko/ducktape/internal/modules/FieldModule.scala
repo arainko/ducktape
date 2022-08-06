@@ -1,7 +1,7 @@
 package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
-import scala.deriving.Mirror as DerMirror
+import scala.deriving.*
 import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.function.NamedArgument
 
@@ -18,18 +18,16 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
       }
 
     private def derivedTransformer[A: Type, B: Type]: Option[Expr[Transformer[A, B]]] =
-      DerivingMirror
-        .of[A]
-        .zip(DerivingMirror.of[B])
-        .map {
-          case ('{ $src: deriving.Mirror.Of[A] }, '{ $dest: deriving.Mirror.Of[B] }) =>
-            '{ Transformer.derived[A, B](using $src, $dest) }
-        }
+      mirrorOf[A].zip(mirrorOf[B]).map {
+        case ('{ $src: deriving.Mirror.Of[A] }, '{ $dest: deriving.Mirror.Of[B] }) =>
+          '{ Transformer.derived[A, B](using $src, $dest) }
+      }
   }
 
   object Field {
-    def fromMirror[A](mirror: DerivingMirror.ProductOf[A]): List[Field] = {
-      val materializedMirror = Mirror(mirror).getOrElse(report.errorAndAbort("### Failed to materialize a mirror ###"))
+    def fromMirror[A](mirror: Expr[Mirror.ProductOf[A]]): List[Field] = {
+      val materializedMirror =
+        MaterializedMirror(mirror).getOrElse(report.errorAndAbort("### Failed to materialize a mirror ###"))
 
       materializedMirror.mirroredElemLabels
         .zip(materializedMirror.mirroredElemTypes)
@@ -57,8 +55,9 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
   }
 
   object Case {
-    def fromMirror[A](mirror: DerivingMirror.SumOf[A]): List[Case] = {
-      val materializedMirror = Mirror(mirror).getOrElse(report.errorAndAbort("### Failed to materialize a mirror ###"))
+    def fromMirror[A](mirror: Expr[Mirror.SumOf[A]]): List[Case] = {
+      val materializedMirror =
+        MaterializedMirror(mirror).getOrElse(report.errorAndAbort("### Failed to materialize a mirror ###"))
 
       materializedMirror.mirroredElemLabels
         .zip(materializedMirror.mirroredElemTypes)

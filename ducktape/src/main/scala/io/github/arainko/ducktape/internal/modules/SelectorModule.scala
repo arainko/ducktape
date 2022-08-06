@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
+import scala.deriving.*
 import io.github.arainko.ducktape.function.*
 import scala.util.NotGiven
 
@@ -8,7 +9,7 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
   import quotes.reflect.*
 
   def selectedField[From: Type, FieldType](
-    mirror: DerivingMirror.ProductOf[From],
+    mirror: Expr[Mirror.ProductOf[From]],
     lambda: Expr[From => FieldType]
   ): String = {
     val validFields = Field.fromMirror(mirror).map(_.name)

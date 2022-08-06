@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
+import scala.deriving.*
 import io.github.arainko.ducktape.Transformer
 
 private[internal] trait Module {
@@ -13,11 +14,5 @@ private[internal] trait Module {
   given Printer[TypeRepr] = Printer.TypeReprShortCode
   given Printer[Tree] = Printer.TreeShortCode
 
-  object DerivingMirror {
-    type SumOf[A] = Expr[deriving.Mirror.SumOf[A]]
-    type ProductOf[A] = Expr[deriving.Mirror.ProductOf[A]]
-    type Of[A] = Expr[deriving.Mirror.Of[A]]
-
-    def of[A: Type]: Option[DerivingMirror.Of[A]] = Expr.summon[deriving.Mirror.Of[A]]
-  }
+  def mirrorOf[A: Type] = Expr.summon[Mirror.Of[A]]
 }

@@ -2,13 +2,14 @@ package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 import scala.annotation.tailrec
+import scala.deriving.Mirror
 
 // Taken from shapeless 3:
 // https://github.com/typelevel/shapeless-3/blob/main/modules/deriving/src/main/scala/shapeless3/deriving/internals/reflectionutils.scala
 private[internal] trait MirrorModule { self: Module =>
   import quotes.reflect.*
 
-  case class Mirror(
+  case class MaterializedMirror(
     mirroredType: TypeRepr,
     mirroredMonoType: TypeRepr,
     mirroredElemTypes: List[TypeRepr],
@@ -16,8 +17,8 @@ private[internal] trait MirrorModule { self: Module =>
     mirroredElemLabels: List[String]
   )
 
-  object Mirror {
-    def apply(mirror: Expr[deriving.Mirror]): Option[Mirror] = {
+  object MaterializedMirror {
+    def apply(mirror: Expr[deriving.Mirror]): Option[MaterializedMirror] = {
       val mirrorTpe = mirror.asTerm.tpe.widen
       for {
         mirroredType <- findMemberType(mirrorTpe, "MirroredType")
@@ -29,7 +30,7 @@ private[internal] trait MirrorModule { self: Module =>
         val elemTypes = tupleTypeElements(mirroredElemTypes)
         val ConstantType(StringConstant(label)) = mirroredLabel
         val elemLabels = tupleTypeElements(mirroredElemLabels).map { case ConstantType(StringConstant(l)) => l }
-        Mirror(mirroredType, mirroredMonoType, elemTypes, label, elemLabels)
+        MaterializedMirror(mirroredType, mirroredMonoType, elemTypes, label, elemLabels)
       }
     }
   }

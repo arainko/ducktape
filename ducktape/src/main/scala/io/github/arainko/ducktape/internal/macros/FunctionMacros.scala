@@ -1,8 +1,9 @@
 package io.github.arainko.ducktape.internal.macros
 
-import scala.quoted.*
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.modules.*
+
+import scala.quoted.*
 
 class FunctionMacros(using val quotes: Quotes) extends Module, SelectorModule, FieldModule, MirrorModule {
   import FunctionMacros.*
@@ -12,15 +13,13 @@ class FunctionMacros(using val quotes: Quotes) extends Module, SelectorModule, F
     TypeRepr.of[Func] match {
       case tpe @ AppliedType(_, tpeArgs) if tpe.isFunctionType =>
         val returnTpe = tpeArgs.last
-        val args = tupleify(tpeArgs.init)
 
-        (returnTpe.asType -> args.asType) match {
-          case ('[ret], '[IsTuple[args]]) =>
+        returnTpe.asType match {
+          case '[ret] =>
             '{
               FunctionMirror.asInstanceOf[
                 FunctionMirror[Func] {
                   type Return = ret
-                  type Args = args
                 }
               ]
             }

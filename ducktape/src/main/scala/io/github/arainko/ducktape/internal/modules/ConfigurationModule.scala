@@ -33,7 +33,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
         .toList
 
     def materializeArgConfig[Source, Dest, NamedArguments <: Tuple](
-      config: Seq[Expr[ArgConfig[Source, Dest, NamedArguments]]]
+      config: Seq[Expr[ArgBuilderConfig[Source, Dest, NamedArguments]]]
     ): List[Product] =
       config
         .map(materializeSingleArgConfig)
@@ -89,7 +89,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
       }
 
     private def materializeSingleArgConfig[Source, Dest, NamedArguments <: Tuple](
-      config: Expr[ArgConfig[Source, Dest, NamedArguments]]
+      config: Expr[ArgBuilderConfig[Source, Dest, NamedArguments]]
     ) = config match {
       case '{
             type namedArgs <: Tuple

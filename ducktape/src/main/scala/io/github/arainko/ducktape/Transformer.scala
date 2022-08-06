@@ -27,17 +27,10 @@ object Transformer {
   }
 
   inline given derived[A, B](using From: Mirror.Of[A], To: Mirror.Of[B]): Transformer[A, B] =
-    inline erasedValue[(From.type, To.type)] match {
-      case (_: Mirror.SumOf[A], _: Mirror.SumOf[B]) =>
-        CoproductTransformerMacros.transform[A, B](_)(using summonInline, summonInline)
-      case (_: Mirror.ProductOf[A], _: Mirror.ProductOf[B]) =>
-        ProductTransformerMacros.transform[A, B](_)(using summonInline, summonInline)
-      case other =>
-        error("Derived transformers are only supported for Product -> Product and Coproduct -> Coproduct transformations")
-    }
+    from => TransformerMacros.transform(from)
 
   given [A, B](using Transformer[A, B]): Transformer[A, Option[B]] =
-    Transformer[A, B].transform.andThen(Some.apply)(_)
+    from => Transformer[A, B].transform.andThen(Some.apply)(from)
 
   given [A, B](using Transformer[A, B]): Transformer[Option[A], Option[B]] =
     from => from.map(Transformer[A, B].transform)

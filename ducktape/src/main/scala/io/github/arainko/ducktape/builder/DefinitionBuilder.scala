@@ -11,6 +11,6 @@ final class DefinitionBuilder[Source, Dest] {
   inline def apply(inline config: BuilderConfig[Source, Dest]*): Transformer[Source, Dest] =
     new {
       def transform(from: Source): Dest =
-        ProductTransformerMacros.transformWhateverConfigured(from, config*)
+        TransformerMacros.transformConfigured(from, config)
     }
 }

@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal.macros
 import scala.quoted.*
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.modules.*
-import scala.deriving.Mirror as DerivingMirror
+import scala.deriving.*
 
 private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     extends Module,
@@ -16,8 +16,8 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
 
   def transform[A: Type, B: Type](
     sourceValue: Expr[A],
-    A: DerivingMirror.SumOf[A],
-    B: DerivingMirror.SumOf[B]
+    A: Expr[Mirror.SumOf[A]],
+    B: Expr[Mirror.SumOf[B]]
   ): Expr[B] = {
     val sourceCases = Case.fromMirror(A)
     val destCases = Case.fromMirror(B).map(c => c.name -> c).toMap
@@ -28,8 +28,8 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
   def transformConfigured[A: Type, B: Type](
     sourceValue: Expr[A],
     config: Expr[Seq[BuilderConfig[A, B]]],
-    A: DerivingMirror.SumOf[A],
-    B: DerivingMirror.SumOf[B]
+    A: Expr[Mirror.SumOf[A]],
+    B: Expr[Mirror.SumOf[B]]
   ): Expr[B] = {
     val materializedConfig = config match {
       case Varargs(config) => MaterializedConfiguration.materializeCoproductConfig(config)
@@ -97,26 +97,26 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
 
 private[ducktape] object CoproductTransformerMacros {
   inline def transform[A, B](source: A)(using
-    A: DerivingMirror.SumOf[A],
-    B: DerivingMirror.SumOf[B]
+    A: Mirror.SumOf[A],
+    B: Mirror.SumOf[B]
   ): B = ${ transformMacro[A, B]('source, 'A, 'B) }
 
   def transformMacro[A: Type, B: Type](
     source: Expr[A],
-    A: Expr[DerivingMirror.SumOf[A]],
-    B: Expr[DerivingMirror.SumOf[B]]
+    A: Expr[Mirror.SumOf[A]],
+    B: Expr[Mirror.SumOf[B]]
   )(using Quotes): Expr[B] = CoproductTransformerMacros().transform(source, A, B)
 
   inline def transformConfigured[A, B](source: A, inline config: BuilderConfig[A, B]*)(using
-    A: DerivingMirror.SumOf[A],
-    B: DerivingMirror.SumOf[B]
+    A: Mirror.SumOf[A],
+    B: Mirror.SumOf[B]
   ): B =
     ${ transformConfiguredMacro[A, B]('source, 'config, 'A, 'B) }
 
   def transformConfiguredMacro[A: Type, B: Type](
     source: Expr[A],
     config: Expr[Seq[BuilderConfig[A, B]]],
-    A: Expr[DerivingMirror.SumOf[A]],
-    B: Expr[DerivingMirror.SumOf[B]]
+    A: Expr[Mirror.SumOf[A]],
+    B: Expr[Mirror.SumOf[B]]
   )(using Quotes): Expr[B] = CoproductTransformerMacros().transformConfigured(source, config, A, B)
 }

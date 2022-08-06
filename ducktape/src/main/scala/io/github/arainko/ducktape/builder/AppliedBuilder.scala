@@ -9,5 +9,5 @@ import scala.deriving.Mirror
 final case class AppliedBuilder[Source, Dest](appliedTo: Source) {
 
   inline def apply(inline config: BuilderConfig[Source, Dest]*): Dest = 
-    ProductTransformerMacros.transformWhateverConfigured(appliedTo, config*)
+    TransformerMacros.transformConfigured(appliedTo, config)
 }
