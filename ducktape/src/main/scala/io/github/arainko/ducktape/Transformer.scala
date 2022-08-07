@@ -26,8 +26,11 @@ object Transformer {
     def transform(from: A): A = from
   }
 
-  inline given derived[A, B](using From: Mirror.Of[A], To: Mirror.Of[B]): Transformer[A, B] =
-    from => TransformerMacros.transform(from)
+  inline given forProducts[A, B](using Mirror.ProductOf[A], Mirror.ProductOf[B]): Transformer[A, B] =
+    from => ProductTransformerMacros.transform(from)
+
+  inline given forCoproducts[A, B](using Mirror.SumOf[A], Mirror.SumOf[B]): Transformer[A, B] =
+    from => CoproductTransformerMacros.transform(from)
 
   given [A, B](using Transformer[A, B]): Transformer[A, Option[B]] =
     from => Transformer[A, B].transform.andThen(Some.apply)(from)

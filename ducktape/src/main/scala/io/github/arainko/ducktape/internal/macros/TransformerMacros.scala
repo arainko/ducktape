@@ -9,17 +9,6 @@ import scala.quoted.*
 private[ducktape] final class TransformerMacros(using val quotes: Quotes) extends Module {
   import quotes.reflect.*
 
-  def transform[Source: Type, Dest: Type](sourceValue: Expr[Source]) =
-    mirrorOf[Source]
-      .zip(mirrorOf[Dest])
-      .collect {
-        case '{ $source: Mirror.ProductOf[Source] } -> '{ $dest: Mirror.ProductOf[Dest] } =>
-          ProductTransformerMacros.transformMacro(sourceValue, source, dest)
-        case '{ $source: Mirror.SumOf[Source] } -> '{ $dest: Mirror.SumOf[Dest] } =>
-          CoproductTransformerMacros.transformMacro(sourceValue, source, dest)
-      }
-      .getOrElse(report.errorAndAbort("BARF"))
-
   def transformConfigured[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     config: Expr[Seq[BuilderConfig[Source, Dest]]]
@@ -37,10 +26,6 @@ private[ducktape] final class TransformerMacros(using val quotes: Quotes) extend
 }
 
 object TransformerMacros {
-  inline def transform[Source, Dest](sourceValue: Source): Dest = ${ transformMacro('sourceValue) }
-
-  def transformMacro[Source: Type, Dest](sourceValue: Expr[Source])(using Quotes): Expr[Dest] =
-    TransformerMacros().transform(sourceValue)
 
   inline def transformConfigured[Source, Dest](
     sourceValue: Source,

@@ -14,13 +14,15 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
         case ('[source], '[dest]) =>
           Expr
             .summon[Transformer[source, dest]]
-            .orElse(derivedTransformer[source, dest])
+            // .orElse(derivedTransformer[source, dest])
       }
 
     private def derivedTransformer[A: Type, B: Type]: Option[Expr[Transformer[A, B]]] =
-      mirrorOf[A].zip(mirrorOf[B]).map {
-        case ('{ $src: deriving.Mirror.Of[A] }, '{ $dest: deriving.Mirror.Of[B] }) =>
-          '{ Transformer.derived[A, B](using $src, $dest) }
+      mirrorOf[A].zip(mirrorOf[B]).collect {
+        case ('{ $src: Mirror.ProductOf[A] }, '{ $dest: Mirror.ProductOf[B] }) =>
+          '{ Transformer.forProducts[A, B](using $src, $dest) }
+        case ('{ $src: Mirror.SumOf[A] }, '{ $dest: Mirror.SumOf[B] }) =>
+          '{ Transformer.forCoproducts[A, B](using $src, $dest) }
       }
   }
 

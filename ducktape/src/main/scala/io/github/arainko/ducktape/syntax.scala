@@ -19,7 +19,13 @@ extension [Source](value: Source) {
   ): Func.Return = ProductTransformerMacros.via(value, function)
 }
 
-final case class Person(name: String, age: Int)
+final case class Inside(name: String, age: Int)
+
+final case class Inside2(name: String)
+
+final case class Person(name: String, age: Int, ins: Inside)
+
+final case class PersonRearranged(age: Int, name: String, ins: Inside2)
 
 enum Color {
   case Red, Green, Blue
@@ -31,11 +37,17 @@ enum ColorExtra {
 
 @main def test = {
   def someMethod(age: Int, name: String, addArg: String) =
-    Person("asd" + addArg, age)
+    Person("asd" + addArg, age, Inside("name", 123))
 
   val mirror = summon[FunctionMirror[Any => Any]]
 
-  val cos = Person("asd", 1)
+  val cos = Person("asd", 1, Inside("name", 123))
+
+  DebugMacros.codeCompiletime {
+    // summon[Transformer[Person, PersonRearranged]]
+    cos.to[PersonRearranged]
+  }
+
 
   DebugMacros.codeCompiletime {
   ColorExtra.Red.into[Color](Case.const[ColorExtra.Orange.type](Color.Blue))

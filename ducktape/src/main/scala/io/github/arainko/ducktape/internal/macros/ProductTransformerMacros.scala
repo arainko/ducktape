@@ -38,7 +38,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
   ): Expr[B] = {
     val materializedConfig = config match {
       case Varargs(config) => MaterializedConfiguration.materializeArgConfig(config)
-      case other => report.errorAndAbort("Failed to materialize ArgConfig!")
+      case other           => report.errorAndAbort("Failed to materialize ArgConfig!")
     }
 
     val functionFields = Field.fromNamedArguments[NamedArgs].map(field => field.name -> field).toMap
@@ -118,7 +118,11 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
           .get(field.name)
           .getOrElse(report.errorAndAbort(s"No field named '${field.name}' found in ${TypeRepr.of[A].show}"))
     }.map { (dest, source) =>
-      val call = resolveTransformer(sourceValue, source, dest)
+      val call =
+        resolveTransformer(sourceValue, source, dest)
+          .orElse(directTransformation(sourceValue, source, dest))
+          .getOrElse(report.errorAndAbort(s"Transformer[${source.tpe.show}, ${dest.tpe.show}] not found"))
+
       NamedArg(dest.name, call)
     }
 
@@ -151,7 +155,19 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
           val field = accessField(sourceValue, source.name).asExprOf[source]
           '{ $transformer.transform($field) }.asTerm
       }
-      .getOrElse(report.errorAndAbort(s"Transformer[${source.tpe.show}, ${destination.tpe.show}] not found"))
+
+  private def directTransformation[A: Type](sourceValue: Expr[A], source: Field, destination: Field) =
+    (source.tpe.asType -> destination.tpe.asType) match {
+      case '[src] -> '[dest] =>
+        mirrorOf[src].zip(mirrorOf[dest]).collect {
+          case ('{ $src: Mirror.ProductOf[src] }, '{ $dest: Mirror.ProductOf[dest] }) =>
+            transform(accessField(sourceValue, source.name).asExprOf[src], src, dest).asTerm
+          case ('{ $src: Mirror.SumOf[src] }, '{ $dest: Mirror.SumOf[dest] }) =>
+            CoproductTransformerMacros
+              .transformMacro(accessField(sourceValue, source.name).asExprOf[src], src, dest)
+              .asTerm
+        }
+    }
 
   private def accessField[A: Type](value: Expr[A], fieldName: String) = Select.unique(value.asTerm, fieldName)
 
@@ -222,11 +238,10 @@ private[ducktape] object ProductTransformerMacros {
   )(using Quotes) =
     ProductTransformerMacros().transformConfigured(sourceValue, config, Source, Dest)
 
-
   // inline def transformWhateverConfigured[Source, Dest](sourceValue: Source, inline config: BuilderConfig[Source, Dest]*) =
-    //  ${ transformWhateverConfiguredMacro('sourceValue, 'config) }
-  
-     //TODO: Moove that into `TransformerMacros` and for the love of god name it somewhat else
+  //  ${ transformWhateverConfiguredMacro('sourceValue, 'config) }
+
+  //TODO: Moove that into `TransformerMacros` and for the love of god name it somewhat else
   // def transformWhateverConfiguredMacro[Source: Type, Dest: Type](
   //   sourceValue: Expr[Source],
   //   config: Expr[Seq[BuilderConfig[Source, Dest]]]
