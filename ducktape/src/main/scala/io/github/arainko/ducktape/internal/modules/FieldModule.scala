@@ -4,25 +4,16 @@ import scala.quoted.*
 import scala.deriving.*
 import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.function.NamedArgument
+import scala.compiletime.*
 
 private[internal] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
 
   case class Field(name: String, tpe: TypeRepr) {
     def transformerTo(that: Field): Option[Expr[Transformer[?, ?]]] =
-      (tpe.asType, that.tpe.asType) match {
-        case ('[source], '[dest]) =>
-          Expr
-            .summon[Transformer[source, dest]]
-            // .orElse(derivedTransformer[source, dest])
-      }
-
-    private def derivedTransformer[A: Type, B: Type]: Option[Expr[Transformer[A, B]]] =
-      mirrorOf[A].zip(mirrorOf[B]).collect {
-        case ('{ $src: Mirror.ProductOf[A] }, '{ $dest: Mirror.ProductOf[B] }) =>
-          '{ Transformer.forProducts[A, B](using $src, $dest) }
-        case ('{ $src: Mirror.SumOf[A] }, '{ $dest: Mirror.SumOf[B] }) =>
-          '{ Transformer.forCoproducts[A, B](using $src, $dest) }
+      Implicits.search(TypeRepr.of[Transformer].appliedTo(List(tpe, that.tpe))) match {
+        case iss: ImplicitSearchSuccess => Some(iss.tree.asExprOf[Transformer[?, ?]])
+        case iss: ImplicitSearchFailure => None
       }
   }
 

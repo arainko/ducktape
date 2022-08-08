@@ -25,7 +25,7 @@ final case class Inside2(name: String)
 
 final case class Person(name: String, age: Int, ins: Inside)
 
-final case class PersonRearranged(age: Int, name: String, ins: Inside2)
+final case class PersonRearranged(age: Int, name: String, ins: Option[Inside2])
 
 enum Color {
   case Red, Green, Blue
@@ -39,9 +39,12 @@ enum ColorExtra {
   def someMethod(age: Int, name: String, addArg: String) =
     Person("asd" + addArg, age, Inside("name", 123))
 
-  val mirror = summon[FunctionMirror[Any => Any]]
-
   val cos = Person("asd", 1, Inside("name", 123))
+
+  // DebugMacros.codeCompiletime {
+    // summon[Transformer[Inside, Option[Inside2]]]
+  // }
+
 
   DebugMacros.codeCompiletime {
     // summon[Transformer[Person, PersonRearranged]]
@@ -50,7 +53,7 @@ enum ColorExtra {
 
 
   DebugMacros.codeCompiletime {
-  ColorExtra.Red.into[Color](Case.const[ColorExtra.Orange.type](Color.Blue))
+    ColorExtra.Red.into[Color](Case.const[ColorExtra.Orange.type](Color.Blue))
   }
 
   val builder = AppliedViaBuilder.create(cos, someMethod)

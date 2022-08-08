@@ -121,7 +121,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       val call =
         resolveTransformer(sourceValue, source, dest)
           .orElse(directTransformation(sourceValue, source, dest))
-          .getOrElse(report.errorAndAbort(s"Transformer[${source.tpe.show}, ${dest.tpe.show}] not found"))
+          .getOrElse(inlineTransformer(sourceValue, source, dest))
 
       NamedArg(dest.name, call)
     }
@@ -159,14 +159,28 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
   private def directTransformation[A: Type](sourceValue: Expr[A], source: Field, destination: Field) =
     (source.tpe.asType -> destination.tpe.asType) match {
       case '[src] -> '[dest] =>
-        mirrorOf[src].zip(mirrorOf[dest]).collect {
-          case ('{ $src: Mirror.ProductOf[src] }, '{ $dest: Mirror.ProductOf[dest] }) =>
-            transform(accessField(sourceValue, source.name).asExprOf[src], src, dest).asTerm
-          case ('{ $src: Mirror.SumOf[src] }, '{ $dest: Mirror.SumOf[dest] }) =>
-            CoproductTransformerMacros
-              .transformMacro(accessField(sourceValue, source.name).asExprOf[src], src, dest)
-              .asTerm
-        }
+        val accessedField = accessField(sourceValue, source.name).asExprOf[src]
+
+        mirrorOf[src]
+          .zip(mirrorOf[dest])
+          .collect {
+            case ('{ $src: Mirror.ProductOf[src] }, '{ $dest: Mirror.ProductOf[dest] }) =>
+              transform(accessedField, src, dest).asTerm
+            case ('{ $src: Mirror.SumOf[src] }, '{ $dest: Mirror.SumOf[dest] }) =>
+              CoproductTransformerMacros
+                .transformMacro(accessedField, src, dest)
+                .asTerm
+          }
+    }
+
+  // Expr.summon[Transformer[A, B]] doesn't seem to work with inlined typeclasses? This
+  // properl resolves a transformer but the error message is not cool.
+  // TODO: Research behavior of Expr.summon
+  private def inlineTransformer[A: Type](sourceValue: Expr[A], source: Field, destination: Field) =
+    (source.tpe.asType -> destination.tpe.asType) match {
+      case '[src] -> '[dest] =>
+        val accessedField = accessField(sourceValue, source.name).asExprOf[src]
+        '{ compiletime.summonInline[Transformer[src, dest]].transform($accessedField) }.asTerm
     }
 
   private def accessField[A: Type](value: Expr[A], fieldName: String) = Select.unique(value.asTerm, fieldName)
