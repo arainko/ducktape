@@ -9,13 +9,11 @@ object DebugMacros {
   def structureMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*
     val struct = Printer.TreeStructure.show(value.asTerm)
-    '{
-      println(${ Expr(struct) })
-      $value
-    }
+    report.info(struct)
+    value
   }
 
-  inline def codeCompiletime[A](inline value: A) = ${ codeCompiletimeMacro('value) }
+  inline def code[A](inline value: A) = ${ codeCompiletimeMacro('value) }
 
   def codeCompiletimeMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*

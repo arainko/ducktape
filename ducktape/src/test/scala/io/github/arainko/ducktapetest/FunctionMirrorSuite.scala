@@ -18,7 +18,7 @@ class FunctionMirrorSuite extends FunSuite {
 
   test("derives FunctionMirror for multiple arg functions") {
     val mirror = summon[FunctionMirror[(String, Int) => Int]]
-    
+
     summon[mirror.Return =:= Int]
   }
 }

@@ -15,34 +15,34 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
-  def via[A: Type, B: Type, Func](
-    sourceValue: Expr[A],
+  def via[Source: Type, Dest: Type, Func](
+    sourceValue: Expr[Source],
     function: Expr[Func],
-    Func: Expr[FunctionMirror.Aux[Func, B]],
-    A: Expr[Mirror.ProductOf[A]]
-  ): Expr[B] = function.asTerm match {
+    Func: Expr[FunctionMirror.Aux[Func, Dest]],
+    Source: Expr[Mirror.ProductOf[Source]]
+  ): Expr[Dest] = function.asTerm match {
     case func @ SelectorLambda(vals, body) =>
       val functionFields = vals.map(Field.fromValDef)
-      val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
+      val sourceFields = Field.fromMirror(Source).map(field => field.name -> field).toMap
       val calls = fieldTransformers(sourceValue, functionFields, sourceFields).map(_.value)
 
-      Select.unique(func, "apply").appliedToArgs(calls).asExprOf[B]
+      Select.unique(func, "apply").appliedToArgs(calls).asExprOf[Dest]
     case other => report.errorAndAbort(s"'via' is only supported on eta-expanded methods!")
   }
 
-  def viaConfigured[A: Type, B: Type, Func: Type, NamedArgs <: Tuple: Type](
-    sourceValue: Expr[A],
+  def viaConfigured[Source: Type, Dest: Type, Func: Type, NamedArgs <: Tuple: Type](
+    sourceValue: Expr[Source],
     function: Expr[Func],
-    config: Expr[Seq[ArgBuilderConfig[A, B, NamedArgs]]],
-    A: Expr[Mirror.ProductOf[A]]
-  ): Expr[B] = {
+    config: Expr[Seq[ArgBuilderConfig[Source, Dest, NamedArgs]]],
+    Source: Expr[Mirror.ProductOf[Source]]
+  ): Expr[Dest] = {
     val materializedConfig = config match {
       case Varargs(config) => MaterializedConfiguration.materializeArgConfig(config)
       case other           => report.errorAndAbort("Failed to materialize ArgConfig!")
     }
 
     val functionFields = Field.fromNamedArguments[NamedArgs].map(field => field.name -> field).toMap
-    val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
+    val sourceFields = Field.fromMirror(Source).map(field => field.name -> field).toMap
 
     val nonConfiguredFields = functionFields -- materializedConfig.map(_.destFieldName)
     val transformedFields =
@@ -51,7 +51,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
         .toMap
 
     val configuredFields =
-      fieldConfigurations[A, B](
+      fieldConfigurations(
         materializedConfig,
         sourceValue,
         functionFields
@@ -67,48 +67,48 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     Select
       .unique(function.asTerm, "apply")
       .appliedToArgs(callsInOrder.toList)
-      .asExprOf[B]
+      .asExprOf[Dest]
   }
 
-  def transformConfigured[A: Type, B: Type, Config <: Tuple: Type](
-    sourceValue: Expr[A],
-    config: Expr[Seq[BuilderConfig[A, B]]],
-    A: Expr[Mirror.ProductOf[A]],
-    B: Expr[Mirror.ProductOf[B]]
-  ): Expr[B] = {
+  def transformConfigured[Source: Type, Dest: Type, Config <: Tuple: Type](
+    sourceValue: Expr[Source],
+    config: Expr[Seq[BuilderConfig[Source, Dest]]],
+    Source: Expr[Mirror.ProductOf[Source]],
+    Dest: Expr[Mirror.ProductOf[Dest]]
+  ): Expr[Dest] = {
     val materializedConfig = config match {
       case Varargs(config) => MaterializedConfiguration.materializeProductConfig(config)
       case other           => report.errorAndAbort(s"Failed to materialize field config: ${other.show} ")
     }
 
-    val destinationFields = Field.fromMirror(B).map(field => field.name -> field).toMap
-    val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
+    val destinationFields = Field.fromMirror(Dest).map(field => field.name -> field).toMap
+    val sourceFields = Field.fromMirror(Source).map(field => field.name -> field).toMap
 
     val nonConfiguredFields = destinationFields -- materializedConfig.map(_.destFieldName)
     val transformedFields = fieldTransformers(sourceValue, nonConfiguredFields.values.toList, sourceFields)
-    val configuredFields = fieldConfigurations[A, B](materializedConfig, sourceValue, destinationFields)
+    val configuredFields = fieldConfigurations(materializedConfig, sourceValue, destinationFields)
 
-    constructor(TypeRepr.of[B])
+    constructor(TypeRepr.of[Dest])
       .appliedToArgs(transformedFields ++ configuredFields)
-      .asExprOf[B]
+      .asExprOf[Dest]
   }
 
-  def transform[A: Type, B: Type](
-    sourceValue: Expr[A],
-    A: Expr[Mirror.ProductOf[A]],
-    B: Expr[Mirror.ProductOf[B]]
-  ): Expr[B] = {
-    val destinationFields = Field.fromMirror(B)
-    val sourceFields = Field.fromMirror(A).map(field => field.name -> field).toMap
+  def transform[Source: Type, Dest: Type](
+    sourceValue: Expr[Source],
+    Source: Expr[Mirror.ProductOf[Source]],
+    Dest: Expr[Mirror.ProductOf[Dest]]
+  ): Expr[Dest] = {
+    val destinationFields = Field.fromMirror(Dest)
+    val sourceFields = Field.fromMirror(Source).map(field => field.name -> field).toMap
     val transformerFields = fieldTransformers(sourceValue, destinationFields, sourceFields)
 
-    constructor(TypeRepr.of[B])
+    constructor(TypeRepr.of[Dest])
       .appliedToArgs(transformerFields.toList)
-      .asExprOf[B]
+      .asExprOf[Dest]
   }
 
-  private def fieldTransformers[A: Type](
-    sourceValue: Expr[A],
+  private def fieldTransformers[Source: Type](
+    sourceValue: Expr[Source],
     destinationFields: List[Field],
     sourceFieldMapping: Map[String, Field]
   ) =
@@ -116,19 +116,16 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       field ->
         sourceFieldMapping
           .get(field.name)
-          .getOrElse(report.errorAndAbort(s"No field named '${field.name}' found in ${TypeRepr.of[A].show}"))
+          .getOrElse(report.errorAndAbort(s"No field named '${field.name}' found in ${TypeRepr.of[Source].show}"))
     }.map { (dest, source) =>
-      val call =
-        resolveTransformer(sourceValue, source, dest)
-          .orElse(directTransformation(sourceValue, source, dest))
-          .getOrElse(inlineTransformer(sourceValue, source, dest))
+      val call = resolveTransformer(sourceValue, source, dest)
 
       NamedArg(dest.name, call)
     }
 
-  private def fieldConfigurations[A: Type, B: Type](
+  private def fieldConfigurations[Source: Type](
     config: List[MaterializedConfiguration.Product],
-    sourceValue: Expr[A],
+    sourceValue: Expr[Source],
     destinationFieldMapping: Map[String, Field]
   ) = config
     .map(cfg => destinationFieldMapping(cfg.destFieldName) -> cfg)
@@ -146,44 +143,15 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       NamedArg(field.name, castedCall.asTerm)
     }
 
-  private def resolveTransformer[A: Type](sourceValue: Expr[A], source: Field, destination: Field) =
-    source
-      .transformerTo(destination)
-      .map {
-        case '{ $transformer: Transformer.Identity[source] } => accessField(sourceValue, source.name)
-        case '{ $transformer: Transformer[source, dest] } =>
-          val field = accessField(sourceValue, source.name).asExprOf[source]
-          '{ $transformer.transform($field) }.asTerm
-      }
-
-  private def directTransformation[A: Type](sourceValue: Expr[A], source: Field, destination: Field) =
-    (source.tpe.asType -> destination.tpe.asType) match {
-      case '[src] -> '[dest] =>
-        val accessedField = accessField(sourceValue, source.name).asExprOf[src]
-
-        mirrorOf[src]
-          .zip(mirrorOf[dest])
-          .collect {
-            case ('{ $src: Mirror.ProductOf[src] }, '{ $dest: Mirror.ProductOf[dest] }) =>
-              transform(accessedField, src, dest).asTerm
-            case ('{ $src: Mirror.SumOf[src] }, '{ $dest: Mirror.SumOf[dest] }) =>
-              CoproductTransformerMacros
-                .transformMacro(accessedField, src, dest)
-                .asTerm
-          }
+  private def resolveTransformer[Source: Type](sourceValue: Expr[Source], source: Field, destination: Field) =
+    source.transformerTo(destination) match {
+      case '{ $transformer: Transformer.Identity[source] } => accessField(sourceValue, source.name)
+      case '{ $transformer: Transformer[source, dest] } =>
+        val field = accessField(sourceValue, source.name).asExprOf[source]
+        '{ $transformer.transform($field) }.asTerm
     }
 
-  // Expr.summon[Transformer[A, B]] doesn't seem to work with inlined typeclasses? This
-  // properl resolves a transformer but the error message is not cool.
-  // TODO: Research behavior of Expr.summon
-  private def inlineTransformer[A: Type](sourceValue: Expr[A], source: Field, destination: Field) =
-    (source.tpe.asType -> destination.tpe.asType) match {
-      case '[src] -> '[dest] =>
-        val accessedField = accessField(sourceValue, source.name).asExprOf[src]
-        '{ compiletime.summonInline[Transformer[src, dest]].transform($accessedField) }.asTerm
-    }
-
-  private def accessField[A: Type](value: Expr[A], fieldName: String) = Select.unique(value.asTerm, fieldName)
+  private def accessField[Source: Type](value: Expr[Source], fieldName: String) = Select.unique(value.asTerm, fieldName)
 
   private def constructor(tpe: TypeRepr): Term = {
     val (repr, constructor, tpeArgs) = tpe match {
@@ -199,43 +167,42 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 }
 
 private[ducktape] object ProductTransformerMacros {
-  inline def transform[A, B](source: A)(using
-    A: Mirror.ProductOf[A],
-    B: Mirror.ProductOf[B]
-  ): B = ${ transformMacro[A, B]('source, 'A, 'B) }
+  inline def transform[Source, Dest](source: Source)(using
+    Source: Mirror.ProductOf[Source],
+    Dest: Mirror.ProductOf[Dest]
+  ): Dest = ${ transformMacro[Source, Dest]('source, 'Source, 'Dest) }
 
-  def transformMacro[A: Type, B: Type](
-    source: Expr[A],
-    A: Expr[Mirror.ProductOf[A]],
-    B: Expr[Mirror.ProductOf[B]]
-  )(using Quotes): Expr[B] = ProductTransformerMacros().transform(source, A, B)
+  def transformMacro[Source: Type, Dest: Type](
+    source: Expr[Source],
+    Source: Expr[Mirror.ProductOf[Source]],
+    Dest: Expr[Mirror.ProductOf[Dest]]
+  )(using Quotes): Expr[Dest] = ProductTransformerMacros().transform(source, Source, Dest)
 
-  inline def via[A, B, Func](source: A, inline function: Func)(using
-    A: Mirror.ProductOf[A],
-    Func: FunctionMirror.Aux[Func, B]
-  ): B = ${ viaMacro('source, 'function, 'Func, 'A) }
+  inline def via[Source, Dest, Func](source: Source, inline function: Func)(using
+    Source: Mirror.ProductOf[Source],
+    Func: FunctionMirror.Aux[Func, Dest]
+  ): Dest = ${ viaMacro('source, 'function, 'Func, 'Source) }
 
-  def viaMacro[A: Type, B: Type, Func](
-    source: Expr[A],
+  def viaMacro[Source: Type, Dest: Type, Func](
+    source: Expr[Source],
     function: Expr[Func],
-    Func: Expr[FunctionMirror.Aux[Func, B]],
-    A: Expr[Mirror.ProductOf[A]]
+    Func: Expr[FunctionMirror.Aux[Func, Dest]],
+    Source: Expr[Mirror.ProductOf[Source]]
   )(using Quotes) =
-    ProductTransformerMacros().via(source, function, Func, A)
+    ProductTransformerMacros().via(source, function, Func, Source)
 
-  inline def viaWithBuilder[A, B, Func, NamedArgs <: Tuple](
-    source: A,
+  inline def viaWithBuilder[Source, Dest, Func, NamedArgs <: Tuple](
+    source: Source,
     inline function: Func,
-    inline config: ArgBuilderConfig[A, B, NamedArgs]*
-  )(using
-    A: Mirror.ProductOf[A]
-  ): B = ${ viaWithBuilderMacro('source, 'function, 'config, 'A) }
+    inline config: ArgBuilderConfig[Source, Dest, NamedArgs]*
+  )(using Source: Mirror.ProductOf[Source]): Dest =
+    ${ viaWithBuilderMacro('source, 'function, 'config, 'Source) }
 
-  def viaWithBuilderMacro[A: Type, B: Type, Func: Type, NamedArgs <: Tuple: Type](
-    sourceValue: Expr[A],
+  def viaWithBuilderMacro[Source: Type, Dest: Type, Func: Type, NamedArgs <: Tuple: Type](
+    sourceValue: Expr[Source],
     function: Expr[Func],
-    config: Expr[Seq[ArgBuilderConfig[A, B, NamedArgs]]],
-    A: Expr[Mirror.ProductOf[A]]
+    config: Expr[Seq[ArgBuilderConfig[Source, Dest, NamedArgs]]],
+    A: Expr[Mirror.ProductOf[Source]]
   )(using Quotes) =
     ProductTransformerMacros().viaConfigured(sourceValue, function, config, A)
 
@@ -251,25 +218,5 @@ private[ducktape] object ProductTransformerMacros {
     Dest: Expr[Mirror.ProductOf[Dest]]
   )(using Quotes) =
     ProductTransformerMacros().transformConfigured(sourceValue, config, Source, Dest)
-
-  // inline def transformWhateverConfigured[Source, Dest](sourceValue: Source, inline config: BuilderConfig[Source, Dest]*) =
-  //  ${ transformWhateverConfiguredMacro('sourceValue, 'config) }
-
-  //TODO: Moove that into `TransformerMacros` and for the love of god name it somewhat else
-  // def transformWhateverConfiguredMacro[Source: Type, Dest: Type](
-  //   sourceValue: Expr[Source],
-  //   config: Expr[Seq[BuilderConfig[Source, Dest]]]
-  // )(using Quotes) = {
-  //   import quotes.reflect.*
-  //   val sourceMirror = Expr.summon[DerivingMirror.Of[Source]]
-  //   val destMirror = Expr.summon[DerivingMirror.Of[Dest]]
-
-  //   sourceMirror.zip(destMirror).collect {
-  //     case '{ $source: Expr[Mirror.ProductOf[Source]} -> '{ $dest: Expr[Mirror.ProductOf[Dest]]] } =>
-  //       ProductTransformerMacros.transformConfiguredMacro(sourceValue, config, source, dest)
-  //     case '{ $source: DerivingMirror.SumOf[Source] } -> '{ $dest: DerivingMirror.SumOf[Dest] } =>
-  //       CoproductTransformerMacros.transformConfiguredMacro(sourceValue, config, source, dest)
-  //   }.getOrElse(report.errorAndAbort("BARF"))
-  // }
 
 }

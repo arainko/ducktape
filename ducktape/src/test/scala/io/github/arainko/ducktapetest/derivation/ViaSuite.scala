@@ -51,7 +51,7 @@
 //       Some(WrappedInt(4))
 //     )
 //     val actual = value.via(method[WrappedInt])
-    
+
 //     assertEquals(actual, expected)
 //   }
 

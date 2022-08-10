@@ -15,7 +15,7 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
     val validFields = Field.fromMirror(mirror).map(_.name)
     lambda match {
       case FieldSelector(fieldName) if validFields.contains(fieldName) => fieldName
-      case other                                                           => 
+      case other =>
         val suggestions = validFields.map(arg => s"'_.$arg'").mkString(", ")
         report.errorAndAbort(s"Not a field selector! Try one of these: $suggestions. $other")
     }
@@ -27,7 +27,7 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
     val arguments = Field.fromNamedArguments[NamedArgs].map(_.name)
     selector.asTerm match {
       case ArgSelector(argumentName) if arguments.contains(argumentName) => argumentName
-      case other                     => 
+      case other =>
         val suggestions = arguments.map(arg => s"'_.$arg'").mkString(", ")
         report.errorAndAbort(s"Not an argument selector! Try one of these: $suggestions")
     }

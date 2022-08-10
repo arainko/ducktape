@@ -10,11 +10,30 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
 
   case class Field(name: String, tpe: TypeRepr) {
-    def transformerTo(that: Field): Option[Expr[Transformer[?, ?]]] =
-      Implicits.search(TypeRepr.of[Transformer].appliedTo(List(tpe, that.tpe))) match {
-        case iss: ImplicitSearchSuccess => Some(iss.tree.asExprOf[Transformer[?, ?]])
-        case iss: ImplicitSearchFailure => None
+
+    /**
+     * Workaround for Expr.summon failing with eg.:
+     *
+     * given instance forProducts in object Transformer does not match type Transformer[Inside, Inside2]
+     *
+     * But `summonInline` will actually succeed in this case but that results in terrible error messages in case
+     * of failure and givens summoned with `summonInline` do not retain the exact type of the summoned instance (eg. Transformer.Identity)
+     * which makes it impossible to optimize (eg. replacing the runtime instance of Transformer with the transformation itself)
+     *
+     * TODO: Investigate it further and find what causes that problem.
+     */
+    def transformerTo(that: Field): Expr[Transformer[?, ?]] = {
+      (tpe.asType -> that.tpe.asType) match {
+        case '[src] -> '[dest] =>
+          Implicits.search(TypeRepr.of[Transformer[src, dest]]) match {
+            case success: ImplicitSearchSuccess  => success.tree.asExprOf[Transformer[src, dest]]
+            case noMatching: NoMatchingImplicits => report.errorAndAbort(noMatching.explanation)
+            case diverging: DivergingImplicit    => report.errorAndAbort(diverging.explanation)
+            case ambigious: AmbiguousImplicits   => report.errorAndAbort(ambigious.explanation)
+            case _: ImplicitSearchFailure        => '{ compiletime.summonInline[Transformer[src, dest]] }
+          }
       }
+    }
   }
 
   object Field {

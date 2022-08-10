@@ -1,6 +1,6 @@
 package io.github.arainko.ducktape.internal.modules
 
-import io.github.arainko.ducktape.{Case => CaseConfig, Field => FieldConfig, _}
+import io.github.arainko.ducktape.{ Case => CaseConfig, Field => FieldConfig, _ }
 
 import scala.quoted.*
 

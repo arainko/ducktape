@@ -1,67 +1,68 @@
 package io.github.arainko.ducktape
 
-import scala.collection.Factory
-import scala.deriving.Mirror
-import scala.compiletime.*
-import io.github.arainko.ducktape.internal.macros.*
-import scala.collection.BuildFrom
 import io.github.arainko.ducktape.builder.*
+import io.github.arainko.ducktape.internal.macros.*
+
+import scala.collection.BuildFrom
+import scala.collection.Factory
+import scala.compiletime.*
+import scala.deriving.Mirror
 
 @FunctionalInterface
-trait Transformer[From, To] {
-  def transform(from: From): To
+trait Transformer[Source, Dest] {
+  def transform(from: Source): Dest
 }
 
 object Transformer {
-  def apply[A, B](using trans: Transformer[A, B]): Transformer[A, B] = trans
+  def apply[Source, Dest](using transformer: Transformer[Source, Dest]): Transformer[Source, Dest] = transformer
 
-  def define[A, B]: DefinitionBuilder[A, B] = DefinitionBuilder[A, B]
+  def define[Source, Dest]: DefinitionBuilder[Source, Dest] = DefinitionBuilder[Source, Dest]
 
   // def defineVia[A]: ViaBuilder.DefinitionViaPartiallyApplied[A] =
   //   ViaBuilder.DefinitionViaPartiallyApplied[A]
 
-  sealed trait Identity[A] extends Transformer[A, A]
+  sealed trait Identity[Source] extends Transformer[Source, Source]
 
-  given [A]: Identity[A] = new {
-    def transform(from: A): A = from
+  given [Source]: Identity[Source] = new {
+    def transform(from: Source): Source = from
   }
 
-  inline given forProducts[A, B](using Mirror.ProductOf[A], Mirror.ProductOf[B]): Transformer[A, B] =
+  inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): Transformer[Source, Dest] =
     from => ProductTransformerMacros.transform(from)
 
-  inline given forCoproducts[A, B](using Mirror.SumOf[A], Mirror.SumOf[B]): Transformer[A, B] =
+  inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): Transformer[Source, Dest] =
     from => CoproductTransformerMacros.transform(from)
 
-  given [A, B](using Transformer[A, B]): Transformer[A, Option[B]] =
-    from => Transformer[A, B].transform.andThen(Some.apply)(from)
+  given [Source, Dest](using Transformer[Source, Dest]): Transformer[Source, Option[Dest]] =
+    from => Transformer[Source, Dest].transform.andThen(Some.apply)(from)
 
-  given [A, B](using Transformer[A, B]): Transformer[Option[A], Option[B]] =
-    from => from.map(Transformer[A, B].transform)
+  given [Source, Dest](using Transformer[Source, Dest]): Transformer[Option[Source], Option[Dest]] =
+    from => from.map(Transformer[Source, Dest].transform)
 
   given [A1, A2, B1, B2](using Transformer[A1, A2], Transformer[B1, B2]): Transformer[Either[A1, B1], Either[A2, B2]] = {
     case Right(value) => Right(Transformer[B1, B2].transform(value))
     case Left(value)  => Left(Transformer[A1, A2].transform(value))
   }
 
-  given [A, B, CollFrom[+elem] <: Iterable[elem], CollTo[+elem] <: Iterable[elem]](using
-    trans: Transformer[A, B],
-    factory: Factory[B, CollTo[B]]
-  ): Transformer[CollFrom[A], CollTo[B]] = from => from.map(trans.transform).to(factory)
+  given [Source, Dest, SourceCollection[+elem] <: Iterable[elem], DestCollection[+elem] <: Iterable[elem]](using
+    trans: Transformer[Source, Dest],
+    factory: Factory[Dest, DestCollection[Dest]]
+  ): Transformer[SourceCollection[Source], DestCollection[Dest]] = from => from.map(trans.transform).to(factory)
 
-  inline given [A <: Product, SimpleType](using
-    A: Mirror.ProductOf[A]
+  inline given [Source <: Product, SimpleType](using
+    Source: Mirror.ProductOf[Source]
   )(using
-    A.MirroredElemLabels <:< NonEmptyTuple,
-    A.MirroredElemTypes =:= (SimpleType *: EmptyTuple)
-  ): Transformer[A, SimpleType] =
+    Source.MirroredElemLabels <:< NonEmptyTuple,
+    Source.MirroredElemTypes =:= (SimpleType *: EmptyTuple)
+  ): Transformer[Source, SimpleType] =
     from => from.productElement(0).asInstanceOf[SimpleType]
 
-  inline given [A <: Product, SimpleType](using
-    A: Mirror.ProductOf[A]
+  inline given [Source <: Product, SimpleType](using
+    Source: Mirror.ProductOf[Source]
   )(using
-    A.MirroredElemLabels <:< NonEmptyTuple,
-    A.MirroredElemTypes =:= (SimpleType *: EmptyTuple)
-  ): Transformer[SimpleType, A] =
-    from => A.fromProduct(Tuple(from))
+    Source.MirroredElemLabels <:< NonEmptyTuple,
+    Source.MirroredElemTypes =:= (SimpleType *: EmptyTuple)
+  ): Transformer[SimpleType, Source] =
+    from => Source.fromProduct(Tuple(from))
 
 }
