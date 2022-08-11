@@ -6,7 +6,7 @@ import io.github.arainko.ducktape.internal.macros.*
 import scala.compiletime.*
 import scala.deriving.Mirror
 
-final case class AppliedBuilder[Source, Dest](appliedTo: Source) {
+final class AppliedBuilder[Source, Dest](appliedTo: Source) {
 
   inline def apply(inline config: BuilderConfig[Source, Dest]*): Dest =
     TransformerMacros.transformConfigured(appliedTo, config)

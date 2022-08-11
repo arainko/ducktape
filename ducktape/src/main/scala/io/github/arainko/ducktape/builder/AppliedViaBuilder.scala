@@ -9,7 +9,7 @@ import scala.compiletime.*
 
 sealed abstract class AppliedViaBuilder[Source, Dest, Func, NamedArguments <: Tuple](source: Source, function: Func) {
 
-  inline def apply(
+  inline def transform(
     inline config: ArgBuilderConfig[Source, Dest, NamedArguments]*
   )(using Source: Mirror.ProductOf[Source]): Dest =
     ProductTransformerMacros.viaWithBuilder[Source, Dest, Func, NamedArguments](source, function, config*)

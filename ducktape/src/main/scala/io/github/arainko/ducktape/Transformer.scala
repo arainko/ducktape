@@ -18,8 +18,7 @@ object Transformer {
 
   def define[Source, Dest]: DefinitionBuilder[Source, Dest] = DefinitionBuilder[Source, Dest]
 
-  // def defineVia[A]: ViaBuilder.DefinitionViaPartiallyApplied[A] =
-  //   ViaBuilder.DefinitionViaPartiallyApplied[A]
+  def defineVia[A]: DefinitionViaBuilder.PartiallyApplied[A] = DefinitionViaBuilder.create[A]
 
   sealed trait Identity[Source] extends Transformer[Source, Source]
 

@@ -5,12 +5,8 @@ import io.github.arainko.ducktape.internal.macros.*
 
 import scala.compiletime.*
 import scala.deriving.Mirror
-import java.awt.Color
 
 final class DefinitionBuilder[Source, Dest] {
   inline def apply(inline config: BuilderConfig[Source, Dest]*): Transformer[Source, Dest] =
-    new {
-      def transform(from: Source): Dest =
-        TransformerMacros.transformConfigured(from, config)
-    }
+    from => TransformerMacros.transformConfigured(from, config)
 }
