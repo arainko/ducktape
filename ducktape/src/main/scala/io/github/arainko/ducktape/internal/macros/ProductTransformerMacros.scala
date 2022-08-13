@@ -21,7 +21,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     Func: Expr[FunctionMirror.Aux[Func, Dest]],
     Source: Expr[Mirror.ProductOf[Source]]
   ): Expr[Dest] = function.asTerm match {
-    case func @ SelectorLambda(vals, body) =>
+    case func @ FunctionLambda(vals, body) =>
       val functionFields = vals.map(Field.fromValDef)
       val sourceFields = Field.fromMirror(Source).map(field => field.name -> field).toMap
       val calls = fieldTransformers(sourceValue, functionFields, sourceFields).map(_.value)

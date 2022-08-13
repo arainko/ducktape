@@ -25,9 +25,13 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
       case Const(tpe: TypeRepr, value: Expr[Any])
     }
 
-    def materializeProductConfig[Source, Dest](config: Seq[Expr[BuilderConfig[Source, Dest]]]): List[Product] =
+    def materializeProductConfig[Source, Dest](
+      config: Seq[Expr[BuilderConfig[Source, Dest]]],
+      sourceFields: List[Field],
+      destinationFields: List[Field]
+    ): List[Product] =
       config
-        .map(materializeSingleProductConfig)
+        .map(materializeSingleProductConfig(_, sourceFields, destinationFields))
         .groupBy(_.destFieldName)
         .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
         .toList
@@ -48,30 +52,38 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
         .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
         .toList
 
-    private def materializeSingleProductConfig[Source, Dest](config: Expr[BuilderConfig[Source, Dest]]) =
+    private def materializeSingleProductConfig[Source, Dest](
+      config: Expr[BuilderConfig[Source, Dest]],
+      sourceFields: List[Field],
+      destinationFields: List[Field]
+    ) =
       config match {
         case '{
               FieldConfig.const[source, dest, fieldType, actualType](
-                ${ FieldSelector(name) },
+                $selector,
                 $value
               )(using $ev1, $ev2, $ev3)
             } =>
+          val name = selectedFieldName(destinationFields, selector)
           Product.Const(name, value)
 
         case '{
               FieldConfig.computed[source, dest, fieldType, actualType](
-                ${ FieldSelector(name) },
+                $selector,
                 $function
               )(using $ev1, $ev2, $ev3)
             } =>
+          val name = selectedFieldName(destinationFields, selector)
           Product.Computed(name, function.asInstanceOf[Expr[Any => Any]])
 
         case '{
               FieldConfig.renamed[source, dest, sourceFieldType, destFieldType](
-                ${ FieldSelector(destFieldName) },
-                ${ FieldSelector(sourceFieldName) }
+                $destSelector,
+                $sourceSelector
               )(using $ev1, $ev2, $ev3)
             } =>
+          val destFieldName = selectedFieldName(destinationFields, destSelector)
+          val sourceFieldName = selectedFieldName(sourceFields, sourceSelector)
           Product.Renamed(destFieldName, sourceFieldName)
 
         case other => report.errorAndAbort(s"Unsupported field configuration: ${other.asTerm.show}")
@@ -95,22 +107,22 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
             type namedArgs <: Tuple
             Arg.const[source, dest, argType, actualType, `namedArgs`]($selector, $const)(using $ev1, $ev2)
           } =>
-        val argName = selectedArg[`namedArgs`, argType](selector)
+        val argName = selectedArgName[`namedArgs`, argType](selector)
         Product.Const(argName, const)
 
       case '{
             type namedArgs <: Tuple
             Arg.computed[source, dest, argType, actualType, `namedArgs`]($selector, $function)(using $ev1, $ev2)
           } =>
-        val argName = selectedArg[`namedArgs`, argType](selector)
+        val argName = selectedArgName[`namedArgs`, argType](selector)
         Product.Computed(argName, function.asInstanceOf[Expr[Any => Any]])
 
       case '{
             type namedArgs <: Tuple
             Arg.renamed[source, dest, argType, fieldType, `namedArgs`]($destSelector, $sourceSelector)(using $sourceMirror, $ev2)
           } =>
-        val argName = selectedArg[`namedArgs`, argType](destSelector)
-        val fieldName = selectedField[source, fieldType](sourceMirror, sourceSelector)
+        val argName = selectedArgName[`namedArgs`, argType](destSelector)
+        val fieldName = selectedFieldName[source, fieldType](sourceMirror, sourceSelector)
         Product.Renamed(argName, fieldName)
 
       case other => report.errorAndAbort(s"Unsupported field configuration: ${other.asTerm.show}")

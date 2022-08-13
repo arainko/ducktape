@@ -17,4 +17,26 @@ private[internal] trait Module {
 
   def mirrorOf[A: Type]: Option[Expr[Mirror.Of[A]]] = Expr.summon[Mirror.Of[A]]
 
+  def abort(error: Failure): Nothing = report.errorAndAbort(error.render)
+
+  opaque type Suggestion = String
+
+  object Suggestion {
+    def apply(s: String): Suggestion = s
+  }
+
+  sealed trait Failure {
+    def render: String
+  }
+
+  object Failure {
+    final case class MirrorMaterialization[A: Type](notFoundTypeMemberName: String) extends Failure {
+
+      def render = s"Mirror materialization for ${Type.show[A]} failed. Member type not found: '$notFoundTypeMemberName'."
+    }
+
+    
+
+  }
+
 }

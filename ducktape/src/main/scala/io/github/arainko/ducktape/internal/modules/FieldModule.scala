@@ -21,6 +21,14 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
      * which makes it impossible to optimize (eg. replacing the runtime instance of Transformer with the transformation itself)
      *
      * TODO: Investigate it further and find what causes that problem.
+     *
+     * 13.08.2022 update:
+     *    This is definitely a compiler bug, `Expr.summon` and `summonInline`
+     *    should function the same (https://github.com/lampepfl/dotty/issues/12359). 
+     *    Not-a-real-workaround: Marking ProductTransformerMacros.transform as `transparent inline` allows for a direct
+     *    call to that macro to work. Still doesn't work inside a `given` (be it inline or transparent inline).
+     *
+     * TODO2: Minimaze the issue and try to open a ticket in the `dotty` repo.
      */
     def transformerTo(that: Field): Expr[Transformer[?, ?]] = {
       (tpe.asType -> that.tpe.asType) match {
@@ -37,9 +45,8 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
   }
 
   object Field {
-    def fromMirror[A](mirror: Expr[Mirror.ProductOf[A]]): List[Field] = {
-      val materializedMirror =
-        MaterializedMirror(mirror).getOrElse(report.errorAndAbort("### Failed to materialize a mirror ###"))
+    def fromMirror[A: Type](mirror: Expr[Mirror.ProductOf[A]]): List[Field] = {
+      val materializedMirror = MaterializedMirror.createOrAbort(mirror)
 
       materializedMirror.mirroredElemLabels
         .zip(materializedMirror.mirroredElemTypes)
@@ -67,9 +74,8 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
   }
 
   object Case {
-    def fromMirror[A](mirror: Expr[Mirror.SumOf[A]]): List[Case] = {
-      val materializedMirror =
-        MaterializedMirror(mirror).getOrElse(report.errorAndAbort("### Failed to materialize a mirror ###"))
+    def fromMirror[A: Type](mirror: Expr[Mirror.SumOf[A]]): List[Case] = {
+      val materializedMirror = MaterializedMirror.createOrAbort(mirror)
 
       materializedMirror.mirroredElemLabels
         .zip(materializedMirror.mirroredElemTypes)

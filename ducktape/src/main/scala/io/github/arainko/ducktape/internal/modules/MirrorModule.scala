@@ -4,12 +4,12 @@ import scala.quoted.*
 import scala.annotation.tailrec
 import scala.deriving.Mirror
 
-// Taken from shapeless 3:
+// Lifted from shapeless 3:
 // https://github.com/typelevel/shapeless-3/blob/main/modules/deriving/src/main/scala/shapeless3/deriving/internals/reflectionutils.scala
 private[internal] trait MirrorModule { self: Module =>
   import quotes.reflect.*
 
-  case class MaterializedMirror(
+  final case class MaterializedMirror private (
     mirroredType: TypeRepr,
     mirroredMonoType: TypeRepr,
     mirroredElemTypes: List[TypeRepr],
@@ -18,7 +18,10 @@ private[internal] trait MirrorModule { self: Module =>
   )
 
   object MaterializedMirror {
-    def apply(mirror: Expr[deriving.Mirror]): Option[MaterializedMirror] = {
+    def createOrAbort[A: Type](mirror: Expr[Mirror.Of[A]]): MaterializedMirror =
+      create(mirror).fold(Failure.MirrorMaterialization[A].andThen(abort), identity)
+
+    private def create(mirror: Expr[Mirror]): Either[String, MaterializedMirror] = {
       val mirrorTpe = mirror.asTerm.tpe.widen
       for {
         mirroredType <- findMemberType(mirrorTpe, "MirroredType")
@@ -48,10 +51,11 @@ private[internal] trait MirrorModule { self: Module =>
     case tp             => tp
   }
 
-  private def findMemberType(tp: TypeRepr, name: String): Option[TypeRepr] = tp match {
-    case Refinement(_, `name`, tp) => Some(low(tp))
-    case Refinement(parent, _, _)  => findMemberType(parent, name)
-    case AndType(left, right)      => findMemberType(left, name).orElse(findMemberType(right, name))
-    case _                         => None
-  }
+  private def findMemberType(tp: TypeRepr, name: String): Either[String, TypeRepr] =
+    tp match {
+      case Refinement(_, `name`, tp) => Right(low(tp))
+      case Refinement(parent, _, _)  => findMemberType(parent, name)
+      case AndType(left, right)      => findMemberType(left, name).orElse(findMemberType(right, name))
+      case _                         => Left(name)
+    }
 }
