@@ -10,7 +10,7 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
 
   sealed trait Fields {
-    export byName.{ apply => unsafeGet, get }
+    export byName.{ apply => unsafeGet, contains => containsFieldWithName, get }
 
     val value: List[Field]
 
@@ -100,23 +100,7 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
     }
   }
 
-  final case class Case(name: String, tpe: TypeRepr, ordinal: Int) {
-
-    def materializeSingleton: Option[Term] =
-      Option.when(tpe.isSingleton) {
-        tpe match { case TermRef(a, b) => Ident(TermRef(a, b)) }
-      }
+  extension (companion: Suggestion.type) {
+    def fromFields(fields: Fields): List[Suggestion] = fields.value.map(f => Suggestion(s"_.${f.name}"))
   }
-
-  object Case {
-    def fromMirror[A: Type](mirror: Expr[Mirror.SumOf[A]]): List[Case] = {
-      val materializedMirror = MaterializedMirror.createOrAbort(mirror)
-
-      materializedMirror.mirroredElemLabels
-        .zip(materializedMirror.mirroredElemTypes)
-        .zipWithIndex
-        .map { case name -> tpe -> ordinal => Case(name, tpe, ordinal) }
-    }
-  }
-
 }

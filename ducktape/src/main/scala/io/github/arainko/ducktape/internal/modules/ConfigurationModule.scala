@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.{ Case => CaseConfig, Field => FieldConfig, _ 
 
 import scala.quoted.*
 
-private[internal] trait ConfigurationModule { self: Module & SelectorModule & MirrorModule & FieldModule =>
+private[internal] trait ConfigurationModule { self: Module & SelectorModule & MirrorModule & FieldModule & CaseModule =>
   import quotes.reflect.*
 
   sealed trait MaterializedConfiguration
@@ -38,7 +38,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
 
     def materializeArgConfig[Source, Dest, NamedArguments <: Tuple](
       config: Expr[Seq[ArgBuilderConfig[Source, Dest, NamedArguments]]]
-    ): List[Product] =
+    )(using Fields.Source, Fields.Dest): List[Product] =
       Varargs
         .unapply(config)
         .getOrElse(report.errorAndAbort(s"Failed to materialize arg config"))
@@ -47,7 +47,9 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
         .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
         .toList
 
-    def materializeCoproductConfig[Source, Dest](config: Expr[Seq[BuilderConfig[Source, Dest]]]): List[Coproduct] =
+    def materializeCoproductConfig[Source, Dest](
+      config: Expr[Seq[BuilderConfig[Source, Dest]]]
+    )(using Cases.Source, Cases.Dest): List[Coproduct] =
       Varargs
         .unapply(config)
         .getOrElse(report.errorAndAbort(s"Failed to materialize coproduct config"))
@@ -66,7 +68,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
                 $value
               )(using $ev1, $ev2, $ev3)
             } =>
-          val name = selectedFieldName(Fields.dest.value, selector)
+          val name = selectedFieldName(Fields.dest, selector)
           Product.Const(name, value)
 
         case '{
@@ -75,7 +77,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
                 $function
               )(using $ev1, $ev2, $ev3)
             } =>
-          val name = selectedFieldName(Fields.dest.value, selector)
+          val name = selectedFieldName(Fields.dest, selector)
           Product.Computed(name, function.asInstanceOf[Expr[Any => Any]])
 
         case '{
@@ -84,8 +86,8 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
                 $sourceSelector
               )(using $ev1, $ev2, $ev3)
             } =>
-          val destFieldName = selectedFieldName(Fields.dest.value, destSelector)
-          val sourceFieldName = selectedFieldName(Fields.source.value, sourceSelector)
+          val destFieldName = selectedFieldName(Fields.dest, destSelector)
+          val sourceFieldName = selectedFieldName(Fields.source, sourceSelector)
           Product.Renamed(destFieldName, sourceFieldName)
 
         case other => report.errorAndAbort(s"Unsupported field configuration: ${other.asTerm.show}")

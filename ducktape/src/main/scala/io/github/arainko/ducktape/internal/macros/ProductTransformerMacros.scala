@@ -9,6 +9,7 @@ import scala.deriving.*
 private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     extends Module,
       FieldModule,
+      CaseModule,
       MirrorModule,
       SelectorModule,
       ConfigurationModule {

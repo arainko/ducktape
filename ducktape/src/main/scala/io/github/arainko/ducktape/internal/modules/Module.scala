@@ -22,7 +22,7 @@ private[internal] trait Module {
   opaque type Suggestion = String
 
   object Suggestion {
-    def apply(s: String): Suggestion = s
+    def apply(text: String): Suggestion = text
   }
 
   sealed trait Failure {

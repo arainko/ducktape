@@ -7,9 +7,10 @@ import scala.deriving.*
 
 private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     extends Module,
+      CaseModule,
       FieldModule,
-      MirrorModule,
       SelectorModule,
+      MirrorModule,
       ConfigurationModule {
   import quotes.reflect.*
   import MaterializedConfiguration.*
@@ -19,9 +20,9 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     Source: Expr[Mirror.SumOf[Source]],
     Dest: Expr[Mirror.SumOf[Dest]]
   ): Expr[Dest] = {
-    val sourceCases = Case.fromMirror(Source)
-    val destCases = Case.fromMirror(Dest).map(c => c.name -> c).toMap
-    val ifBranches = singletonIfBranches[Source, Dest](sourceValue, sourceCases, destCases)
+    given Cases.Source = Cases.Source.fromMirror(Source)
+    given Cases.Dest = Cases.Dest.fromMirror(Dest)
+    val ifBranches = singletonIfBranches[Source, Dest](sourceValue, Cases.source.value)
     ifStatement(ifBranches).asExprOf[Dest]
   }
 
@@ -31,17 +32,14 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     Source: Expr[Mirror.SumOf[Source]],
     Dest: Expr[Mirror.SumOf[Dest]]
   ): Expr[Dest] = {
-    val materializedConfig = config match {
-      case Varargs(config) => MaterializedConfiguration.materializeCoproductConfig(config)
-      case other           => report.errorAndAbort(s"Failed to materialize field config: ${other.asTerm.show} ")
-    }
+    given Cases.Source = Cases.Source.fromMirror(Source)
+    given Cases.Dest = Cases.Dest.fromMirror(Dest)
+    val materializedConfig = MaterializedConfiguration.materializeCoproductConfig(config)
 
-    val sourceCases = Case.fromMirror(Source)
-    val destCases = Case.fromMirror(Dest).map(c => c.name -> c).toMap
     val (nonConfiguredCases, configuredCases) =
-      sourceCases.partition(c => !materializedConfig.exists(_.tpe =:= c.tpe)) //TODO: Optimize
+      Cases.source.value.partition(c => !materializedConfig.exists(_.tpe =:= c.tpe))
 
-    val nonConfiguredIfBranches = singletonIfBranches[Source, Dest](sourceValue, nonConfiguredCases, destCases)
+    val nonConfiguredIfBranches = singletonIfBranches[Source, Dest](sourceValue, nonConfiguredCases)
 
     val configuredIfBranches =
       configuredCases.zip(materializedConfig).map { (source, config) =>
@@ -69,11 +67,10 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
 
   private def singletonIfBranches[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
-    sourceCases: List[Case],
-    destinationCaseMapping: Map[String, Case]
-  ) = {
+    sourceCases: List[Case]
+  )(using Cases.Dest) = {
     sourceCases.map { source =>
-      source -> destinationCaseMapping
+      source -> Cases.dest
         .get(source.name)
         .getOrElse(report.errorAndAbort(s"No child named '${source.name}' in ${TypeRepr.of[Dest].show}"))
     }.map { (source, dest) =>

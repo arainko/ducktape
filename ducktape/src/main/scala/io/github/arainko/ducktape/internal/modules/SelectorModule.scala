@@ -9,24 +9,24 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
   import quotes.reflect.*
 
   def selectedFieldName[From: Type, FieldType](
-    validFields: List[Field],
+    validFields: Fields,
     selector: Expr[From => FieldType]
   ): String =
     selector match {
-      case FieldSelector(fieldName) if validFields.contains(fieldName) => fieldName
+      case FieldSelector(fieldName) if validFields.containsFieldWithName(fieldName) => fieldName
       case other =>
-        val suggestions = validFields.map(arg => s"'_.$arg'").mkString(", ")
-        report.errorAndAbort(s"Not a field selector! Try one of these: $suggestions. $other")
+        val suggestions = validFields.value.map(arg => s"'_.$arg'").mkString(", ")
+        report.errorAndAbort(s"Not a field selector! Try one of these: $suggestions")
     }
 
   def selectedArgName[NamedArgs <: Tuple: Type, ArgType](
-    validArgs: List[Field],
+    validArgs: Fields,
     selector: Expr[FunctionArguments[NamedArgs] => ArgType]
   ): String = {
     selector.asTerm match {
-      case ArgSelector(argumentName) if validArgs.contains(argumentName) => argumentName
+      case ArgSelector(argumentName) if validArgs.containsFieldWithName(argumentName) => argumentName
       case other =>
-        val suggestions = validArgs.map(arg => s"'_.$arg'").mkString(", ")
+        val suggestions = validArgs.value.map(arg => s"'_.$arg'").mkString(", ")
         report.errorAndAbort(s"Not an argument selector! Try one of these: $suggestions")
     }
   }
