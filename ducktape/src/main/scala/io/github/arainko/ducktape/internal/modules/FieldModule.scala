@@ -9,7 +9,63 @@ import scala.compiletime.*
 private[internal] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
 
-  case class Field(name: String, tpe: TypeRepr) {
+  sealed trait Fields {
+    export byName.{ apply => unsafeGet, get }
+
+    val value: List[Field]
+
+    val byName: Map[String, Field] = value.map(f => f.name -> f).toMap
+  }
+
+  object Fields {
+
+    def source(using sourceFields: Fields.Source): Fields.Source = sourceFields
+
+    def dest(using destFields: Fields.Dest): Fields.Dest = destFields
+
+    final case class Source(value: List[Field]) extends Fields
+
+    object Source extends FieldsCompanion[Source]
+
+    final case class Dest(value: List[Field]) extends Fields
+
+    object Dest extends FieldsCompanion[Dest]
+  }
+
+  protected trait FieldsCompanion[FieldsSubtype <: Fields] {
+
+    def apply(fields: List[Field]): FieldsSubtype
+
+    final def fromMirror[A: Type](mirror: Expr[Mirror.ProductOf[A]]): FieldsSubtype = {
+      val materializedMirror = MaterializedMirror.createOrAbort(mirror)
+
+      val fields = materializedMirror.mirroredElemLabels
+        .zip(materializedMirror.mirroredElemTypes)
+        .map(Field.apply)
+
+      apply(fields)
+    }
+
+    final def fromNamedArguments[NamedArgs <: Tuple: Type]: FieldsSubtype = {
+      def listOfFields[Args <: Tuple: Type]: List[Field] =
+        Type.of[Args] match {
+          case '[EmptyTuple] => List.empty
+          case '[NamedArgument[name, tpe] *: tail] =>
+            val name = Type.valueOfConstant[name].getOrElse(report.errorAndAbort("Not a constant named arg name"))
+            val field = Field(name, TypeRepr.of[tpe])
+            field :: listOfFields[tail]
+        }
+      apply(listOfFields[NamedArgs])
+    }
+
+    final def fromValDefs(valDefs: List[ValDef]): FieldsSubtype = {
+      val fields = valDefs.map(vd => Field(vd.name, vd.tpt.tpe))
+      apply(fields)
+    }
+
+  }
+
+  final case class Field(name: String, tpe: TypeRepr) {
 
     /**
      * Workaround for Expr.summon failing with eg.:
@@ -24,7 +80,7 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
      *
      * 13.08.2022 update:
      *    This is definitely a compiler bug, `Expr.summon` and `summonInline`
-     *    should function the same (https://github.com/lampepfl/dotty/issues/12359). 
+     *    should function the same (https://github.com/lampepfl/dotty/issues/12359).
      *    Not-a-real-workaround: Marking ProductTransformerMacros.transform as `transparent inline` allows for a direct
      *    call to that macro to work. Still doesn't work inside a `given` (be it inline or transparent inline).
      *
@@ -44,28 +100,7 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
     }
   }
 
-  object Field {
-    def fromMirror[A: Type](mirror: Expr[Mirror.ProductOf[A]]): List[Field] = {
-      val materializedMirror = MaterializedMirror.createOrAbort(mirror)
-
-      materializedMirror.mirroredElemLabels
-        .zip(materializedMirror.mirroredElemTypes)
-        .map(Field.apply)
-    }
-
-    def fromNamedArguments[NamedArgs <: Tuple: Type]: List[Field] =
-      Type.of[NamedArgs] match {
-        case '[EmptyTuple] => List.empty
-        case '[NamedArgument[name, tpe] *: tail] =>
-          val name = Type.valueOfConstant[name].getOrElse(report.errorAndAbort("Not a constant named arg name"))
-          val field = Field(name, TypeRepr.of[tpe])
-          field :: fromNamedArguments[tail]
-      }
-
-    def fromValDef(valDef: ValDef): Field = Field(valDef.name, valDef.tpt.tpe)
-  }
-
-  case class Case(name: String, tpe: TypeRepr, ordinal: Int) {
+  final case class Case(name: String, tpe: TypeRepr, ordinal: Int) {
 
     def materializeSingleton: Option[Term] =
       Option.when(tpe.isSingleton) {
