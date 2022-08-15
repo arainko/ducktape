@@ -13,16 +13,16 @@ object Arg {
   def const[Source, Dest, ArgType, ActualType, NamedArgs <: Tuple](
     selector: FunctionArguments[NamedArgs] => ArgType,
     const: ActualType
-  )(using Mirror.ProductOf[Source], ActualType <:< ArgType): ArgBuilderConfig[Source, Dest, NamedArgs] = ArgBuilderConfig.instance
+  )(using Mirror.ProductOf[Source]): ArgBuilderConfig[Source, Dest, NamedArgs] = ArgBuilderConfig.instance
 
   def computed[Source, Dest, ArgType, ActualType, NamedArgs <: Tuple](
     selector: FunctionArguments[NamedArgs] => ArgType,
     f: Source => ActualType
-  )(using Mirror.ProductOf[Source], ActualType <:< ArgType): ArgBuilderConfig[Source, Dest, NamedArgs] = ArgBuilderConfig.instance
+  )(using Mirror.ProductOf[Source]): ArgBuilderConfig[Source, Dest, NamedArgs] = ArgBuilderConfig.instance
 
   def renamed[Source, Dest, ArgType, FieldType, NamedArgs <: Tuple](
     destSelector: FunctionArguments[NamedArgs] => ArgType,
     sourceSelector: Source => FieldType
-  )(using Mirror.ProductOf[Source], FieldType <:< ArgType): ArgBuilderConfig[Source, Dest, NamedArgs] = ArgBuilderConfig.instance
+  )(using Mirror.ProductOf[Source]): ArgBuilderConfig[Source, Dest, NamedArgs] = ArgBuilderConfig.instance
 
 }

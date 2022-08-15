@@ -18,17 +18,13 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
   }
 
   object Fields {
-
     def source(using sourceFields: Fields.Source): Fields.Source = sourceFields
-
     def dest(using destFields: Fields.Dest): Fields.Dest = destFields
 
     final case class Source(value: List[Field]) extends Fields
-
     object Source extends FieldsCompanion[Source]
 
     final case class Dest(value: List[Field]) extends Fields
-
     object Dest extends FieldsCompanion[Dest]
   }
 

@@ -8,26 +8,31 @@ import scala.util.NotGiven
 private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModule =>
   import quotes.reflect.*
 
-  def selectedFieldName[From: Type, FieldType](
-    validFields: Fields,
-    selector: Expr[From => FieldType]
-  ): String =
-    selector match {
-      case FieldSelector(fieldName) if validFields.containsFieldWithName(fieldName) => fieldName
-      case other =>
-        val suggestions = validFields.value.map(arg => s"'_.$arg'").mkString(", ")
-        report.errorAndAbort(s"Not a field selector! Try one of these: $suggestions")
-    }
+  object Selectors {
+    def fieldName[From: Type, FieldType](
+      validFields: Fields,
+      selector: Expr[From => FieldType]
+    ): String =
+      selector match {
+        case FieldSelector(fieldName) if validFields.containsFieldWithName(fieldName) =>
+          fieldName
+        case other =>
+          abort(Failure.InvalidFieldSelector(other, TypeRepr.of[From], Suggestion.fromFields(validFields)))
+      }
 
-  def selectedArgName[NamedArgs <: Tuple: Type, ArgType](
-    validArgs: Fields,
-    selector: Expr[FunctionArguments[NamedArgs] => ArgType]
-  ): String = {
-    selector.asTerm match {
-      case ArgSelector(argumentName) if validArgs.containsFieldWithName(argumentName) => argumentName
-      case other =>
-        val suggestions = validArgs.value.map(arg => s"'_.$arg'").mkString(", ")
-        report.errorAndAbort(s"Not an argument selector! Try one of these: $suggestions")
+    def argName[NamedArgs <: Tuple: Type, ArgType: Type](
+      validArgs: Fields,
+      actualType: TypeRepr,
+      selector: Expr[FunctionArguments[NamedArgs] => ArgType]
+    ): String = {
+      val argTpe = TypeRepr.of[ArgType]
+      selector.asTerm match {
+        //TODO: Check if the types are right and report an appropariate error
+        case ArgSelector(argumentName) if validArgs.containsFieldWithName(argumentName) && actualType <:< argTpe =>
+          argumentName
+        case other =>
+          abort(Failure.InvalidArgSelector(selector, Suggestion.fromFields(validArgs)))
+      }
     }
   }
 
