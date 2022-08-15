@@ -18,10 +18,8 @@ private[internal] trait Module {
 
   def mirrorOf[A: Type]: Option[Expr[Mirror.Of[A]]] = Expr.summon[Mirror.Of[A]]
 
-  //TODO: Use the variant with Expr for better position of the error message
-  def abort(error: Failure): Nothing = {  
-    report.errorAndAbort(error.render)
-  }
+  def abort(error: Failure): Nothing =
+    report.errorAndAbort(error.render, error.position)
 
   opaque type Suggestion = String
 
@@ -38,15 +36,17 @@ private[internal] trait Module {
   }
 
   sealed trait Failure {
+    def position: Position = Position.ofMacroExpansion
+
     def render: String
   }
 
   object Failure {
-    final case class MirrorMaterialization[A: Type](notFoundTypeMemberName: String) extends Failure {
+    final case class MirrorMaterialization(mirroredType: TypeRepr, notFoundTypeMemberName: String) extends Failure {
 
       def render: String =
         s"""
-        |Mirror materialization for ${Type.show[A]} failed. 
+        |Mirror materialization for ${mirroredType.show} failed. 
         |Member type not found: '$notFoundTypeMemberName'.
         """.stripMargin
     }
@@ -56,6 +56,8 @@ private[internal] trait Module {
       sourceTpe: TypeRepr,
       suggestedFields: List[Suggestion]
     ) extends Failure {
+      override def position = selector.asTerm.pos
+
       def render: String =
         s"""
         |'${selector.asTerm.show}' is not a valid field selector for ${sourceTpe.show}.
@@ -63,15 +65,43 @@ private[internal] trait Module {
         """.stripMargin
     }
 
-    final case class InvalidArgSelector(
-      selector: Expr[Any],
-      suggestedArgs: List[Suggestion]
-    ) extends Failure {
-      def render: String =
-        s"""
-        |Not a valid argument selector.
-        |Try one of these: ${Suggestion.renderAll(suggestedArgs)}
+    enum InvalidArgSelector extends Failure {
+      override def position: Position =
+        this match {
+          case NotFound(selector, _, _)                  => selector.asTerm.pos
+          case TypeMismatch(_, _, _, _, mismatchedValue) => mismatchedValue.asTerm.pos
+          case NotAnArgSelector(selector, _)             => selector.asTerm.pos
+        }
+
+      final def render = this match {
+        case NotFound(_, argName, suggestedArgs) =>
+          s"""
+            |'_.$argName' is not a valid argument selector.
+            |Try one of these: ${Suggestion.renderAll(suggestedArgs)}
         """.stripMargin
+        case TypeMismatch(_, argName, expectedType, actualTpe, _) =>
+          s"""
+              |Type mistmatch for argument '$argName'.
+              |Expected ${expectedType.show} but found ${actualTpe.show}.
+        """.stripMargin
+        case NotAnArgSelector(_, suggestedArgs) =>
+          s"""
+              |Not a valid argument selector.
+              |Try one of these: ${Suggestion.renderAll(suggestedArgs)}
+        """.stripMargin
+      }
+
+      case NotFound(selector: Expr[Any], argumentName: String, suggestedArgs: List[Suggestion])
+
+      case TypeMismatch(
+        selector: Expr[Any],
+        argumentName: String,
+        expectedType: TypeRepr,
+        actualType: TypeRepr,
+        mismatchedValue: Expr[Any]
+      )
+
+      case NotAnArgSelector(selector: Expr[Any], suggestedArgs: List[Suggestion])
     }
 
     final case class UnsupportedConfig(config: Expr[Any], configFor: "arg" | "field" | "case") extends Failure {
@@ -96,7 +126,9 @@ private[internal] trait Module {
           case coprod: "case" => caseSuggestions
         }
 
-      def render: String = 
+      override def position = config.asTerm.pos
+
+      def render: String =
         s"""
         |'${config.asTerm.show}' is not a supported $configFor configuration expression.
         |Try one of these: ${Suggestion.renderAll(suggestions)}
@@ -105,8 +137,6 @@ private[internal] trait Module {
         |not with the splash operator (eg. Seq()*) etc.).
         """.stripMargin
     }
-
-
 
   }
 

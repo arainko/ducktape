@@ -19,7 +19,7 @@ private[internal] trait MirrorModule { self: Module =>
 
   object MaterializedMirror {
     def createOrAbort[A: Type](mirror: Expr[Mirror.Of[A]]): MaterializedMirror =
-      create(mirror).fold(Failure.MirrorMaterialization[A].andThen(abort), identity)
+      create(mirror).fold(memberName => abort(Failure.MirrorMaterialization(TypeRepr.of[A], memberName)), identity)
 
     private def create(mirror: Expr[Mirror]): Either[String, MaterializedMirror] = {
       val mirrorTpe = mirror.asTerm.tpe.widen

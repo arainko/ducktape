@@ -22,18 +22,17 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
 
     def argName[NamedArgs <: Tuple: Type, ArgType: Type](
       validArgs: Fields,
-      actualType: TypeRepr,
       selector: Expr[FunctionArguments[NamedArgs] => ArgType]
-    ): String = {
-      val argTpe = TypeRepr.of[ArgType]
+    ): String =
       selector.asTerm match {
-        //TODO: Check if the types are right and report an appropariate error
-        case ArgSelector(argumentName) if validArgs.containsFieldWithName(argumentName) && actualType <:< argTpe =>
+        case ArgSelector(argumentName) if validArgs.containsFieldWithName(argumentName) =>
           argumentName
+        case ArgSelector(argumentName) =>
+          abort(Failure.InvalidArgSelector.NotFound(selector, argumentName, Suggestion.fromFields(validArgs)))
         case other =>
-          abort(Failure.InvalidArgSelector(selector, Suggestion.fromFields(validArgs)))
+          abort(Failure.InvalidArgSelector.NotAnArgSelector(selector, Suggestion.fromFields(validArgs)))
       }
-    }
+
   }
 
   object FunctionLambda {
