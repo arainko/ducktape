@@ -84,22 +84,19 @@ val person = Person("Jerry", "Smith", 20)
 val withConstant = 
   person
     .into[PersonButMoreFields]
-    .withFieldConst(_.socialSecurityNo, "CONSTANT-SSN")
-    .transform
+    .transform(Field.const(_.socialSecurityNo, "CONSTANT-SSN"))
 
 // 2. Compute the value for a specific field by applying a function
 val withComputed = 
   person
     .into[PersonButMoreFields]
-    .withFieldComputed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN")
-    .transform
+    .transform(Field.computed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN"))
 
 // 3. Use a different field in its place - 'rename' it
 val withRename = 
   person
     .into[PersonButMoreFields]
-    .withFieldRenamed(_.socialSecurityNo, _.firstName)
-    .transform
+    .transform(Field.renamed(_.socialSecurityNo, _.firstName))
 ```
 
 In case we repeatedly apply configurations to the same field, the latest one is chosen:
@@ -109,10 +106,11 @@ In case we repeatedly apply configurations to the same field, the latest one is 
 val withRepeatedConfig =
   person
     .into[PersonButMoreFields]
-    .withFieldRenamed(_.socialSecurityNo, _.firstName)
-    .withFieldComputed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN")
-    .withFieldConst(_.socialSecurityNo, "CONSTANT-SSN")
-    .transform
+    .transform(
+      Field.renamed(_.socialSecurityNo, _.firstName),
+      Field.computed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN"),
+      Field.const(_.socialSecurityNo, "CONSTANT-SSN")
+    )
 
 ```
 
@@ -123,11 +121,12 @@ Of course we can use this to override the automatic derivation per field:
 val withEverythingOverriden = 
   person
     .into[PersonButMoreFields]
-    .withFieldConst(_.socialSecurityNo, "CONSTANT-SSN")
-    .withFieldConst(_.age, 100)
-    .withFieldConst(_.firstName, "OVERRIDEN-FIRST-NAME")
-    .withFieldConst(_.lastName, "OVERRIDEN-LAST-NAME")
-    .transform
+    .transform(
+      Field.const(_.socialSecurityNo, "CONSTANT-SSN"),
+      Field.const(_.age, 100),
+      Field.const(_.firstName, "OVERRIDEN-FIRST-NAME"),
+      Field.const(_.lastName, "OVERRIDEN-LAST-NAME"),
+    )
 
 ```
 
