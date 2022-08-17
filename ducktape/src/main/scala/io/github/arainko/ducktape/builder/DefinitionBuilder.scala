@@ -7,6 +7,6 @@ import scala.compiletime.*
 import scala.deriving.Mirror
 
 final class DefinitionBuilder[Source, Dest] {
-  inline def apply(inline config: BuilderConfig[Source, Dest]*): Transformer[Source, Dest] =
+  inline def build(inline config: BuilderConfig[Source, Dest]*): Transformer[Source, Dest] =
     from => TransformerMacros.transformConfigured(from, config)
 }
