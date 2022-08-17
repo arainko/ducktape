@@ -72,13 +72,12 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     sourceCases.map { source =>
       source -> Cases.dest
         .get(source.name)
-        .getOrElse(report.errorAndAbort(s"No child named '${source.name}' in ${TypeRepr.of[Dest].show}"))
+        .getOrElse(abort(Failure.NoChildMapping(source.name, TypeRepr.of[Dest])))
     }.map { (source, dest) =>
       val cond = source.tpe.asType match {
         case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
       }
-      cond.asTerm -> dest.materializeSingleton
-        .getOrElse(report.errorAndAbort(s"Cannot materialize singleton. Seems like ${dest.tpe.show} is not a singleton type."))
+      cond.asTerm -> dest.materializeSingleton.getOrElse(abort(Failure.CannotMaterializeSingleton(dest.tpe)))
     }
   }
 

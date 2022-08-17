@@ -56,7 +56,7 @@ private[internal] trait Module {
       sourceTpe: TypeRepr,
       suggestedFields: List[Suggestion]
     ) extends Failure {
-      override def position = selector.asTerm.pos
+      override def position: Position = selector.asTerm.pos
 
       def render: String =
         s"""
@@ -69,7 +69,7 @@ private[internal] trait Module {
       override def position: Position =
         this match {
           case NotFound(selector, _, _)                  => selector.asTerm.pos
-          case TypeMismatch(_, _, _, _, mismatchedValue) => mismatchedValue.asTerm.pos
+          case TypeMismatch(_, _, _, mismatchedValue) => mismatchedValue.asTerm.pos
           case NotAnArgSelector(selector, _)             => selector.asTerm.pos
         }
 
@@ -79,7 +79,7 @@ private[internal] trait Module {
             |'_.$argName' is not a valid argument selector.
             |Try one of these: ${Suggestion.renderAll(suggestedArgs)}
         """.stripMargin
-        case TypeMismatch(_, argName, expectedType, actualTpe, _) =>
+        case TypeMismatch(argName, expectedType, actualTpe, _) =>
           s"""
               |Type mistmatch for argument '$argName'.
               |Expected ${expectedType.show} but found ${actualTpe.show}.
@@ -94,7 +94,6 @@ private[internal] trait Module {
       case NotFound(selector: Expr[Any], argumentName: String, suggestedArgs: List[Suggestion])
 
       case TypeMismatch(
-        selector: Expr[Any],
         argumentName: String,
         expectedType: TypeRepr,
         actualType: TypeRepr,
@@ -135,6 +134,24 @@ private[internal] trait Module {
         |
         |Please note that you HAVE to use these directly as variadic arguments (not through a proxy method,
         |not with the splash operator (eg. Seq()*) etc.).
+        """.stripMargin
+    }
+
+    final case class NoFieldMapping(fieldName: String, sourceType: TypeRepr) extends Failure {
+      def render = s"No field named '$fieldName' found in ${sourceType.show}" 
+    }
+
+    final case class NoChildMapping(childName: String, destinationType: TypeRepr) extends Failure {
+      def render: String = s"No child named '$childName' found in ${destinationType.show}"
+    }
+
+    final case class CannotMaterializeSingleton(tpe: TypeRepr) extends Failure {
+      private val suggestions = Suggestion.all(s"${tpe.show} is not a singleton type")
+
+      def render: String = 
+        s"""
+        |Cannot materialize singleton for ${tpe.show}.
+        |Possible causes: ${Suggestion.renderAll(suggestions)}
         """.stripMargin
     }
 

@@ -17,14 +17,12 @@ private[ducktape] trait CaseModule { self: Module & MirrorModule =>
   object Cases {
 
     def source(using sourceCases: Cases.Source): Cases.Source = sourceCases
-
     def dest(using destCases: Cases.Dest): Cases.Dest = destCases
-    final case class Source(value: List[Case]) extends Cases
 
+    final case class Source(value: List[Case]) extends Cases
     object Source extends CasesCompanion[Source]
 
     final case class Dest(value: List[Case]) extends Cases
-
     object Dest extends CasesCompanion[Dest]
   }
 

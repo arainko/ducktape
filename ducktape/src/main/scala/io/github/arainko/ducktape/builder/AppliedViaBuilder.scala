@@ -12,7 +12,7 @@ sealed abstract class AppliedViaBuilder[Source, Dest, Func, NamedArguments <: Tu
   inline def transform(
     inline config: ArgBuilderConfig[Source, Dest, NamedArguments]*
   )(using Source: Mirror.ProductOf[Source]): Dest =
-    ProductTransformerMacros.viaWithBuilder[Source, Dest, Func, NamedArguments](source, function, config*)
+    ProductTransformerMacros.viaConfigured[Source, Dest, Func, NamedArguments](source, function, config*)
 }
 
 object AppliedViaBuilder {

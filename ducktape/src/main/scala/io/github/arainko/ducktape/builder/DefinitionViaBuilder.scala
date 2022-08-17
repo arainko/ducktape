@@ -10,7 +10,7 @@ sealed abstract class DefinitionViaBuilder[Source, Dest, Func, NamedArguments <:
   inline def build(
     inline config: ArgBuilderConfig[Source, Dest, NamedArguments]*
   )(using Mirror.ProductOf[Source]): Transformer[Source, Dest] = from =>
-    ProductTransformerMacros.viaWithBuilder[Source, Dest, Func, NamedArguments](from, function, config*)
+    ProductTransformerMacros.viaConfigured[Source, Dest, Func, NamedArguments](from, function, config*)
 }
 
 object DefinitionViaBuilder {

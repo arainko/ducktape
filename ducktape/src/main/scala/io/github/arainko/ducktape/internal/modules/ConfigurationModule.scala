@@ -119,7 +119,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
               Arg.const[source, dest, argType, actualType, `namedArgs`]($selector, $const)(using $ev1)
             } =>
           val argName = Selectors.argName(Fields.dest, selector)
-          verifyArgSelectorTypes(selector, argName, const, TypeRepr.of[argType], TypeRepr.of[actualType])
+          verifyArgSelectorTypes(argName, const, TypeRepr.of[argType], TypeRepr.of[actualType])
           Product.Const(argName, const)
 
         case '{
@@ -127,7 +127,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
               Arg.computed[source, dest, argType, actualType, `namedArgs`]($selector, $function)(using $ev1)
             } =>
           val argName = Selectors.argName(Fields.dest, selector)
-          verifyArgSelectorTypes(selector, argName, function, TypeRepr.of[argType], TypeRepr.of[actualType])
+          verifyArgSelectorTypes(argName, function, TypeRepr.of[argType], TypeRepr.of[actualType])
           Product.Computed(argName, function.asInstanceOf[Expr[Any => Any]])
 
         case '{
@@ -136,20 +136,19 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
             } =>
           val argName = Selectors.argName(Fields.dest, destSelector)
           val fieldName = Selectors.fieldName(Fields.source, sourceSelector)
-          verifyArgSelectorTypes(destSelector, argName, sourceSelector, TypeRepr.of[argType], TypeRepr.of[fieldType])
+          verifyArgSelectorTypes(argName, sourceSelector, TypeRepr.of[argType], TypeRepr.of[fieldType])
           Product.Renamed(argName, fieldName)
 
         case other => abort(Failure.UnsupportedConfig(other, "arg"))
       }
 
     private def verifyArgSelectorTypes(
-      selector: Expr[Any],
       argName: String,
       mismatchedValue: Expr[Any],
       expected: TypeRepr,
       actual: TypeRepr
     ) = if (!(actual <:< expected))
-      abort(Failure.InvalidArgSelector.TypeMismatch(selector, argName, expected, actual, mismatchedValue))
+      abort(Failure.InvalidArgSelector.TypeMismatch(argName, expected, actual, mismatchedValue))
 
   }
 }

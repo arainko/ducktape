@@ -107,7 +107,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       field ->
         Fields.source
           .get(field.name)
-          .getOrElse(report.errorAndAbort(s"No field named '${field.name}' found in ${TypeRepr.of[Source].show}"))
+          .getOrElse(abort(Failure.NoFieldMapping(field.name, TypeRepr.of[Source])))
     }.map { (dest, source) =>
       val call = resolveTransformer(sourceValue, source, dest)
 
@@ -182,14 +182,14 @@ private[ducktape] object ProductTransformerMacros {
   )(using Quotes) =
     ProductTransformerMacros().via(source, function, Func, Source)
 
-  inline def viaWithBuilder[Source, Dest, Func, NamedArgs <: Tuple](
+  inline def viaConfigured[Source, Dest, Func, NamedArgs <: Tuple](
     source: Source,
     inline function: Func,
     inline config: ArgBuilderConfig[Source, Dest, NamedArgs]*
   )(using Source: Mirror.ProductOf[Source]): Dest =
-    ${ viaWithBuilderMacro('source, 'function, 'config, 'Source) }
+    ${ viaConfiguredMacro('source, 'function, 'config, 'Source) }
 
-  def viaWithBuilderMacro[Source: Type, Dest: Type, Func: Type, NamedArgs <: Tuple: Type](
+  def viaConfiguredMacro[Source: Type, Dest: Type, Func: Type, NamedArgs <: Tuple: Type](
     sourceValue: Expr[Source],
     function: Expr[Func],
     config: Expr[Seq[ArgBuilderConfig[Source, Dest, NamedArgs]]],

@@ -21,7 +21,9 @@ private[ducktape] final class TransformerMacros(using val quotes: Quotes) extend
         case '{ $source: Mirror.SumOf[Source] } -> '{ $dest: Mirror.SumOf[Dest] } =>
           CoproductTransformerMacros.transformConfiguredMacro(sourceValue, config, source, dest)
       }
-      .getOrElse(report.errorAndAbort("BARF"))
+      .getOrElse(
+        report.errorAndAbort("Configured transformations are supported for Product -> Product and Coproduct -> Coproduct.")
+      )
 
 }
 
