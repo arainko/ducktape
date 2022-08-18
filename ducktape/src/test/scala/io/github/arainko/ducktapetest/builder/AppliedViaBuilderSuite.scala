@@ -46,6 +46,19 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
+  test("The last ") {
+    def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
+
+    val expected = TestClassWithAdditionalString(1, "str", "str")
+
+    val actual =
+      testClass
+        .intoVia(method)
+        .transform(Arg.renamed(_.additionalArg, _.str))
+
+    assertEquals(actual, expected)
+  }
+
   test("Builder reports a missing argument") {
     assertFailsToCompileWith {
       """
