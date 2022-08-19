@@ -21,6 +21,10 @@ private[internal] trait Module {
   def abort(error: Failure): Nothing =
     report.errorAndAbort(error.render, error.position)
 
+  extension (tpe: TypeRepr) {
+    def fullSimplifiedName: String = tpe.simplified.show(using Printer.TypeReprCode)
+  }
+
   opaque type Suggestion = String
 
   object Suggestion {

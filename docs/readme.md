@@ -68,9 +68,9 @@ As we established earlier, going from `Person` to a `PersonButMoreFields` cannot
 doesn't have the `socialSecurityNo` field, but it has all the other fields so it's almost there, we just have to nudge it a lil' bit.
 
 We can do so with field configurations in 3 ways:
-  1. Set a constant to a specific field
-  2. Compute the value for a specific field by applying a function
-  3. Use a different field in its place - 'rename' it
+  1. Set a constant to a specific field with `Field.const`
+  2. Compute the value for a specific field by applying a function with `Field.computed`
+  3. Use a different field in its place - 'rename' it with `Field.renamed`
 
 ```scala mdoc:reset
 import io.github.arainko.ducktape.*
@@ -80,23 +80,20 @@ final case class PersonButMoreFields(firstName: String, lastName: String, age: I
 
 val person = Person("Jerry", "Smith", 20)
 
+// create an AppliedBuilder,
+val builder = person.into[PersonButMoreFields]
+
 // 1. Set a constant to a specific field
 val withConstant = 
-  person
-    .into[PersonButMoreFields]
-    .transform(Field.const(_.socialSecurityNo, "CONSTANT-SSN"))
+  builder.transform(Field.const(_.socialSecurityNo, "CONSTANT-SSN"))
 
 // 2. Compute the value for a specific field by applying a function
 val withComputed = 
-  person
-    .into[PersonButMoreFields]
-    .transform(Field.computed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN"))
+  builder.transform(Field.computed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN"))
 
 // 3. Use a different field in its place - 'rename' it
 val withRename = 
-  person
-    .into[PersonButMoreFields]
-    .transform(Field.renamed(_.socialSecurityNo, _.firstName))
+  builder.transform(Field.renamed(_.socialSecurityNo, _.firstName))
 ```
 
 In case we repeatedly apply configurations to the same field, the latest one is chosen:
@@ -104,8 +101,7 @@ In case we repeatedly apply configurations to the same field, the latest one is 
 ```scala mdoc
 
 val withRepeatedConfig =
-  person
-    .into[PersonButMoreFields]
+  builder
     .transform(
       Field.renamed(_.socialSecurityNo, _.firstName),
       Field.computed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN"),
@@ -119,8 +115,7 @@ Of course we can use this to override the automatic derivation per field:
 ```scala mdoc
 
 val withEverythingOverriden = 
-  person
-    .into[PersonButMoreFields]
+  builder
     .transform(
       Field.const(_.socialSecurityNo, "CONSTANT-SSN"),
       Field.const(_.age, 100),
@@ -143,15 +138,24 @@ enum Size:
 enum ExtraSize:
   case ExtraSmall, Small, Medium, Large, ExtraLarge
 
-val transformed = Size.Small.to[ExtraSize]
+val builder = ExtraSize.ExtraSmall.into[Size]
 
-// Apply a function for the specified subtype
-val size = 
-  ExtraSize.ExtraSmall
-    .into[Size]
-    .withCaseInstance[ExtraSize.ExtraSmall.type](_ => Size.Small)
-    .withCaseInstance[ExtraSize.ExtraLarge.type](_ => Size.Large)
-    .transform
+// Specify a constant for the cases that are not covered automatically
+val withConstants = 
+  builder
+    .transform(
+      Case.const[ExtraSize.ExtraSmall.type](Size.Small),
+      Case.const[ExtraSize.ExtraLarge.type](Size.Large)
+    )
+
+// Specify a function to transform a given case with that function
+val withComputed =
+  builder
+    .transform(
+      Case.computed[ExtraSize.ExtraSmall.type](_ => Size.Small),
+      Case.computed[ExtraSize.ExtraLarge.type](_ => Size.Large)
+    )
+    
 ```
 
 #### 5. Method to case class
@@ -192,16 +196,15 @@ tackle the last example once again:
 def methodToExpandButOneMoreArg(lastName: String, age: Int, firstName: String, additionalArg: String): Person2 =
   Person2(firstName + additionalArg, lastName, age)
 
-person1
-  .intoVia(methodToExpandButOneMoreArg)
-  .withArgConst(_.additionalArg, "-CONST ARG")
-  .transform
+val builder = person1.intoVia(methodToExpandButOneMoreArg)
+
+val withConstant = builder.transform(Arg.const(_.additionalArg, "-CONST ARG"))
+
+val withComputed = builder.transform(Arg.computed(_.additionalArg, _.lastName + "-COMPUTED"))
+
+val withRenamed = builder.transform(Arg.renamed(_.additionalArg, _.lastName))
 ```
 
-We can configure method arguments in 3 ways:
- - `withArgConst` - supply a constant value to a method argument
- - `withArgComputed` - compute the argument with a function
- - `withArgRenamed` - rename an argument so that it matches a different field
 
 ### A look at the generated code
 

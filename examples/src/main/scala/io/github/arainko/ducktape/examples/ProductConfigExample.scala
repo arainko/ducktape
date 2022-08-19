@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.examples
 
 import io.github.arainko.ducktape.*
 import scala.compiletime.*
+import io.github.arainko.ducktape.internal.macros.DebugMacros
 
 final case class Person(firstName: String, lastName: String, age: Int)
 
@@ -34,3 +35,5 @@ final case class PersonButMoreFields(firstName: String, lastName: String, age: I
   println(withComputed)
   println(withRename)
 }
+
+    

@@ -42,7 +42,6 @@ private[ducktape] trait CaseModule { self: Module & MirrorModule =>
   }
 
   final case class Case(name: String, tpe: TypeRepr, ordinal: Int) {
-
     def materializeSingleton: Option[Term] =
       Option.when(tpe.isSingleton) {
         tpe match { case TermRef(a, b) => Ident(TermRef(a, b)) }

@@ -54,7 +54,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
         .unapply(config)
         .getOrElse(abort(Failure.UnsupportedConfig(config, "case")))
         .map(materializeSingleCoproductConfig)
-        .groupBy(_.tpe.typeSymbol.fullName) // TODO: Ths is probably not the best way to do this (?)
+        .groupBy(_.tpe.fullSimplifiedName) // TODO: Ths is probably not the best way to do this (?)
         .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
         .toList
 
