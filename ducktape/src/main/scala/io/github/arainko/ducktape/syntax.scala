@@ -1,20 +1,20 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.Builder.Applied
 import io.github.arainko.ducktape.internal.macros.*
 import io.github.arainko.ducktape.function.*
 import scala.deriving.Mirror
+import io.github.arainko.ducktape.builder.*
 
-extension [From](value: From) {
-  def into[To]: Applied[From, To, EmptyTuple] = Builder.applied[From, To](value)
+extension [Source](value: Source) {
+  def into[Dest]: AppliedBuilder[Source, Dest] = AppliedBuilder(value)
 
-  def to[To](using Transformer[From, To]): To = Transformer[From, To].transform(value)
+  def to[Dest](using Transformer[Source, Dest]): Dest = Transformer[Source, Dest].transform(value)
 
-  transparent inline def intoVia[Func](inline function: Func)(using From: Mirror.ProductOf[From], Func: FunctionMirror[Func]) =
-    ViaBuilder.applied(value, function)
+  transparent inline def intoVia[Func](inline function: Func)(using Mirror.ProductOf[Source], FunctionMirror[Func]) =
+    AppliedViaBuilder.create(value, function)
 
   inline def via[Func](inline function: Func)(using
     Func: FunctionMirror[Func],
-    A: Mirror.ProductOf[From]
+    Source: Mirror.ProductOf[Source]
   ): Func.Return = ProductTransformerMacros.via(value, function)
 }

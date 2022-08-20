@@ -9,21 +9,19 @@ object DebugMacros {
   def structureMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*
     val struct = Printer.TreeStructure.show(value.asTerm)
-    '{
-      println(${ Expr(struct) })
-      $value
-    }
+    report.info(struct)
+    value
   }
 
-  inline def code[A](inline value: A) = ${ codeMacro('value) }
+  inline def code[A](inline value: A) = ${ codeCompiletimeMacro('value) }
 
-  def codeMacro[A: Type](value: Expr[A])(using Quotes) = {
+  def codeCompiletimeMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*
 
     val struct = Printer.TreeShortCode.show(value.asTerm)
-    '{
-      println(${ Expr(struct) })
-      $value
-    }
+
+    report.info(struct)
+
+    value
   }
 }

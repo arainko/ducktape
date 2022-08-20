@@ -1,114 +1,132 @@
 package io.github.arainko.ducktape.internal.macros
 
 import scala.quoted.*
-import io.github.arainko.ducktape.Configuration.*
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.modules.*
-import scala.deriving.Mirror as DerivingMirror
+import scala.deriving.*
 
 private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     extends Module,
+      CaseModule,
       FieldModule,
-      MirrorModule,
       SelectorModule,
+      MirrorModule,
       ConfigurationModule {
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
-  def transform[A: Type, B: Type](
-    sourceValue: Expr[A],
-    A: DerivingMirror.SumOf[A],
-    B: DerivingMirror.SumOf[B]
-  ): Expr[B] = {
-    val sourceCases = Case.fromMirror(A)
-    val destCases = Case.fromMirror(B).map(c => c.name -> c).toMap
-
-    val ValReference(ordinalRef, ordinalStatement) = '{ val ordinal = $A.ordinal($sourceValue) }
-    val ordinal = ordinalRef.asExprOf[Int]
-    val ifBranches = singletonIfBranches[A, B](sourceValue, ordinal, sourceCases, destCases)
-    Block(ordinalStatement :: Nil, ifStatement(ifBranches)).asExprOf[B]
+  def transform[Source: Type, Dest: Type](
+    sourceValue: Expr[Source],
+    Source: Expr[Mirror.SumOf[Source]],
+    Dest: Expr[Mirror.SumOf[Dest]]
+  ): Expr[Dest] = {
+    given Cases.Source = Cases.Source.fromMirror(Source)
+    given Cases.Dest = Cases.Dest.fromMirror(Dest)
+    val ifBranches = singletonIfBranches[Source, Dest](sourceValue, Cases.source.value)
+    ifStatement(ifBranches).asExprOf[Dest]
   }
 
-  def transformConfigured[A: Type, B: Type, Config <: Tuple: Type](
-    sourceValue: Expr[A],
-    builder: Expr[Builder[?, A, B, Config]],
-    A: DerivingMirror.SumOf[A],
-    B: DerivingMirror.SumOf[B]
-  ): Expr[B] = {
-    val sourceCases = Case.fromMirror(A)
-    val destCases = Case.fromMirror(B).map(c => c.name -> c).toMap
-    val config = materializeCoproductConfig[Config]
-    val (nonConfiguredCases, configuredCases) = sourceCases.partition(c => !config.exists(_.tpe =:= c.tpe)) //TODO: Optimize
+  def transformConfigured[Source: Type, Dest: Type](
+    sourceValue: Expr[Source],
+    config: Expr[Seq[BuilderConfig[Source, Dest]]],
+    Source: Expr[Mirror.SumOf[Source]],
+    Dest: Expr[Mirror.SumOf[Dest]]
+  ): Expr[Dest] = {
+    given Cases.Source = Cases.Source.fromMirror(Source)
+    given Cases.Dest = Cases.Dest.fromMirror(Dest)
+    val materializedConfig =
+      MaterializedConfiguration
+        .materializeCoproductConfig(config)
+        .map(c => c.tpe.fullName -> c)
+        .toMap
 
-    val ValReference(ordinalRef, ordinalStatement) = '{ val ordinal = $A.ordinal($sourceValue) }
-    val ordinal = ordinalRef.asExprOf[Int]
-    val nonConfiguredIfBranches = singletonIfBranches[A, B](sourceValue, ordinal, nonConfiguredCases, destCases)
+    val (nonConfiguredCases, configuredCases) =
+      Cases.source.value.partition(c => !materializedConfig.contains(c.tpe.fullName))
+
+    val nonConfiguredIfBranches = singletonIfBranches[Source, Dest](sourceValue, nonConfiguredCases)
 
     val configuredIfBranches =
-      configuredCases.map { source =>
-        val cond = '{ $ordinal == ${ Expr(source.ordinal) } }
-        val value = '{ $builder.caseInstances($ordinal)($sourceValue) }
-        cond.asTerm -> value.asTerm
-      }
+      configuredCases
+        .map(c => c.tpe.fullName -> c)
+        .toMap
+        .map {
+          case (fullName, source) =>
+            ConfiguredCase(materializedConfig(fullName), source)
+        }
+        .map {
+          case ConfiguredCase(config, source) =>
+            config match {
+              case Coproduct.Computed(tpe, function) =>
+                val cond = source.tpe.asType match {
+                  case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
+                }
+                val castedSource = tpe.asType match {
+                  case '[tpe] => '{ $sourceValue.asInstanceOf[tpe] }
+                }
+                val value = '{ $function($castedSource) }
+                cond.asTerm -> value.asTerm
 
-    Block(ordinalStatement :: Nil, ifStatement(nonConfiguredIfBranches ++ configuredIfBranches)).asExprOf[B]
+              case Coproduct.Const(tpe, value) =>
+                val cond = source.tpe.asType match {
+                  case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
+                }
+                cond.asTerm -> value.asTerm
+            }
+        }
+
+    ifStatement(nonConfiguredIfBranches ++ configuredIfBranches).asExprOf[Dest]
   }
 
-  private def singletonIfBranches[A: Type, B: Type](
-    sourceValue: Expr[A],
-    ordinalExpr: Expr[Int],
-    sourceCases: List[Case],
-    destinationCaseMapping: Map[String, Case]
-  ) = {
+  private def singletonIfBranches[Source: Type, Dest: Type](
+    sourceValue: Expr[Source],
+    sourceCases: List[Case]
+  )(using Cases.Dest) = {
     sourceCases.map { source =>
-      source -> destinationCaseMapping
+      source -> Cases.dest
         .get(source.name)
-        .getOrElse(report.errorAndAbort(s"No child named '${source.name}' in ${TypeRepr.of[B].show}"))
+        .getOrElse(abort(Failure.NoChildMapping(source.name, TypeRepr.of[Dest])))
     }.map { (source, dest) =>
-      val cond = '{ $ordinalExpr == ${ Expr(source.ordinal) } }
-      cond.asTerm -> dest.materializeSingleton
-        .getOrElse(report.errorAndAbort(s"Cannot materialize singleton. Seems like ${dest.tpe.show} is not a singleton type."))
+      val cond = source.tpe.asType match {
+        case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
+      }
+      cond.asTerm -> dest.materializeSingleton.getOrElse(abort(Failure.CannotMaterializeSingleton(dest.tpe)))
     }
   }
 
   private def ifStatement(branches: List[(Term, Term)]): Term = {
-    branches match
+    branches match {
       case (p1, a1) :: xs =>
         If(p1, a1, ifStatement(xs))
       case Nil =>
         '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }.asTerm
-  }
-
-  private object ValReference {
-    def unapply(statement: Expr[Unit]) = statement.asTerm match {
-      case Inlined(_, _, Block((valDef: Statement) :: Nil, _)) => Some(Ref(valDef.symbol) -> valDef)
-      case other                                               => report.errorAndAbort("Not a val reference!")
     }
   }
+
+  private case class ConfiguredCase(config: Coproduct, subcase: Case)
 }
 
 private[ducktape] object CoproductTransformerMacros {
-  inline def transform[A, B](source: A)(using
-    A: DerivingMirror.SumOf[A],
-    B: DerivingMirror.SumOf[B]
-  ): B = ${ transformMacro[A, B]('source, 'A, 'B) }
+  inline def transform[Source, Dest](source: Source)(using
+    Source: Mirror.SumOf[Source],
+    Dest: Mirror.SumOf[Dest]
+  ): Dest = ${ transformMacro[Source, Dest]('source, 'Source, 'Dest) }
 
-  inline def transformWithBuilder[A, B, Config <: Tuple](source: A, builder: Builder[?, A, B, Config])(using
-    A: DerivingMirror.SumOf[A],
-    B: DerivingMirror.SumOf[B]
-  ): B =
-    ${ transformWithBuilderMacro[A, B, Config]('source, 'builder, 'A, 'B) }
+  def transformMacro[Source: Type, Dest: Type](
+    source: Expr[Source],
+    Source: Expr[Mirror.SumOf[Source]],
+    Dest: Expr[Mirror.SumOf[Dest]]
+  )(using Quotes): Expr[Dest] = CoproductTransformerMacros().transform(source, Source, Dest)
 
-  def transformMacro[A: Type, B: Type](
-    source: Expr[A],
-    A: Expr[DerivingMirror.SumOf[A]],
-    B: Expr[DerivingMirror.SumOf[B]]
-  )(using Quotes): Expr[B] = CoproductTransformerMacros().transform(source, A, B)
+  inline def transformConfigured[Source, Dest](source: Source, inline config: BuilderConfig[Source, Dest]*)(using
+    Source: Mirror.SumOf[Source],
+    Dest: Mirror.SumOf[Dest]
+  ): Dest =
+    ${ transformConfiguredMacro[Source, Dest]('source, 'config, 'Source, 'Dest) }
 
-  def transformWithBuilderMacro[A: Type, B: Type, Config <: Tuple: Type](
-    source: Expr[A],
-    builder: Expr[Builder[?, A, B, Config]],
-    A: Expr[DerivingMirror.SumOf[A]],
-    B: Expr[DerivingMirror.SumOf[B]]
-  )(using Quotes): Expr[B] = CoproductTransformerMacros().transformConfigured(source, builder, A, B)
+  def transformConfiguredMacro[Source: Type, Dest: Type](
+    source: Expr[Source],
+    config: Expr[Seq[BuilderConfig[Source, Dest]]],
+    Source: Expr[Mirror.SumOf[Source]],
+    Dest: Expr[Mirror.SumOf[Dest]]
+  )(using Quotes): Expr[Dest] = CoproductTransformerMacros().transformConfigured(source, config, Source, Dest)
 }

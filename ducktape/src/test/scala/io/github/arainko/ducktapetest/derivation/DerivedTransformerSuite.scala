@@ -5,39 +5,43 @@ import io.github.arainko.ducktapetest.model.*
 import munit.FunSuite
 
 import scala.compiletime.testing.*
-import io.github.arainko.ducktape.Builder
 import io.github.arainko.ducktape.internal.macros.*
 import scala.deriving.Mirror
+import io.github.arainko.ducktapetest.DucktapeSuite
 
-object DerivedTransformerSuite:
+object DerivedTransformerSuite {
 // If these are declared inside their tests the compiler crashes 🤔
-  enum MoreCases:
+  enum MoreCases {
     case Case1
     case Case2
     case Case3
     case Case4
+  }
 
-  enum LessCases:
+  enum LessCases {
     case Case1
     case Case2
     case Case3
+  }
 
-  enum Enum1:
+  enum Enum1 {
     case Case1
     case Case2
     case Case3
+  }
 
-  enum Enum2:
+  enum Enum2 {
     case Case3
     case Case2
     case Case1
-
-end DerivedTransformerSuite
+  }
+}
 
 final case class Basic1(value: Int, value1: Int)
+
 final case class Basic2(value2: Int, value: Int, extra: String)
 
-class DerivedTransformerSuite extends FunSuite {
+class DerivedTransformerSuite extends DucktapeSuite {
   import DerivedTransformerSuite.*
 
   test("derived product transformer roundtrip") {
@@ -58,7 +62,6 @@ class DerivedTransformerSuite extends FunSuite {
     )
 
     val actualComplex = expectedPrimitive.to[ComplexPerson]
-
     val actualPrimitive = actualComplex.to[PrimitivePerson]
 
     assertEquals(expectedComplex, actualComplex)
@@ -85,16 +88,6 @@ class DerivedTransformerSuite extends FunSuite {
     }
   }
 
-  test("derived value class transformer roundtrip") {
-    final case class Value(value: Int)
-
-    val expectedUnwrapped = Value(5).to[Int]
-    val expectedWrapped = 5.to[Value]
-
-    assertEquals(expectedUnwrapped, 5)
-    assertEquals(expectedWrapped, Value(5))
-  }
-
   test("derivation succeeds when going from a class with more fields to a class with less fields") {
     final case class MoreFields(field1: Int, field2: Int, field3: Int, field4: Int)
     final case class LessFields(field1: Int, field2: Int, field3: Int)
@@ -106,17 +99,28 @@ class DerivedTransformerSuite extends FunSuite {
     assertEquals(expected, actual)
   }
 
+  test("derivation succeeds with more complex subderivations inside") {
+    final case class Inside(name: String, age: Int)
+    final case class Inside2(name: String)
+    final case class Person(name: String, age: Int, ins: Inside)
+    final case class Person2(name: String, age: Int, ins: Option[Inside2])
+
+    val person = Person("p1", 1, Inside("ins1", 1))
+    val expected = Person2("p1", 1, Some(Inside2("ins1")))
+    val actual = person.to[Person2]
+
+    assertEquals(actual, expected)
+  }
+
   test("derivation fails when going from a product with less fields to a product with more fields") {
-    val errors = typeCheckErrors {
+    assertFailsToCompileWith {
       """
       final case class MoreFields(field1: Int, field2: Int, field3: Int, field4: Int)
       final case class LessFields(field1: Int, field2: Int, field3: Int)
 
       val derived = Transformer[LessFields, MoreFields]
       """
-    }.map(_.message).mkString
-
-    assertEquals(errors, "No field named 'field4' found in LessFields")
+    }("No field named 'field4' found in LessFields")
   }
 
   test("derivation succeeds when going from a sum with less cases to a sum with more cases") {
@@ -128,11 +132,6 @@ class DerivedTransformerSuite extends FunSuite {
   }
 
   test("derivation fails when going from a sum with more cases to a sum with less cases") {
-    val errors = typeCheckErrors("Transformer[MoreCases, LessCases]").map(_.message).mkString
-
-    assertEquals(
-      errors,
-      "No child named 'Case4' in LessCases"
-    )
+    assertFailsToCompileWith("Transformer[MoreCases, LessCases]")("No child named 'Case4' found in LessCases")
   }
 }

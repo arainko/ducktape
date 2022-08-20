@@ -10,10 +10,11 @@ final case class PrimitivePerson(
 
 final case class PrimitiveContactInfo(phoneNo: String, address: String)
 
-enum PrimitiveCoolnessFactor:
+enum PrimitiveCoolnessFactor {
   case Uncool
   case Cool
   case SomewhatCool
+}
 
 final case class ComplexPerson(
   name: Name,
@@ -23,19 +24,20 @@ final case class ComplexPerson(
   coolnessFactor: ComplexCoolnessFactor
 )
 
-final case class Name(value: String)
+final case class Name(value: String) extends AnyVal
 
-final case class Age(value: Int)
+final case class Age(value: Int) extends AnyVal
 
 final case class ComplexContactInfo(phoneNo: PhoneNumber, address: Address)
 
-final case class PhoneNumber(value: String)
+final case class PhoneNumber(value: String) extends AnyVal
 
-final case class Address(value: String)
+final case class Address(value: String) extends AnyVal
 
-final case class Hobby(value: String)
+final case class Hobby(value: String) extends AnyVal
 
-enum ComplexCoolnessFactor:
+enum ComplexCoolnessFactor {
   case Uncool
   case SomewhatCool
   case Cool
+}

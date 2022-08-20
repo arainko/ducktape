@@ -2,13 +2,14 @@ package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 import scala.annotation.tailrec
+import scala.deriving.Mirror
 
-// Taken from shapeless 3:
+// Lifted from shapeless 3:
 // https://github.com/typelevel/shapeless-3/blob/main/modules/deriving/src/main/scala/shapeless3/deriving/internals/reflectionutils.scala
 private[internal] trait MirrorModule { self: Module =>
   import quotes.reflect.*
 
-  case class Mirror(
+  final case class MaterializedMirror private (
     mirroredType: TypeRepr,
     mirroredMonoType: TypeRepr,
     mirroredElemTypes: List[TypeRepr],
@@ -16,8 +17,11 @@ private[internal] trait MirrorModule { self: Module =>
     mirroredElemLabels: List[String]
   )
 
-  object Mirror {
-    def apply(mirror: Expr[deriving.Mirror]): Option[Mirror] = {
+  object MaterializedMirror {
+    def createOrAbort[A: Type](mirror: Expr[Mirror.Of[A]]): MaterializedMirror =
+      create(mirror).fold(memberName => abort(Failure.MirrorMaterialization(TypeRepr.of[A], memberName)), identity)
+
+    private def create(mirror: Expr[Mirror]): Either[String, MaterializedMirror] = {
       val mirrorTpe = mirror.asTerm.tpe.widen
       for {
         mirroredType <- findMemberType(mirrorTpe, "MirroredType")
@@ -29,7 +33,7 @@ private[internal] trait MirrorModule { self: Module =>
         val elemTypes = tupleTypeElements(mirroredElemTypes)
         val ConstantType(StringConstant(label)) = mirroredLabel
         val elemLabels = tupleTypeElements(mirroredElemLabels).map { case ConstantType(StringConstant(l)) => l }
-        Mirror(mirroredType, mirroredMonoType, elemTypes, label, elemLabels)
+        MaterializedMirror(mirroredType, mirroredMonoType, elemTypes, label, elemLabels)
       }
     }
   }
@@ -47,10 +51,11 @@ private[internal] trait MirrorModule { self: Module =>
     case tp             => tp
   }
 
-  private def findMemberType(tp: TypeRepr, name: String): Option[TypeRepr] = tp match {
-    case Refinement(_, `name`, tp) => Some(low(tp))
-    case Refinement(parent, _, _)  => findMemberType(parent, name)
-    case AndType(left, right)      => findMemberType(left, name).orElse(findMemberType(right, name))
-    case _                         => None
-  }
+  private def findMemberType(tp: TypeRepr, name: String): Either[String, TypeRepr] =
+    tp match {
+      case Refinement(_, `name`, tp) => Right(low(tp))
+      case Refinement(parent, _, _)  => findMemberType(parent, name)
+      case AndType(left, right)      => findMemberType(left, name).orElse(findMemberType(right, name))
+      case _                         => Left(name)
+    }
 }

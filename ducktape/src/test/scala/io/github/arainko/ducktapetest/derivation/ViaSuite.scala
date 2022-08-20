@@ -3,6 +3,7 @@ package io.github.arainko.ducktapetest.derivation
 import io.github.arainko.ducktape.*
 import scala.compiletime.testing.*
 import munit.FunSuite
+import io.github.arainko.ducktapetest.DucktapeSuite
 
 final case class Input(int: Int, string: String, list: List[Int], option: Option[Int])
 
@@ -10,9 +11,9 @@ final case class Transformed(int: Int, string: String, list: List[Int], option: 
 
 final case class TransformedGeneric[A](int: Int, string: String, list: List[Int], option: Option[A])
 
-final case class WrappedInt(value: Int)
+final case class WrappedInt(value: Int) extends AnyVal
 
-final case class WrappedString(value: String)
+final case class WrappedString(value: String) extends AnyVal
 
 final case class TransformedWithSubtransformations[A](
   int: WrappedInt,
@@ -21,7 +22,7 @@ final case class TransformedWithSubtransformations[A](
   option: Option[A]
 )
 
-class ViaSuite extends FunSuite {
+class ViaSuite extends DucktapeSuite {
 
   test("via") {
     def method(option: Option[Int], list: List[Int], string: String, int: Int) =
@@ -60,7 +61,7 @@ class ViaSuite extends FunSuite {
   }
 
   test("via fails when the source doesn't have all the method arguments") {
-    val error = typeCheckErrors {
+    assertFailsToCompileWith {
       """
       def method(option: Option[Int], list: List[Int], string: String, int: Int, extraField: String) = ???
 
@@ -68,9 +69,7 @@ class ViaSuite extends FunSuite {
 
       value.via(method)
       """
-    }.map(_.message).mkString
-
-    assertEquals(error, "No field named 'extraField' found in Input")
+    }("No field named 'extraField' found in Input")
   }
 
 }

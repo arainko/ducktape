@@ -5,15 +5,15 @@ import scala.annotation.implicitNotFound
 
 @implicitNotFound("FunctionMirrors are only available for function types, but got ${F}")
 sealed trait FunctionMirror[F] {
-  type Args <: Tuple
   type Return
 }
 
-object FunctionMirror {
-  type Aux[F, A <: Tuple, R] = FunctionMirror[F] {
-    type Args = A
+object FunctionMirror extends FunctionMirror[Any => Any] {
+  type Aux[F, R] = FunctionMirror[F] {
     type Return = R
   }
+
+  override type Return = Any
 
   transparent inline given [F]: FunctionMirror[F] = FunctionMacros.createMirror[F]
 }
