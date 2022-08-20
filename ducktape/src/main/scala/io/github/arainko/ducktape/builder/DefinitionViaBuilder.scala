@@ -14,7 +14,7 @@ sealed abstract class DefinitionViaBuilder[Source, Dest, Func, NamedArguments <:
 }
 
 object DefinitionViaBuilder {
-  def create[Source]: PartiallyApplied[Source] = () 
+  def create[Source]: PartiallyApplied[Source] = ()
 
   opaque type PartiallyApplied[Source] = Unit
 

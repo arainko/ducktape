@@ -25,7 +25,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     case func @ FunctionLambda(vals, _) =>
       given Fields.Source = Fields.Source.fromMirror(Source)
       given Fields.Dest = Fields.Dest.fromValDefs(vals)
-      
+
       val calls = fieldTransformers(sourceValue, Fields.dest.value).map(_.value)
       Select.unique(func, "apply").appliedToArgs(calls).asExprOf[Dest]
     case other => report.errorAndAbort(s"'via' is only supported on eta-expanded methods!")
@@ -66,7 +66,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       .asExprOf[Dest]
   }
 
-  def transformConfigured[Source: Type, Dest: Type, Config <: Tuple: Type](
+  def transformConfigured[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     config: Expr[Seq[BuilderConfig[Source, Dest]]],
     Source: Expr[Mirror.ProductOf[Source]],
@@ -75,7 +75,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromMirror(Dest)
 
-    val materializedConfig = MaterializedConfiguration.materializeProductConfig(config) 
+    val materializedConfig = MaterializedConfiguration.materializeProductConfig(config)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
     val transformedFields = fieldTransformers(sourceValue, nonConfiguredFields.values.toList)
     val configuredFields = fieldConfigurations(materializedConfig, sourceValue)
@@ -98,6 +98,24 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       .appliedToArgs(transformerFields.toList)
       .asExprOf[Dest]
   }
+
+  def transformFromAnyVal[Source <: AnyVal: Type, Dest: Type](
+    sourceValue: Expr[Source]
+  ): Expr[Dest] = {
+    val tpe = TypeRepr.of[Source]
+    val fieldSymbol =
+      tpe.typeSymbol.fieldMembers.headOption
+        .getOrElse(report.errorAndAbort(s"Failed to fetch the wrapped field name of ${tpe.show}"))
+
+    accessField(sourceValue, fieldSymbol.name).asExprOf[Dest]
+  }
+
+  def transformToAnyVal[Source: Type, Dest <: AnyVal: Type](
+    sourceValue: Expr[Source]
+  ): Expr[Dest] =
+    constructor(TypeRepr.of[Dest])
+      .appliedTo(sourceValue.asTerm)
+      .asExprOf[Dest]
 
   private def fieldTransformers[Source: Type](
     sourceValue: Expr[Source],
@@ -209,5 +227,17 @@ private[ducktape] object ProductTransformerMacros {
     Dest: Expr[Mirror.ProductOf[Dest]]
   )(using Quotes) =
     ProductTransformerMacros().transformConfigured(sourceValue, config, Source, Dest)
+
+  inline def transformFromAnyVal[Source <: AnyVal, Dest](sourceValue: Source): Dest =
+    ${ transformFromAnyValMacro[Source, Dest]('sourceValue) }
+
+  def transformFromAnyValMacro[Source <: AnyVal: Type, Dest: Type](sourceValue: Expr[Source])(using Quotes): Expr[Dest] =
+    ProductTransformerMacros().transformFromAnyVal[Source, Dest](sourceValue)
+
+  inline def transfromToAnyVal[Source, Dest <: AnyVal](sourceValue: Source) =
+    ${ transformToAnyValMacro[Source, Dest]('sourceValue) }
+
+  def transformToAnyValMacro[Source: Type, Dest <: AnyVal: Type](sourceValue: Expr[Source])(using Quotes): Expr[Dest] =
+    ProductTransformerMacros().transformToAnyVal[Source, Dest](sourceValue)
 
 }

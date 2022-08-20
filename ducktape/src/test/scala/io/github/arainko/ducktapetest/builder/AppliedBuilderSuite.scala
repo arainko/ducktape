@@ -93,7 +93,10 @@ class AppliedBuilderSuite extends DucktapeSuite {
     val actual =
       MoreCases.Case4
         .into[LessCases]
-        .transform(Case.const[MoreCases.Case4.type](LessCases.Case3))
+        .transform(
+          Case.const[MoreCases.Case4.type](LessCases.Case3),
+          Case.const[MoreCases.Case5.type](LessCases.Case3)
+        )
 
     assertEquals(actual, expected)
   }
@@ -125,6 +128,7 @@ object AppliedBuilderSuite {
     case Case2
     case Case3
     case Case4
+    case Case5
   }
 
   enum NotEnumMoreCases {

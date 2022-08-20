@@ -48,20 +48,10 @@ object Transformer {
     factory: Factory[Dest, DestCollection[Dest]]
   ): Transformer[SourceCollection[Source], DestCollection[Dest]] = from => from.map(trans.transform).to(factory)
 
-  inline given [Source <: Product, SimpleType](using
-    Source: Mirror.ProductOf[Source]
-  )(using
-    Source.MirroredElemLabels <:< NonEmptyTuple,
-    Source.MirroredElemTypes =:= (SimpleType *: EmptyTuple)
-  ): Transformer[Source, SimpleType] =
-    from => from.productElement(0).asInstanceOf[SimpleType]
+  inline given fromAnyVal[Source <: AnyVal, Dest]: Transformer[Source, Dest] =
+    from => ProductTransformerMacros.transformFromAnyVal[Source, Dest](from)
 
-  inline given [Source <: Product, SimpleType](using
-    Source: Mirror.ProductOf[Source]
-  )(using
-    Source.MirroredElemLabels <:< NonEmptyTuple,
-    Source.MirroredElemTypes =:= (SimpleType *: EmptyTuple)
-  ): Transformer[SimpleType, Source] =
-    from => Source.fromProduct(Tuple(from))
+  inline given toAnyVal[Source, Dest <: AnyVal]: Transformer[Source, Dest] =
+    from => ProductTransformerMacros.transfromToAnyVal[Source, Dest](from)
 
 }

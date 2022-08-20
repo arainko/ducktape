@@ -11,9 +11,9 @@ final case class Transformed(int: Int, string: String, list: List[Int], option: 
 
 final case class TransformedGeneric[A](int: Int, string: String, list: List[Int], option: Option[A])
 
-final case class WrappedInt(value: Int)
+final case class WrappedInt(value: Int) extends AnyVal
 
-final case class WrappedString(value: String)
+final case class WrappedString(value: String) extends AnyVal
 
 final case class TransformedWithSubtransformations[A](
   int: WrappedInt,

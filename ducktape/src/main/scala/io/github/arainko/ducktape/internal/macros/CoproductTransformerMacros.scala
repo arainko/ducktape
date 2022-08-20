@@ -37,39 +37,41 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     val materializedConfig =
       MaterializedConfiguration
         .materializeCoproductConfig(config)
-        .map(c => c.tpe.fullSimplifiedName -> c)
+        .map(c => c.tpe.fullName -> c)
         .toMap
 
     val (nonConfiguredCases, configuredCases) =
-      Cases.source.value.partition(c => !materializedConfig.contains(c.tpe.fullSimplifiedName))
+      Cases.source.value.partition(c => !materializedConfig.contains(c.tpe.fullName))
 
     val nonConfiguredIfBranches = singletonIfBranches[Source, Dest](sourceValue, nonConfiguredCases)
 
     val configuredIfBranches =
       configuredCases
-        .map(c => c.tpe.fullSimplifiedName -> c)
+        .map(c => c.tpe.fullName -> c)
         .toMap
-        .map { case (fullName, source) =>
-          ConfiguredCase(materializedConfig(fullName), source)
+        .map {
+          case (fullName, source) =>
+            ConfiguredCase(materializedConfig(fullName), source)
         }
-        .map { case ConfiguredCase(config, source) =>
-          config match {
-            case Coproduct.Computed(tpe, function) =>
-              val cond = source.tpe.asType match {
-                case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
-              }
-              val castedSource = tpe.asType match {
-                case '[tpe] => '{ $sourceValue.asInstanceOf[tpe] }
-              }
-              val value = '{ $function($castedSource) }
-              cond.asTerm -> value.asTerm
+        .map {
+          case ConfiguredCase(config, source) =>
+            config match {
+              case Coproduct.Computed(tpe, function) =>
+                val cond = source.tpe.asType match {
+                  case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
+                }
+                val castedSource = tpe.asType match {
+                  case '[tpe] => '{ $sourceValue.asInstanceOf[tpe] }
+                }
+                val value = '{ $function($castedSource) }
+                cond.asTerm -> value.asTerm
 
-            case Coproduct.Const(tpe, value) =>
-              val cond = source.tpe.asType match {
-                case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
-              }
-              cond.asTerm -> value.asTerm
-          }
+              case Coproduct.Const(tpe, value) =>
+                val cond = source.tpe.asType match {
+                  case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
+                }
+                cond.asTerm -> value.asTerm
+            }
         }
 
     ifStatement(nonConfiguredIfBranches ++ configuredIfBranches).asExprOf[Dest]
@@ -100,7 +102,7 @@ private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
     }
   }
 
-  private case class ConfiguredCase(config: Coproduct, subcase: Case) 
+  private case class ConfiguredCase(config: Coproduct, subcase: Case)
 }
 
 private[ducktape] object CoproductTransformerMacros {

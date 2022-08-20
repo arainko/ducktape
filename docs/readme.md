@@ -4,6 +4,8 @@
 
 *Ducktape* is a library for boilerplate-less and configurable transformations between case classes/enums (sealed traits) for Scala 3. Directly inspired by [chimney](https://github.com/scalalandio/chimney).
 
+If this project interests you, please drop a 🌟 - these things are worthless but give me a dopamine rush nonetheless.
+
 ### Installation
 ```scala
 libraryDependencies += "io.github.arainko" %% "ducktape" % "@VERSION@"
@@ -203,6 +205,59 @@ val withConstant = builder.transform(Arg.const(_.additionalArg, "-CONST ARG"))
 val withComputed = builder.transform(Arg.computed(_.additionalArg, _.lastName + "-COMPUTED"))
 
 val withRenamed = builder.transform(Arg.renamed(_.additionalArg, _.lastName))
+```
+
+#### 7. Automatic wrapping and unwrapping of `AnyVal`
+
+Despite being a really flawed abstraction `AnyVal` is pretty prevalent in Scala 2 code that you may want to interop with
+and `ducktape` is here to assist you. `Transformer` definitions for wrapped -> unwrapped and unwrapped -> wrapped are
+automatically available:
+
+```scala mdoc:reset-object
+import io.github.arainko.ducktape.*
+
+final case class WrappedString(value: String) extends AnyVal
+
+val wrapped = WrappedString("I am a String")
+
+val unwrapped = wrapped.to[String]
+
+val wrappedAgain = unwrapped.to[WrappedString]
+```
+
+#### 8. Defining custom `Transformers`
+
+If for some reason you need a custom `Transformer` in scope but still want to partially rely
+on the automatic derivation and have all the configuration DSL goodies you can use these:
+
+* `Transformer.define[Source, Dest].build(<Field/Case configuration>)`
+* `Transformer.defineVia[Source](someMethod).build(<Arg configuration>)`
+  
+Examples:
+
+```scala mdoc:reset
+import io.github.arainko.ducktape.*
+
+final case class TestClass(str: String, int: Int)
+final case class TestClassWithAdditionalList(int: Int, str: String, additionalArg: List[String])
+
+def method(str: String, int: Int, additionalArg: List[String]) = TestClassWithAdditionalList(int, str, additionalArg)
+
+val testClass = TestClass("str", 1)
+
+val definedViaTransformer =
+  Transformer
+    .defineVia[TestClass](method)
+    .build(Arg.const(_.additionalArg, List("const")))
+
+val definedTransformer =
+  Transformer
+    .define[TestClass, TestClassWithAdditionalList]   
+    .build(Field.const(_.additionalArg, List("const")))
+
+val transformedVia = definedViaTransformer.transform(testClass)
+
+val transformed = definedTransformer.transform(testClass)
 ```
 
 

@@ -37,7 +37,6 @@ object DerivedTransformerSuite {
   }
 }
 
-
 final case class Basic1(value: Int, value1: Int)
 
 final case class Basic2(value2: Int, value: Int, extra: String)
@@ -63,7 +62,6 @@ class DerivedTransformerSuite extends DucktapeSuite {
     )
 
     val actualComplex = expectedPrimitive.to[ComplexPerson]
-
     val actualPrimitive = actualComplex.to[PrimitivePerson]
 
     assertEquals(expectedComplex, actualComplex)
@@ -88,16 +86,6 @@ class DerivedTransformerSuite extends DucktapeSuite {
       val actual = value.to[Enum1]
       assertEquals(expectedFromEnum2Mapping(value), actual)
     }
-  }
-
-  test("derived value class transformer roundtrip") {
-    final case class Value(value: Int)
-
-    val expectedUnwrapped = Value(5).to[Int]
-    val expectedWrapped = 5.to[Value]
-
-    assertEquals(expectedUnwrapped, 5)
-    assertEquals(expectedWrapped, Value(5))
   }
 
   test("derivation succeeds when going from a class with more fields to a class with less fields") {

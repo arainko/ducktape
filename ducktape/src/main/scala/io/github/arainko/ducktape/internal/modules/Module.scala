@@ -22,7 +22,7 @@ private[internal] trait Module {
     report.errorAndAbort(error.render, error.position)
 
   extension (tpe: TypeRepr) {
-    def fullSimplifiedName: String = tpe.simplified.show(using Printer.TypeReprCode)
+    def fullName: String = tpe.show(using Printer.TypeReprCode)
   }
 
   opaque type Suggestion = String
@@ -46,6 +46,17 @@ private[internal] trait Module {
   }
 
   object Failure {
+    enum ConfigType {
+      final def name: String =
+        this match {
+          case Field => "field"
+          case Case  => "case"
+          case Arg   => "arg"
+        }
+
+      case Field, Case, Arg
+    }
+
     final case class MirrorMaterialization(mirroredType: TypeRepr, notFoundTypeMemberName: String) extends Failure {
 
       def render: String =
@@ -72,9 +83,9 @@ private[internal] trait Module {
     enum InvalidArgSelector extends Failure {
       override def position: Position =
         this match {
-          case NotFound(selector, _, _)                  => selector.asTerm.pos
+          case NotFound(selector, _, _)               => selector.asTerm.pos
           case TypeMismatch(_, _, _, mismatchedValue) => mismatchedValue.asTerm.pos
-          case NotAnArgSelector(selector, _)             => selector.asTerm.pos
+          case NotAnArgSelector(selector, _)          => selector.asTerm.pos
         }
 
       final def render = this match {
@@ -107,9 +118,9 @@ private[internal] trait Module {
       case NotAnArgSelector(selector: Expr[Any], suggestedArgs: List[Suggestion])
     }
 
-    final case class UnsupportedConfig(config: Expr[Any], configFor: "arg" | "field" | "case") extends Failure {
-      private def fieldOrArgSuggestions(fieldOrArg: "arg" | "field") = {
-        val capitalized = fieldOrArg.capitalize
+    final case class UnsupportedConfig(config: Expr[Any], configFor: ConfigType) extends Failure {
+      private def fieldOrArgSuggestions(fieldOrArg: Failure.ConfigType.Arg.type | Failure.ConfigType.Field.type) = {
+        val capitalized = fieldOrArg.name.capitalize
         Suggestion.all(
           s"""${capitalized}.const(_.${fieldOrArg}Name, "value")""",
           s"""${capitalized}.computed(_.${fieldOrArg}Name, source => source.value)""",
@@ -124,9 +135,9 @@ private[internal] trait Module {
 
       private val suggestions =
         configFor match {
-          case arg: "arg"     => fieldOrArgSuggestions(arg)
-          case field: "field" => fieldOrArgSuggestions(field)
-          case coprod: "case" => caseSuggestions
+          case field: Failure.ConfigType.Field.type => fieldOrArgSuggestions(field)
+          case arg: Failure.ConfigType.Arg.type     => fieldOrArgSuggestions(arg)
+          case Failure.ConfigType.Case              => caseSuggestions
         }
 
       override def position = config.asTerm.pos
@@ -142,7 +153,7 @@ private[internal] trait Module {
     }
 
     final case class NoFieldMapping(fieldName: String, sourceType: TypeRepr) extends Failure {
-      def render = s"No field named '$fieldName' found in ${sourceType.show}" 
+      def render = s"No field named '$fieldName' found in ${sourceType.show}"
     }
 
     final case class NoChildMapping(childName: String, destinationType: TypeRepr) extends Failure {
@@ -152,7 +163,7 @@ private[internal] trait Module {
     final case class CannotMaterializeSingleton(tpe: TypeRepr) extends Failure {
       private val suggestions = Suggestion.all(s"${tpe.show} is not a singleton type")
 
-      def render: String = 
+      def render: String =
         s"""
         |Cannot materialize singleton for ${tpe.show}.
         |Possible causes: ${Suggestion.renderAll(suggestions)}

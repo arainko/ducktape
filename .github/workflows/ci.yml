@@ -19,3 +19,5 @@ jobs:
         run: sbt scalafmtCheckAll
       - name: Run unit tests 
         run: sbt test
+      - name: Check docs
+        run: sbt docs/mdoc

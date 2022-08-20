@@ -30,7 +30,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
     )(using Fields.Source, Fields.Dest): List[Product] =
       Varargs
         .unapply(config)
-        .getOrElse(abort(Failure.UnsupportedConfig(config, "field")))
+        .getOrElse(abort(Failure.UnsupportedConfig(config, Failure.ConfigType.Field)))
         .map(materializeSingleProductConfig)
         .groupBy(_.destFieldName)
         .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
@@ -41,7 +41,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
     )(using Fields.Source, Fields.Dest): List[Product] =
       Varargs
         .unapply(config)
-        .getOrElse(abort(Failure.UnsupportedConfig(config, "arg")))
+        .getOrElse(abort(Failure.UnsupportedConfig(config, Failure.ConfigType.Arg)))
         .map(materializeSingleArgConfig)
         .groupBy(_.destFieldName)
         .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
@@ -52,9 +52,9 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
     )(using Cases.Source, Cases.Dest): List[Coproduct] =
       Varargs
         .unapply(config)
-        .getOrElse(abort(Failure.UnsupportedConfig(config, "case")))
+        .getOrElse(abort(Failure.UnsupportedConfig(config, Failure.ConfigType.Case)))
         .map(materializeSingleCoproductConfig)
-        .groupBy(_.tpe.fullSimplifiedName) // TODO: Ths is probably not the best way to do this (?)
+        .groupBy(_.tpe.fullName) // TODO: Ths is probably not the best way to do this (?)
         .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
         .toList
 
@@ -90,7 +90,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
           val sourceFieldName = Selectors.fieldName(Fields.source, sourceSelector)
           Product.Renamed(destFieldName, sourceFieldName)
 
-        case other => abort(Failure.UnsupportedConfig(other, "field"))
+        case other => abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Field))
       }
 
     private def materializeSingleCoproductConfig[Source, Dest](config: Expr[BuilderConfig[Source, Dest]]) =
@@ -101,7 +101,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
         case '{ CaseConfig.const[sourceSubtype].apply[source, dest]($value)(using $ev1, $ev2, $ev3) } =>
           Coproduct.Const(TypeRepr.of[sourceSubtype], value)
 
-        case other => abort(Failure.UnsupportedConfig(other, "case"))
+        case other => abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Case))
       }
 
     /**
@@ -139,7 +139,7 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
           verifyArgSelectorTypes(argName, sourceSelector, TypeRepr.of[argType], TypeRepr.of[fieldType])
           Product.Renamed(argName, fieldName)
 
-        case other => abort(Failure.UnsupportedConfig(other, "arg"))
+        case other => abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Arg))
       }
 
     private def verifyArgSelectorTypes(
