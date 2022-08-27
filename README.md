@@ -34,9 +34,9 @@ val transformed = personWithMoreFields.to[Person]
 ```
 
 Automatic case class to case class transformations are supported given that
-the source type has all the fields of a the destination case class and the types corresponding to these fields have an instance of `Transformer` in scope.
+the source type has all the fields of the destination type and the types corresponding to these fields have an instance of `Transformer` in scope.
 
-If these are not met, a compiletime error is issued:
+If these requirements are not met, a compiletime error is issued:
 ```scala
 val person = Person("Jerry", "Smith", 20)
 
@@ -72,11 +72,11 @@ val size = ExtraSize.Small.to[Size]
 ```
 
 Automatic enum to enum transformations are supported given that the destination enum contains a subset of cases
-we transform into, otherwise a compiletime errors is issued.
+we want to transform into, otherwise a compiletime errors is issued.
 
 #### 3. *Case class to case class with config*
 
-As we established earlier, going from `Person` to a `PersonButMoreFields` cannot happen automatically as the former
+As we established earlier, going from `Person` to `PersonButMoreFields` cannot happen automatically as the former
 doesn't have the `socialSecurityNo` field, but it has all the other fields so it's almost there, we just have to nudge it a lil' bit.
 
 We can do so with field configurations in 3 ways:
@@ -93,13 +93,11 @@ final case class PersonButMoreFields(firstName: String, lastName: String, age: I
 val person = Person("Jerry", "Smith", 20)
 // person: Person = Person(firstName = "Jerry", lastName = "Smith", age = 20)
 
-// create an AppliedBuilder,
-val builder = person.into[PersonButMoreFields]
-// builder: AppliedBuilder[Person, PersonButMoreFields] = io.github.arainko.ducktape.builder.AppliedBuilder@25f42466
-
 // 1. Set a constant to a specific field
 val withConstant = 
-  builder.transform(Field.const(_.socialSecurityNo, "CONSTANT-SSN"))
+  person
+    .into[PersonButMoreFields]
+    .transform(Field.const(_.socialSecurityNo, "CONSTANT-SSN"))
 // withConstant: PersonButMoreFields = PersonButMoreFields(
 //   firstName = "Jerry",
 //   lastName = "Smith",
@@ -109,7 +107,9 @@ val withConstant =
 
 // 2. Compute the value for a specific field by applying a function
 val withComputed = 
-  builder.transform(Field.computed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN"))
+  person
+    .into[PersonButMoreFields]
+    .transform(Field.computed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN"))
 // withComputed: PersonButMoreFields = PersonButMoreFields(
 //   firstName = "Jerry",
 //   lastName = "Smith",
@@ -119,7 +119,9 @@ val withComputed =
 
 // 3. Use a different field in its place - 'rename' it
 val withRename = 
-  builder.transform(Field.renamed(_.socialSecurityNo, _.firstName))
+  person
+    .into[PersonButMoreFields]
+    .transform(Field.renamed(_.socialSecurityNo, _.firstName))
 // withRename: PersonButMoreFields = PersonButMoreFields(
 //   firstName = "Jerry",
 //   lastName = "Smith",
@@ -132,7 +134,8 @@ In case we repeatedly apply configurations to the same field, the latest one is 
 
 ```scala
 val withRepeatedConfig =
-  builder
+  person
+    .into[PersonButMoreFields]
     .transform(
       Field.renamed(_.socialSecurityNo, _.firstName),
       Field.computed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN"),
@@ -146,11 +149,12 @@ val withRepeatedConfig =
 // )
 ```
 
-Of course we can use this to override the automatic derivation per field:
+Of course we can use this to override the automatic derivation for each field:
 
 ```scala
 val withEverythingOverriden = 
-  builder
+  person
+    .into[PersonButMoreFields]
     .transform(
       Field.const(_.socialSecurityNo, "CONSTANT-SSN"),
       Field.const(_.age, 100),
@@ -167,7 +171,9 @@ val withEverythingOverriden =
 
 #### 4. Enum to enum with config
 
-Enum transformations, just like case class transformations, can be configured - but only in one way, by applying a function to a specific subtype:
+Enum transformations, just like case class transformations, can be configured by:
+* supplying a constant value with `Case.const`,
+* supplying a function that will be applied to the chosen subtype with `Case.computed`.
 
 ```scala
 import io.github.arainko.ducktape.*
@@ -178,12 +184,10 @@ enum Size:
 enum ExtraSize:
   case ExtraSmall, Small, Medium, Large, ExtraLarge
 
-val builder = ExtraSize.ExtraSmall.into[Size]
-// builder: AppliedBuilder[ExtraSize, Size] = io.github.arainko.ducktape.builder.AppliedBuilder@4f1eccd4
-
 // Specify a constant for the cases that are not covered automatically
 val withConstants = 
-  builder
+  ExtraSize.ExtraSmall
+    .into[Size]
     .transform(
       Case.const[ExtraSize.ExtraSmall.type](Size.Small),
       Case.const[ExtraSize.ExtraLarge.type](Size.Large)
@@ -192,7 +196,8 @@ val withConstants =
 
 // Specify a function to transform a given case with that function
 val withComputed =
-  builder
+  ExtraSize.ExtraSmall
+    .into[Size]
     .transform(
       Case.computed[ExtraSize.ExtraSmall.type](_ => Size.Small),
       Case.computed[ExtraSize.ExtraLarge.type](_ => Size.Large)
@@ -240,24 +245,30 @@ tackle the last example once again:
 def methodToExpandButOneMoreArg(lastName: String, age: Int, firstName: String, additionalArg: String): Person2 =
   Person2(firstName + additionalArg, lastName, age)
 
-val builder = person1.intoVia(methodToExpandButOneMoreArg)
-// builder: AppliedViaBuilder[Person1, Person2, Function4[String, Int, String, String, Person2], *:[NamedArgument["lastName", String], *:[NamedArgument["age", Int], *:[NamedArgument["firstName", String], *:[NamedArgument["additionalArg", String], EmptyTuple]]]]] = repl.MdocSession$$anon$19@de601fb
-
-val withConstant = builder.transform(Arg.const(_.additionalArg, "-CONST ARG"))
+val withConstant = 
+  person1
+    .intoVia(methodToExpandButOneMoreArg)
+    .transform(Arg.const(_.additionalArg, "-CONST ARG"))
 // withConstant: Person2 = Person2(
 //   firstName = "John-CONST ARG",
 //   lastName = "Doe",
 //   age = 23
 // )
 
-val withComputed = builder.transform(Arg.computed(_.additionalArg, _.lastName + "-COMPUTED"))
+val withComputed = 
+  person1
+    .intoVia(methodToExpandButOneMoreArg)
+    .transform(Arg.computed(_.additionalArg, _.lastName + "-COMPUTED"))
 // withComputed: Person2 = Person2(
 //   firstName = "JohnDoe-COMPUTED",
 //   lastName = "Doe",
 //   age = 23
 // )
 
-val withRenamed = builder.transform(Arg.renamed(_.additionalArg, _.lastName))
+val withRenamed = 
+  person1
+    .intoVia(methodToExpandButOneMoreArg)
+    .transform(Arg.renamed(_.additionalArg, _.lastName))
 // withRenamed: Person2 = Person2(
 //   firstName = "JohnDoe",
 //   lastName = "Doe",
@@ -268,7 +279,7 @@ val withRenamed = builder.transform(Arg.renamed(_.additionalArg, _.lastName))
 #### 7. Automatic wrapping and unwrapping of `AnyVal`
 
 Despite being a really flawed abstraction `AnyVal` is pretty prevalent in Scala 2 code that you may want to interop with
-and `ducktape` is here to assist you. `Transformer` definitions for wrapped -> unwrapped and unwrapped -> wrapped are
+and `ducktape` is here to assist you. `Transformer` definitions for wrapping and uwrapping `AnyVals`
 automatically available:
 
 ```scala
@@ -311,13 +322,13 @@ val definedViaTransformer =
   Transformer
     .defineVia[TestClass](method)
     .build(Arg.const(_.additionalArg, List("const")))
-// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$App6$$Lambda$24523/0x0000000804942840@127ac2
+// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$8962/0x0000000802e7e040@61870c88
 
 val definedTransformer =
   Transformer
     .define[TestClass, TestClassWithAdditionalList]   
     .build(Field.const(_.additionalArg, List("const")))
-// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$App6$$Lambda$24524/0x0000000804942c40@4c1b9b2
+// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$8963/0x0000000802e7e440@2f13a6ac
 
 val transformedVia = definedViaTransformer.transform(testClass)
 // transformedVia: TestClassWithAdditionalList = TestClassWithAdditionalList(
