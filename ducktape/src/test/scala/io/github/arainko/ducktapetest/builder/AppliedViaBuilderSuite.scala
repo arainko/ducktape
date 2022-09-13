@@ -20,7 +20,7 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
         .intoVia(method)
         .transform(Arg.const(_.additionalArg, List("const")))
 
-    // assertEquals(actual, expected)
+    assertEquals(actual, expected)
   }
 
   // test("Arg.computed properly applies a function to an argument") {
