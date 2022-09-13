@@ -7,11 +7,11 @@ import scala.annotation.implicitNotFound
 opaque type ArgBuilderConfig[Source, Dest, ArgSelector <: FunctionArguments[_]] = Unit
 
 object ArgBuilderConfig {
-  private[ducktape] def instance[Source, Dest, ArgSelector <: FunctionArguments[_]]: ArgBuilderConfig[Source, Dest, ArgSelector] = ()
+  private[ducktape] def instance[Source, Dest, ArgSelector <: FunctionArguments[?]]: ArgBuilderConfig[Source, Dest, ArgSelector] = ()
 }
 
 object Arg {
-  def const[Source, Dest, ArgType, ActualType, ArgSelector <: FunctionArguments[_]](
+  def const[Source, Dest, ArgType, ActualType, ArgSelector <: FunctionArguments[?]](
     selector: ArgSelector => ArgType,
     const: ActualType
   )(using

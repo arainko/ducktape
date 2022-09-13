@@ -13,7 +13,7 @@ ThisBuild / developers := List(
     url("https://github.com/arainko")
   )
 )
-ThisBuild / scalaVersion := "3.1.3"
+ThisBuild / scalaVersion := "3.2.0"
 
 name := "ducktape"
 sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
