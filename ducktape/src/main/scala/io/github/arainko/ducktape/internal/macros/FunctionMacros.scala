@@ -28,13 +28,19 @@ class FunctionMacros(using val quotes: Quotes) extends Module, SelectorModule, F
       case other => report.errorAndAbort(s"FunctionMirrors can only be created for functions. Got ${other.show} instead.")
     }
 
-  def namedArguments[Func: Type, F[_ <: Tuple]: Type](function: Expr[Func], initial: Expr[F[Nothing]]) =
+  def namedArguments[Func: Type, F[_ <: Tuple, _ <: FunctionArguments[?]]: Type](function: Expr[Func], initial: Expr[F[Nothing, Nothing]]) =
     function.asTerm match {
       case func @ FunctionLambda(vals, body) =>
         val namedArg = TypeRepr.of[NamedArgument]
+        val wrapper = TypeRepr.of[F]
         val args = vals.map(valdef => namedArg.appliedTo(ConstantType(StringConstant(valdef.name)) :: valdef.tpt.tpe :: Nil))
-        tupleify(args).asType match {
-          case '[IsTuple[namedArgs]] => '{ $initial.asInstanceOf[F[namedArgs]] }
+        val argTuple = tupleify(args)
+        val functionArguments = TypeRepr.of[FunctionArguments].appliedTo(argTuple)
+        val refinedFunctionArgs = 
+          vals.foldLeft(functionArguments)((tpe, valDef) => Refinement(tpe, valDef.name, valDef.tpt.tpe))
+        // val appliedArgs = argT
+        tupleify(args).asType -> refinedFunctionArgs.asType match {
+          case ('[IsTuple[namedArgs]], '[IsFuncArgs[args]]) => '{ $initial.asInstanceOf[F[namedArgs, args]] }
         }
 
       case other => report.errorAndAbort(s"Failed to extract named arguments from ${other.show}")
@@ -50,17 +56,18 @@ class FunctionMacros(using val quotes: Quotes) extends Module, SelectorModule, F
 
 private[ducktape] object FunctionMacros {
   private type IsTuple[A <: Tuple] = A
+  private type IsFuncArgs[A <: FunctionArguments[?]] = A
 
   transparent inline def createMirror[F]: FunctionMirror[F] = ${ createMirrorMacro[F] }
 
   def createMirrorMacro[Func: Type](using Quotes): Expr[FunctionMirror[Func]] =
     FunctionMacros().createMirror[Func]
 
-  transparent inline def namedArguments[Func, F[_ <: Tuple]](
+  transparent inline def namedArguments[Func, F[_ <: Tuple, _ <: FunctionArguments[?]]](
     inline function: Func,
-    initial: F[Nothing]
+    initial: F[Nothing, Nothing]
   )(using FunctionMirror[Func]) = ${ namedArgumentsMacro[Func, F]('function, 'initial) }
 
-  def namedArgumentsMacro[Func: Type, F[_ <: Tuple]: Type](function: Expr[Func], initial: Expr[F[Nothing]])(using Quotes) =
+  def namedArgumentsMacro[Func: Type, F[_ <: Tuple, _ <: FunctionArguments[?]]: Type](function: Expr[Func], initial: Expr[F[Nothing, Nothing]])(using Quotes) =
     FunctionMacros().namedArguments[Func, F](function, initial)
 }

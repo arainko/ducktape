@@ -31,10 +31,10 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     case other => report.errorAndAbort(s"'via' is only supported on eta-expanded methods!")
   }
 
-  def viaConfigured[Source: Type, Dest: Type, Func: Type, NamedArgs <: Tuple: Type](
+  def viaConfigured[Source: Type, Dest: Type, Func: Type, NamedArgs <: Tuple: Type, ArgSelector <: FunctionArguments[?]: Type](
     sourceValue: Expr[Source],
     function: Expr[Func],
-    config: Expr[Seq[ArgBuilderConfig[Source, Dest, NamedArgs]]],
+    config: Expr[Seq[ArgBuilderConfig[Source, Dest, ArgSelector]]],
     Source: Expr[Mirror.ProductOf[Source]]
   ): Expr[Dest] = {
     given Fields.Source = Fields.Source.fromMirror(Source)
@@ -200,20 +200,20 @@ private[ducktape] object ProductTransformerMacros {
   )(using Quotes) =
     ProductTransformerMacros().via(source, function, Func, Source)
 
-  inline def viaConfigured[Source, Dest, Func, NamedArgs <: Tuple](
+  inline def viaConfigured[Source, Dest, Func, NamedArgs <: Tuple, ArgSelector <: FunctionArguments[?]](
     source: Source,
     inline function: Func,
-    inline config: ArgBuilderConfig[Source, Dest, NamedArgs]*
+    inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
   )(using Source: Mirror.ProductOf[Source]): Dest =
-    ${ viaConfiguredMacro('source, 'function, 'config, 'Source) }
+    ${ viaConfiguredMacro[Source, Dest, Func, NamedArgs, ArgSelector]('source, 'function, 'config, 'Source) }
 
-  def viaConfiguredMacro[Source: Type, Dest: Type, Func: Type, NamedArgs <: Tuple: Type](
+  def viaConfiguredMacro[Source: Type, Dest: Type, Func: Type, NamedArgs <: Tuple: Type, ArgSelector <: FunctionArguments[?]: Type](
     sourceValue: Expr[Source],
     function: Expr[Func],
-    config: Expr[Seq[ArgBuilderConfig[Source, Dest, NamedArgs]]],
+    config: Expr[Seq[ArgBuilderConfig[Source, Dest, ArgSelector]]],
     A: Expr[Mirror.ProductOf[Source]]
   )(using Quotes) =
-    ProductTransformerMacros().viaConfigured(sourceValue, function, config, A)
+    ProductTransformerMacros().viaConfigured[Source, Dest, Func, NamedArgs, ArgSelector](sourceValue, function, config, A)
 
   inline def transformConfigured[Source, Dest](sourceValue: Source, inline config: BuilderConfig[Source, Dest]*)(using
     Source: Mirror.ProductOf[Source],

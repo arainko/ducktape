@@ -50,6 +50,7 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
             val name = Type.valueOfConstant[name].getOrElse(report.errorAndAbort("Not a constant named arg name"))
             val field = Field(name, TypeRepr.of[tpe])
             field :: listOfFields[tail]
+          case other => report.errorAndAbort(s"Failed here with ${Type.show[NamedArgs]}")
         }
       apply(listOfFields[NamedArgs])
     }
