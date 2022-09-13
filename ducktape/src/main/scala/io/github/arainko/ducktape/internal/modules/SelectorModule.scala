@@ -30,7 +30,6 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
         case ArgSelector(argumentName) =>
           abort(Failure.InvalidArgSelector.NotFound(selector, argumentName, Suggestion.fromFields(validArgs)))
         case other =>
-          report.errorAndAbort(other.show)
           abort(Failure.InvalidArgSelector.NotAnArgSelector(selector, Suggestion.fromFields(validArgs)))
       }
 
@@ -64,7 +63,7 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
       PartialFunction.condOpt(arg.asExpr) {
         case '{ 
           type argSelector <: FunctionArguments[?]
-          ($args: `argSelector`).selectDynamic($selectedArg).asInstanceOf[argTpe]
+          ($args: `argSelector`).selectDynamic($selectedArg).$asInstanceOf$[tpe]
         } => selectedArg.valueOrAbort
       }
   }

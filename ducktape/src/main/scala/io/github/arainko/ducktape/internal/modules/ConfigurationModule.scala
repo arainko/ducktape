@@ -116,8 +116,8 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
     )(using Fields.Source, Fields.Dest): Product =
       config match {
         case '{
-              type namedArgs <: FunctionArguments[?]
-              Arg.const[source, dest, argType, actualType, `namedArgs`]($selector, $const)(using $ev1)
+              type argSelector <: FunctionArguments[?]
+              Arg.const[source, dest, argType, actualType, `argSelector`]($selector, $const)(using $ev1)
             } =>
           val argName = Selectors.argName(Fields.dest, selector.asInstanceOf[Expr[FunctionArguments[?] => Any]])
           verifyArgSelectorTypes(argName, const, TypeRepr.of[argType], TypeRepr.of[actualType])
