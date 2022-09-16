@@ -8,7 +8,7 @@ import io.github.arainko.ducktape.function.FunctionArguments
 import io.github.arainko.ducktape.builder.AppliedViaBuilder
 
 class AppliedViaBuilderSuite extends DucktapeSuite {
-  val testClass = TestClass("str", 1)
+  private val testClass = TestClass("str", 1)
 
   test("Arg.const properly applies a constant to an argument") {
     def method(str: String, int: Int, additionalArg: List[String]) = TestClassWithAdditionalList(int, str, additionalArg)

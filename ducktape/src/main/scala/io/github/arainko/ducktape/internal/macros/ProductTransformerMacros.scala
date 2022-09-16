@@ -31,14 +31,16 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     case other => report.errorAndAbort(s"'via' is only supported on eta-expanded methods!")
   }
 
-  def viaConfigured[Source: Type, Dest: Type, Func: Type, NamedArgs <: Tuple: Type, ArgSelector <: FunctionArguments[?]: Type](
+  def viaConfigured[Source: Type, Dest: Type, Func: Type, ArgSelector <: FunctionArguments[?]: Type](
     sourceValue: Expr[Source],
     function: Expr[Func],
     config: Expr[Seq[ArgBuilderConfig[Source, Dest, ArgSelector]]],
     Source: Expr[Mirror.ProductOf[Source]]
   ): Expr[Dest] = {
     given Fields.Source = Fields.Source.fromMirror(Source)
-    given Fields.Dest = Fields.Dest.fromNamedArguments[NamedArgs]
+    given Fields.Dest = Type.of[ArgSelector] match {
+      case '[FunctionArguments[namedArgs]] => Fields.Dest.fromNamedArguments[namedArgs]
+    }
     val materializedConfig = MaterializedConfiguration.materializeArgConfig(config)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
 
@@ -200,20 +202,20 @@ private[ducktape] object ProductTransformerMacros {
   )(using Quotes) =
     ProductTransformerMacros().via(source, function, Func, Source)
 
-  inline def viaConfigured[Source, Dest, Func, NamedArgs <: Tuple, ArgSelector <: FunctionArguments[?]](
+  inline def viaConfigured[Source, Dest, Func, ArgSelector <: FunctionArguments[?]](
     source: Source,
     inline function: Func,
     inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
   )(using Source: Mirror.ProductOf[Source]): Dest =
-    ${ viaConfiguredMacro[Source, Dest, Func, NamedArgs, ArgSelector]('source, 'function, 'config, 'Source) }
+    ${ viaConfiguredMacro[Source, Dest, Func, ArgSelector]('source, 'function, 'config, 'Source) }
 
-  def viaConfiguredMacro[Source: Type, Dest: Type, Func: Type, NamedArgs <: Tuple: Type, ArgSelector <: FunctionArguments[?]: Type](
+  def viaConfiguredMacro[Source: Type, Dest: Type, Func: Type, ArgSelector <: FunctionArguments[?]: Type](
     sourceValue: Expr[Source],
     function: Expr[Func],
     config: Expr[Seq[ArgBuilderConfig[Source, Dest, ArgSelector]]],
     A: Expr[Mirror.ProductOf[Source]]
   )(using Quotes) =
-    ProductTransformerMacros().viaConfigured[Source, Dest, Func, NamedArgs, ArgSelector](sourceValue, function, config, A)
+    ProductTransformerMacros().viaConfigured[Source, Dest, Func, ArgSelector](sourceValue, function, config, A)
 
   inline def transformConfigured[Source, Dest](sourceValue: Source, inline config: BuilderConfig[Source, Dest]*)(using
     Source: Mirror.ProductOf[Source],

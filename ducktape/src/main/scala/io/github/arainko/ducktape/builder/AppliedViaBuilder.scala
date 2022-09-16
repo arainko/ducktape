@@ -6,17 +6,25 @@ import scala.deriving.Mirror
 import io.github.arainko.ducktape.function.*
 import scala.compiletime.*
 
-sealed abstract class AppliedViaBuilder[Source, Dest, Func, NamedArguments <: Tuple, ArgSelector <: FunctionArguments[?]](source: Source, function: Func) {
+sealed abstract class AppliedViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArguments[?]](
+  source: Source,
+  function: Func
+) {
 
   inline def transform(
     inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
   )(using Source: Mirror.ProductOf[Source]): Dest =
-    ProductTransformerMacros.viaConfigured[Source, Dest, Func, NamedArguments, ArgSelector](source, function, config*)
+    ProductTransformerMacros.viaConfigured[Source, Dest, Func, ArgSelector](source, function, config*)
 }
 
 object AppliedViaBuilder {
+  private[AppliedViaBuilder] class Impl[Source, Dest, Func, ArgSelector <: FunctionArguments[?]](
+    source: Source,
+    function: Func
+  ) extends AppliedViaBuilder[Source, Dest, Func, ArgSelector](source, function)
+
   transparent inline def create[Source, Func](source: Source, inline func: Func)(using Func: FunctionMirror[Func]) = {
-    val builder = new AppliedViaBuilder[Source, Func.Return, Func, Nothing, Nothing](source, func) {}
+    val builder = Impl[Source, Func.Return, Func, Nothing](source, func)
     FunctionMacros.namedArguments(func, builder)
   }
 }
