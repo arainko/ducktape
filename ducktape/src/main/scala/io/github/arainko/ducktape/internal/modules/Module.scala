@@ -84,7 +84,6 @@ private[internal] trait Module {
       override def position: Position =
         this match {
           case NotFound(selector, _, _)               => selector.asTerm.pos
-          case TypeMismatch(_, _, _, mismatchedValue) => mismatchedValue.asTerm.pos
           case NotAnArgSelector(selector, _)          => selector.asTerm.pos
         }
 
@@ -94,11 +93,6 @@ private[internal] trait Module {
             |'_.$argName' is not a valid argument selector.
             |Try one of these: ${Suggestion.renderAll(suggestedArgs)}
         """.stripMargin
-        case TypeMismatch(argName, expectedType, actualTpe, _) =>
-          s"""
-              |Type mistmatch for argument '$argName'.
-              |Expected ${expectedType.show} but found ${actualTpe.show}.
-        """.stripMargin
         case NotAnArgSelector(_, suggestedArgs) =>
           s"""
               |Not a valid argument selector.
@@ -107,13 +101,6 @@ private[internal] trait Module {
       }
 
       case NotFound(selector: Expr[Any], argumentName: String, suggestedArgs: List[Suggestion])
-
-      case TypeMismatch(
-        argumentName: String,
-        expectedType: TypeRepr,
-        actualType: TypeRepr,
-        mismatchedValue: Expr[Any]
-      )
 
       case NotAnArgSelector(selector: Expr[Any], suggestedArgs: List[Suggestion])
     }

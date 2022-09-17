@@ -3,7 +3,6 @@ package io.github.arainko.ducktape.internal.modules
 import scala.quoted.*
 import scala.deriving.*
 import io.github.arainko.ducktape.Transformer
-import io.github.arainko.ducktape.function.NamedArgument
 import scala.compiletime.*
 import io.github.arainko.ducktape.function.FunctionArguments
 
@@ -43,13 +42,13 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
       apply(fields)
     }
 
-    final def fromNamedArguments[ArgSelector <: FunctionArguments[?]: Type]: FieldsSubtype = {
+    final def fromFunctionArguments[ArgSelector <: FunctionArguments: Type]: FieldsSubtype = {
       val fields = List.unfold(TypeRepr.of[ArgSelector]) { state =>
         PartialFunction.condOpt(state) {
           case Refinement(parent, name, fieldTpe) => Field(name, fieldTpe) -> parent
         }
       }
-      apply(fields)
+      apply(fields.reverse)
     }
 
     final def fromValDefs(valDefs: List[ValDef]): FieldsSubtype = {

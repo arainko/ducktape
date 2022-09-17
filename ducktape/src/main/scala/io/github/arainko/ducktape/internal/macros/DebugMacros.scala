@@ -17,11 +17,8 @@ object DebugMacros {
 
   def codeCompiletimeMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*
-
     val struct = Printer.TreeShortCode.show(value.asTerm)
-
     report.info(struct)
-
     value
   }
 }

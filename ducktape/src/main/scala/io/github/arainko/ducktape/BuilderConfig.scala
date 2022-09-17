@@ -10,6 +10,7 @@ object BuilderConfig {
   private[ducktape] def instance[Source, Dest]: BuilderConfig[Source, Dest] = ()
 }
 
+//TODO: Slap a @compileTimeOnly on all things here
 object Field {
   def const[Source, Dest, FieldType, ActualType](selector: Dest => FieldType, value: ActualType)(using
     ev1: ActualType <:< FieldType,
@@ -39,6 +40,7 @@ object Field {
   ): BuilderConfig[Source, Dest] = BuilderConfig.instance
 }
 
+//TODO: Slap a @compileTimeOnly on all things here
 object Case {
   def const[SourceSubtype]: Case.Const[SourceSubtype] = Const.instance
 

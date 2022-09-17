@@ -6,7 +6,7 @@ import scala.deriving.Mirror
 import io.github.arainko.ducktape.function.*
 import scala.compiletime.*
 
-sealed abstract class AppliedViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArguments[?]](
+sealed abstract class AppliedViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArguments](
   source: Source,
   function: Func
 ) {
@@ -18,13 +18,14 @@ sealed abstract class AppliedViaBuilder[Source, Dest, Func, ArgSelector <: Funct
 }
 
 object AppliedViaBuilder {
-  private[AppliedViaBuilder] class Impl[Source, Dest, Func, ArgSelector <: FunctionArguments[?]](
+  private[AppliedViaBuilder] class Impl[Source, Dest, Func, ArgSelector <: FunctionArguments](
     source: Source,
     function: Func
   ) extends AppliedViaBuilder[Source, Dest, Func, ArgSelector](source, function)
 
   transparent inline def create[Source, Func](source: Source, inline func: Func)(using Func: FunctionMirror[Func]) = {
-    val builder = Impl[Source, Func.Return, Func, Nothing](source, func)
+    // widen the type to not infer `AppliedViaBuilder.Impl`, we're in a transparent inline method after all
+    val builder: AppliedViaBuilder[Source, Func.Return, Func, Nothing] = Impl(source, func)
     FunctionMacros.namedArguments(func, builder)
   }
 }

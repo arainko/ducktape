@@ -3,7 +3,6 @@ package io.github.arainko.ducktapetest.builder
 import io.github.arainko.ducktapetest.DucktapeSuite
 import io.github.arainko.ducktapetest.builder.AppliedViaBuilderSuite.*
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.function.NamedArgument
 import io.github.arainko.ducktape.function.FunctionArguments
 import io.github.arainko.ducktape.builder.AppliedViaBuilder
 
@@ -18,62 +17,62 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
     val actual =
       testClass
         .intoVia(method)
-        // .transform(Arg.const(_.additionalArg, List("const")))
+        .transform(Arg.const(_.additionalArg, List("const")))
 
-    // assertEquals(actual, expected)
+    assertEquals(actual, expected)
   }
 
-  // test("Arg.computed properly applies a function to an argument") {
-  //   def method(str: String, int: Int, additionalArg: List[String]) = TestClassWithAdditionalList(int, str, additionalArg)
+  test("Arg.computed properly applies a function to an argument") {
+    def method(str: String, int: Int, additionalArg: List[String]) = TestClassWithAdditionalList(int, str, additionalArg)
 
-  //   val expected = TestClassWithAdditionalList(1, "str", List("str"))
+    val expected = TestClassWithAdditionalList(1, "str", List("str"))
 
-  //   val actual =
-  //     testClass
-  //       .intoVia(method)
-  //       .transform(Arg.computed(_.additionalArg, testClass => List(testClass.str)))
+    val actual =
+      testClass
+        .intoVia(method)
+        .transform(Arg.computed(_.additionalArg, testClass => List(testClass.str)))
 
-  //   assertEquals(actual, expected)
-  // }
+    assertEquals(actual, expected)
+  }
 
-  // test("Arg.renamed properly uses a different field for that argument") {
-  //   def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
+  test("Arg.renamed properly uses a different field for that argument") {
+    def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
 
-  //   val expected = TestClassWithAdditionalString(1, "str", "str")
+    val expected = TestClassWithAdditionalString(1, "str", "str")
 
-  //   val actual =
-  //     testClass
-  //       .intoVia(method)
-  //       .transform(Arg.renamed(_.additionalArg, _.str))
+    val actual =
+      testClass
+        .intoVia(method)
+        .transform(Arg.renamed(_.additionalArg, _.str))
 
-  //   assertEquals(actual, expected)
-  // }
+    assertEquals(actual, expected)
+  }
 
-  // test("The last ") {
-  //   def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
+  test("The last ") {
+    def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
 
-  //   val expected = TestClassWithAdditionalString(1, "str", "str")
+    val expected = TestClassWithAdditionalString(1, "str", "str")
 
-  //   val actual =
-  //     testClass
-  //       .intoVia(method)
-  //       .transform(Arg.renamed(_.additionalArg, _.str))
+    val actual =
+      testClass
+        .intoVia(method)
+        .transform(Arg.renamed(_.additionalArg, _.str))
 
-  //   assertEquals(actual, expected)
-  // }
+    assertEquals(actual, expected)
+  }
 
-  // test("Builder reports a missing argument") {
-  //   assertFailsToCompileWith {
-  //     """
-  //     def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
+  test("Builder reports a missing argument") {
+    assertFailsToCompileWith {
+      """
+      def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
 
-  //     val actual =
-  //       testClass
-  //         .intoVia(method)
-  //         .transform()
-  //     """
-  //   }("No field named 'additionalArg' found in TestClass")
-  // }
+      val actual =
+        testClass
+          .intoVia(method)
+          .transform()
+      """
+    }("No field named 'additionalArg' found in TestClass")
+  }
 }
 
 object AppliedViaBuilderSuite {

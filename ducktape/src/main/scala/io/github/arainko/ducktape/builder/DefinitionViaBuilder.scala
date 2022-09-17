@@ -1,29 +1,34 @@
-// package io.github.arainko.ducktape.builder
+package io.github.arainko.ducktape.builder
 
-// import io.github.arainko.ducktape.*
-// import io.github.arainko.ducktape.internal.macros.*
-// import scala.deriving.*
-// import io.github.arainko.ducktape.function.FunctionMirror
+import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.internal.macros.*
+import scala.deriving.*
+import io.github.arainko.ducktape.function.*
 
-// sealed abstract class DefinitionViaBuilder[Source, Dest, Func, NamedArguments <: Tuple](function: Func) {
+sealed abstract class DefinitionViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArguments](function: Func) {
 
-//   inline def build(
-//     inline config: ArgBuilderConfig[Source, Dest, NamedArguments]*
-//   )(using Mirror.ProductOf[Source]): Transformer[Source, Dest] = from =>
-//     ProductTransformerMacros.viaConfigured[Source, Dest, Func, NamedArguments](from, function, config*)
-// }
+  inline def build(
+    inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
+  )(using Mirror.ProductOf[Source]): Transformer[Source, Dest] = from =>
+    ProductTransformerMacros.viaConfigured[Source, Dest, Func, ArgSelector](from, function, config*)
+}
 
-// object DefinitionViaBuilder {
-//   def create[Source]: PartiallyApplied[Source] = ()
+object DefinitionViaBuilder {
+  private[DefinitionViaBuilder] class Impl[Source, Dest, Func, ArgSelector <: FunctionArguments](
+    function: Func
+  ) extends DefinitionViaBuilder[Source, Dest, Func, ArgSelector](function)
 
-//   opaque type PartiallyApplied[Source] = Unit
+  def create[Source]: PartiallyApplied[Source] = ()
 
-//   object PartiallyApplied {
-//     extension [Source](partial: PartiallyApplied[Source]) {
-//       transparent inline def apply[Func](inline func: Func)(using Func: FunctionMirror[Func]) = {
-//         val builder = new DefinitionViaBuilder[Source, Func.Return, Func, Nothing](func) {}
-//         FunctionMacros.namedArguments(func, builder)
-//       }
-//     }
-//   }
-// }
+  opaque type PartiallyApplied[Source] = Unit
+
+  object PartiallyApplied {
+    extension [Source](partial: PartiallyApplied[Source]) {
+      transparent inline def apply[Func](inline func: Func)(using Func: FunctionMirror[Func]) = {
+        // widen the type to not infer `DefinitionViaBuilder.Impl`, we're in a transparent inline method after all
+        val builder: DefinitionViaBuilder[Source, Func.Return, Func, Nothing] = Impl(func)
+        FunctionMacros.namedArguments(func, builder)
+      }
+    }
+  }
+}

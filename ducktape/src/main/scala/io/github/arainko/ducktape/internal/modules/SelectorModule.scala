@@ -20,9 +20,9 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
           abort(Failure.InvalidFieldSelector(other, TypeRepr.of[From], Suggestion.fromFields(validFields)))
       }
 
-    def argName[ArgType: Type](
+    def argName[ArgType: Type, ArgSelector <: FunctionArguments](
       validArgs: Fields,
-      selector: Expr[FunctionArguments[?] => ArgType]
+      selector: Expr[ArgSelector => ArgType]
     ): String =
       selector.asTerm match {
         case ArgSelector(argumentName) if validArgs.containsFieldWithName(argumentName) =>
@@ -62,7 +62,7 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
     def unapply(arg: Term): Option[String] =
       PartialFunction.condOpt(arg.asExpr) {
         case '{ 
-          type argSelector <: FunctionArguments[?]
+          type argSelector <: FunctionArguments
           ($args: `argSelector`).selectDynamic($selectedArg).$asInstanceOf$[tpe]
         } => selectedArg.valueOrAbort
       }

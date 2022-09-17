@@ -31,7 +31,7 @@ private[internal] trait MirrorModule { self: Module =>
         mirroredElemLabels <- findMemberType(mirrorTpe, "MirroredElemLabels")
       } yield {
         val elemTypes = tupleTypeElements(mirroredElemTypes)
-        val ConstantType(StringConstant(label)) = mirroredLabel
+        val ConstantType(StringConstant(label)) = mirroredLabel: @unchecked
         val elemLabels = tupleTypeElements(mirroredElemLabels).map { case ConstantType(StringConstant(l)) => l }
         MaterializedMirror(mirroredType, mirroredMonoType, elemTypes, label, elemLabels)
       }
