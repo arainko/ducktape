@@ -39,6 +39,7 @@ private[ducktape] class FunctionMacros(using val quotes: Quotes) extends Module,
         val args = valDefs.map(valdef => namedArg.appliedTo(ConstantType(StringConstant(valdef.name)) :: valdef.tpt.tpe :: Nil))
         val funcArgs = functionArguments.appliedTo(tupleify(args))
         val refinedFunctionArgs = refine(funcArgs, valDefs)
+        report.errorAndAbort(refinedFunctionArgs.show)
         refinedFunctionArgs.asType match {
           case '[IsFuncArgs[args]] => '{ $initial.asInstanceOf[F[args]] }
         }

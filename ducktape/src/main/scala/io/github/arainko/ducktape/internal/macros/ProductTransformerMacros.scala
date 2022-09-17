@@ -38,9 +38,9 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     Source: Expr[Mirror.ProductOf[Source]]
   ): Expr[Dest] = {
     given Fields.Source = Fields.Source.fromMirror(Source)
-    given Fields.Dest = Type.of[ArgSelector] match {
-      case '[FunctionArguments[namedArgs]] => Fields.Dest.fromNamedArguments[namedArgs]
-    }
+    // report.errorAndAbort(TypeRepr.of[ArgSelector].show)
+    given Fields.Dest = Fields.Dest.fromNamedArguments[ArgSelector]
+    report.errorAndAbort(Fields.dest.value.map(_.tpe.show).mkString(", "))
     val materializedConfig = MaterializedConfiguration.materializeArgConfig(config)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
 
