@@ -13,7 +13,8 @@ ThisBuild / developers := List(
     url("https://github.com/arainko")
   )
 )
-ThisBuild / scalaVersion := "3.1.3"
+ThisBuild / scalaVersion := "3.2.0"
+ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
 
 name := "ducktape"
 sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
@@ -29,7 +30,7 @@ lazy val ducktape =
   project
     .in(file("ducktape"))
     .settings(
-      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax"),
+      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings"),
       libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M6" % Test
     )
 

@@ -1,12 +1,11 @@
 package io.github.arainko.ducktape.internal.modules
 
-import scala.quoted.*
-import scala.deriving.*
-import io.github.arainko.ducktape.Transformer
-import scala.deriving.*
-import io.github.arainko.ducktape.Arg
+import io.github.arainko.ducktape.{ Arg, Transformer }
 
-private[internal] trait Module {
+import scala.deriving.*
+import scala.quoted.*
+
+private[ducktape] trait Module {
   val quotes: Quotes
 
   given Quotes = quotes
@@ -83,9 +82,8 @@ private[internal] trait Module {
     enum InvalidArgSelector extends Failure {
       override def position: Position =
         this match {
-          case NotFound(selector, _, _)               => selector.asTerm.pos
-          case TypeMismatch(_, _, _, mismatchedValue) => mismatchedValue.asTerm.pos
-          case NotAnArgSelector(selector, _)          => selector.asTerm.pos
+          case NotFound(selector, _, _)      => selector.asTerm.pos
+          case NotAnArgSelector(selector, _) => selector.asTerm.pos
         }
 
       final def render = this match {
@@ -93,11 +91,6 @@ private[internal] trait Module {
           s"""
             |'_.$argName' is not a valid argument selector.
             |Try one of these: ${Suggestion.renderAll(suggestedArgs)}
-        """.stripMargin
-        case TypeMismatch(argName, expectedType, actualTpe, _) =>
-          s"""
-              |Type mistmatch for argument '$argName'.
-              |Expected ${expectedType.show} but found ${actualTpe.show}.
         """.stripMargin
         case NotAnArgSelector(_, suggestedArgs) =>
           s"""
@@ -107,13 +100,6 @@ private[internal] trait Module {
       }
 
       case NotFound(selector: Expr[Any], argumentName: String, suggestedArgs: List[Suggestion])
-
-      case TypeMismatch(
-        argumentName: String,
-        expectedType: TypeRepr,
-        actualType: TypeRepr,
-        mismatchedValue: Expr[Any]
-      )
 
       case NotAnArgSelector(selector: Expr[Any], suggestedArgs: List[Suggestion])
     }

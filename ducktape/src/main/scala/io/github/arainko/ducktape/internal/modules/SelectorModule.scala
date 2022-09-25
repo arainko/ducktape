@@ -1,11 +1,12 @@
 package io.github.arainko.ducktape.internal.modules
 
-import scala.quoted.*
-import scala.deriving.*
 import io.github.arainko.ducktape.function.*
+
+import scala.deriving.*
+import scala.quoted.*
 import scala.util.NotGiven
 
-private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModule =>
+private[ducktape] trait SelectorModule { self: Module & MirrorModule & FieldModule =>
   import quotes.reflect.*
 
   object Selectors {
@@ -20,9 +21,9 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
           abort(Failure.InvalidFieldSelector(other, TypeRepr.of[From], Suggestion.fromFields(validFields)))
       }
 
-    def argName[NamedArgs <: Tuple: Type, ArgType: Type](
+    def argName[ArgType: Type, ArgSelector <: FunctionArguments](
       validArgs: Fields,
-      selector: Expr[FunctionArguments[NamedArgs] => ArgType]
+      selector: Expr[ArgSelector => ArgType]
     ): String =
       selector.asTerm match {
         case ArgSelector(argumentName) if validArgs.containsFieldWithName(argumentName) =>
@@ -54,14 +55,18 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
   private object ArgSelector {
     def unapply(arg: Term): Option[String] =
       PartialFunction.condOpt(arg) {
-        case Lambda(_, DynamicSelector(argumentName)) => argumentName
+        case Lambda(_, FunctionArgumentSelector(argumentName)) => argumentName
       }
   }
 
-  private object DynamicSelector {
+  private object FunctionArgumentSelector {
     def unapply(arg: Term): Option[String] =
       PartialFunction.condOpt(arg.asExpr) {
-        case '{ ($args: FunctionArguments[namedArgs]).selectDynamic($selectedArg) } => selectedArg.valueOrAbort
+        case '{
+              type argSelector <: FunctionArguments
+              ($args: `argSelector`).selectDynamic($selectedArg).$asInstanceOf$[tpe]
+            } =>
+          selectedArg.valueOrAbort
       }
   }
 }

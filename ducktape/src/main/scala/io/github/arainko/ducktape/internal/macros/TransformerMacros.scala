@@ -27,7 +27,7 @@ private[ducktape] final class TransformerMacros(using val quotes: Quotes) extend
 
 }
 
-object TransformerMacros {
+private[ducktape] object TransformerMacros {
 
   inline def transformConfigured[Source, Dest](
     sourceValue: Source,

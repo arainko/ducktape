@@ -1,9 +1,10 @@
 package io.github.arainko.ducktapetest.derivation
 
 import io.github.arainko.ducktape.*
-import scala.compiletime.testing.*
-import munit.FunSuite
 import io.github.arainko.ducktapetest.DucktapeSuite
+import munit.FunSuite
+
+import scala.compiletime.testing.*
 
 final case class Input(int: Int, string: String, list: List[Int], option: Option[Int])
 

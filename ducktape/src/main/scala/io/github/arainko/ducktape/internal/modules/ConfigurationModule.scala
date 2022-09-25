@@ -1,10 +1,11 @@
 package io.github.arainko.ducktape.internal.modules
 
+import io.github.arainko.ducktape.function.FunctionArguments
 import io.github.arainko.ducktape.{ Case => CaseConfig, Field => FieldConfig, _ }
 
 import scala.quoted.*
 
-private[internal] trait ConfigurationModule { self: Module & SelectorModule & MirrorModule & FieldModule & CaseModule =>
+private[ducktape] trait ConfigurationModule { self: Module & SelectorModule & MirrorModule & FieldModule & CaseModule =>
   import quotes.reflect.*
 
   sealed trait MaterializedConfiguration
@@ -36,8 +37,8 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
         .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
         .toList
 
-    def materializeArgConfig[Source, Dest, NamedArguments <: Tuple](
-      config: Expr[Seq[ArgBuilderConfig[Source, Dest, NamedArguments]]]
+    def materializeArgConfig[Source, Dest, ArgSelector <: FunctionArguments](
+      config: Expr[Seq[ArgBuilderConfig[Source, Dest, ArgSelector]]]
     )(using Fields.Source, Fields.Dest): List[Product] =
       Varargs
         .unapply(config)
@@ -104,51 +105,34 @@ private[internal] trait ConfigurationModule { self: Module & SelectorModule & Mi
         case other => abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Case))
       }
 
-    /**
-     * We check arg types here because if an arg is not found `FunctionArguments.FindByName` returns a Nothing
-     * which trips up evidence summoning which in turn only tells us that an arg was Nothing (with no suggestions etc.)
-     *
-     * TODO: See if it works properly, if not we may need to go back ot the old encoding with the evidence and bad error messages
-     */
-    private def materializeSingleArgConfig[Source, Dest, NamedArguments <: Tuple](
-      config: Expr[ArgBuilderConfig[Source, Dest, NamedArguments]]
+    private def materializeSingleArgConfig[Source, Dest, ArgSelector <: FunctionArguments](
+      config: Expr[ArgBuilderConfig[Source, Dest, ArgSelector]]
     )(using Fields.Source, Fields.Dest): Product =
       config match {
         case '{
-              type namedArgs <: Tuple
-              Arg.const[source, dest, argType, actualType, `namedArgs`]($selector, $const)(using $ev1)
+              type argSelector <: FunctionArguments
+              Arg.const[source, dest, argType, actualType, `argSelector`]($selector, $const)(using $ev1, $ev2)
             } =>
           val argName = Selectors.argName(Fields.dest, selector)
-          verifyArgSelectorTypes(argName, const, TypeRepr.of[argType], TypeRepr.of[actualType])
           Product.Const(argName, const)
 
         case '{
-              type namedArgs <: Tuple
-              Arg.computed[source, dest, argType, actualType, `namedArgs`]($selector, $function)(using $ev1)
+              type argSelector <: FunctionArguments
+              Arg.computed[source, dest, argType, actualType, `argSelector`]($selector, $function)(using $ev1, $ev2)
             } =>
           val argName = Selectors.argName(Fields.dest, selector)
-          verifyArgSelectorTypes(argName, function, TypeRepr.of[argType], TypeRepr.of[actualType])
           Product.Computed(argName, function.asInstanceOf[Expr[Any => Any]])
 
         case '{
-              type namedArgs <: Tuple
-              Arg.renamed[source, dest, argType, fieldType, `namedArgs`]($destSelector, $sourceSelector)(using $ev1)
+              type argSelector <: FunctionArguments
+              Arg.renamed[source, dest, argType, fieldType, `argSelector`]($destSelector, $sourceSelector)(using $ev1, $ev2)
             } =>
           val argName = Selectors.argName(Fields.dest, destSelector)
           val fieldName = Selectors.fieldName(Fields.source, sourceSelector)
-          verifyArgSelectorTypes(argName, sourceSelector, TypeRepr.of[argType], TypeRepr.of[fieldType])
           Product.Renamed(argName, fieldName)
 
         case other => abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Arg))
       }
-
-    private def verifyArgSelectorTypes(
-      argName: String,
-      mismatchedValue: Expr[Any],
-      expected: TypeRepr,
-      actual: TypeRepr
-    ) = if (!(actual <:< expected))
-      abort(Failure.InvalidArgSelector.TypeMismatch(argName, expected, actual, mismatchedValue))
 
   }
 }

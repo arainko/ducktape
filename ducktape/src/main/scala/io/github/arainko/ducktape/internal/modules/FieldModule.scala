@@ -1,10 +1,11 @@
 package io.github.arainko.ducktape.internal.modules
 
-import scala.quoted.*
-import scala.deriving.*
 import io.github.arainko.ducktape.Transformer
-import io.github.arainko.ducktape.function.NamedArgument
+import io.github.arainko.ducktape.function.FunctionArguments
+
 import scala.compiletime.*
+import scala.deriving.*
+import scala.quoted.*
 
 private[internal] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
@@ -42,16 +43,13 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
       apply(fields)
     }
 
-    final def fromNamedArguments[NamedArgs <: Tuple: Type]: FieldsSubtype = {
-      def listOfFields[Args <: Tuple: Type]: List[Field] =
-        Type.of[Args] match {
-          case '[EmptyTuple] => List.empty
-          case '[NamedArgument[name, tpe] *: tail] =>
-            val name = Type.valueOfConstant[name].getOrElse(report.errorAndAbort("Not a constant named arg name"))
-            val field = Field(name, TypeRepr.of[tpe])
-            field :: listOfFields[tail]
+    final def fromFunctionArguments[ArgSelector <: FunctionArguments: Type]: FieldsSubtype = {
+      val fields = List.unfold(TypeRepr.of[ArgSelector]) { state =>
+        PartialFunction.condOpt(state) {
+          case Refinement(parent, name, fieldTpe) => Field(name, fieldTpe) -> parent
         }
-      apply(listOfFields[NamedArgs])
+      }
+      apply(fields.reverse)
     }
 
     final def fromValDefs(valDefs: List[ValDef]): FieldsSubtype = {
