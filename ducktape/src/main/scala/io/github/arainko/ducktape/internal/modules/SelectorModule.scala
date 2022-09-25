@@ -1,11 +1,12 @@
 package io.github.arainko.ducktape.internal.modules
 
-import scala.quoted.*
-import scala.deriving.*
 import io.github.arainko.ducktape.function.*
+
+import scala.deriving.*
+import scala.quoted.*
 import scala.util.NotGiven
 
-private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModule =>
+private[ducktape] trait SelectorModule { self: Module & MirrorModule & FieldModule =>
   import quotes.reflect.*
 
   object Selectors {
@@ -54,17 +55,18 @@ private[internal] trait SelectorModule { self: Module & MirrorModule & FieldModu
   private object ArgSelector {
     def unapply(arg: Term): Option[String] =
       PartialFunction.condOpt(arg) {
-        case Lambda(_, DynamicSelector(argumentName)) => argumentName
+        case Lambda(_, FunctionArgumentSelector(argumentName)) => argumentName
       }
   }
 
-  private object DynamicSelector {
+  private object FunctionArgumentSelector {
     def unapply(arg: Term): Option[String] =
       PartialFunction.condOpt(arg.asExpr) {
-        case '{ 
-          type argSelector <: FunctionArguments
-          ($args: `argSelector`).selectDynamic($selectedArg).$asInstanceOf$[tpe]
-        } => selectedArg.valueOrAbort
+        case '{
+              type argSelector <: FunctionArguments
+              ($args: `argSelector`).selectDynamic($selectedArg).$asInstanceOf$[tpe]
+            } =>
+          selectedArg.valueOrAbort
       }
   }
 }

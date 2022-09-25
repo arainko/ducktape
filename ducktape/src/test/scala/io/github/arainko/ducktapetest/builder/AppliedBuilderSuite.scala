@@ -1,7 +1,8 @@
 package io.github.arainko.ducktapetest.builder
 
-import io.github.arainko.ducktapetest.DucktapeSuite
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktapetest.DucktapeSuite
+
 import scala.deriving.Mirror
 
 class AppliedBuilderSuite extends DucktapeSuite {
@@ -102,6 +103,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
   }
 
   test("Case.computed applies a function to that given subtype") {
+
     def actual(value: NotEnumMoreCases) =
       value
         .into[MoreCases]

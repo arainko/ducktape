@@ -3,8 +3,7 @@ package io.github.arainko.ducktape
 import io.github.arainko.ducktape.builder.*
 import io.github.arainko.ducktape.internal.macros.*
 
-import scala.collection.BuildFrom
-import scala.collection.Factory
+import scala.collection.{ BuildFrom, Factory }
 import scala.compiletime.*
 import scala.deriving.Mirror
 
@@ -20,11 +19,11 @@ object Transformer {
 
   def defineVia[A]: DefinitionViaBuilder.PartiallyApplied[A] = DefinitionViaBuilder.create[A]
 
-  sealed trait Identity[Source] extends Transformer[Source, Source]
-
-  given [Source]: Identity[Source] = new {
+  final class Identity[Source] private[Transformer] extends Transformer[Source, Source] {
     def transform(from: Source): Source = from
   }
+
+  given [Source]: Identity[Source] = Identity[Source]
 
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): Transformer[Source, Dest] =
     from => ProductTransformerMacros.transform(from)

@@ -1,11 +1,11 @@
 package io.github.arainko.ducktape.internal.modules
 
-import io.github.arainko.ducktape.{ Case => CaseConfig, Field => FieldConfig, _ }
 import io.github.arainko.ducktape.function.FunctionArguments
+import io.github.arainko.ducktape.{ Case => CaseConfig, Field => FieldConfig, _ }
 
 import scala.quoted.*
 
-private[internal] trait ConfigurationModule { self: Module & SelectorModule & MirrorModule & FieldModule & CaseModule =>
+private[ducktape] trait ConfigurationModule { self: Module & SelectorModule & MirrorModule & FieldModule & CaseModule =>
   import quotes.reflect.*
 
   sealed trait MaterializedConfiguration

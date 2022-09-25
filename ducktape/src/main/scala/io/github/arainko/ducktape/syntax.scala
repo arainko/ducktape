@@ -1,9 +1,10 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.macros.*
-import io.github.arainko.ducktape.function.*
-import scala.deriving.Mirror
 import io.github.arainko.ducktape.builder.*
+import io.github.arainko.ducktape.function.*
+import io.github.arainko.ducktape.internal.macros.*
+
+import scala.deriving.Mirror
 
 extension [Source](value: Source) {
   def into[Dest]: AppliedBuilder[Source, Dest] = AppliedBuilder(value)

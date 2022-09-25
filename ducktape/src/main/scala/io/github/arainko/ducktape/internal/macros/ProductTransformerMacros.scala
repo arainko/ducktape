@@ -1,10 +1,11 @@
 package io.github.arainko.ducktape.internal.macros
 
-import scala.quoted.*
-import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.function.*
+import io.github.arainko.ducktape.internal.modules.*
+
 import scala.deriving.*
+import scala.quoted.*
 
 private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     extends Module,

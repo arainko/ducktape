@@ -1,12 +1,11 @@
 package io.github.arainko.ducktape.internal.modules
 
-import scala.quoted.*
-import scala.deriving.*
-import io.github.arainko.ducktape.Transformer
-import scala.deriving.*
-import io.github.arainko.ducktape.Arg
+import io.github.arainko.ducktape.{ Arg, Transformer }
 
-private[internal] trait Module {
+import scala.deriving.*
+import scala.quoted.*
+
+private[ducktape] trait Module {
   val quotes: Quotes
 
   given Quotes = quotes
@@ -83,8 +82,8 @@ private[internal] trait Module {
     enum InvalidArgSelector extends Failure {
       override def position: Position =
         this match {
-          case NotFound(selector, _, _)               => selector.asTerm.pos
-          case NotAnArgSelector(selector, _)          => selector.asTerm.pos
+          case NotFound(selector, _, _)      => selector.asTerm.pos
+          case NotAnArgSelector(selector, _) => selector.asTerm.pos
         }
 
       final def render = this match {

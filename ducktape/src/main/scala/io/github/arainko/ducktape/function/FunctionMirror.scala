@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.function
 
 import io.github.arainko.ducktape.internal.macros.*
+
 import scala.annotation.implicitNotFound
 
 @implicitNotFound("FunctionMirrors are only available for function types, but got ${F}")

@@ -1,10 +1,10 @@
 package io.github.arainko.ducktapetest.builder
 
+import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.builder.AppliedViaBuilder
+import io.github.arainko.ducktape.function.FunctionArguments
 import io.github.arainko.ducktapetest.DucktapeSuite
 import io.github.arainko.ducktapetest.builder.AppliedViaBuilderSuite.*
-import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.function.FunctionArguments
-import io.github.arainko.ducktape.builder.AppliedViaBuilder
 
 class AppliedViaBuilderSuite extends DucktapeSuite {
   private val testClass = TestClass("str", 1)
@@ -36,19 +36,6 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
   }
 
   test("Arg.renamed properly uses a different field for that argument") {
-    def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
-
-    val expected = TestClassWithAdditionalString(1, "str", "str")
-
-    val actual =
-      testClass
-        .intoVia(method)
-        .transform(Arg.renamed(_.additionalArg, _.str))
-
-    assertEquals(actual, expected)
-  }
-
-  test("The last ") {
     def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
 
     val expected = TestClassWithAdditionalString(1, "str", "str")

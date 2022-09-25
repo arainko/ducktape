@@ -1,7 +1,7 @@
 package io.github.arainko.ducktapetest
 
-import munit.FunSuite
 import io.github.arainko.ducktape.function.FunctionMirror
+import munit.FunSuite
 
 class FunctionMirrorSuite extends FunSuite {
   test("derives FunctionMirror for 0 arg functions") {

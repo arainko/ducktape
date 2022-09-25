@@ -1,11 +1,12 @@
 package io.github.arainko.ducktape.builder
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.internal.macros.*
-import scala.deriving.*
 import io.github.arainko.ducktape.function.*
+import io.github.arainko.ducktape.internal.macros.*
 
-sealed abstract class DefinitionViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArguments](function: Func) {
+import scala.deriving.*
+
+final class DefinitionViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArguments] private (function: Func) {
 
   inline def build(
     inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
@@ -14,9 +15,8 @@ sealed abstract class DefinitionViaBuilder[Source, Dest, Func, ArgSelector <: Fu
 }
 
 object DefinitionViaBuilder {
-  private[DefinitionViaBuilder] class Impl[Source, Dest, Func, ArgSelector <: FunctionArguments](
-    function: Func
-  ) extends DefinitionViaBuilder[Source, Dest, Func, ArgSelector](function)
+  private def instance[Source, Dest, Func, ArgSelector <: FunctionArguments](function: Func) =
+    DefinitionViaBuilder[Source, Dest, Func, ArgSelector](function)
 
   def create[Source]: PartiallyApplied[Source] = ()
 
@@ -25,8 +25,7 @@ object DefinitionViaBuilder {
   object PartiallyApplied {
     extension [Source](partial: PartiallyApplied[Source]) {
       transparent inline def apply[Func](inline func: Func)(using Func: FunctionMirror[Func]) = {
-        // widen the type to not infer `DefinitionViaBuilder.Impl`, we're in a transparent inline method after all
-        val builder: DefinitionViaBuilder[Source, Func.Return, Func, Nothing] = Impl(func)
+        val builder = instance[Source, Func.Return, Func, Nothing](func)
         FunctionMacros.namedArguments(func, builder)
       }
     }

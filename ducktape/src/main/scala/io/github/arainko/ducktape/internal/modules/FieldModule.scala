@@ -1,10 +1,11 @@
 package io.github.arainko.ducktape.internal.modules
 
-import scala.quoted.*
-import scala.deriving.*
 import io.github.arainko.ducktape.Transformer
-import scala.compiletime.*
 import io.github.arainko.ducktape.function.FunctionArguments
+
+import scala.compiletime.*
+import scala.deriving.*
+import scala.quoted.*
 
 private[internal] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
