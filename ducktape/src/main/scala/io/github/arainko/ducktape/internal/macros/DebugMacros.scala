@@ -22,4 +22,36 @@ private[ducktape] object DebugMacros {
     report.info(struct)
     value
   }
+
+  inline def extractTransformer[A](inline value: A): A = ${ extractTransformerMacro('value) }
+
+  def extractTransformerMacro[A: Type](value: Expr[A])(using Quotes) = {
+    import quotes.reflect.*
+    given Printer[Tree] = Printer.TreeStructure
+
+    val trans -> appliedTo = value match {
+      case '{ ($transformer: Transformer[a, b]).transform($that) } =>
+        transformer -> that
+      case other => report.errorAndAbort(other.asTerm.show)
+    }
+
+    object traverser extends TreeMap {
+      override def transformSubTrees[Tr <: Tree](trees: List[Tr])(owner: Symbol): List[Tr] = ???
+    }
+
+
+    val expr = trans.asTerm match {
+      case Typed(Lambda(List(ValDef(arg, _, _)), Apply(call, args)), _) =>
+        // report.info(term.show)
+        val fieldNameds = args.map {
+          case Select(Ident(`arg`), fieldName) => Select.unique(appliedTo.asTerm, fieldName)
+          case other => other
+        }
+        Apply(call, fieldNameds)
+      case tree  => 
+        report.errorAndAbort(tree.show)
+    }
+
+    expr.asExprOf[A]
+  } 
 }
