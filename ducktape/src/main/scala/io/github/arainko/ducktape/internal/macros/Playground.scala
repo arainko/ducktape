@@ -1,19 +1,17 @@
 package io.github.arainko.ducktape.internal.macros
 
-import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.*
 
-case class Person(int: Int, str: String)
-case class Person2(int: Int, str: String)
+case class Person(int: Int, str: String, inside: Inside)
+case class Person2(int: Int, str: String, inside: Inside2)
+
+case class Inside(str: String, int: Int)
+case class Inside2(int: Int, str: String)
 
 object Playground extends App {
-  inline def transfromer: Transformer[Person, Person2] = p => new Person2(p.int, p.str)
+  val cos = Person(1, "2", Inside("2", 1)).to[Person2]
 
-  val cos = DebugMacros.code {
-    DebugMacros.extractTransformer {
-      transfromer.transform(Person(1, "2"))
-    }
-  }
-
+  
   println(cos)
 
 }

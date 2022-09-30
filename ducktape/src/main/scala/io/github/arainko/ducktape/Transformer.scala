@@ -26,7 +26,7 @@ object Transformer {
   given [Source]: Identity[Source] = Identity[Source]
 
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): Transformer[Source, Dest] =
-    from => ProductTransformerMacros.transform(from)
+    from => DebugMacros.code(ProductTransformerMacros.transform(from))
 
   inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): Transformer[Source, Dest] =
     from => CoproductTransformerMacros.transform(from)
