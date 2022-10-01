@@ -23,10 +23,13 @@ object Transformer {
     def transform(from: Source): Source = from
   }
 
+  @FunctionalInterface
+  trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
+
   given [Source]: Identity[Source] = Identity[Source]
 
-  inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): Transformer[Source, Dest] =
-    from => DebugMacros.code(ProductTransformerMacros.transform(from))
+  inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
+    from => NormalizationMacros.normalize(ProductTransformerMacros.transform(from))
 
   inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): Transformer[Source, Dest] =
     from => CoproductTransformerMacros.transform(from)

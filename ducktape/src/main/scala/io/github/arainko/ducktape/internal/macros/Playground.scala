@@ -9,9 +9,15 @@ case class Inside(str: String, int: Int)
 case class Inside2(int: Int, str: String)
 
 object Playground extends App {
-  val cos = Person(1, "2", Inside("2", 1)).to[Person2]
+  val cos = 
+    DebugMacros.code {
+      Person(1, "2", Inside("2", 1)).to[Option[Person2]]
+    }
 
-  
+
+
+
+
   println(cos)
 
 }
