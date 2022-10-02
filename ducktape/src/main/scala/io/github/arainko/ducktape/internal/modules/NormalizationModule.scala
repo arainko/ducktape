@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 import io.github.arainko.ducktape.*
+import scala.reflect.TypeTest
 
 /* 
   zaczynam od: 
@@ -17,18 +18,22 @@ trait NormalizationModule { self: Module =>
   def normalize[A: Type](expr: Expr[A]): Expr[A] = {
     given Printer[Tree] = Printer.TreeShortCode
     
-    val res = stripInlinedAndTyped.transformTree(expr.asTerm)(Symbol.spliceOwner) match {
+    val res = StripInlinedAndTyped.transformTree(expr.asTerm)(Symbol.spliceOwner) match {
       case Apply(call, args) =>
         val refinedArgs = args.map {
-          case NamedArg(name, TransformerInvocation(TransformerLambda(argName, call, argss), appliedTo)) => 
-            // report.info(appliedTo.show)
-            // report.info(argss.map(_.show).mkString(", "))
-            val newArgs = argss.map {
-              case NamedArg(name, Select(Ident(`argName`), fieldName)) =>
-                // report.info(appliedTo.show)
-                NamedArg(name, Select.unique(appliedTo, fieldName))
-              case other => other
+          case NamedArg(name, TransformerInvocation(TransformerLambda(vd, call, argss), appliedTo)) => 
+            object replacer extends TreeMap {
+              override def transformTerm(tree: Term)(owner: Symbol): Term = 
+                tree match {
+                  // by checking symbols we know if the term refers to the TransformerLambda parameter so we can replace it
+                  case Select(ident: Ident, fieldName) if vd.symbol == ident.symbol =>
+                    Select.unique(appliedTo, fieldName)
+                  case other => super.transformTerm(other)(owner)
+                }
             }
+
+
+            val newArgs = argss.map(replacer.transformTerm(_)(Symbol.spliceOwner))
 
             // report.info(s"t1: ${call.show}, t2: ${appliedTo.show}")
             NamedArg(name, Apply(call, newArgs))
@@ -40,12 +45,12 @@ trait NormalizationModule { self: Module =>
         // report.info(s"still other ${other.show}")
         other
     }
-    // report.info(res.show)
+    report.info(res.show)
     res.asExprOf[A]
-    // stripBullshit.transformTree(expr.asTerm)(Symbol.spliceOwner).asExprOf[A]
+    // stripInlinedAndTyped.transformTree(expr.asTerm)(Symbol.spliceOwner).asExprOf[A]
   }
 
-  object stripInlinedAndTyped extends TreeMap {
+  object StripInlinedAndTyped extends TreeMap {
     override def transformTerm(tree: Term)(owner: Symbol): Term = 
       tree match {
         case Inlined(_, _, term) => transformTerm(term)(owner)
@@ -54,47 +59,31 @@ trait NormalizationModule { self: Module =>
       }
   }
 
-  // def extractTransformerMacro[A: Type](value: Expr[A]) = {
+  class Replacer extends TreeMap {
 
-  //   val trans -> appliedTo = value match {
-  //     case '{ ($transformer: Transformer[a, b]).transform($that) } =>
-  //       transformer -> that
-  //     case other => report.errorAndAbort(other.asTerm.show)
-  //   }
+  }
 
-  //   val expr = trans.asTerm match {
-  //     case Untyped(TransformerLambda(arg, call, args)) =>
-  //       // report.info(term.show)
-  //       val fieldNameds = args.map {
-  //         case Select(Ident(`arg`), fieldName) => Select.unique(appliedTo.asTerm, fieldName)
-  //         case other                           => other
-  //       }
-  //       Apply(call, fieldNameds)
-
-  //     case tree =>
-  //       report.errorAndAbort(tree.show)
-  //   }
-
-  //   expr.asExprOf[A]
-  // }
+  final class TransformerLambda(val param: ValDef, val methodCall: Term, val methodArgs: List[Term])
 
   /**
    * Matches a SAM Transformer creation eg.:
    *
    * ((p: Person) => new Person2(p.int, p.str)): Transformer[Person, Person2]
    *
-   * @return a name of the parameter ('p'), a call to eg. a method ('new Person2')
+   * @return the parameter ('p'), a call to eg. a method ('new Person2')
    * and the args of that call ('p.int', 'p.str')
    */
   object TransformerLambda {
-    def unapply(term: Term): Option[(String, Term, List[Term])] =
+
+    def unapply(term: Term): Option[TransformerLambda] =
       PartialFunction.condOpt(term) {
-        case Lambda(List(ValDef(arg, _, _)), Apply(call, args)) => (arg, call, args)
+        case Lambda(List(param), Apply(method, methodArgs)) => 
+          TransformerLambda(param, method, methodArgs)
       }
   }
 
   object TransformerInvocation {
-    def unapply(term: Term)(using Quotes): Option[(Term, Term)] =
+    def unapply(term: Term): Option[(Term, Term)] =
       PartialFunction.condOpt(term.asExpr) {
         case '{ ($transformer: Transformer.ForProduct[a, b]).transform($appliedTo) } =>
           transformer.asTerm -> appliedTo.asTerm

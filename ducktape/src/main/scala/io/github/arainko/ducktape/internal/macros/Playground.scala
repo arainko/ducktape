@@ -14,8 +14,14 @@ object Playground extends App {
       Person(1, "2", Inside("2", 1)).to[Option[Person2]]
     }
 
+  def costam(int: Int) = int
+
+  DebugMacros.structure {
+    (p: Person) => costam(costam(p.int))
+  }
 
 
+  
 
 
   println(cos)
