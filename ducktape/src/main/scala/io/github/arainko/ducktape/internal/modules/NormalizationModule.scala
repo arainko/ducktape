@@ -70,14 +70,10 @@ trait NormalizationModule { self: Module =>
   }
 
   object TransformerInvocation {
-    def unapply(term: Term): Option[(TransformerLambda, Term)] =
+    def unapply(term: Term)(using Quotes): Option[(TransformerLambda, Term)] =
       PartialFunction.condOpt(term.asExpr) {
-        case '{ ForProduct.make[a, b]($lambda).transform($appliedTo) } =>
-          report.info(lambda.asTerm.show)
-          TransformerLambda.unapply(lambda.asTerm).get -> appliedTo.asTerm //TODO: delete the .get call
-        case other => 
-          println(other.asTerm.show)
-          
+        case '{ ($transformer: Transformer.ForProduct[a, b]).transform($appliedTo) } =>
+          TransformerLambda.unapply(transformer.asTerm).get -> appliedTo.asTerm //TODO: delete the .get call
       }
   }
 }

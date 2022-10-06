@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.builder.*
-import io.github.arainko.ducktape.derived.*
 import io.github.arainko.ducktape.internal.macros.*
 
 import scala.collection.{ BuildFrom, Factory }
@@ -26,8 +25,11 @@ object Transformer {
 
   given [Source]: Identity[Source] = Identity[Source]
 
+  @FunctionalInterface
+  trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
+
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
-    ForProduct.make(from => NormalizationMacros.normalize(ProductTransformerMacros.transform(from)))
+    from => NormalizationMacros.normalize(ProductTransformerMacros.transform(from))
 
   inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): Transformer[Source, Dest] =
     from => CoproductTransformerMacros.transform(from)
