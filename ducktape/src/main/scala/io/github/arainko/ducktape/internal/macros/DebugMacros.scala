@@ -4,12 +4,22 @@ import io.github.arainko.ducktape.*
 
 import scala.quoted.*
 
-private[ducktape] object DebugMacros {
+object DebugMacros {
   inline def structure[A](inline value: A) = ${ structureMacro('value) }
 
   def structureMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*
-    val struct = Printer.TreeStructure.show(value.asTerm)
+
+    object StripInlinedAndTyped extends TreeMap {
+      override def transformTerm(tree: Term)(owner: Symbol): Term =
+        tree match {
+          case Inlined(_, _, term) => transformTerm(term)(owner)
+          case Typed(term, _)      => transformTerm(term)(owner)
+          case other               => super.transformTerm(other)(owner)
+        }
+    }
+
+    val struct = Printer.TreeStructure.show(StripInlinedAndTyped.transformTerm(value.asTerm)(Symbol.spliceOwner))
     report.info(struct)
     value
   }
