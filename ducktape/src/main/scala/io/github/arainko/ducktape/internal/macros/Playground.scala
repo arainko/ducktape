@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.internal.macros
 
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.Transformer.ForProduct
 
 case class Person(int: Int, str: String, inside: Inside)
 case class Person2(int: Int, str: String, inside: Inside2)
@@ -32,13 +33,9 @@ object Playground extends App {
             )
           )
         ): Person2)): ForProduct[Person, Person2])))
-    */
-
-    
+    */   
 
 
-  def costam(int: Int) = int
 
-  println(cos)
 
 }

@@ -8,6 +8,7 @@ import munit.FunSuite
 
 import scala.compiletime.testing.*
 import scala.deriving.Mirror
+import io.github.arainko.ducktape.Transformer.ForProduct
 
 object DerivedTransformerSuite {
 // If these are declared inside their tests the compiler crashes 🤔
@@ -62,6 +63,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
     )
 
     val actualComplex = expectedPrimitive.to[ComplexPerson]
+
     val actualPrimitive =
       DebugMacros.code {
         actualComplex.to[PrimitivePerson]

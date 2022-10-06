@@ -12,6 +12,10 @@ trait Transformer[Source, Dest] {
   def transform(from: Source): Dest
 }
 
+object T2 {
+  val p: Transformer.ForProduct[Int, Int] = from => from
+}
+
 object Transformer {
   def apply[Source, Dest](using transformer: Transformer[Source, Dest]): Transformer[Source, Dest] = transformer
 
@@ -26,7 +30,7 @@ object Transformer {
   given [Source]: Identity[Source] = Identity[Source]
 
   @FunctionalInterface
-  trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
+  private[ducktape] trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
 
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
     from => NormalizationMacros.normalize(ProductTransformerMacros.transform(from))
