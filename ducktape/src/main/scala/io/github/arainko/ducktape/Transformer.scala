@@ -23,14 +23,20 @@ object Transformer {
 
   def defineVia[A]: DefinitionViaBuilder.PartiallyApplied[A] = DefinitionViaBuilder.create[A]
 
-  final class Identity[Source] private[Transformer] extends Transformer[Source, Source] {
-    def transform(from: Source): Source = from
+  final class Identity[Source, Dest >: Source] private[Transformer] extends Transformer[Source, Dest] {
+    def transform(from: Source): Dest = from
   }
 
-  given [Source]: Identity[Source] = Identity[Source]
+  given [Source, Dest >: Source]: Identity[Source, Dest] = Identity[Source, Dest]
 
   @FunctionalInterface
   private[ducktape] trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
+
+  @FunctionalInterface
+  private[ducktape] trait FromAnyVal[Source <: AnyVal, Dest] extends Transformer[Source, Dest]
+
+  @FunctionalInterface
+  private[ducktape] trait ToAnyVal[Source, Dest <: AnyVal] extends Transformer[Source, Dest]
 
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
     from => NormalizationMacros.normalize(ProductTransformerMacros.transform(from))
@@ -54,10 +60,10 @@ object Transformer {
     factory: Factory[Dest, DestCollection[Dest]]
   ): Transformer[SourceCollection[Source], DestCollection[Dest]] = from => from.map(trans.transform).to(factory)
 
-  inline given fromAnyVal[Source <: AnyVal, Dest]: Transformer[Source, Dest] =
+  inline given fromAnyVal[Source <: AnyVal, Dest]: FromAnyVal[Source, Dest] =
     from => ProductTransformerMacros.transformFromAnyVal[Source, Dest](from)
 
-  inline given toAnyVal[Source, Dest <: AnyVal]: Transformer[Source, Dest] =
+  inline given toAnyVal[Source, Dest <: AnyVal]: ToAnyVal[Source, Dest] =
     from => ProductTransformerMacros.transfromToAnyVal[Source, Dest](from)
 
 }

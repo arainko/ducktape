@@ -68,8 +68,8 @@ class DerivedTransformerSuite extends DucktapeSuite {
       DebugMacros.code {
         actualComplex.to[PrimitivePerson]
       }
-      
 
+      
     assertEquals(expectedComplex, actualComplex)
     assertEquals(expectedPrimitive, actualPrimitive)
   }

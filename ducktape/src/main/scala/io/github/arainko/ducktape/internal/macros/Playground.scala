@@ -18,6 +18,9 @@ object Playground extends App {
       Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3))).to[Person2]
     }
 
+  val cos1 = summon[Transformer[String, CharSequence]]
+
+
     /*
     to[Person](Person.apply(1, "2", Inside.apply("2", 1, EvenMoreInside.apply("asd", 3))))[Option[Person2]](given_Transformer_Source_Option[Person, Person2](((
       (from: Person) => (
