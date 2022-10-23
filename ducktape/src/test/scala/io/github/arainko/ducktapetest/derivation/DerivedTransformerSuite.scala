@@ -65,9 +65,9 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val actualComplex = expectedPrimitive.to[ComplexPerson]
 
     val actualPrimitive =
-      DebugMacros.code {
+      // DebugMacros.code {
         actualComplex.to[PrimitivePerson]
-      }
+      // }
 
       
     assertEquals(expectedComplex, actualComplex)

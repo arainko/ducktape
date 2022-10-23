@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape.internal.modules
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.derived.*
 
 import scala.quoted.*
 import scala.reflect.TypeTest
@@ -10,17 +9,33 @@ trait NormalizationModule { self: Module =>
   import quotes.reflect.*
 
   def normalize[A: Type](expr: Expr[A]): Expr[A] = {
-    val normalized =
-      StripInlinedAndTyped.transformTree(expr.asTerm)(Symbol.spliceOwner) match {
-        case Apply(call, args) => Apply(call, args.map(transformToplevelArg))
-        case other             => other
-      }
+    // println(StripInlinedAndTyped.transformTree(expr.asTerm)(Symbol.spliceOwner).show)
+
+    val stripped = StripNoisyNodes.transformTerm(expr.asTerm)(Symbol.spliceOwner)
+    println(stripped.show(using Printer.TreeStructure))
+    val normalized = normalizeTerm(stripped)
+    // println(normalized.show)
     normalized.asExprOf[A]
   }
+
+  private def normalizeTerm(term: Term): Term =
+    term match {
+      case Inlined(call, stats, tree) => Inlined.copy(term)(call, stats, normalizeTerm(tree))
+      case app @ Apply(call, args) =>
+        Apply.copy(app)(call, args.map(transformToplevelArg))
+      case other => other
+    }
+
+  // object Uninlined {
+  //   def unapply(term: Term): Term = term match {
+  //     case Inlined(call, stats, tree) =>
+  //   }
+  // }
 
   // Match on all the possibilieties of method invocations (that is, named args 'field = ...' and normal param passing).
   private def transformToplevelArg(term: Term): Term =
     term match {
+      // case Inlined(call, stats, term) => Inlined.copy(term)(call, stats, transformToplevelArg(term))
       case NamedArg(name, TransformerInvocation(transformerLambda, appliedTo)) =>
         NamedArg(name, optimizeTransformerInvocation(transformerLambda, appliedTo))
       case TransformerInvocation(transformerLambda, appliedTo) =>
@@ -30,7 +45,7 @@ trait NormalizationModule { self: Module =>
 
   private def optimizeTransformerInvocation(transformerLambda: TransformerLambda, appliedTo: Term): Term = {
     transformerLambda match {
-      case TransformerLambda.ForProduct(param, methodCall, methodArgs) => 
+      case TransformerLambda.ForProduct(param, methodCall, methodArgs) =>
         val replacer = Replacer(transformerLambda, appliedTo)
         val newArgs =
           methodArgs
@@ -43,7 +58,7 @@ trait NormalizationModule { self: Module =>
       case TransformerLambda.FromAnyVal(param, fieldName) =>
         Select.unique(appliedTo, fieldName)
     }
-    
+
   }
 
   class Replacer(transformerLambda: TransformerLambda, appliedTo: Term) extends TreeMap {
@@ -56,12 +71,12 @@ trait NormalizationModule { self: Module =>
       }
   }
 
-  object StripInlinedAndTyped extends TreeMap {
+  object StripNoisyNodes extends TreeMap {
     override def transformTerm(tree: Term)(owner: Symbol): Term =
       tree match {
-        case Inlined(_, _, term) => transformTerm(term)(owner)
-        case Typed(term, _)      => transformTerm(term)(owner)
-        case other               => super.transformTerm(other)(owner)
+        case Inlined(_, Nil, term) => transformTerm(term)(owner)
+        case Typed(term, _) => transformTerm(term)(owner)
+        case other          => super.transformTerm(other)(owner)
       }
   }
 

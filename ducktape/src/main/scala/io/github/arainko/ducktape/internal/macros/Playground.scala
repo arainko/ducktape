@@ -13,12 +13,19 @@ case class EvenMoreInside(str: String, int: Int)
 case class EvenMoreInside2(str: String, int: Int)
 
 object Playground extends App {
-  val cos = 
+  // val cos = 
     DebugMacros.code {
-      Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3))).to[Person2]
+      Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3))).into[Person2].transform()
     }
 
-  val cos1 = summon[Transformer[String, CharSequence]]
+
+  // val cos2 = 
+    // DebugMacros.structure {
+      // EvenMoreInside("asd", 3).to[EvenMoreInside2]
+    // }
+
+    
+  // val cos1 = summon[Transformer[String, CharSequence]]
 
 
     /*
