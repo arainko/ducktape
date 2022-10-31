@@ -62,12 +62,16 @@ class DerivedTransformerSuite extends DucktapeSuite {
       ComplexCoolnessFactor.Cool
     )
 
-    val actualComplex = expectedPrimitive.to[ComplexPerson]
-
+    val actualComplex = 
+      DebugMacros.code {
+        expectedPrimitive.to[ComplexPerson]
+      }
+      
     val actualPrimitive =
-      // DebugMacros.code {
+      DebugMacros.code {
+
         actualComplex.to[PrimitivePerson]
-      // }
+      }
 
       
     assertEquals(expectedComplex, actualComplex)

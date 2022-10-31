@@ -15,7 +15,7 @@ case class EvenMoreInside2(str: String, int: Int)
 object Playground extends App {
   // val cos = 
     DebugMacros.code {
-      Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3))).into[Person2].transform()
+      Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3))).to[Person2]
     }
 
 

@@ -11,17 +11,16 @@ class AppliedBuilderSuite extends DucktapeSuite {
 
   private val testClass = TestClass("str", 1)
 
-  // test("Field.const properly applies a constant to a field") {
-  //   val expected = TestClassWithAdditionalList(1, "str", List("const"))
+  test("Field.const properly applies a constant to a field") {
+    val expected = TestClassWithAdditionalList(1, "str", List("const"))
 
-  //   val actual =
-  //       testClass
-  //         .into[TestClassWithAdditionalList]
-  //         .transform(Field.const(_.additionalArg, List("const")))
-      
-
-  //   assertEquals(actual, expected)
-  // }
+    val actual =
+        testClass
+          .into[TestClassWithAdditionalList]
+          .transform(Field.const(_.additionalArg, List("const")))
+    
+    assertEquals(actual, expected)
+  }
 
   test("Field.const fails when the field and constant types do not match") {
     assertFailsToCompileWith {
@@ -33,16 +32,16 @@ class AppliedBuilderSuite extends DucktapeSuite {
     }("Cannot prove that String <:< List[String].")
   }
 
-  // test("Field.computed properly applies a function to a field") {
-  //   val expected = TestClassWithAdditionalList(1, "str", List("str"))
+  test("Field.computed properly applies a function to a field") {
+    val expected = TestClassWithAdditionalList(1, "str", List("str"))
 
-  //   val actual =
-  //     testClass
-  //       .into[TestClassWithAdditionalList]
-  //       .transform(Field.computed(_.additionalArg, testClass => List(testClass.str)))
+    val actual =
+      testClass
+        .into[TestClassWithAdditionalList]
+        .transform(Field.computed(_.additionalArg, testClass => List(testClass.str)))
 
-  //   assertEquals(actual, expected)
-  // }
+    assertEquals(actual, expected)
+  }
 
   test("Field.computed fails when the result type of the computed function doesn't match the field") {
     assertFailsToCompileWith {

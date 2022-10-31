@@ -9,36 +9,25 @@ trait NormalizationModule { self: Module =>
   import quotes.reflect.*
 
   def normalize[A: Type](expr: Expr[A]): Expr[A] = {
-    // println(StripInlinedAndTyped.transformTree(expr.asTerm)(Symbol.spliceOwner).show)
-
     val stripped = StripNoisyNodes.transformTerm(expr.asTerm)(Symbol.spliceOwner)
-    println(stripped.show(using Printer.TreeStructure))
     val normalized = normalizeTerm(stripped)
-    // println(normalized.show)
     normalized.asExprOf[A]
   }
 
   private def normalizeTerm(term: Term): Term =
     term match {
       case Inlined(call, stats, tree) => Inlined.copy(term)(call, stats, normalizeTerm(tree))
-      case app @ Apply(call, args) =>
-        Apply.copy(app)(call, args.map(transformToplevelArg))
-      case other => other
+      case Typed(tree, tt)            => Typed.copy(term)(normalizeTerm(tree), tt)
+      case Apply(call, args)          => Apply.copy(term)(call, args.map(transformToplevelArg))
+      case other                      => other
     }
-
-  // object Uninlined {
-  //   def unapply(term: Term): Term = term match {
-  //     case Inlined(call, stats, tree) =>
-  //   }
-  // }
 
   // Match on all the possibilieties of method invocations (that is, named args 'field = ...' and normal param passing).
   private def transformToplevelArg(term: Term): Term =
     term match {
-      // case Inlined(call, stats, term) => Inlined.copy(term)(call, stats, transformToplevelArg(term))
-      case NamedArg(name, TransformerInvocation(transformerLambda, appliedTo)) =>
+      case NamedArg(name, Untyped(TransformerInvocation(transformerLambda, appliedTo))) =>
         NamedArg(name, optimizeTransformerInvocation(transformerLambda, appliedTo))
-      case TransformerInvocation(transformerLambda, appliedTo) =>
+      case Untyped(TransformerInvocation(transformerLambda, appliedTo)) =>
         optimizeTransformerInvocation(transformerLambda, appliedTo)
       case other => other
     }
@@ -74,9 +63,8 @@ trait NormalizationModule { self: Module =>
   object StripNoisyNodes extends TreeMap {
     override def transformTerm(tree: Term)(owner: Symbol): Term =
       tree match {
-        case Inlined(_, Nil, term) => transformTerm(term)(owner)
-        case Typed(term, _) => transformTerm(term)(owner)
-        case other          => super.transformTerm(other)(owner)
+        case Inlined(_, Nil, term)                   => transformTerm(term)(owner)
+        case other                                   => super.transformTerm(other)(owner)
       }
   }
 
@@ -84,7 +72,7 @@ trait NormalizationModule { self: Module =>
     def param: ValDef
 
     case ForProduct(param: ValDef, methodCall: Term, methodArgs: List[Term])
-    case ToAnyVal(param: ValDef, constructorCall: New, constructorArg: Term)
+    case ToAnyVal(param: ValDef, constructorCall: Term, constructorArg: Term)
     case FromAnyVal(param: ValDef, fieldName: String)
   }
 
@@ -100,19 +88,19 @@ trait NormalizationModule { self: Module =>
      */
     def fromForProduct(expr: Expr[Transformer.ForProduct[?, ?]]): Option[TransformerLambda.ForProduct] =
       PartialFunction.condOpt(expr.asTerm) {
-        case Lambda(List(param), Apply(method, methodArgs)) =>
+        case Untyped(Lambda(List(param), Untyped(Apply(method, methodArgs)))) =>
           TransformerLambda.ForProduct(param, method, methodArgs)
       }
 
     def fromToAnyVal(expr: Expr[Transformer.ToAnyVal[?, ?]]): Option[TransformerLambda.ToAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
-        case Lambda(List(param), Apply(constructorCall: New, List(arg))) =>
+        case Untyped(Lambda(List(param), Untyped(Apply(Untyped(constructorCall), List(arg))))) =>
           TransformerLambda.ToAnyVal(param, constructorCall, arg)
       }
 
     def fromFromAnyVal(expr: Expr[Transformer.FromAnyVal[?, ?]]): Option[TransformerLambda.FromAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
-        case Lambda(List(param), Select(_: Ident, fieldName)) =>
+        case Untyped(Lambda(List(param), Untyped(Select(Untyped(_: Ident), fieldName)))) =>
           TransformerLambda.FromAnyVal(param, fieldName)
       }
   }
@@ -127,6 +115,14 @@ trait NormalizationModule { self: Module =>
         case '{ ($transformer: Transformer.ToAnyVal[a, b]).transform($appliedTo) } =>
           TransformerLambda.fromToAnyVal(transformer).map(_ -> appliedTo.asTerm)
         case other => None
+      }
+  }
+
+  object Untyped {
+    def unapply(term: Term)(using Quotes): Some[Term] =
+      term match {
+        case Typed(tree, _) => unapply(tree)
+        case other          => Some(other)
       }
   }
 }
