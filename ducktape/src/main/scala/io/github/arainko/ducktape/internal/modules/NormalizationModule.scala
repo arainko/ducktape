@@ -18,17 +18,25 @@ trait NormalizationModule { self: Module =>
     term match {
       case Inlined(call, stats, tree) => Inlined.copy(term)(call, stats, normalizeTerm(tree))
       case Typed(tree, tt)            => Typed.copy(term)(normalizeTerm(tree), tt)
-      case Apply(call, args)          => Apply.copy(term)(call, args.map(transformToplevelArg))
+      case Block(stats, tree)         => Block.copy(term)(stats.map(normalizeStatement(_)), normalizeTerm(tree))
+      case Apply(call, args)          => Apply.copy(term)(call, args.map(transformTransformerInvocation))
       case other                      => other
     }
 
+  private def normalizeStatement(stat: Statement) =
+    stat match {
+      case vd @ ValDef(name, tt, term) =>
+        ValDef.copy(stat)(name, tt, term.map(transformTransformerInvocation(_).changeOwner(vd.symbol)))
+      case other => other
+    }
+
   // Match on all the possibilieties of method invocations (that is, named args 'field = ...' and normal param passing).
-  private def transformToplevelArg(term: Term): Term =
+  private def transformTransformerInvocation(term: Term): Term =
     term match {
-      case NamedArg(name, Untyped(TransformerInvocation(transformerLambda, appliedTo))) =>
-        NamedArg(name, optimizeTransformerInvocation(transformerLambda, appliedTo))
       case Untyped(TransformerInvocation(transformerLambda, appliedTo)) =>
         optimizeTransformerInvocation(transformerLambda, appliedTo)
+      case NamedArg(name, Untyped(TransformerInvocation(transformerLambda, appliedTo))) =>
+        NamedArg(name, optimizeTransformerInvocation(transformerLambda, appliedTo))
       case other => other
     }
 
@@ -39,7 +47,7 @@ trait NormalizationModule { self: Module =>
         val newArgs =
           methodArgs
             .map(replacer.transformTerm(_)(Symbol.spliceOwner)) // replace all references to the lambda param
-            .map(transformToplevelArg) // recurse down into nested calls
+            .map(transformTransformerInvocation) // recurse down into nested calls
         Apply(methodCall, newArgs)
 
       case TransformerLambda.ToAnyVal(param, constructorCall, constructorArg) =>
@@ -63,8 +71,8 @@ trait NormalizationModule { self: Module =>
   object StripNoisyNodes extends TreeMap {
     override def transformTerm(tree: Term)(owner: Symbol): Term =
       tree match {
-        case Inlined(_, Nil, term)                   => transformTerm(term)(owner)
-        case other                                   => super.transformTerm(other)(owner)
+        case Inlined(_, Nil, term) => transformTerm(term)(owner)
+        case other                 => super.transformTerm(other)(owner)
       }
   }
 
