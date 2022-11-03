@@ -5,6 +5,7 @@ import io.github.arainko.ducktapetest.DucktapeSuite
 import munit.FunSuite
 
 import scala.compiletime.testing.*
+import io.github.arainko.ducktape.internal.macros.DebugMacros
 
 final case class Input(int: Int, string: String, list: List[Int], option: Option[Int])
 
@@ -32,6 +33,7 @@ class ViaSuite extends DucktapeSuite {
     val value = Input(1, "a", List(1, 2, 3), Some(4))
     val expected = Transformed(1, "a", List(1, 2, 3), Some(4))
     val actual = value.via(method)
+      
     assertEquals(actual, expected)
   }
 
@@ -57,6 +59,7 @@ class ViaSuite extends DucktapeSuite {
       Some(WrappedInt(4))
     )
     val actual = value.via(method[WrappedInt])
+      
 
     assertEquals(actual, expected)
   }

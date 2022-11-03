@@ -7,7 +7,7 @@ case class Person(int: Int, str: String, inside: Inside)
 case class Person2(int: Int, str: String, inside: Inside2)
 
 case class Inside(str: String, int: Int, inside: EvenMoreInside)
-case class Inside2(int: Int, str: String, inside: Option[EvenMoreInside2])
+case class Inside2(int: Int, str: String, inside: EvenMoreInside2)
 
 case class EvenMoreInside(str: String, int: Int)
 case class EvenMoreInside2(str: String, int: Int)
@@ -16,11 +16,8 @@ object Playground extends App {
   // val cos =
   DebugMacros.code {
     Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3)))
-      .into[Person2]
-      .transform(
-        Field.const(_.str, "CONST"),
-        Field.computed(_.int, _.int + 3)
-      )
+      .intoVia(Person2.apply)
+      .transform()
   }
 
 

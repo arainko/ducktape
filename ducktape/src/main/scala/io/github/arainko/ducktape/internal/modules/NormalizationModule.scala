@@ -16,17 +16,17 @@ trait NormalizationModule { self: Module =>
 
   private def normalizeTerm(term: Term): Term =
     term match {
-      case Inlined(call, stats, tree) => Inlined.copy(term)(call, stats, normalizeTerm(tree))
+      case Inlined(call, stats, tree) => Inlined.copy(term)(call, stats.map(normalizeStatement), normalizeTerm(tree))
       case Typed(tree, tt)            => Typed.copy(term)(normalizeTerm(tree), tt)
-      case Block(stats, tree)         => Block.copy(term)(stats.map(normalizeStatement(_)), normalizeTerm(tree))
+      case Block(stats, tree)         => Block.copy(term)(stats.map(normalizeStatement), normalizeTerm(tree))
       case Apply(call, args)          => Apply.copy(term)(call, args.map(transformTransformerInvocation))
       case other                      => other
     }
 
-  private def normalizeStatement(stat: Statement) =
-    stat match {
+  private def normalizeStatement[A >: ValDef <: Tree](statement: A) =
+    statement match {
       case vd @ ValDef(name, tt, term) =>
-        ValDef.copy(stat)(name, tt, term.map(transformTransformerInvocation(_).changeOwner(vd.symbol)))
+        ValDef.copy(statement)(name, tt, term.map(transformTransformerInvocation(_).changeOwner(vd.symbol)))
       case other => other
     }
 

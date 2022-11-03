@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.builder.AppliedViaBuilder
 import io.github.arainko.ducktape.function.FunctionArguments
 import io.github.arainko.ducktapetest.DucktapeSuite
 import io.github.arainko.ducktapetest.builder.AppliedViaBuilderSuite.*
+import io.github.arainko.ducktape.internal.macros.DebugMacros
 
 class AppliedViaBuilderSuite extends DucktapeSuite {
   private val testClass = TestClass("str", 1)
@@ -41,9 +42,9 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
     val expected = TestClassWithAdditionalString(1, "str", "str")
 
     val actual =
-      testClass
-        .intoVia(method)
-        .transform(Arg.renamed(_.additionalArg, _.str))
+        testClass
+          .intoVia(method)
+          .transform(Arg.renamed(_.additionalArg, _.str))
 
     assertEquals(actual, expected)
   }
