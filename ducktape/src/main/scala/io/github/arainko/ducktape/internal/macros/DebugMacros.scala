@@ -24,18 +24,26 @@ object DebugMacros {
     value
   }
 
-  // inline def matchTest[A](inline expr: A) = ${ matchTestMacro('expr) }
+  inline def matchTest[A](inline expr: A) = ${ matchTestMacro('expr) }
 
-  // def matchTestMacro[A](expr: Expr[A])(using Quotes) = {
-  //   import quotes.reflect.*
+  def matchTestMacro[A](expr: Expr[A])(using Quotes) = {
+    import quotes.reflect.*
 
-  //   expr match {
-  //     case '{ Transformer.ForProduct.make[a, b]($lambda) } =>
-  //       report.info(expr.asTerm.show)
-  //       expr
-  //     case other =>
-  //       report.info(s"OTHER: ${other.asTerm.show}")
-  //       expr
-  //   }
-  // }
+    object StripNoisyNodes extends TreeMap {
+      override def transformTerm(tree: Term)(owner: Symbol): Term =
+        tree match {
+          case Inlined(_, Nil, term) => transformTerm(term)(owner)
+          case other                 => super.transformTerm(other)(owner)
+        }
+    }
+
+    val stripped = StripNoisyNodes.transformTerm(expr.asTerm)(Symbol.spliceOwner)
+
+    stripped match {
+      case Block(_, Typed(Apply(_, Lambda(param :: Nil, body) :: Nil), _)) =>
+        // report.info(param.show)
+        report.info(body.show(using Printer.TreeStructure))
+        stripped.asExpr
+    }
+  }
 }

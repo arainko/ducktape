@@ -94,21 +94,22 @@ trait NormalizationModule { self: Module =>
      * @return the parameter ('p'), a call to eg. a method ('new Person2')
      * and the args of that call ('p.int', 'p.str')
      */
-    def fromForProduct(expr: Expr[Transformer.ForProduct[?, ?]]): Option[TransformerLambda.ForProduct] =
+    def fromForProduct(expr: Expr[Transformer.ForProduct[?, ?]]): Option[TransformerLambda.ForProduct] = 
       PartialFunction.condOpt(expr.asTerm) {
-        case Untyped(Lambda(List(param), Untyped(Apply(method, methodArgs)))) =>
+        case MakeTransformer(param, Untyped(Apply(method, methodArgs))) =>
           TransformerLambda.ForProduct(param, method, methodArgs)
       }
+    
 
     def fromToAnyVal(expr: Expr[Transformer.ToAnyVal[?, ?]]): Option[TransformerLambda.ToAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
-        case Untyped(Lambda(List(param), Untyped(Apply(Untyped(constructorCall), List(arg))))) =>
+        case MakeTransformer(param, Untyped(Apply(Untyped(constructorCall), List(arg)))) =>
           TransformerLambda.ToAnyVal(param, constructorCall, arg)
       }
 
     def fromFromAnyVal(expr: Expr[Transformer.FromAnyVal[?, ?]]): Option[TransformerLambda.FromAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
-        case Untyped(Lambda(List(param), Untyped(Select(Untyped(_: Ident), fieldName)))) =>
+        case MakeTransformer(param, Untyped(Select(Untyped(_: Ident), fieldName))) =>
           TransformerLambda.FromAnyVal(param, fieldName)
       }
   }
@@ -131,6 +132,17 @@ trait NormalizationModule { self: Module =>
       term match {
         case Typed(tree, _) => unapply(tree)
         case other          => Some(other)
+      }
+  }
+
+  /**
+   * Extracts the creator lambda param and body from a `make` expression, eg.:
+   *  ForProduct.make(param => body)
+   */
+  object MakeTransformer {
+    def unapply(term: Term)(using Quotes): Option[(ValDef, Term)] =
+      PartialFunction.condOpt(term) {
+        case Untyped(Apply(_, List(Lambda(List(param), body)))) => param -> body
       }
   }
 }

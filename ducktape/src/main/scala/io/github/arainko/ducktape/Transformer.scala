@@ -12,10 +12,6 @@ trait Transformer[Source, Dest] {
   def transform(from: Source): Dest
 }
 
-object T2 {
-  val p: Transformer.ForProduct[Int, Int] = from => from
-}
-
 object Transformer {
   def apply[Source, Dest](using transformer: Transformer[Source, Dest]): Transformer[Source, Dest] = transformer
 
@@ -27,19 +23,37 @@ object Transformer {
     def transform(from: Source): Dest = from
   }
 
+  sealed trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
+
+  object ForProduct {
+    private[ducktape] def make[Source, Dest](f: Source => Dest): ForProduct[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+  }
+
+  sealed trait FromAnyVal[Source <: AnyVal, Dest] extends Transformer[Source, Dest]
+
+  object FromAnyVal {
+    private[ducktape] def make[Source <: AnyVal, Dest](f: Source => Dest): FromAnyVal[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+  }
+
+  sealed trait ToAnyVal[Source, Dest <: AnyVal] extends Transformer[Source, Dest]
+
+  object ToAnyVal {
+    private[ducktape] def make[Source, Dest <: AnyVal](f: Source => Dest): ToAnyVal[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+  }
+  
   given [Source, Dest >: Source]: Identity[Source, Dest] = Identity[Source, Dest]
 
-  @FunctionalInterface
-  private[ducktape] trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
-
-  @FunctionalInterface
-  private[ducktape] trait FromAnyVal[Source <: AnyVal, Dest] extends Transformer[Source, Dest]
-
-  @FunctionalInterface
-  private[ducktape] trait ToAnyVal[Source, Dest <: AnyVal] extends Transformer[Source, Dest]
-
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
-    from => NormalizationMacros.normalize(ProductTransformerMacros.transform(from))
+    ForProduct.make(from => NormalizationMacros.normalize(ProductTransformerMacros.transform(from)))
 
   inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): Transformer[Source, Dest] =
     from => CoproductTransformerMacros.transform(from)
@@ -61,9 +75,9 @@ object Transformer {
   ): Transformer[SourceCollection[Source], DestCollection[Dest]] = from => from.map(trans.transform).to(factory)
 
   inline given fromAnyVal[Source <: AnyVal, Dest]: FromAnyVal[Source, Dest] =
-    from => ProductTransformerMacros.transformFromAnyVal[Source, Dest](from)
+    FromAnyVal.make(from => ProductTransformerMacros.transformFromAnyVal[Source, Dest](from))
 
   inline given toAnyVal[Source, Dest <: AnyVal]: ToAnyVal[Source, Dest] =
-    from => ProductTransformerMacros.transfromToAnyVal[Source, Dest](from)
+    ToAnyVal.make(from => ProductTransformerMacros.transfromToAnyVal[Source, Dest](from))
 
 }

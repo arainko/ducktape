@@ -12,13 +12,34 @@ case class Inside2(int: Int, str: String, inside: EvenMoreInside2)
 case class EvenMoreInside(str: String, int: Int)
 case class EvenMoreInside2(str: String, int: Int)
 
+sealed trait Costam[A, B] extends Transformer[A, B]
+
+object Costam {
+  private[ducktape] def make[A, B](f: A => B): Costam[A, B] = 
+    new {
+      def transform(from: A): B = f(from)
+    }
+}
+
 object Playground extends App {
   // val cos =
   DebugMacros.code {
     Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3)))
-      .intoVia(Person2.apply)
-      .transform()
+      .into[Person2]
+      .transform(Field.const(_.int, 123))
   }
+
+
+
+
+
+  inline def made = Costam.make[Int, Int](int => int)
+
+  DebugMacros.matchTest {
+    made
+  }
+
+
 
 
 

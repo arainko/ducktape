@@ -67,6 +67,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
         expectedPrimitive.to[ComplexPerson]
       }
       
+      
     val actualPrimitive =
       DebugMacros.code {
 
