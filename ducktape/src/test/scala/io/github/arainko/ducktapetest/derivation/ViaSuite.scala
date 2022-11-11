@@ -52,14 +52,15 @@ class ViaSuite extends DucktapeSuite {
       TransformedWithSubtransformations[A](int, string, list, option)
 
     val value = Input(1, "a", List(1, 2, 3), Some(4))
+    
     val expected = TransformedWithSubtransformations(
       WrappedInt(1),
       WrappedString("a"),
       List(WrappedInt(1), WrappedInt(2), WrappedInt(3)),
       Some(WrappedInt(4))
     )
+    
     val actual = value.via(method[WrappedInt])
-      
 
     assertEquals(actual, expected)
   }

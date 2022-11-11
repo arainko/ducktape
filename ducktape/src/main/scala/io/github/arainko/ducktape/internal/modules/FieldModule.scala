@@ -7,7 +7,7 @@ import scala.compiletime.*
 import scala.deriving.*
 import scala.quoted.*
 
-private[internal] trait FieldModule { self: Module & MirrorModule =>
+private[ducktape] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
 
   sealed trait Fields {

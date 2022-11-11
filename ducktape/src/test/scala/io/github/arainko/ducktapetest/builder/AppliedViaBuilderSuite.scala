@@ -42,9 +42,9 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
     val expected = TestClassWithAdditionalString(1, "str", "str")
 
     val actual =
-        testClass
-          .intoVia(method)
-          .transform(Arg.renamed(_.additionalArg, _.str))
+      testClass
+        .intoVia(method)
+        .transform(Arg.renamed(_.additionalArg, _.str))
 
     assertEquals(actual, expected)
   }

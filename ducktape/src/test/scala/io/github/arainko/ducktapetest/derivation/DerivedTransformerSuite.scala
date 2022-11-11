@@ -36,11 +36,9 @@ object DerivedTransformerSuite {
     case Case2
     case Case1
   }
+
+  final case class Wrapped[A](value: A) extends AnyVal
 }
-
-final case class Basic1(value: Int, value1: Int)
-
-final case class Basic2(value2: Int, value: Int, extra: String)
 
 class DerivedTransformerSuite extends DucktapeSuite {
   import DerivedTransformerSuite.*
@@ -72,21 +70,51 @@ class DerivedTransformerSuite extends DucktapeSuite {
         Transformer.defineVia[PrimitivePerson](ComplexPerson.apply).build().transform(expectedPrimitive)
       )
 
-    val actualPrimitive = 
-      DebugMacros.code {
-
-        List(
-          expectedComplex.to[PrimitivePerson],
-          expectedComplex.into[PrimitivePerson].transform(),
-          expectedComplex.via(PrimitivePerson.apply),
-          expectedComplex.intoVia(PrimitivePerson.apply).transform(),
-          Transformer.define[ComplexPerson, PrimitivePerson].build().transform(expectedComplex),
-          Transformer.defineVia[ComplexPerson](PrimitivePerson.apply).build().transform(expectedComplex)
-        )
-      }
+    val actualPrimitive =
+      List(
+        expectedComplex.to[PrimitivePerson],
+        expectedComplex.into[PrimitivePerson].transform(),
+        expectedComplex.via(PrimitivePerson.apply),
+        expectedComplex.intoVia(PrimitivePerson.apply).transform(),
+        Transformer.define[ComplexPerson, PrimitivePerson].build().transform(expectedComplex),
+        Transformer.defineVia[ComplexPerson](PrimitivePerson.apply).build().transform(expectedComplex)
+      )
 
     actualComplex.foreach(actual => assertEquals(expectedComplex, actual))
     actualPrimitive.foreach(actual => assertEquals(expectedPrimitive, actual))
+  }
+
+  test("derived product transformers take locally scoped Transformers into consideration") {
+    val primitive = PrimitivePerson(
+      "Danzig",
+      25,
+      PrimitiveContactInfo("555 444 333", "Nowhere City, 42"),
+      List("cycling"),
+      PrimitiveCoolnessFactor.Cool
+    )
+
+    val expectedComplex = ComplexPerson(
+      Name("Danzig-LOCAL"),
+      Age(25),
+      ComplexContactInfo(PhoneNumber("555 444 333-LOCAL"), Address("Nowhere City, 42")),
+      Vector(Hobby("cycling")),
+      ComplexCoolnessFactor.Cool
+    )
+
+    given Transformer[String, Name] = str => Name(str + "-LOCAL")
+    given Transformer[String, PhoneNumber] = str => PhoneNumber(str + "-LOCAL")
+
+    val actualComplex =
+      List(
+        primitive.to[ComplexPerson],
+        primitive.into[ComplexPerson].transform(),
+        primitive.via(ComplexPerson.apply),
+        primitive.intoVia(ComplexPerson.apply).transform(),
+        Transformer.define[PrimitivePerson, ComplexPerson].build().transform(primitive),
+        Transformer.defineVia[PrimitivePerson](ComplexPerson.apply).build().transform(primitive)
+      )
+
+    actualComplex.foreach(actual => assertEquals(expectedComplex, actual))
   }
 
   test("derived enum transformer should map to cases with same name") {
@@ -115,22 +143,82 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val more = MoreFields(1, 2, 3, 4)
     val expected = LessFields(1, 2, 3)
-    val actual = more.to[LessFields]
+    val actual =
+      List(
+        more.to[LessFields],
+        more.into[LessFields].transform(),
+        more.via(LessFields.apply),
+        more.intoVia(LessFields.apply).transform(),
+        Transformer.define[MoreFields, LessFields].build().transform(more),
+        Transformer.defineVia[MoreFields](LessFields.apply).build().transform(more)
+      )
 
-    assertEquals(expected, actual)
+    actual.foreach(actual => assertEquals(expected, actual))
   }
 
   test("derivation succeeds with more complex subderivations inside") {
-    final case class Inside(name: String, age: Int)
-    final case class Inside2(name: String)
-    final case class Person(name: String, age: Int, ins: Inside)
-    final case class Person2(name: String, age: Int, ins: Option[Inside2])
+    case class Person(int: Int, str: String, inside: Inside)
+    case class Person2(int: Int, str: String, inside: Inside2)
 
-    val person = Person("p1", 1, Inside("ins1", 1))
-    val expected = Person2("p1", 1, Some(Inside2("ins1")))
-    val actual = person.to[Person2]
+    case class Inside(str: String, int: Int, inside: EvenMoreInside)
+    case class Inside2(int: Int, str: String, inside: Option[EvenMoreInside2])
 
-    assertEquals(actual, expected)
+    case class EvenMoreInside(str: String, int: Int)
+    case class EvenMoreInside2(str: String, int: Int)
+
+    val person = Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3)))
+    val expected = Person2(1, "2", Inside2(1, "2", Some(EvenMoreInside2("asd", 3))))
+
+    val actual =
+      List(
+        person.to[Person2],
+        person.into[Person2].transform(),
+        person.via(Person2.apply),
+        person.intoVia(Person2.apply).transform(),
+        Transformer.define[Person, Person2].build().transform(person),
+        Transformer.defineVia[Person](Person2.apply).build().transform(person)
+      )
+
+    actual.foreach(actual => assertEquals(expected, actual))
+  }
+
+  test("derived FromAnyVal & ToAnyVal transformers with type parameters roundrip") {
+    val wrappedString = Wrapped("asd")
+    val unwrapped = "asd"
+
+    assertEquals(wrappedString.to[String], unwrapped)
+    assertEquals(unwrapped.to[Wrapped[String]], wrappedString)
+  }
+
+  test("products with AnyVal fields with type params roundrip to their primitives") {
+    final case class Person[A](name: Wrapped[String], age: Wrapped[Int], homies: List[Wrapped[String]], wildcard: Wrapped[A])
+    final case class UnwrappedPerson[A](name: String, age: Int, homies: List[String], wildcard: A)
+
+    val person = Person(Wrapped("Name"), Wrapped(18), List(Wrapped("Homie1")), Wrapped(5L))
+    val unwrapped = UnwrappedPerson("Name", 18, List("Homie1"), 5L)
+
+    val actualUnwrapped =
+      List(
+        person.to[UnwrappedPerson[Long]],
+        person.into[UnwrappedPerson[Long]].transform(),
+        person.via(UnwrappedPerson.apply[Long]),
+        person.intoVia(UnwrappedPerson.apply[Long]).transform(),
+        Transformer.define[Person[Long], UnwrappedPerson[Long]].build().transform(person),
+        Transformer.defineVia[Person[Long]](UnwrappedPerson.apply[Long]).build().transform(person)
+      )
+
+    val actualPerson =
+      List(
+        unwrapped.to[Person[Long]],
+        unwrapped.into[Person[Long]].transform(),
+        unwrapped.via(Person.apply[Long]),
+        unwrapped.intoVia(Person.apply[Long]).transform(),
+        Transformer.define[UnwrappedPerson[Long], Person[Long]].build().transform(unwrapped),
+        Transformer.defineVia[UnwrappedPerson[Long]](Person.apply[Long]).build().transform(unwrapped)
+      )
+
+    actualUnwrapped.foreach(actual => assertEquals(actual, unwrapped))
+    actualPerson.foreach(actual => assertEquals(actual, person))
   }
 
   test("derivation fails when going from a product with less fields to a product with more fields") {
@@ -156,5 +244,3 @@ class DerivedTransformerSuite extends DucktapeSuite {
     assertFailsToCompileWith("Transformer[MoreCases, LessCases]")("No child named 'Case4' found in LessCases")
   }
 }
-
-

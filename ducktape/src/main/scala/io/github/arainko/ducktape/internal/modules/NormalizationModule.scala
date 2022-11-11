@@ -5,7 +5,7 @@ import io.github.arainko.ducktape.*
 import scala.quoted.*
 import scala.reflect.TypeTest
 
-trait NormalizationModule { self: Module =>
+private[ducktape] trait NormalizationModule { self: Module =>
   import quotes.reflect.*
 
   def normalize[A: Type](expr: Expr[A]): Expr[A] = {

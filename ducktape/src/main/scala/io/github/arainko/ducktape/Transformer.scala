@@ -78,7 +78,7 @@ object Transformer {
     case Left(value)  => Left(Transformer[A1, A2].transform(value))
   }
 
-  given [Source, Dest, SourceCollection[+elem] <: Iterable[elem], DestCollection[+elem] <: Iterable[elem]](using
+  given [Source, Dest, SourceCollection[elem] <: Iterable[elem], DestCollection[elem] <: Iterable[elem]](using
     trans: Transformer[Source, Dest],
     factory: Factory[Dest, DestCollection[Dest]]
   ): Transformer[SourceCollection[Source], DestCollection[Dest]] = from => from.map(trans.transform).to(factory)

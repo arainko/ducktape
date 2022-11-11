@@ -11,6 +11,4 @@ trait DucktapeSuite extends FunSuite {
     val errors = compiletime.testing.typeCheckErrors(code).map(_.message).mkString("\n")
     assertEquals(errors, expected)
   }
-
-  
 }
