@@ -9,6 +9,7 @@ private[ducktape] object DebugMacros {
 
   def structureMacro[A: Type](value: Expr[A])(using Quotes) = {
     import quotes.reflect.*
+
     val struct = Printer.TreeStructure.show(value.asTerm)
     report.info(struct)
     value

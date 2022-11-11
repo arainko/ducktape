@@ -7,7 +7,7 @@ import scala.compiletime.*
 import scala.deriving.*
 import scala.quoted.*
 
-private[internal] trait FieldModule { self: Module & MirrorModule =>
+private[ducktape] trait FieldModule { self: Module & MirrorModule =>
   import quotes.reflect.*
 
   sealed trait Fields {
@@ -78,7 +78,7 @@ private[internal] trait FieldModule { self: Module & MirrorModule =>
      *    Not-a-real-workaround: Marking ProductTransformerMacros.transform as `transparent inline` allows for a direct
      *    call to that macro to work. Still doesn't work inside a `given` (be it inline or transparent inline).
      *
-     * TODO2: Minimaze the issue and try to open a ticket in the `dotty` repo.
+     * TODO2: Minimize the issue and try to open a ticket in the `dotty` repo.
      */
     def transformerTo(that: Field): Expr[Transformer[?, ?]] = {
       (tpe.asType -> that.tpe.asType) match {

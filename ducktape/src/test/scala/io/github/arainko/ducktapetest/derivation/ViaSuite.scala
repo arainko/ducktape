@@ -1,6 +1,7 @@
 package io.github.arainko.ducktapetest.derivation
 
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.internal.macros.DebugMacros
 import io.github.arainko.ducktapetest.DucktapeSuite
 import munit.FunSuite
 
@@ -32,6 +33,7 @@ class ViaSuite extends DucktapeSuite {
     val value = Input(1, "a", List(1, 2, 3), Some(4))
     val expected = Transformed(1, "a", List(1, 2, 3), Some(4))
     val actual = value.via(method)
+
     assertEquals(actual, expected)
   }
 
@@ -50,12 +52,14 @@ class ViaSuite extends DucktapeSuite {
       TransformedWithSubtransformations[A](int, string, list, option)
 
     val value = Input(1, "a", List(1, 2, 3), Some(4))
+
     val expected = TransformedWithSubtransformations(
       WrappedInt(1),
       WrappedString("a"),
       List(WrappedInt(1), WrappedInt(2), WrappedInt(3)),
       Some(WrappedInt(4))
     )
+
     val actual = value.via(method[WrappedInt])
 
     assertEquals(actual, expected)

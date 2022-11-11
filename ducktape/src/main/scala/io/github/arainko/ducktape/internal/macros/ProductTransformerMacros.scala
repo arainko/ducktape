@@ -54,10 +54,10 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
         sourceValue
       ).map(field => field.name -> field).toMap
 
-    val callsInOrder = Fields.dest.byName.map { (name, field) =>
+    val callsInOrder = Fields.dest.value.map { field =>
       transformedFields
-        .get(name)
-        .getOrElse(configuredFields(name))
+        .get(field.name)
+        .getOrElse(configuredFields(field.name))
         .value
     }
 
@@ -155,13 +155,13 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 
   private def resolveTransformer[Source: Type](sourceValue: Expr[Source], source: Field, destination: Field) =
     source.transformerTo(destination) match {
-      case '{ $transformer: Transformer.Identity[source] } => accessField(sourceValue, source.name)
+      case '{ $transformer: Transformer.Identity[?, ?] } => accessField(sourceValue, source.name)
       case '{ $transformer: Transformer[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
         '{ $transformer.transform($field) }.asTerm
     }
 
-  private def accessField[Source: Type](value: Expr[Source], fieldName: String) = Select.unique(value.asTerm, fieldName)
+  private def accessField[Source](value: Expr[Source], fieldName: String) = Select.unique(value.asTerm, fieldName)
 
   private def constructor(tpe: TypeRepr): Term = {
     val (repr, constructor, tpeArgs) = tpe match {

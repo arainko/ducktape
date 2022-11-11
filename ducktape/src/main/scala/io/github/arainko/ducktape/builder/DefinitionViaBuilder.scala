@@ -10,8 +10,11 @@ final class DefinitionViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArgu
 
   inline def build(
     inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
-  )(using Mirror.ProductOf[Source]): Transformer[Source, Dest] = from =>
-    ProductTransformerMacros.viaConfigured[Source, Dest, Func, ArgSelector](from, function, config*)
+  )(using Mirror.ProductOf[Source]): Transformer[Source, Dest] =
+    from =>
+      NormalizationMacros.normalize(
+        ProductTransformerMacros.viaConfigured[Source, Dest, Func, ArgSelector](from, function, config*)
+      )
 }
 
 object DefinitionViaBuilder {

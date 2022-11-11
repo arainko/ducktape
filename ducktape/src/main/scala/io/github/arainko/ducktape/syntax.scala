@@ -17,5 +17,5 @@ extension [Source](value: Source) {
   inline def via[Func](inline function: Func)(using
     Func: FunctionMirror[Func],
     Source: Mirror.ProductOf[Source]
-  ): Func.Return = ProductTransformerMacros.via(value, function)
+  ): Func.Return = NormalizationMacros.normalize(ProductTransformerMacros.via(value, function))
 }

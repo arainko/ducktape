@@ -19,17 +19,53 @@ object Transformer {
 
   def defineVia[A]: DefinitionViaBuilder.PartiallyApplied[A] = DefinitionViaBuilder.create[A]
 
-  final class Identity[Source] private[Transformer] extends Transformer[Source, Source] {
-    def transform(from: Source): Source = from
+  final class Identity[Source, Dest >: Source] private[Transformer] extends Transformer[Source, Dest] {
+    def transform(from: Source): Dest = from
   }
 
-  given [Source]: Identity[Source] = Identity[Source]
+  sealed trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
 
-  inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): Transformer[Source, Dest] =
-    from => ProductTransformerMacros.transform(from)
+  object ForProduct {
+    private[ducktape] def make[Source, Dest](f: Source => Dest): ForProduct[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+  }
 
-  inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): Transformer[Source, Dest] =
-    from => CoproductTransformerMacros.transform(from)
+  sealed trait ForCoproduct[Source, Dest] extends Transformer[Source, Dest]
+
+  object ForCoproduct {
+    private[ducktape] def make[Source, Dest](f: Source => Dest): ForCoproduct[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+  }
+
+  sealed trait FromAnyVal[Source <: AnyVal, Dest] extends Transformer[Source, Dest]
+
+  object FromAnyVal {
+    private[ducktape] def make[Source <: AnyVal, Dest](f: Source => Dest): FromAnyVal[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+  }
+
+  sealed trait ToAnyVal[Source, Dest <: AnyVal] extends Transformer[Source, Dest]
+
+  object ToAnyVal {
+    private[ducktape] def make[Source, Dest <: AnyVal](f: Source => Dest): ToAnyVal[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+  }
+
+  given [Source, Dest >: Source]: Identity[Source, Dest] = Identity[Source, Dest]
+
+  inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
+    ForProduct.make(from => NormalizationMacros.normalize(ProductTransformerMacros.transform(from)))
+
+  inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): ForCoproduct[Source, Dest] =
+    ForCoproduct.make(from => CoproductTransformerMacros.transform(from))
 
   given [Source, Dest](using Transformer[Source, Dest]): Transformer[Source, Option[Dest]] =
     from => Transformer[Source, Dest].transform.andThen(Some.apply)(from)
@@ -42,15 +78,15 @@ object Transformer {
     case Left(value)  => Left(Transformer[A1, A2].transform(value))
   }
 
-  given [Source, Dest, SourceCollection[+elem] <: Iterable[elem], DestCollection[+elem] <: Iterable[elem]](using
+  given [Source, Dest, SourceCollection[elem] <: Iterable[elem], DestCollection[elem] <: Iterable[elem]](using
     trans: Transformer[Source, Dest],
     factory: Factory[Dest, DestCollection[Dest]]
   ): Transformer[SourceCollection[Source], DestCollection[Dest]] = from => from.map(trans.transform).to(factory)
 
-  inline given fromAnyVal[Source <: AnyVal, Dest]: Transformer[Source, Dest] =
-    from => ProductTransformerMacros.transformFromAnyVal[Source, Dest](from)
+  inline given fromAnyVal[Source <: AnyVal, Dest]: FromAnyVal[Source, Dest] =
+    FromAnyVal.make(from => ProductTransformerMacros.transformFromAnyVal[Source, Dest](from))
 
-  inline given toAnyVal[Source, Dest <: AnyVal]: Transformer[Source, Dest] =
-    from => ProductTransformerMacros.transfromToAnyVal[Source, Dest](from)
+  inline given toAnyVal[Source, Dest <: AnyVal]: ToAnyVal[Source, Dest] =
+    ToAnyVal.make(from => ProductTransformerMacros.transfromToAnyVal[Source, Dest](from))
 
 }
