@@ -1,7 +1,8 @@
 package io.github.arainko.ducktape.internal.macros
 
-import scala.quoted.*
 import io.github.arainko.ducktape.internal.modules.*
+
+import scala.quoted.*
 
 private[ducktape] class NormalizationMacros(using val quotes: Quotes) extends Module, NormalizationModule
 

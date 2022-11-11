@@ -58,7 +58,7 @@ object Transformer {
         def transform(from: Source): Dest = f(from)
       }
   }
-  
+
   given [Source, Dest >: Source]: Identity[Source, Dest] = Identity[Source, Dest]
 
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =

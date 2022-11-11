@@ -1,5 +1,6 @@
 package io.github.arainko.ducktapetest.derivation
 
+import io.github.arainko.ducktape.Transformer.ForProduct
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.*
 import io.github.arainko.ducktapetest.DucktapeSuite
@@ -8,7 +9,6 @@ import munit.FunSuite
 
 import scala.compiletime.testing.*
 import scala.deriving.Mirror
-import io.github.arainko.ducktape.Transformer.ForProduct
 
 object DerivedTransformerSuite {
 // If these are declared inside their tests the compiler crashes 🤔

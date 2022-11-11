@@ -1,10 +1,10 @@
 package io.github.arainko.ducktapetest.builder
 
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.internal.macros.DebugMacros
 import io.github.arainko.ducktapetest.DucktapeSuite
 
 import scala.deriving.Mirror
-import io.github.arainko.ducktape.internal.macros.DebugMacros
 
 class AppliedBuilderSuite extends DucktapeSuite {
   import AppliedBuilderSuite.*
@@ -15,10 +15,10 @@ class AppliedBuilderSuite extends DucktapeSuite {
     val expected = TestClassWithAdditionalList(1, "str", List("const"))
 
     val actual =
-        testClass
-          .into[TestClassWithAdditionalList]
-          .transform(Field.const(_.additionalArg, List("const")))
-    
+      testClass
+        .into[TestClassWithAdditionalList]
+        .transform(Field.const(_.additionalArg, List("const")))
+
     assertEquals(actual, expected)
   }
 
@@ -86,7 +86,6 @@ class AppliedBuilderSuite extends DucktapeSuite {
           Field.computed(_.additionalArg, _.str + "-computed")
         )
 
-
     assertEquals(actual, expected)
   }
 
@@ -100,7 +99,6 @@ class AppliedBuilderSuite extends DucktapeSuite {
           Case.const[MoreCases.Case4.type](LessCases.Case3),
           Case.const[MoreCases.Case5.type](LessCases.Case3)
         )
-
 
     assertEquals(actual, expected)
   }

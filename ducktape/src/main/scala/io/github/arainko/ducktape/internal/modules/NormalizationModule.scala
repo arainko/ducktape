@@ -3,7 +3,6 @@ package io.github.arainko.ducktape.internal.modules
 import io.github.arainko.ducktape.*
 
 import scala.quoted.*
-import scala.reflect.TypeTest
 
 private[ducktape] trait NormalizationModule { self: Module =>
   import quotes.reflect.*
@@ -30,7 +29,7 @@ private[ducktape] trait NormalizationModule { self: Module =>
       case other => other
     }
 
-  // Match on all the possibilieties of method invocations (that is, named args 'field = ...' and normal param passing).
+  // Match on all the possibilieties of method invocations (that is, named args 'field = ...' and normalterms).
   private def transformTransformerInvocation(term: Term): Term =
     term match {
       case Untyped(TransformerInvocation(transformerLambda, appliedTo)) =>
@@ -58,21 +57,21 @@ private[ducktape] trait NormalizationModule { self: Module =>
 
   }
 
-  class Replacer(transformerLambda: TransformerLambda, appliedTo: Term) extends TreeMap {
+  /**
+   * Replaces all instances of 'param' of the given TransformerLamba with `appliedTo`. Eg.:
+   *
+   * val name = (((param: String) => new Name(param)): Transformer.ToAnyVal[String, Name]).transform("appliedTo")
+   *
+   * After replacing this piece of code will look like this:
+   * val name = new Name("appliedTo")
+   */
+  final class Replacer(transformerLambda: TransformerLambda, appliedTo: Term) extends TreeMap {
     override def transformTerm(tree: Term)(owner: Symbol): Term =
       tree match {
         // by checking symbols we know if the term refers to the TransformerLambda parameter so we can replace it
         case Select(ident: Ident, fieldName) if transformerLambda.param.symbol == ident.symbol =>
           Select.unique(appliedTo, fieldName)
         case other => super.transformTerm(other)(owner)
-      }
-  }
-
-  object StripNoisyNodes extends TreeMap {
-    override def transformTerm(tree: Term)(owner: Symbol): Term =
-      tree match {
-        case Inlined(_, Nil, term) => transformTerm(term)(owner)
-        case other                 => super.transformTerm(other)(owner)
       }
   }
 
@@ -87,26 +86,43 @@ private[ducktape] trait NormalizationModule { self: Module =>
   object TransformerLambda {
 
     /**
-     * Matches a SAM Transformer creation eg.:
+     * Matches a .make Transformer.ForProduct creation eg.:
      *
-     * ((p: Person) => new Person2(p.int, p.str)): Transformer[Person, Person2]
+     * Transformer.ForProduct.make((p: Person) => new Person2(p.int, p.str))
      *
      * @return the parameter ('p'), a call to eg. a method ('new Person2')
      * and the args of that call ('p.int', 'p.str')
      */
-    def fromForProduct(expr: Expr[Transformer.ForProduct[?, ?]]): Option[TransformerLambda.ForProduct] = 
+    def fromForProduct(expr: Expr[Transformer.ForProduct[?, ?]]): Option[TransformerLambda.ForProduct] =
       PartialFunction.condOpt(expr.asTerm) {
         case MakeTransformer(param, Untyped(Apply(method, methodArgs))) =>
           TransformerLambda.ForProduct(param, method, methodArgs)
       }
-    
 
+    /**
+     * Matches a .make Transformer.ToAnyVal creation eg.:
+     *
+     * final case class Name(value: String) extends AnyVal
+     *
+     * Transformer.ToAnyVal.make((str: String) => new Name(str))
+     *
+     * @return the parameter ('str'), the constructor call ('new Name') and the singular arg ('str').
+     */
     def fromToAnyVal(expr: Expr[Transformer.ToAnyVal[?, ?]]): Option[TransformerLambda.ToAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
         case MakeTransformer(param, Untyped(Apply(Untyped(constructorCall), List(arg)))) =>
           TransformerLambda.ToAnyVal(param, constructorCall, arg)
       }
 
+    /**
+     * Matches a .make Transformer.FromAnyVal creation eg.:
+     *
+     * final case class Name(value: String) extends AnyVal
+     *
+     * Transformer.FromAnyVal.make((name: Name) => name.value)
+     *
+     * @return the parameter ('name'), and the field name ('value' from the expression 'name.value')
+     */
     def fromFromAnyVal(expr: Expr[Transformer.FromAnyVal[?, ?]]): Option[TransformerLambda.FromAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
         case MakeTransformer(param, Untyped(Select(Untyped(_: Ident), fieldName))) =>
@@ -127,6 +143,20 @@ private[ducktape] trait NormalizationModule { self: Module =>
       }
   }
 
+  /**
+   * Strips all Inlined nodes that don't introduce any new vals into the scope.
+   */
+  object StripNoisyNodes extends TreeMap {
+    override def transformTerm(tree: Term)(owner: Symbol): Term =
+      tree match {
+        case Inlined(_, Nil, term) => transformTerm(term)(owner)
+        case other                 => super.transformTerm(other)(owner)
+      }
+  }
+
+  /**
+   * Recursively unpacks Typed nodes
+   */
   object Untyped {
     def unapply(term: Term)(using Quotes): Some[Term] =
       term match {

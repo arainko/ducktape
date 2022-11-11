@@ -3,9 +3,9 @@ package io.github.arainko.ducktapetest.builder
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.builder.AppliedViaBuilder
 import io.github.arainko.ducktape.function.FunctionArguments
+import io.github.arainko.ducktape.internal.macros.DebugMacros
 import io.github.arainko.ducktapetest.DucktapeSuite
 import io.github.arainko.ducktapetest.builder.AppliedViaBuilderSuite.*
-import io.github.arainko.ducktape.internal.macros.DebugMacros
 
 class AppliedViaBuilderSuite extends DucktapeSuite {
   private val testClass = TestClass("str", 1)
