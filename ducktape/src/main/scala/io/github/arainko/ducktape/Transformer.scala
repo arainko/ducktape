@@ -32,6 +32,15 @@ object Transformer {
       }
   }
 
+  sealed trait ForCoproduct[Source, Dest] extends Transformer[Source, Dest]
+
+  object ForCoproduct {
+    private[ducktape] def make[Source, Dest](f: Source => Dest): ForCoproduct[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+  }
+
   sealed trait FromAnyVal[Source <: AnyVal, Dest] extends Transformer[Source, Dest]
 
   object FromAnyVal {
@@ -55,8 +64,8 @@ object Transformer {
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
     ForProduct.make(from => NormalizationMacros.normalize(ProductTransformerMacros.transform(from)))
 
-  inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): Transformer[Source, Dest] =
-    from => CoproductTransformerMacros.transform(from)
+  inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): ForCoproduct[Source, Dest] =
+    ForCoproduct.make(from => CoproductTransformerMacros.transform(from))
 
   given [Source, Dest](using Transformer[Source, Dest]): Transformer[Source, Option[Dest]] =
     from => Transformer[Source, Dest].transform.andThen(Some.apply)(from)

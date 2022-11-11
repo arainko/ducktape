@@ -13,7 +13,7 @@ ThisBuild / developers := List(
     url("https://github.com/arainko")
   )
 )
-ThisBuild / scalaVersion := "3.2.0"
+ThisBuild / scalaVersion := "3.2.1"
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
 
 name := "ducktape"

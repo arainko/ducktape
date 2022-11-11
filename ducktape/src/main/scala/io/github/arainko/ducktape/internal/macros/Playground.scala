@@ -23,26 +23,11 @@ object Costam {
 
 object Playground extends App {
   // val cos =
-  DebugMacros.code {
+  // DebugMacros.code {
     Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3)))
       .into[Person2]
       .transform(Field.const(_.int, 123))
-  }
-
-
-
-
-
-  inline def made = Costam.make[Int, Int](int => int)
-
-  DebugMacros.matchTest {
-    made
-  }
-
-
-
-
-
+  // }
   // val cos2 =
   // DebugMacros.structure {
   // EvenMoreInside("asd", 3).to[EvenMoreInside2]

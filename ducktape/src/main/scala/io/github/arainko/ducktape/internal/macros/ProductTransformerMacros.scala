@@ -54,10 +54,10 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
         sourceValue
       ).map(field => field.name -> field).toMap
 
-    val callsInOrder = Fields.dest.byName.map { (name, field) =>
+    val callsInOrder = Fields.dest.value.map { (field) =>
       transformedFields
-        .get(name)
-        .getOrElse(configuredFields(name))
+        .get(field.name)
+        .getOrElse(configuredFields(field.name))
         .value
     }
 

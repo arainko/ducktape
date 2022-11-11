@@ -62,21 +62,31 @@ class DerivedTransformerSuite extends DucktapeSuite {
       ComplexCoolnessFactor.Cool
     )
 
-    val actualComplex = 
-      DebugMacros.code {
-        expectedPrimitive.to[ComplexPerson]
-      }
-      
-      
-    val actualPrimitive =
+    val actualComplex =
+      List(
+        expectedPrimitive.to[ComplexPerson],
+        expectedPrimitive.into[ComplexPerson].transform(),
+        expectedPrimitive.via(ComplexPerson.apply),
+        expectedPrimitive.intoVia(ComplexPerson.apply).transform(),
+        Transformer.define[PrimitivePerson, ComplexPerson].build().transform(expectedPrimitive),
+        Transformer.defineVia[PrimitivePerson](ComplexPerson.apply).build().transform(expectedPrimitive)
+      )
+
+    val actualPrimitive = 
       DebugMacros.code {
 
-        actualComplex.to[PrimitivePerson]
+        List(
+          expectedComplex.to[PrimitivePerson],
+          expectedComplex.into[PrimitivePerson].transform(),
+          expectedComplex.via(PrimitivePerson.apply),
+          expectedComplex.intoVia(PrimitivePerson.apply).transform(),
+          Transformer.define[ComplexPerson, PrimitivePerson].build().transform(expectedComplex),
+          Transformer.defineVia[ComplexPerson](PrimitivePerson.apply).build().transform(expectedComplex)
+        )
       }
 
-      
-    assertEquals(expectedComplex, actualComplex)
-    assertEquals(expectedPrimitive, actualPrimitive)
+    actualComplex.foreach(actual => assertEquals(expectedComplex, actual))
+    actualPrimitive.foreach(actual => assertEquals(expectedPrimitive, actual))
   }
 
   test("derived enum transformer should map to cases with same name") {
@@ -146,3 +156,5 @@ class DerivedTransformerSuite extends DucktapeSuite {
     assertFailsToCompileWith("Transformer[MoreCases, LessCases]")("No child named 'Case4' found in LessCases")
   }
 }
+
+
