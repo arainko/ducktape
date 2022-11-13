@@ -17,6 +17,8 @@ jobs:
           java-version: 17
       - name: Check formatting
         run: sbt scalafmtCheckAll
+      - name: Check binary compat
+        run: sbt ducktape/mimaReportBinaryIssues
       - name: Run unit tests 
         run: sbt test
       - name: Check docs

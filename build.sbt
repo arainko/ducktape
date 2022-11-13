@@ -31,7 +31,8 @@ lazy val ducktape =
     .in(file("ducktape"))
     .settings(
       scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings"),
-      libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M6" % Test
+      libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M6" % Test,
+      mimaPreviousArtifacts := Set("io.github.arainko" %% "ducktape" % "0.1.0")
     )
 
 lazy val docs =
