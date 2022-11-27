@@ -88,7 +88,8 @@ private[ducktape] trait FieldModule { self: Module & MirrorModule =>
             case noMatching: NoMatchingImplicits => report.errorAndAbort(noMatching.explanation)
             case diverging: DivergingImplicit    => report.errorAndAbort(diverging.explanation)
             case ambigious: AmbiguousImplicits   => report.errorAndAbort(ambigious.explanation)
-            case _: ImplicitSearchFailure        => '{ compiletime.summonInline[Transformer[src, dest]] }
+            case err: ImplicitSearchFailure        => report.errorAndAbort(err.explanation)
+              // '{ compiletime.summonInline[Transformer[src, dest]] }
           }
       }
     }

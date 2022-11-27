@@ -26,9 +26,14 @@ object Transformer {
   sealed trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
 
   object ForProduct {
-    private[ducktape] def make[Source, Dest](f: Source => Dest): ForProduct[Source, Dest] =
+    // private[ducktape] def make[Source, Dest](f: Source => Dest): ForProduct[Source, Dest] =
+    //   new {
+    //     def transform(from: Source): Dest = f(from)
+    //   }
+
+    private[ducktape] def make[Source, Dest](f: Transformer[Source, Dest]): ForProduct[Source, Dest] =
       new {
-        def transform(from: Source): Dest = f(from)
+        def transform(from: Source): Dest = f.transform(from)
       }
   }
 
@@ -62,7 +67,7 @@ object Transformer {
   given [Source, Dest >: Source]: Identity[Source, Dest] = Identity[Source, Dest]
 
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
-    ForProduct.make(from => NormalizationMacros.normalize(ProductTransformerMacros.transform(from)))
+    ForProduct.make(ProductTransformerMacros.productTransformer[Source, Dest])
 
   inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): ForCoproduct[Source, Dest] =
     ForCoproduct.make(from => CoproductTransformerMacros.transform(from))

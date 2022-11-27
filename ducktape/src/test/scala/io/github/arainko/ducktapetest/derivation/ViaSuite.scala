@@ -47,23 +47,23 @@ class ViaSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
-  test("via with substransformations") {
-    def method[A](option: Option[A], list: List[WrappedInt], string: WrappedString, int: WrappedInt) =
-      TransformedWithSubtransformations[A](int, string, list, option)
+  // test("via with substransformations") {
+  //   def method[A](option: Option[A], list: List[WrappedInt], string: WrappedString, int: WrappedInt) =
+  //     TransformedWithSubtransformations[A](int, string, list, option)
 
-    val value = Input(1, "a", List(1, 2, 3), Some(4))
+  //   val value = Input(1, "a", List(1, 2, 3), Some(4))
 
-    val expected = TransformedWithSubtransformations(
-      WrappedInt(1),
-      WrappedString("a"),
-      List(WrappedInt(1), WrappedInt(2), WrappedInt(3)),
-      Some(WrappedInt(4))
-    )
+  //   val expected = TransformedWithSubtransformations(
+  //     WrappedInt(1),
+  //     WrappedString("a"),
+  //     List(WrappedInt(1), WrappedInt(2), WrappedInt(3)),
+  //     Some(WrappedInt(4))
+  //   )
 
-    val actual = value.via(method[WrappedInt])
+  //   val actual = value.via(method[WrappedInt])
 
-    assertEquals(actual, expected)
-  }
+  //   assertEquals(actual, expected)
+  // }
 
   test("via fails when the source doesn't have all the method arguments") {
     assertFailsToCompileWith {

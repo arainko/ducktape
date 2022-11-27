@@ -177,6 +177,19 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 }
 
 private[ducktape] object ProductTransformerMacros {
+  inline def productTransformer[Source, Dest](using
+    Source: Mirror.ProductOf[Source],
+    Dest: Mirror.ProductOf[Dest]
+  ): Transformer[Source, Dest] = ${ productTransformerMacro('Source, 'Dest) }
+
+  def productTransformerMacro[Source: Type, Dest: Type](
+    Source: Expr[Mirror.ProductOf[Source]],
+    Dest: Expr[Mirror.ProductOf[Dest]]
+  )(using Quotes): Expr[Transformer[Source, Dest]] = '{
+    source => ${ transformMacro[Source, Dest]('source, Source, Dest) }
+  }
+
+
   inline def transform[Source, Dest](source: Source)(using
     Source: Mirror.ProductOf[Source],
     Dest: Mirror.ProductOf[Dest]

@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.*
 
 import scala.quoted.*
 
-private[ducktape] object DebugMacros {
+object DebugMacros {
   inline def structure[A](inline value: A) = ${ structureMacro('value) }
 
   def structureMacro[A: Type](value: Expr[A])(using Quotes) = {
