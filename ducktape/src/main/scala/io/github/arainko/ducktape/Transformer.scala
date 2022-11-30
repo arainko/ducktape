@@ -17,7 +17,7 @@ object Transformer {
 
   def define[Source, Dest]: DefinitionBuilder[Source, Dest] = DefinitionBuilder[Source, Dest]
 
-  def defineVia[A]: DefinitionViaBuilder.PartiallyApplied[A] = DefinitionViaBuilder.create[A]
+  def defineVia[Source]: DefinitionViaBuilder.PartiallyApplied[Source] = DefinitionViaBuilder.create[Source]
 
   final class Identity[Source, Dest >: Source] private[Transformer] extends Transformer[Source, Dest] {
     def transform(from: Source): Dest = from
@@ -26,51 +26,46 @@ object Transformer {
   sealed trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
 
   object ForProduct {
-    // private[ducktape] def make[Source, Dest](f: Source => Dest): ForProduct[Source, Dest] =
-    //   new {
-    //     def transform(from: Source): Dest = f(from)
-    //   }
-
-    private[ducktape] def make[Source, Dest](f: Transformer[Source, Dest]): ForProduct[Source, Dest] =
+    private[ducktape] def make[Source, Dest](transfomer: Transformer[Source, Dest]): ForProduct[Source, Dest] =
       new {
-        def transform(from: Source): Dest = f.transform(from)
+        def transform(from: Source): Dest = transfomer.transform(from)
       }
   }
 
   sealed trait ForCoproduct[Source, Dest] extends Transformer[Source, Dest]
 
   object ForCoproduct {
-    private[ducktape] def make[Source, Dest](f: Source => Dest): ForCoproduct[Source, Dest] =
+    private[ducktape] def make[Source, Dest](transformer: Transformer[Source, Dest]): ForCoproduct[Source, Dest] =
       new {
-        def transform(from: Source): Dest = f(from)
+        def transform(from: Source): Dest = transformer.transform(from)
       }
   }
 
   sealed trait FromAnyVal[Source <: AnyVal, Dest] extends Transformer[Source, Dest]
 
   object FromAnyVal {
-    private[ducktape] def make[Source <: AnyVal, Dest](f: Source => Dest): FromAnyVal[Source, Dest] =
+    private[ducktape] def make[Source <: AnyVal, Dest](transformer: Transformer[Source, Dest]): FromAnyVal[Source, Dest] =
       new {
-        def transform(from: Source): Dest = f(from)
+        def transform(from: Source): Dest = transformer.transform(from)
       }
   }
 
   sealed trait ToAnyVal[Source, Dest <: AnyVal] extends Transformer[Source, Dest]
 
   object ToAnyVal {
-    private[ducktape] def make[Source, Dest <: AnyVal](f: Source => Dest): ToAnyVal[Source, Dest] =
+    private[ducktape] def make[Source, Dest <: AnyVal](transformer: Transformer[Source, Dest]): ToAnyVal[Source, Dest] =
       new {
-        def transform(from: Source): Dest = f(from)
+        def transform(from: Source): Dest = transformer.transform(from)
       }
   }
 
   given [Source, Dest >: Source]: Identity[Source, Dest] = Identity[Source, Dest]
 
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
-    ForProduct.make(ProductTransformerMacros.productTransformer[Source, Dest])
+    ForProduct.make(DerivationMacros.deriveProductTransformer[Source, Dest])
 
   inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): ForCoproduct[Source, Dest] =
-    ForCoproduct.make(from => CoproductTransformerMacros.transform(from))
+    ForCoproduct.make(DerivationMacros.deriveCoproductTransformer[Source, Dest])
 
   given [Source, Dest](using Transformer[Source, Dest]): Transformer[Source, Option[Dest]] =
     from => Transformer[Source, Dest].transform.andThen(Some.apply)(from)
@@ -89,9 +84,9 @@ object Transformer {
   ): Transformer[SourceCollection[Source], DestCollection[Dest]] = from => from.map(trans.transform).to(factory)
 
   inline given fromAnyVal[Source <: AnyVal, Dest]: FromAnyVal[Source, Dest] =
-    FromAnyVal.make(from => ProductTransformerMacros.transformFromAnyVal[Source, Dest](from))
+    FromAnyVal.make(DerivationMacros.deriveFromAnyValTransformer[Source, Dest])
 
   inline given toAnyVal[Source, Dest <: AnyVal]: ToAnyVal[Source, Dest] =
-    ToAnyVal.make(from => ProductTransformerMacros.transfromToAnyVal[Source, Dest](from))
+    ToAnyVal.make(DerivationMacros.deriveToAnyValTransformer[Source, Dest])
 
 }

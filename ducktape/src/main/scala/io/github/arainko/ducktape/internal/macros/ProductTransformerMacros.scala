@@ -156,6 +156,26 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
   private def resolveTransformer[Source: Type](sourceValue: Expr[Source], source: Field, destination: Field) =
     source.transformerTo(destination) match {
       case '{ $transformer: Transformer.Identity[?, ?] } => accessField(sourceValue, source.name)
+
+      case '{ $transformer: Transformer.ForProduct[source, dest] } =>
+        val field = accessField(sourceValue, source.name).asExprOf[source]
+        println()
+        println(transformer.asTerm.show(using Printer.TreeStructure))
+        println()
+        '{ $transformer.transform($field) }.asTerm
+
+      case '{ $transformer: Transformer.ForCoproduct[source, dest] } =>
+        val field = accessField(sourceValue, source.name).asExprOf[source]
+        '{ $transformer.transform($field) }.asTerm
+
+      case '{ $transformer: Transformer.FromAnyVal[source, dest] } =>
+        val field = accessField(sourceValue, source.name).asExprOf[source]
+        '{ $transformer.transform($field) }.asTerm
+
+      case '{ $transformer: Transformer.ToAnyVal[source, dest] } =>
+        val field = accessField(sourceValue, source.name).asExprOf[source]
+        '{ $transformer.transform($field) }.asTerm
+
       case '{ $transformer: Transformer[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
         '{ $transformer.transform($field) }.asTerm
@@ -177,23 +197,6 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 }
 
 private[ducktape] object ProductTransformerMacros {
-  inline def productTransformer[Source, Dest](using
-    Source: Mirror.ProductOf[Source],
-    Dest: Mirror.ProductOf[Dest]
-  ): Transformer[Source, Dest] = ${ productTransformerMacro('Source, 'Dest) }
-
-  def productTransformerMacro[Source: Type, Dest: Type](
-    Source: Expr[Mirror.ProductOf[Source]],
-    Dest: Expr[Mirror.ProductOf[Dest]]
-  )(using Quotes): Expr[Transformer[Source, Dest]] = '{
-    source => ${ transformMacro[Source, Dest]('source, Source, Dest) }
-  }
-
-
-  inline def transform[Source, Dest](source: Source)(using
-    Source: Mirror.ProductOf[Source],
-    Dest: Mirror.ProductOf[Dest]
-  ): Dest = ${ transformMacro[Source, Dest]('source, 'Source, 'Dest) }
 
   def transformMacro[Source: Type, Dest: Type](
     source: Expr[Source],
@@ -242,14 +245,8 @@ private[ducktape] object ProductTransformerMacros {
   )(using Quotes) =
     ProductTransformerMacros().transformConfigured(sourceValue, config, Source, Dest)
 
-  inline def transformFromAnyVal[Source <: AnyVal, Dest](sourceValue: Source): Dest =
-    ${ transformFromAnyValMacro[Source, Dest]('sourceValue) }
-
   def transformFromAnyValMacro[Source <: AnyVal: Type, Dest: Type](sourceValue: Expr[Source])(using Quotes): Expr[Dest] =
     ProductTransformerMacros().transformFromAnyVal[Source, Dest](sourceValue)
-
-  inline def transfromToAnyVal[Source, Dest <: AnyVal](sourceValue: Source) =
-    ${ transformToAnyValMacro[Source, Dest]('sourceValue) }
 
   def transformToAnyValMacro[Source: Type, Dest <: AnyVal: Type](sourceValue: Expr[Source])(using Quotes): Expr[Dest] =
     ProductTransformerMacros().transformToAnyVal[Source, Dest](sourceValue)

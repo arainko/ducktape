@@ -43,79 +43,79 @@ object DerivedTransformerSuite {
 class DerivedTransformerSuite extends DucktapeSuite {
   import DerivedTransformerSuite.*
 
-  // test("derived product transformer roundtrip") {
-  //   val expectedPrimitive = PrimitivePerson(
-  //     "Danzig",
-  //     25,
-  //     PrimitiveContactInfo("555 444 333", "Nowhere City, 42"),
-  //     List("cycling"),
-  //     PrimitiveCoolnessFactor.Cool
-  //   )
+  test("derived product transformer roundtrip") {
+    val expectedPrimitive = PrimitivePerson(
+      "Danzig",
+      25,
+      PrimitiveContactInfo("555 444 333", "Nowhere City, 42"),
+      List("cycling"),
+      PrimitiveCoolnessFactor.Cool
+    )
 
-  //   val expectedComplex = ComplexPerson(
-  //     Name("Danzig"),
-  //     Age(25),
-  //     ComplexContactInfo(PhoneNumber("555 444 333"), Address("Nowhere City, 42")),
-  //     Vector(Hobby("cycling")),
-  //     ComplexCoolnessFactor.Cool
-  //   )
+    val expectedComplex = ComplexPerson(
+      Name("Danzig"),
+      Age(25),
+      ComplexContactInfo(PhoneNumber("555 444 333"), Address("Nowhere City, 42")),
+      Vector(Hobby("cycling")),
+      ComplexCoolnessFactor.Cool
+    )
 
-  //   val actualComplex =
-  //     List(
-  //       expectedPrimitive.to[ComplexPerson],
-  //       expectedPrimitive.into[ComplexPerson].transform(),
-  //       expectedPrimitive.via(ComplexPerson.apply),
-  //       expectedPrimitive.intoVia(ComplexPerson.apply).transform(),
-  //       Transformer.define[PrimitivePerson, ComplexPerson].build().transform(expectedPrimitive),
-  //       Transformer.defineVia[PrimitivePerson](ComplexPerson.apply).build().transform(expectedPrimitive)
-  //     )
+    val actualComplex =
+      List(
+        expectedPrimitive.to[ComplexPerson],
+        expectedPrimitive.into[ComplexPerson].transform(),
+        expectedPrimitive.via(ComplexPerson.apply),
+        expectedPrimitive.intoVia(ComplexPerson.apply).transform(),
+        Transformer.define[PrimitivePerson, ComplexPerson].build().transform(expectedPrimitive),
+        Transformer.defineVia[PrimitivePerson](ComplexPerson.apply).build().transform(expectedPrimitive)
+      )
 
-  //   val actualPrimitive =
-  //     List(
-  //       expectedComplex.to[PrimitivePerson],
-  //       expectedComplex.into[PrimitivePerson].transform(),
-  //       expectedComplex.via(PrimitivePerson.apply),
-  //       expectedComplex.intoVia(PrimitivePerson.apply).transform(),
-  //       Transformer.define[ComplexPerson, PrimitivePerson].build().transform(expectedComplex),
-  //       Transformer.defineVia[ComplexPerson](PrimitivePerson.apply).build().transform(expectedComplex)
-  //     )
+    val actualPrimitive =
+      List(
+        expectedComplex.to[PrimitivePerson],
+        expectedComplex.into[PrimitivePerson].transform(),
+        expectedComplex.via(PrimitivePerson.apply),
+        expectedComplex.intoVia(PrimitivePerson.apply).transform(),
+        Transformer.define[ComplexPerson, PrimitivePerson].build().transform(expectedComplex),
+        Transformer.defineVia[ComplexPerson](PrimitivePerson.apply).build().transform(expectedComplex)
+      )
 
-  //   actualComplex.foreach(actual => assertEquals(expectedComplex, actual))
-  //   actualPrimitive.foreach(actual => assertEquals(expectedPrimitive, actual))
-  // }
+    actualComplex.foreach(actual => assertEquals(expectedComplex, actual))
+    actualPrimitive.foreach(actual => assertEquals(expectedPrimitive, actual))
+  }
 
-  // test("derived product transformers take locally scoped Transformers into consideration") {
-  //   val primitive = PrimitivePerson(
-  //     "Danzig",
-  //     25,
-  //     PrimitiveContactInfo("555 444 333", "Nowhere City, 42"),
-  //     List("cycling"),
-  //     PrimitiveCoolnessFactor.Cool
-  //   )
+  test("derived product transformers take locally scoped Transformers into consideration") {
+    val primitive = PrimitivePerson(
+      "Danzig",
+      25,
+      PrimitiveContactInfo("555 444 333", "Nowhere City, 42"),
+      List("cycling"),
+      PrimitiveCoolnessFactor.Cool
+    )
 
-  //   val expectedComplex = ComplexPerson(
-  //     Name("Danzig-LOCAL"),
-  //     Age(25),
-  //     ComplexContactInfo(PhoneNumber("555 444 333-LOCAL"), Address("Nowhere City, 42")),
-  //     Vector(Hobby("cycling")),
-  //     ComplexCoolnessFactor.Cool
-  //   )
+    val expectedComplex = ComplexPerson(
+      Name("Danzig-LOCAL"),
+      Age(25),
+      ComplexContactInfo(PhoneNumber("555 444 333-LOCAL"), Address("Nowhere City, 42")),
+      Vector(Hobby("cycling")),
+      ComplexCoolnessFactor.Cool
+    )
 
-  //   given Transformer[String, Name] = str => Name(str + "-LOCAL")
-  //   given Transformer[String, PhoneNumber] = str => PhoneNumber(str + "-LOCAL")
+    given Transformer[String, Name] = str => Name(str + "-LOCAL")
+    given Transformer[String, PhoneNumber] = str => PhoneNumber(str + "-LOCAL")
 
-  //   val actualComplex =
-  //     List(
-  //       primitive.to[ComplexPerson],
-  //       primitive.into[ComplexPerson].transform(),
-  //       primitive.via(ComplexPerson.apply),
-  //       primitive.intoVia(ComplexPerson.apply).transform(),
-  //       Transformer.define[PrimitivePerson, ComplexPerson].build().transform(primitive),
-  //       Transformer.defineVia[PrimitivePerson](ComplexPerson.apply).build().transform(primitive)
-  //     )
+    val actualComplex =
+      List(
+        primitive.to[ComplexPerson],
+        primitive.into[ComplexPerson].transform(),
+        primitive.via(ComplexPerson.apply),
+        primitive.intoVia(ComplexPerson.apply).transform(),
+        Transformer.define[PrimitivePerson, ComplexPerson].build().transform(primitive),
+        Transformer.defineVia[PrimitivePerson](ComplexPerson.apply).build().transform(primitive)
+      )
 
-  //   actualComplex.foreach(actual => assertEquals(expectedComplex, actual))
-  // }
+    actualComplex.foreach(actual => assertEquals(expectedComplex, actual))
+  }
 
   test("derived enum transformer should map to cases with same name") {
     val expectedFromEnum1Mapping = Map(
@@ -195,36 +195,36 @@ class DerivedTransformerSuite extends DucktapeSuite {
     assertEquals(unwrapped.to[Wrapped[String]], wrappedString)
   }
 
-  // test("products with AnyVal fields with type params roundrip to their primitives") {
-  //   final case class Person[A](name: Wrapped[String], age: Wrapped[Int], homies: List[Wrapped[String]], wildcard: Wrapped[A])
-  //   final case class UnwrappedPerson[A](name: String, age: Int, homies: List[String], wildcard: A)
+  test("products with AnyVal fields with type params roundrip to their primitives") {
+    final case class Person[A](name: Wrapped[String], age: Wrapped[Int], homies: List[Wrapped[String]], wildcard: Wrapped[A])
+    final case class UnwrappedPerson[A](name: String, age: Int, homies: List[String], wildcard: A)
 
-  //   val person = Person(Wrapped("Name"), Wrapped(18), List(Wrapped("Homie1")), Wrapped(5L))
-  //   val unwrapped = UnwrappedPerson("Name", 18, List("Homie1"), 5L)
+    val person = Person(Wrapped("Name"), Wrapped(18), List(Wrapped("Homie1")), Wrapped(5L))
+    val unwrapped = UnwrappedPerson("Name", 18, List("Homie1"), 5L)
 
-  //   val actualUnwrapped =
-  //     List(
-  //       person.to[UnwrappedPerson[Long]],
-  //       person.into[UnwrappedPerson[Long]].transform(),
-  //       person.via(UnwrappedPerson.apply[Long]),
-  //       person.intoVia(UnwrappedPerson.apply[Long]).transform(),
-  //       Transformer.define[Person[Long], UnwrappedPerson[Long]].build().transform(person),
-  //       Transformer.defineVia[Person[Long]](UnwrappedPerson.apply[Long]).build().transform(person)
-  //     )
+    val actualUnwrapped =
+      List(
+        person.to[UnwrappedPerson[Long]],
+        person.into[UnwrappedPerson[Long]].transform(),
+        person.via(UnwrappedPerson.apply[Long]),
+        person.intoVia(UnwrappedPerson.apply[Long]).transform(),
+        Transformer.define[Person[Long], UnwrappedPerson[Long]].build().transform(person),
+        Transformer.defineVia[Person[Long]](UnwrappedPerson.apply[Long]).build().transform(person)
+      )
 
-  //   val actualPerson =
-  //     List(
-  //       unwrapped.to[Person[Long]],
-  //       unwrapped.into[Person[Long]].transform(),
-  //       unwrapped.via(Person.apply[Long]),
-  //       unwrapped.intoVia(Person.apply[Long]).transform(),
-  //       Transformer.define[UnwrappedPerson[Long], Person[Long]].build().transform(unwrapped),
-  //       Transformer.defineVia[UnwrappedPerson[Long]](Person.apply[Long]).build().transform(unwrapped)
-  //     )
+    val actualPerson =
+      List(
+        unwrapped.to[Person[Long]],
+        unwrapped.into[Person[Long]].transform(),
+        unwrapped.via(Person.apply[Long]),
+        unwrapped.intoVia(Person.apply[Long]).transform(),
+        Transformer.define[UnwrappedPerson[Long], Person[Long]].build().transform(unwrapped),
+        Transformer.defineVia[UnwrappedPerson[Long]](Person.apply[Long]).build().transform(unwrapped)
+      )
 
-  //   actualUnwrapped.foreach(actual => assertEquals(actual, unwrapped))
-  //   actualPerson.foreach(actual => assertEquals(actual, person))
-  // }
+    actualUnwrapped.foreach(actual => assertEquals(actual, unwrapped))
+    actualPerson.foreach(actual => assertEquals(actual, person))
+  }
 
   test("derivation fails when going from a product with less fields to a product with more fields") {
     assertFailsToCompileWith {
