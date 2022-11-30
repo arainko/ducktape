@@ -44,7 +44,9 @@ lazy val ducktape =
 lazy val docs =
   project
     .in(file("documentation"))
-    .settings(publish / skip := true)
-    .settings(mdocVariables := Map("VERSION" -> version.value))
+    .settings(
+      mdocVariables := Map("VERSION" -> version.value),
+      publish / skip := true
+    )
     .dependsOn(ducktape)
     .enablePlugins(MdocPlugin)

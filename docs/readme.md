@@ -277,4 +277,13 @@ val transformed = definedTransformer.transform(testClass)
 
 ### A look at the generated code
 
-#### -- TODO --
+```scala mdoc:reset-object
+import io.github.arainko.ducktape.docs.*
+import scala.compiletime.*
+
+final case class Cos(int: Int)
+
+codeOf {
+  Cos(1)
+}
+```
