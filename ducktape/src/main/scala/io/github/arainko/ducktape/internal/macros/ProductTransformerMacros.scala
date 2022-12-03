@@ -13,7 +13,8 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       CaseModule,
       MirrorModule,
       SelectorModule,
-      ConfigurationModule {
+      ConfigurationModule,
+      NormalizationModule {
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
@@ -159,10 +160,11 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 
       case '{ $transformer: Transformer.ForProduct[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
-        println()
-        println(transformer.asTerm.show(using Printer.TreeStructure))
-        println()
-        '{ $transformer.transform($field) }.asTerm
+        // println()
+        // println(StripNoisyNodes.transformTerm(transformer.asTerm)(Symbol.spliceOwner).show(using Printer.TreeStructure))
+        // println()
+        normalizeTransformer(transformer, field).asTerm
+        // '{ $transformer.transform($field) }.asTerm
 
       case '{ $transformer: Transformer.ForCoproduct[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]

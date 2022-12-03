@@ -22,6 +22,27 @@ private[ducktape] trait NormalizationModule { self: Module =>
       case other                      => other
     }
 
+  /*
+  ForProduct.make(a => new Costam(...))
+   */
+  def normalizeTransformer[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A]) = {
+    val stripped = StripNoisyNodes.transformTerm(transformer.asTerm)(Symbol.spliceOwner).asExprOf[Transformer[A, B]]
+    val transformerLambda =
+      stripped match {
+        case '{ ($transformer: Transformer.ForProduct[a, b]) } =>
+          TransformerLambda.fromForProduct(transformer)
+        case '{ ($transformer: Transformer.FromAnyVal[a, b]) } =>
+          TransformerLambda.fromFromAnyVal(transformer)
+        case '{ ($transformer: Transformer.ToAnyVal[a, b]) } =>
+          TransformerLambda.fromToAnyVal(transformer)
+        case other => None
+      }
+    transformerLambda
+      .map(optimizeTransformerInvocation(_, appliedTo.asTerm))
+      .map(_.asExprOf[B])
+      .getOrElse('{ $transformer.transform($appliedTo) })
+  }
+
   private def normalizeStatement[A >: ValDef <: Tree](statement: A) =
     statement match {
       case vd @ ValDef(name, tt, term) =>
@@ -172,7 +193,7 @@ private[ducktape] trait NormalizationModule { self: Module =>
   object MakeTransformer {
     def unapply(term: Term)(using Quotes): Option[(ValDef, Term)] =
       PartialFunction.condOpt(term) {
-        case Untyped(Apply(_, List(Lambda(List(param), body)))) => param -> body
+        case Untyped(Apply(_, List(Untyped(Lambda(List(param), body))))) => param -> body
       }
   }
 }
