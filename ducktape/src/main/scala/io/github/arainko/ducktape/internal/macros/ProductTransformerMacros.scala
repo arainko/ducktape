@@ -160,11 +160,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 
       case '{ $transformer: Transformer.ForProduct[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
-        // println()
-        // println(StripNoisyNodes.transformTerm(transformer.asTerm)(Symbol.spliceOwner).show(using Printer.TreeStructure))
-        // println()
         normalizeTransformer(transformer, field).asTerm
-        // '{ $transformer.transform($field) }.asTerm
 
       case '{ $transformer: Transformer.ForCoproduct[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
@@ -172,11 +168,15 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 
       case '{ $transformer: Transformer.FromAnyVal[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
-        '{ $transformer.transform($field) }.asTerm
+        normalizeTransformer(transformer, field).asTerm
 
       case '{ $transformer: Transformer.ToAnyVal[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
-        '{ $transformer.transform($field) }.asTerm
+        normalizeTransformer(transformer, field).asTerm
+
+      // case '{ Transformer.given_Transformer_Source_Option[source, dest](using $transformer) } =>
+      //   val field = accessField(sourceValue, source.name).asExprOf[source]
+      //   '{ Some(${ normalizeTransformer(transformer, field).asExprOf[source] }) }.asTerm
 
       case '{ $transformer: Transformer[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]

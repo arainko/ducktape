@@ -7,24 +7,6 @@ import scala.quoted.*
 private[ducktape] trait NormalizationModule { self: Module =>
   import quotes.reflect.*
 
-  def normalize[A: Type](expr: Expr[A]): Expr[A] = {
-    val stripped = StripNoisyNodes.transformTerm(expr.asTerm)(Symbol.spliceOwner)
-    val normalized = normalizeTerm(stripped)
-    normalized.asExprOf[A]
-  }
-
-  private def normalizeTerm(term: Term): Term =
-    term match {
-      case Inlined(call, stats, tree) => Inlined.copy(term)(call, stats.map(normalizeStatement), normalizeTerm(tree))
-      case Typed(tree, tt)            => Typed.copy(term)(normalizeTerm(tree), tt)
-      case Block(stats, tree)         => Block.copy(term)(stats.map(normalizeStatement), normalizeTerm(tree))
-      case Apply(call, args)          => Apply.copy(term)(call, args.map(transformTransformerInvocation))
-      case other                      => other
-    }
-
-  /*
-  ForProduct.make(a => new Costam(...))
-   */
   def normalizeTransformer[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A]) = {
     val stripped = StripNoisyNodes.transformTerm(transformer.asTerm)(Symbol.spliceOwner).asExprOf[Transformer[A, B]]
     val transformerLambda =
@@ -35,20 +17,12 @@ private[ducktape] trait NormalizationModule { self: Module =>
           TransformerLambda.fromFromAnyVal(transformer)
         case '{ ($transformer: Transformer.ToAnyVal[a, b]) } =>
           TransformerLambda.fromToAnyVal(transformer)
-        case other => None
       }
     transformerLambda
       .map(optimizeTransformerInvocation(_, appliedTo.asTerm))
       .map(_.asExprOf[B])
       .getOrElse('{ $transformer.transform($appliedTo) })
   }
-
-  private def normalizeStatement[A >: ValDef <: Tree](statement: A) =
-    statement match {
-      case vd @ ValDef(name, tt, term) =>
-        ValDef.copy(statement)(name, tt, term.map(transformTransformerInvocation(_).changeOwner(vd.symbol)))
-      case other => other
-    }
 
   // Match on all the possibilieties of method invocations (that is, named args 'field = ...' and normalterms).
   private def transformTransformerInvocation(term: Term): Term =
@@ -131,7 +105,7 @@ private[ducktape] trait NormalizationModule { self: Module =>
      */
     def fromToAnyVal(expr: Expr[Transformer.ToAnyVal[?, ?]]): Option[TransformerLambda.ToAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
-        case MakeTransformer(param, Untyped(Apply(Untyped(constructorCall), List(arg)))) =>
+        case MakeTransformer(param, Untyped(Block(_, Apply(Untyped(constructorCall), List(arg))))) =>
           TransformerLambda.ToAnyVal(param, constructorCall, arg)
       }
 
@@ -146,7 +120,7 @@ private[ducktape] trait NormalizationModule { self: Module =>
      */
     def fromFromAnyVal(expr: Expr[Transformer.FromAnyVal[?, ?]]): Option[TransformerLambda.FromAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
-        case MakeTransformer(param, Untyped(Select(Untyped(_: Ident), fieldName))) =>
+        case MakeTransformer(param, Untyped(Block(_, Select(Untyped(_: Ident), fieldName)))) =>
           TransformerLambda.FromAnyVal(param, fieldName)
       }
   }

@@ -15,9 +15,8 @@ final class AppliedViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArgumen
   inline def transform(
     inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
   )(using Source: Mirror.ProductOf[Source]): Dest =
-    NormalizationMacros.normalize(
-      ProductTransformerMacros.viaConfigured[Source, Dest, Func, ArgSelector](source, function, config*)
-    )
+    ProductTransformerMacros.viaConfigured[Source, Dest, Func, ArgSelector](source, function, config*)
+    
 }
 
 object AppliedViaBuilder {

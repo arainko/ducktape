@@ -8,5 +8,5 @@ import scala.deriving.Mirror
 
 final class DefinitionBuilder[Source, Dest] {
   inline def build(inline config: BuilderConfig[Source, Dest]*): Transformer[Source, Dest] =
-    from => NormalizationMacros.normalize(TransformerMacros.transformConfigured(from, config))
+    from => TransformerMacros.transformConfigured(from, config)
 }
