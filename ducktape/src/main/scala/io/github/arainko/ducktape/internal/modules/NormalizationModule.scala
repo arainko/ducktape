@@ -7,7 +7,7 @@ import scala.quoted.*
 private[ducktape] trait NormalizationModule { self: Module =>
   import quotes.reflect.*
 
-  def normalizeTransformer[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A]) = {
+  def normalizeTransformer[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A])(using Quotes) = {
     val stripped = StripNoisyNodes.transformTerm(transformer.asTerm)(Symbol.spliceOwner).asExprOf[Transformer[A, B]]
     val transformerLambda =
       stripped match {
