@@ -185,23 +185,26 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
         val field = accessField(sourceValue, source.name).asExprOf[Option[source]]
         '{ $field.map(src => ${ normalizeTransformer(transformer, 'src) }) }.asTerm
 
-      case '{ 
-        type srcCol[elem1] <: Iterable[`elem1`]
-        type destCol[elem2] <: Iterable[`elem2`]
-        // type source
-        // type dest
-        Transformer.given_Transformer_SourceCollection_DestCollection[source, dest, `srcCol`[elem3], `destCol`[elem4]](using $transformer, $factory) 
-      } =>
-        val field = accessField(sourceValue, source.name).asExprOf[srcCol[source]]
-        ???
+      // Seems like higher-kinded type quotes are not supported yet
+      // https://github.com/lampepfl/dotty-feature-requests/issues/208
+      // https://github.com/lampepfl/dotty/discussions/12446
+      // case '{
+      //      type srcColl[a] <: Iterable[`a`]  
+      //      type destColl[b] <: Iterable[`b`]  
+      //       Transformer.given_Transformer_SourceCollection_DestCollection[
+      //         source,
+      //         dest,
+      //         `srcColl`,
+      //         `destColl`,
+      //       ](using $transformer, $factory)
+      //     } =>  ???
       
-        // '{ $field.map(src => ${ normalizeTransformer(transformer, 'src) }) }.asTerm
-
 
       case '{ $transformer: Transformer[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
         '{ $transformer.transform($field) }.asTerm
     }
+
 
   private def accessField[Source](value: Expr[Source], fieldName: String)(using Quotes) = Select.unique(value.asTerm, fieldName)
 
@@ -219,7 +222,6 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 }
 
 private[ducktape] object ProductTransformerMacros {
-
   def transformMacro[Source: Type, Dest: Type](
     source: Expr[Source],
     Source: Expr[Mirror.ProductOf[Source]],
