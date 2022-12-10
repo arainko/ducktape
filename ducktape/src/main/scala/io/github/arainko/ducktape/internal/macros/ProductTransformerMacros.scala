@@ -6,6 +6,7 @@ import io.github.arainko.ducktape.internal.modules.*
 
 import scala.deriving.*
 import scala.quoted.*
+import scala.collection.Factory
 
 private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     extends Module,
@@ -188,23 +189,25 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       // Seems like higher-kinded type quotes are not supported yet
       // https://github.com/lampepfl/dotty-feature-requests/issues/208
       // https://github.com/lampepfl/dotty/discussions/12446
-      // case '{
-      //      type srcColl[a] <: Iterable[`a`]  
-      //      type destColl[b] <: Iterable[`b`]  
-      //       Transformer.given_Transformer_SourceCollection_DestCollection[
-      //         source,
-      //         dest,
-      //         `srcColl`,
-      //         `destColl`,
-      //       ](using $transformer, $factory)
-      //     } =>  ???
-      
+      // Because of that we need to do some more shenanigans to get the exact collection type we transform into
+      case '{
+            Transformer.given_Transformer_SourceCollection_DestCollection[
+              source,
+              dest,
+              ProductTransformerMacros.IsIterable,
+              ProductTransformerMacros.IsIterable
+            ](using $transformer, $factory)
+          } =>
+        val field = accessField(sourceValue, source.name).asExprOf[Iterable[source]]
+        factory match {
+          case '{ $f: Factory[`dest`, destColl] } =>
+            '{ $field.map(src => ${ normalizeTransformer(transformer, 'src) }).to($f) }.asTerm
+        }
 
       case '{ $transformer: Transformer[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
         '{ $transformer.transform($field) }.asTerm
     }
-
 
   private def accessField[Source](value: Expr[Source], fieldName: String)(using Quotes) = Select.unique(value.asTerm, fieldName)
 
@@ -222,6 +225,8 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 }
 
 private[ducktape] object ProductTransformerMacros {
+  private type IsIterable[a] = Iterable[a]
+
   def transformMacro[Source: Type, Dest: Type](
     source: Expr[Source],
     Source: Expr[Mirror.ProductOf[Source]],
