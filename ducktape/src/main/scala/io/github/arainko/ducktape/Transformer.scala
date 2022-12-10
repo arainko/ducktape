@@ -26,6 +26,12 @@ object Transformer {
   sealed trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
 
   object ForProduct {
+    @deprecated(message = "Use the variant with a Transformer instead", since = "0.1.1")
+    private[ducktape] def make[Source, Dest](f: Source => Dest): ForProduct[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+
     private[ducktape] def make[Source, Dest](transfomer: Transformer[Source, Dest]): ForProduct[Source, Dest] =
       new {
         def transform(from: Source): Dest = transfomer.transform(from)
@@ -35,6 +41,12 @@ object Transformer {
   sealed trait ForCoproduct[Source, Dest] extends Transformer[Source, Dest]
 
   object ForCoproduct {
+    @deprecated(message = "Use the variant with a Transformer instead", since = "0.1.1")
+    private[ducktape] def make[Source, Dest](f: Source => Dest): ForCoproduct[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+
     private[ducktape] def make[Source, Dest](transformer: Transformer[Source, Dest]): ForCoproduct[Source, Dest] =
       new {
         def transform(from: Source): Dest = transformer.transform(from)
@@ -44,6 +56,12 @@ object Transformer {
   sealed trait FromAnyVal[Source <: AnyVal, Dest] extends Transformer[Source, Dest]
 
   object FromAnyVal {
+    @deprecated(message = "Use the variant with a Transformer instead", since = "0.1.1")
+    private[ducktape] def make[Source <: AnyVal, Dest](f: Source => Dest): FromAnyVal[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+
     private[ducktape] def make[Source <: AnyVal, Dest](transformer: Transformer[Source, Dest]): FromAnyVal[Source, Dest] =
       new {
         def transform(from: Source): Dest = transformer.transform(from)
@@ -53,6 +71,12 @@ object Transformer {
   sealed trait ToAnyVal[Source, Dest <: AnyVal] extends Transformer[Source, Dest]
 
   object ToAnyVal {
+    @deprecated(message = "Use the variant with a Transformer instead", since = "0.1.1")
+    private[ducktape] def make[Source, Dest <: AnyVal](f: Source => Dest): ToAnyVal[Source, Dest] =
+      new {
+        def transform(from: Source): Dest = f(from)
+      }
+
     private[ducktape] def make[Source, Dest <: AnyVal](transformer: Transformer[Source, Dest]): ToAnyVal[Source, Dest] =
       new {
         def transform(from: Source): Dest = transformer.transform(from)
