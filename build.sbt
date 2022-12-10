@@ -1,3 +1,4 @@
+import com.typesafe.tools.mima.core._
 import xerial.sbt.Sonatype._
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -16,6 +17,11 @@ ThisBuild / developers := List(
 ThisBuild / scalaVersion := "3.2.1"
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
 
+ThisBuild / versionPolicyIntention := Compatibility.BinaryCompatible
+ThisBuild / mimaBinaryIssueFilters ++= Seq(
+  ProblemFilters.exclude[Problem]("io.github.arainko.ducktape.internal.*")
+)
+
 name := "ducktape"
 sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 sonatypeCredentialHost := "s01.oss.sonatype.org"
@@ -31,13 +37,14 @@ lazy val ducktape =
     .in(file("ducktape"))
     .settings(
       scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings"),
-      libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M6" % Test,
+      libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M7" % Test,
       mimaPreviousArtifacts := Set("io.github.arainko" %% "ducktape" % "0.1.0")
     )
 
 lazy val docs =
   project
     .in(file("documentation"))
+    .settings(publish / skip := true)
     .settings(mdocVariables := Map("VERSION" -> version.value))
     .dependsOn(ducktape)
     .enablePlugins(MdocPlugin)

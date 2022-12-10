@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.modules.*
 
+import scala.collection.Factory
 import scala.deriving.*
 import scala.quoted.*
 
@@ -13,7 +14,8 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       CaseModule,
       MirrorModule,
       SelectorModule,
-      ConfigurationModule {
+      ConfigurationModule,
+      NormalizationModule {
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
@@ -128,7 +130,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
           .get(field.name)
           .getOrElse(abort(Failure.NoFieldMapping(field.name, TypeRepr.of[Source])))
     }.map { (dest, source) =>
-      val call = resolveTransformer(sourceValue, source, dest)
+      val call = resolveTransformation(sourceValue, source, dest)
 
       NamedArg(dest.name, call)
     }
@@ -153,17 +155,58 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
         NamedArg(field.name, castedCall.asTerm)
       }
 
-  private def resolveTransformer[Source: Type](sourceValue: Expr[Source], source: Field, destination: Field) =
+  private def resolveTransformation[Source: Type](sourceValue: Expr[Source], source: Field, destination: Field)(using Quotes) = {
     source.transformerTo(destination) match {
       case '{ $transformer: Transformer.Identity[?, ?] } => accessField(sourceValue, source.name)
+
+      case '{ $transformer: Transformer.ForProduct[source, dest] } =>
+        val field = accessField(sourceValue, source.name).asExprOf[source]
+        normalizeTransformer(transformer, field).asTerm
+
+      case '{ $transformer: Transformer.FromAnyVal[source, dest] } =>
+        val field = accessField(sourceValue, source.name).asExprOf[source]
+        normalizeTransformer(transformer, field).asTerm
+
+      case '{ $transformer: Transformer.ToAnyVal[source, dest] } =>
+        val field = accessField(sourceValue, source.name).asExprOf[source]
+        normalizeTransformer(transformer, field).asTerm
+
+      case '{ Transformer.given_Transformer_Source_Option[source, dest](using $transformer) } =>
+        val field = accessField(sourceValue, source.name).asExprOf[source]
+        val normalized = normalizeTransformer(transformer, field)
+        '{ Some($normalized) }.asTerm
+
+      case '{ Transformer.given_Transformer_Option_Option[source, dest](using $transformer) } =>
+        val field = accessField(sourceValue, source.name).asExprOf[Option[source]]
+        '{ $field.map(src => ${ normalizeTransformer(transformer, 'src) }) }.asTerm
+
+      // Seems like higher-kinded type quotes are not supported yet
+      // https://github.com/lampepfl/dotty-feature-requests/issues/208
+      // https://github.com/lampepfl/dotty/discussions/12446
+      // Because of that we need to do some more shenanigans to get the exact collection type we transform into
+      case '{
+            Transformer.given_Transformer_SourceCollection_DestCollection[
+              source,
+              dest,
+              Iterable,
+              Iterable
+            ](using $transformer, $factory)
+          } =>
+        val field = accessField(sourceValue, source.name).asExprOf[Iterable[source]]
+        factory match {
+          case '{ $f: Factory[`dest`, destColl] } =>
+            '{ $field.map(src => ${ normalizeTransformer(transformer, 'src) }).to($f) }.asTerm
+        }
+
       case '{ $transformer: Transformer[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
         '{ $transformer.transform($field) }.asTerm
     }
+  }
 
-  private def accessField[Source](value: Expr[Source], fieldName: String) = Select.unique(value.asTerm, fieldName)
+  private def accessField(value: Expr[Any], fieldName: String)(using Quotes) = Select.unique(value.asTerm, fieldName)
 
-  private def constructor(tpe: TypeRepr): Term = {
+  private def constructor(tpe: TypeRepr)(using Quotes): Term = {
     val (repr, constructor, tpeArgs) = tpe match {
       case AppliedType(repr, reprArguments) => (repr, repr.typeSymbol.primaryConstructor, reprArguments)
       case notApplied                       => (tpe, tpe.typeSymbol.primaryConstructor, Nil)
@@ -177,11 +220,6 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 }
 
 private[ducktape] object ProductTransformerMacros {
-  inline def transform[Source, Dest](source: Source)(using
-    Source: Mirror.ProductOf[Source],
-    Dest: Mirror.ProductOf[Dest]
-  ): Dest = ${ transformMacro[Source, Dest]('source, 'Source, 'Dest) }
-
   def transformMacro[Source: Type, Dest: Type](
     source: Expr[Source],
     Source: Expr[Mirror.ProductOf[Source]],
@@ -229,14 +267,8 @@ private[ducktape] object ProductTransformerMacros {
   )(using Quotes) =
     ProductTransformerMacros().transformConfigured(sourceValue, config, Source, Dest)
 
-  inline def transformFromAnyVal[Source <: AnyVal, Dest](sourceValue: Source): Dest =
-    ${ transformFromAnyValMacro[Source, Dest]('sourceValue) }
-
   def transformFromAnyValMacro[Source <: AnyVal: Type, Dest: Type](sourceValue: Expr[Source])(using Quotes): Expr[Dest] =
     ProductTransformerMacros().transformFromAnyVal[Source, Dest](sourceValue)
-
-  inline def transfromToAnyVal[Source, Dest <: AnyVal](sourceValue: Source) =
-    ${ transformToAnyValMacro[Source, Dest]('sourceValue) }
 
   def transformToAnyValMacro[Source: Type, Dest <: AnyVal: Type](sourceValue: Expr[Source])(using Quotes): Expr[Dest] =
     ProductTransformerMacros().transformToAnyVal[Source, Dest](sourceValue)

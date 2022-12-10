@@ -7,27 +7,22 @@ import scala.quoted.*
 private[ducktape] trait NormalizationModule { self: Module =>
   import quotes.reflect.*
 
-  def normalize[A: Type](expr: Expr[A]): Expr[A] = {
-    val stripped = StripNoisyNodes.transformTerm(expr.asTerm)(Symbol.spliceOwner)
-    val normalized = normalizeTerm(stripped)
-    normalized.asExprOf[A]
+  def normalizeTransformer[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A])(using Quotes) = {
+    val stripped = StripNoisyNodes.transformTerm(transformer.asTerm)(Symbol.spliceOwner).asExprOf[Transformer[A, B]]
+    val transformerLambda =
+      stripped match {
+        case '{ ($transformer: Transformer.ForProduct[a, b]) } =>
+          TransformerLambda.fromForProduct(transformer)
+        case '{ ($transformer: Transformer.FromAnyVal[a, b]) } =>
+          TransformerLambda.fromFromAnyVal(transformer)
+        case '{ ($transformer: Transformer.ToAnyVal[a, b]) } =>
+          TransformerLambda.fromToAnyVal(transformer)
+      }
+    transformerLambda
+      .map(optimizeTransformerInvocation(_, appliedTo.asTerm))
+      .map(_.asExprOf[B])
+      .getOrElse('{ $transformer.transform($appliedTo) })
   }
-
-  private def normalizeTerm(term: Term): Term =
-    term match {
-      case Inlined(call, stats, tree) => Inlined.copy(term)(call, stats.map(normalizeStatement), normalizeTerm(tree))
-      case Typed(tree, tt)            => Typed.copy(term)(normalizeTerm(tree), tt)
-      case Block(stats, tree)         => Block.copy(term)(stats.map(normalizeStatement), normalizeTerm(tree))
-      case Apply(call, args)          => Apply.copy(term)(call, args.map(transformTransformerInvocation))
-      case other                      => other
-    }
-
-  private def normalizeStatement[A >: ValDef <: Tree](statement: A) =
-    statement match {
-      case vd @ ValDef(name, tt, term) =>
-        ValDef.copy(statement)(name, tt, term.map(transformTransformerInvocation(_).changeOwner(vd.symbol)))
-      case other => other
-    }
 
   // Match on all the possibilieties of method invocations (that is, named args 'field = ...' and normalterms).
   private def transformTransformerInvocation(term: Term): Term =
@@ -93,7 +88,7 @@ private[ducktape] trait NormalizationModule { self: Module =>
      * @return the parameter ('p'), a call to eg. a method ('new Person2')
      * and the args of that call ('p.int', 'p.str')
      */
-    def fromForProduct(expr: Expr[Transformer.ForProduct[?, ?]]): Option[TransformerLambda.ForProduct] =
+    def fromForProduct(expr: Expr[Transformer.ForProduct[?, ?]])(using Quotes): Option[TransformerLambda.ForProduct] =
       PartialFunction.condOpt(expr.asTerm) {
         case MakeTransformer(param, Untyped(Apply(method, methodArgs))) =>
           TransformerLambda.ForProduct(param, method, methodArgs)
@@ -108,9 +103,9 @@ private[ducktape] trait NormalizationModule { self: Module =>
      *
      * @return the parameter ('str'), the constructor call ('new Name') and the singular arg ('str').
      */
-    def fromToAnyVal(expr: Expr[Transformer.ToAnyVal[?, ?]]): Option[TransformerLambda.ToAnyVal] =
+    def fromToAnyVal(expr: Expr[Transformer.ToAnyVal[?, ?]])(using Quotes): Option[TransformerLambda.ToAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
-        case MakeTransformer(param, Untyped(Apply(Untyped(constructorCall), List(arg)))) =>
+        case MakeTransformer(param, Untyped(Block(_, Apply(Untyped(constructorCall), List(arg))))) =>
           TransformerLambda.ToAnyVal(param, constructorCall, arg)
       }
 
@@ -123,9 +118,9 @@ private[ducktape] trait NormalizationModule { self: Module =>
      *
      * @return the parameter ('name'), and the field name ('value' from the expression 'name.value')
      */
-    def fromFromAnyVal(expr: Expr[Transformer.FromAnyVal[?, ?]]): Option[TransformerLambda.FromAnyVal] =
+    def fromFromAnyVal(expr: Expr[Transformer.FromAnyVal[?, ?]])(using Quotes): Option[TransformerLambda.FromAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
-        case MakeTransformer(param, Untyped(Select(Untyped(_: Ident), fieldName))) =>
+        case MakeTransformer(param, Untyped(Block(_, Select(Untyped(_: Ident), fieldName)))) =>
           TransformerLambda.FromAnyVal(param, fieldName)
       }
   }
@@ -172,7 +167,7 @@ private[ducktape] trait NormalizationModule { self: Module =>
   object MakeTransformer {
     def unapply(term: Term)(using Quotes): Option[(ValDef, Term)] =
       PartialFunction.condOpt(term) {
-        case Untyped(Apply(_, List(Lambda(List(param), body)))) => param -> body
+        case Untyped(Apply(_, List(Untyped(Lambda(List(param), body))))) => param -> body
       }
   }
 }
