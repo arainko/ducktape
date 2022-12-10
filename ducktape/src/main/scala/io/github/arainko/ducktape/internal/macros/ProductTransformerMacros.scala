@@ -97,11 +97,9 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     given Fields.Dest = Fields.Dest.fromMirror(Dest)
     val transformerFields = fieldTransformers(sourceValue, Fields.dest.value)
 
-    DebugMacros.codeCompiletimeMacro {
-      constructor(TypeRepr.of[Dest])
-        .appliedToArgs(transformerFields.toList)
-        .asExprOf[Dest]
-    }
+    constructor(TypeRepr.of[Dest])
+      .appliedToArgs(transformerFields.toList)
+      .asExprOf[Dest]
   }
 
   def transformFromAnyVal[Source <: AnyVal: Type, Dest: Type](
@@ -157,17 +155,13 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
         NamedArg(field.name, castedCall.asTerm)
       }
 
-  private def resolveTransformation[Source: Type](sourceValue: Expr[Source], source: Field, destination: Field)(using Quotes) =
+  private def resolveTransformation[Source: Type](sourceValue: Expr[Source], source: Field, destination: Field)(using Quotes) = {
     source.transformerTo(destination) match {
       case '{ $transformer: Transformer.Identity[?, ?] } => accessField(sourceValue, source.name)
 
       case '{ $transformer: Transformer.ForProduct[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
         normalizeTransformer(transformer, field).asTerm
-
-      case '{ $transformer: Transformer.ForCoproduct[source, dest] } =>
-        val field = accessField(sourceValue, source.name).asExprOf[source]
-        '{ $transformer.transform($field) }.asTerm
 
       case '{ $transformer: Transformer.FromAnyVal[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
@@ -208,8 +202,9 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
         val field = accessField(sourceValue, source.name).asExprOf[source]
         '{ $transformer.transform($field) }.asTerm
     }
+  }
 
-  private def accessField[Source](value: Expr[Source], fieldName: String)(using Quotes) = Select.unique(value.asTerm, fieldName)
+  private def accessField(value: Expr[Any], fieldName: String)(using Quotes) = Select.unique(value.asTerm, fieldName)
 
   private def constructor(tpe: TypeRepr)(using Quotes): Term = {
     val (repr, constructor, tpeArgs) = tpe match {

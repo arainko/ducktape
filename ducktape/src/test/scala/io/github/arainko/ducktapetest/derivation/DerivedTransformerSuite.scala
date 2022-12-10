@@ -160,27 +160,23 @@ class DerivedTransformerSuite extends DucktapeSuite {
     case class Person(int: Int, str: String, inside: Inside)
     case class Person2(int: Int, str: String, inside: Inside2)
 
-    case class Inside(str: String, int: Int, inside: Option[EvenMoreInside])
+    case class Inside(str: String, int: Int, inside: EvenMoreInside)
     case class Inside2(int: Int, str: String, inside: Option[EvenMoreInside2])
 
     case class EvenMoreInside(str: String, int: Int)
     case class EvenMoreInside2(str: String, int: Int)
 
-    val person = Person(1, "2", Inside("2", 1, Some(EvenMoreInside("asd", 3))))
+    val person = Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3)))
     val expected = Person2(1, "2", Inside2(1, "2", Some(EvenMoreInside2("asd", 3))))
-
-    DebugMacros.code {
-      person.to[Person2]
-    }
 
     val actual =
       List(
-        // person.to[Person2],
-        // person.into[Person2].transform(),
-        // person.via(Person2.apply),
-        // person.intoVia(Person2.apply).transform(),
-        // Transformer.define[Person, Person2].build().transform(person),
-        // Transformer.defineVia[Person](Person2.apply).build().transform(person)
+        person.to[Person2],
+        person.into[Person2].transform(),
+        person.via(Person2.apply),
+        person.intoVia(Person2.apply).transform(),
+        Transformer.define[Person, Person2].build().transform(person),
+        Transformer.defineVia[Person](Person2.apply).build().transform(person)
       )
 
     actual.foreach(actual => assertEquals(expected, actual))

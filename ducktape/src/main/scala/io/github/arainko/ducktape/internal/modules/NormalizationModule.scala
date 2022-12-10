@@ -88,7 +88,7 @@ private[ducktape] trait NormalizationModule { self: Module =>
      * @return the parameter ('p'), a call to eg. a method ('new Person2')
      * and the args of that call ('p.int', 'p.str')
      */
-    def fromForProduct(expr: Expr[Transformer.ForProduct[?, ?]]): Option[TransformerLambda.ForProduct] =
+    def fromForProduct(expr: Expr[Transformer.ForProduct[?, ?]])(using Quotes): Option[TransformerLambda.ForProduct] =
       PartialFunction.condOpt(expr.asTerm) {
         case MakeTransformer(param, Untyped(Apply(method, methodArgs))) =>
           TransformerLambda.ForProduct(param, method, methodArgs)
@@ -103,7 +103,7 @@ private[ducktape] trait NormalizationModule { self: Module =>
      *
      * @return the parameter ('str'), the constructor call ('new Name') and the singular arg ('str').
      */
-    def fromToAnyVal(expr: Expr[Transformer.ToAnyVal[?, ?]]): Option[TransformerLambda.ToAnyVal] =
+    def fromToAnyVal(expr: Expr[Transformer.ToAnyVal[?, ?]])(using Quotes): Option[TransformerLambda.ToAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
         case MakeTransformer(param, Untyped(Block(_, Apply(Untyped(constructorCall), List(arg))))) =>
           TransformerLambda.ToAnyVal(param, constructorCall, arg)
@@ -118,7 +118,7 @@ private[ducktape] trait NormalizationModule { self: Module =>
      *
      * @return the parameter ('name'), and the field name ('value' from the expression 'name.value')
      */
-    def fromFromAnyVal(expr: Expr[Transformer.FromAnyVal[?, ?]]): Option[TransformerLambda.FromAnyVal] =
+    def fromFromAnyVal(expr: Expr[Transformer.FromAnyVal[?, ?]])(using Quotes): Option[TransformerLambda.FromAnyVal] =
       PartialFunction.condOpt(expr.asTerm) {
         case MakeTransformer(param, Untyped(Block(_, Select(Untyped(_: Ident), fieldName)))) =>
           TransformerLambda.FromAnyVal(param, fieldName)
