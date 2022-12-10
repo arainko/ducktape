@@ -12,7 +12,7 @@ final class DefinitionViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArgu
     inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
   )(using Mirror.ProductOf[Source]): Transformer[Source, Dest] =
     from => ProductTransformerMacros.viaConfigured[Source, Dest, Func, ArgSelector](from, function, config*)
-      
+
 }
 
 object DefinitionViaBuilder {

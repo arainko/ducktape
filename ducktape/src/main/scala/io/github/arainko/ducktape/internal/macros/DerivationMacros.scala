@@ -1,8 +1,9 @@
 package io.github.arainko.ducktape.internal.macros
 
 import io.github.arainko.ducktape.*
-import scala.quoted.*
+
 import scala.deriving.*
+import scala.quoted.*
 
 private[ducktape] object DerivationMacros {
   inline def deriveProductTransformer[Source, Dest](using

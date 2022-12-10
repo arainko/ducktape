@@ -4,9 +4,9 @@ import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.modules.*
 
+import scala.collection.Factory
 import scala.deriving.*
 import scala.quoted.*
-import scala.collection.Factory
 
 private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     extends Module,
@@ -188,8 +188,8 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
             Transformer.given_Transformer_SourceCollection_DestCollection[
               source,
               dest,
-              ProductTransformerMacros.IsIterable,
-              ProductTransformerMacros.IsIterable
+              Iterable,
+              Iterable
             ](using $transformer, $factory)
           } =>
         val field = accessField(sourceValue, source.name).asExprOf[Iterable[source]]
@@ -220,8 +220,6 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 }
 
 private[ducktape] object ProductTransformerMacros {
-  private type IsIterable[a] = Iterable[a]
-
   def transformMacro[Source: Type, Dest: Type](
     source: Expr[Source],
     Source: Expr[Mirror.ProductOf[Source]],

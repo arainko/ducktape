@@ -16,7 +16,7 @@ final class AppliedViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArgumen
     inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
   )(using Source: Mirror.ProductOf[Source]): Dest =
     ProductTransformerMacros.viaConfigured[Source, Dest, Func, ArgSelector](source, function, config*)
-    
+
 }
 
 object AppliedViaBuilder {

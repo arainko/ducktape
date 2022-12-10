@@ -4,7 +4,6 @@ import io.github.arainko.ducktape.*
 import io.github.arainko.ducktapetest.*
 import io.github.arainko.ducktapetest.builder.DefinitionViaBuilderSuite.*
 import munit.*
-import io.github.arainko.ducktape.internal.macros.DebugMacros
 
 class DefinitionViaBuilderSuite extends DucktapeSuite {
   private val testClass = TestClass("str", 1)
