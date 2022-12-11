@@ -17,6 +17,7 @@ private[ducktape] trait NormalizationModule { self: Module =>
           TransformerLambda.fromFromAnyVal(transformer)
         case '{ ($transformer: Transformer.ToAnyVal[a, b]) } =>
           TransformerLambda.fromToAnyVal(transformer)
+        case other => None
       }
     transformerLambda
       .map(optimizeTransformerInvocation(_, appliedTo.asTerm))

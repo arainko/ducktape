@@ -280,10 +280,14 @@ val transformed = definedTransformer.transform(testClass)
 ```scala mdoc:reset-object
 import io.github.arainko.ducktape.docs.*
 import scala.compiletime.*
+import io.github.arainko.ducktape.*
 
 final case class Cos(int: Int)
+final case class Tam(int: Int)
 
-codeOf {
-  Cos(1)
-}
+val cos = Cos(1)
+
+Debug.printCode(
+  cos.to[Tam]
+)
 ```
