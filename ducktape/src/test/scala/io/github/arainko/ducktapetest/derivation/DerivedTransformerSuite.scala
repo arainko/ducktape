@@ -169,13 +169,6 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val person = Person(1, "2", Inside("2", 1, EvenMoreInside("asd", 3)))
     val expected = Person2(1, "2", Inside2(1, "2", Some(EvenMoreInside2("asd", 3))))
 
-    final case class Cos(int: Int)
-    final case class Tam(int: Option[Int])
-
-    val cos = Cos(1)  
-
-    val value = DebugMacros.code(cos.transformInto[Tam])
-    
     val actual =
       List(
         person.transformInto[Person2],
@@ -208,7 +201,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
       List(
         person.transformInto[UnwrappedPerson[Long]],
         person.into[UnwrappedPerson[Long]].transform(),
-        person.via(UnwrappedPerson.apply[Long]),
+        Transformer.Debug.showCode(person.via(UnwrappedPerson.apply[Long])),
         person.intoVia(UnwrappedPerson.apply[Long]).transform(),
         Transformer.define[Person[Long], UnwrappedPerson[Long]].build().transform(person),
         Transformer.defineVia[Person[Long]](UnwrappedPerson.apply[Long]).build().transform(person)

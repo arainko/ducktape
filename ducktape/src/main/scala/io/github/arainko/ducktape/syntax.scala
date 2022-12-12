@@ -13,7 +13,7 @@ extension [Source](value: Source) {
   inline def transformInto[Dest](using inline transformer: Transformer[Source, Dest]): Dest = 
     LiftTransformationMacros.liftTransformation(transformer, value)
 
-  @deprecated(message = "Use 'transformInto' instead", since = "0.1.0")
+  @deprecated(message = "Use 'transformInto' instead", since = "0.1.1")
   def to[Dest](using Transformer[Source, Dest]): Dest = Transformer[Source, Dest].transform(value)
   
   transparent inline def intoVia[Func](inline function: Func)(using Mirror.ProductOf[Source], FunctionMirror[Func]) =

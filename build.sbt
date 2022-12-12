@@ -36,7 +36,7 @@ lazy val ducktape =
   project
     .in(file("ducktape"))
     .settings(
-      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings"),
+      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings", "-deprecation"),
       libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M7" % Test,
       mimaPreviousArtifacts := Set("io.github.arainko" %% "ducktape" % "0.1.0")
     )
