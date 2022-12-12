@@ -62,7 +62,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualComplex =
       List(
-        expectedPrimitive.to[ComplexPerson],
+        expectedPrimitive.transformInto[ComplexPerson],
         expectedPrimitive.into[ComplexPerson].transform(),
         expectedPrimitive.via(ComplexPerson.apply),
         expectedPrimitive.intoVia(ComplexPerson.apply).transform(),
@@ -72,7 +72,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualPrimitive =
       List(
-        expectedComplex.to[PrimitivePerson],
+        expectedComplex.transformInto[PrimitivePerson],
         expectedComplex.into[PrimitivePerson].transform(),
         expectedComplex.via(PrimitivePerson.apply),
         expectedComplex.intoVia(PrimitivePerson.apply).transform(),
@@ -106,7 +106,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualComplex =
       List(
-        primitive.to[ComplexPerson],
+        primitive.transformInto[ComplexPerson],
         primitive.into[ComplexPerson].transform(),
         primitive.via(ComplexPerson.apply),
         primitive.intoVia(ComplexPerson.apply).transform(),
@@ -127,12 +127,12 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val expectedFromEnum2Mapping = expectedFromEnum1Mapping.map(_.swap)
 
     Enum1.values.foreach { value =>
-      val actual = value.to[Enum2]
+      val actual = value.transformInto[Enum2]
       assertEquals(expectedFromEnum1Mapping(value), actual)
     }
 
     Enum2.values.foreach { value =>
-      val actual = value.to[Enum1]
+      val actual = value.transformInto[Enum1]
       assertEquals(expectedFromEnum2Mapping(value), actual)
     }
   }
@@ -145,7 +145,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val expected = LessFields(1, 2, 3)
     val actual =
       List(
-        more.to[LessFields],
+        more.transformInto[LessFields],
         more.into[LessFields].transform(),
         more.via(LessFields.apply),
         more.intoVia(LessFields.apply).transform(),
@@ -174,11 +174,11 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val cos = Cos(1)  
 
-    val value = DebugMacros.code(cos.to[Tam])
-
+    val value = DebugMacros.code(cos.transformInto[Tam])
+    
     val actual =
       List(
-        person.to[Person2],
+        person.transformInto[Person2],
         person.into[Person2].transform(),
         person.via(Person2.apply),
         person.intoVia(Person2.apply).transform(),
@@ -193,8 +193,8 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val wrappedString = Wrapped("asd")
     val unwrapped = "asd"
 
-    assertEquals(wrappedString.to[String], unwrapped)
-    assertEquals(unwrapped.to[Wrapped[String]], wrappedString)
+    assertEquals(wrappedString.transformInto[String], unwrapped)
+    assertEquals(unwrapped.transformInto[Wrapped[String]], wrappedString)
   }
 
   test("products with AnyVal fields with type params roundrip to their primitives") {
@@ -206,7 +206,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualUnwrapped =
       List(
-        person.to[UnwrappedPerson[Long]],
+        person.transformInto[UnwrappedPerson[Long]],
         person.into[UnwrappedPerson[Long]].transform(),
         person.via(UnwrappedPerson.apply[Long]),
         person.intoVia(UnwrappedPerson.apply[Long]).transform(),
@@ -216,7 +216,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualPerson =
       List(
-        unwrapped.to[Person[Long]],
+        unwrapped.transformInto[Person[Long]],
         unwrapped.into[Person[Long]].transform(),
         unwrapped.via(Person.apply[Long]),
         unwrapped.intoVia(Person.apply[Long]).transform(),

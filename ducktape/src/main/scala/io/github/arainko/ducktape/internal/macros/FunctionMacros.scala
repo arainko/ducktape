@@ -5,7 +5,7 @@ import io.github.arainko.ducktape.internal.modules.*
 
 import scala.quoted.*
 
-private[ducktape] class FunctionMacros(using val quotes: Quotes) extends Module, SelectorModule, FieldModule, MirrorModule {
+private[ducktape] final class FunctionMacros(using val quotes: Quotes) extends Module, SelectorModule, FieldModule, MirrorModule {
   import FunctionMacros.*
   import quotes.reflect.*
 

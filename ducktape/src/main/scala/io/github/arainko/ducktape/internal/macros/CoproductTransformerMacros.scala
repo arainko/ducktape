@@ -6,7 +6,7 @@ import io.github.arainko.ducktape.internal.modules.*
 import scala.deriving.*
 import scala.quoted.*
 
-private[ducktape] class CoproductTransformerMacros(using val quotes: Quotes)
+private[ducktape] final class CoproductTransformerMacros(using val quotes: Quotes)
     extends Module,
       CaseModule,
       FieldModule,
