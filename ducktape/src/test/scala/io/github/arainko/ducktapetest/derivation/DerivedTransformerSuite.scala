@@ -227,7 +227,9 @@ class DerivedTransformerSuite extends DucktapeSuite {
       final case class MoreFields(field1: Int, field2: Int, field3: Int, field4: Int)
       final case class LessFields(field1: Int, field2: Int, field3: Int)
 
-      val derived = Transformer[LessFields, MoreFields]
+      val less = LessFields(1, 2, 3)
+
+      val derived = less.to[MoreFields]
       """
     }("No field named 'field4' found in LessFields")
   }

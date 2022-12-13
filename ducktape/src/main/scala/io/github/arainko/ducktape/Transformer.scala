@@ -19,6 +19,10 @@ object Transformer {
 
   def defineVia[Source]: DefinitionViaBuilder.PartiallyApplied[Source] = DefinitionViaBuilder.create[Source]
 
+  object Debug {
+    inline def showCode[A](inline value: A): A = DebugMacros.code(value)
+  }
+
   final class Identity[Source, Dest >: Source] private[Transformer] extends Transformer[Source, Dest] {
     def transform(from: Source): Dest = from
   }
@@ -112,5 +116,4 @@ object Transformer {
 
   inline given toAnyVal[Source, Dest <: AnyVal]: ToAnyVal[Source, Dest] =
     ToAnyVal.make(DerivationMacros.deriveToAnyValTransformer[Source, Dest])
-
 }

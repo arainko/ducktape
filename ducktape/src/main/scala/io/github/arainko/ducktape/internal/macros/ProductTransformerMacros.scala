@@ -8,14 +8,14 @@ import scala.collection.Factory
 import scala.deriving.*
 import scala.quoted.*
 
-private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
+private[ducktape] final class ProductTransformerMacros(using val quotes: Quotes)
     extends Module,
       FieldModule,
       CaseModule,
       MirrorModule,
       SelectorModule,
       ConfigurationModule,
-      NormalizationModule {
+      LiftTransformationModule {
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
@@ -29,7 +29,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       given Fields.Source = Fields.Source.fromMirror(Source)
       given Fields.Dest = Fields.Dest.fromValDefs(vals)
 
-      val calls = fieldTransformers(sourceValue, Fields.dest.value).map(_.value)
+      val calls = fieldTransformations(sourceValue, Fields.dest.value).map(_.value)
       Select.unique(func, "apply").appliedToArgs(calls).asExprOf[Dest]
     case other => report.errorAndAbort(s"'via' is only supported on eta-expanded methods!")
   }
@@ -46,7 +46,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
 
     val transformedFields =
-      fieldTransformers(sourceValue, nonConfiguredFields.values.toList)
+      fieldTransformations(sourceValue, nonConfiguredFields.values.toList)
         .map(field => field.name -> field)
         .toMap
 
@@ -80,7 +80,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
 
     val materializedConfig = MaterializedConfiguration.materializeProductConfig(config)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
-    val transformedFields = fieldTransformers(sourceValue, nonConfiguredFields.values.toList)
+    val transformedFields = fieldTransformations(sourceValue, nonConfiguredFields.values.toList)
     val configuredFields = fieldConfigurations(materializedConfig, sourceValue)
 
     constructor(TypeRepr.of[Dest])
@@ -95,7 +95,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
   ): Expr[Dest] = {
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromMirror(Dest)
-    val transformerFields = fieldTransformers(sourceValue, Fields.dest.value)
+    val transformerFields = fieldTransformations(sourceValue, Fields.dest.value)
 
     constructor(TypeRepr.of[Dest])
       .appliedToArgs(transformerFields.toList)
@@ -120,7 +120,7 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
       .appliedTo(sourceValue.asTerm)
       .asExprOf[Dest]
 
-  private def fieldTransformers[Source: Type](
+  private def fieldTransformations[Source: Type](
     sourceValue: Expr[Source],
     fieldsToTransformInto: List[Field]
   )(using Fields.Source) =
@@ -155,54 +155,12 @@ private[ducktape] class ProductTransformerMacros(using val quotes: Quotes)
         NamedArg(field.name, castedCall.asTerm)
       }
 
-  private def resolveTransformation[Source: Type](sourceValue: Expr[Source], source: Field, destination: Field)(using Quotes) = {
+  private def resolveTransformation[Source: Type](sourceValue: Expr[Source], source: Field, destination: Field)(using Quotes) =
     source.transformerTo(destination) match {
-      case '{ $transformer: Transformer.Identity[?, ?] } => accessField(sourceValue, source.name)
-
-      case '{ $transformer: Transformer.ForProduct[source, dest] } =>
-        val field = accessField(sourceValue, source.name).asExprOf[source]
-        normalizeTransformer(transformer, field).asTerm
-
-      case '{ $transformer: Transformer.FromAnyVal[source, dest] } =>
-        val field = accessField(sourceValue, source.name).asExprOf[source]
-        normalizeTransformer(transformer, field).asTerm
-
-      case '{ $transformer: Transformer.ToAnyVal[source, dest] } =>
-        val field = accessField(sourceValue, source.name).asExprOf[source]
-        normalizeTransformer(transformer, field).asTerm
-
-      case '{ Transformer.given_Transformer_Source_Option[source, dest](using $transformer) } =>
-        val field = accessField(sourceValue, source.name).asExprOf[source]
-        val normalized = normalizeTransformer(transformer, field)
-        '{ Some($normalized) }.asTerm
-
-      case '{ Transformer.given_Transformer_Option_Option[source, dest](using $transformer) } =>
-        val field = accessField(sourceValue, source.name).asExprOf[Option[source]]
-        '{ $field.map(src => ${ normalizeTransformer(transformer, 'src) }) }.asTerm
-
-      // Seems like higher-kinded type quotes are not supported yet
-      // https://github.com/lampepfl/dotty-feature-requests/issues/208
-      // https://github.com/lampepfl/dotty/discussions/12446
-      // Because of that we need to do some more shenanigans to get the exact collection type we transform into
-      case '{
-            Transformer.given_Transformer_SourceCollection_DestCollection[
-              source,
-              dest,
-              Iterable,
-              Iterable
-            ](using $transformer, $factory)
-          } =>
-        val field = accessField(sourceValue, source.name).asExprOf[Iterable[source]]
-        factory match {
-          case '{ $f: Factory[`dest`, destColl] } =>
-            '{ $field.map(src => ${ normalizeTransformer(transformer, 'src) }).to($f) }.asTerm
-        }
-
       case '{ $transformer: Transformer[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
-        '{ $transformer.transform($field) }.asTerm
+        liftTransformation(transformer, field).asTerm
     }
-  }
 
   private def accessField(value: Expr[Any], fieldName: String)(using Quotes) = Select.unique(value.asTerm, fieldName)
 

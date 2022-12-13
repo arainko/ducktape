@@ -36,7 +36,7 @@ lazy val ducktape =
   project
     .in(file("ducktape"))
     .settings(
-      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings"),
+      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings", "-deprecation"),
       libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M7" % Test,
       mimaPreviousArtifacts := Set("io.github.arainko" %% "ducktape" % "0.1.0")
     )
@@ -44,7 +44,10 @@ lazy val ducktape =
 lazy val docs =
   project
     .in(file("documentation"))
-    .settings(publish / skip := true)
-    .settings(mdocVariables := Map("VERSION" -> version.value))
+    .settings(
+      mdocVariables := Map("VERSION" -> version.value),
+      libraryDependencies += ("org.scalameta" %% "scalafmt-dynamic" % "3.6.1").cross(CrossVersion.for3Use2_13),
+      publish / skip := true
+    )
     .dependsOn(ducktape)
     .enablePlugins(MdocPlugin)
