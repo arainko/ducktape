@@ -46,6 +46,7 @@ lazy val docs =
     .in(file("documentation"))
     .settings(
       mdocVariables := Map("VERSION" -> version.value),
+      libraryDependencies += ("org.scalameta" %% "scalafmt-dynamic" % "3.6.1").cross(CrossVersion.for3Use2_13),
       publish / skip := true
     )
     .dependsOn(ducktape)

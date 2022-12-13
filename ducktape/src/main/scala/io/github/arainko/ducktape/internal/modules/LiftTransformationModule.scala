@@ -2,8 +2,8 @@ package io.github.arainko.ducktape.internal.modules
 
 import io.github.arainko.ducktape.*
 
-import scala.quoted.*
 import scala.collection.Factory
+import scala.quoted.*
 
 private[ducktape] trait LiftTransformationModule { self: Module =>
   import quotes.reflect.*
@@ -61,7 +61,6 @@ private[ducktape] trait LiftTransformationModule { self: Module =>
             '{ $field.map(src => ${ liftTransformation(transformer, 'src) }).to($f) }.asExprOf[B]
         }
     }
-  
 
   /**
    * Lifts a raw transformation from a derived Transformer, eg.:

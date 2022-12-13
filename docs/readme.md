@@ -277,17 +277,101 @@ val transformed = definedTransformer.transform(testClass)
 
 ### A look at the generated code
 
-```scala mdoc:reset-object
-import io.github.arainko.ducktape.docs.*
-import scala.compiletime.*
+To inspect the code that is generated you can use `Transformer.Debug.showCode`, this method will print 
+the generated code at compile time for you to analyze and see if there's something funny going on after the macro expands.
+
+For the sake of documentation let's also give some examples of what should be the expected output for some basic usages of `ducktape`.
+
+#### Generated code - product transformations
+Given a structure of case classes like the ones below let's examine the output that `ducktape` splices into your code:
+
+```scala mdoc:reset-object:silent
 import io.github.arainko.ducktape.*
 
-final case class Cos(int: Int)
-final case class Tam(int: Int)
+final case class Wrapped[A](value: A) extends AnyVal
 
-val cos = Cos(1)
+case class Person(int: Int, str: Option[String], inside: Inside, collectionOfNumbers: Vector[Float])
+case class Person2(int: Wrapped[Int], str: Option[Wrapped[String]], inside: Inside2, collectionOfNumbers: List[Wrapped[Float]])
 
-Debug.printCode(
-  cos.to[Tam]
+case class Inside(str: String, int: Int, inside: EvenMoreInside)
+case class Inside2(int: Int, str: String, inside: Option[EvenMoreInside2])
+
+case class EvenMoreInside(str: String, int: Int)
+case class EvenMoreInside2(str: String, int: Int)
+
+val person = Person(23, Some("str"), Inside("insideStr", 24, EvenMoreInside("evenMoreInsideStr", 25)), Vector.empty)
+```
+#### Generated code - expansion of `.to`
+Calling the `.to` method
+```scala mdoc:silent
+person.to[Person2]
+```
+expands to:
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(person.to[Person2])
+```
+
+#### Generated code - expansion of `.into`
+Calling the `.into` method
+```scala mdoc:silent
+person
+  .into[Person2]
+  .transform(
+    Field.const(_.str, Some(Wrapped("ConstString!"))),
+    Field.computed(_.int, person => Wrapped(person.int + 100)),
+  )
+```
+expands to:
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  person
+    .into[Person2]
+    .transform(
+      Field.const(_.str, Some(Wrapped("ConstString!"))),
+      Field.computed(_.int, person => Wrapped(person.int + 100)),
+    )
 )
 ```
+
+#### Generated code - expansion of `.via`
+Calling the `.via` method
+```scala mdoc:silent
+person.via(Person2.apply)
+```
+
+expands to:
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(person.via(Person2.apply))
+```
+
+#### Generated code - expansion of `.intoVia`
+Calling the `.intoVia` method with subsequent transformation customizations
+```scala mdoc:silent
+person
+  .intoVia(Person2.apply)
+  .transform(
+    Arg.const(_.str, Some(Wrapped("ConstStr!"))),
+    Arg.computed(_.int, person => Wrapped(person.int + 100))
+  )
+```
+
+expands to:
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  person
+  .intoVia(Person2.apply)
+  .transform(
+    Arg.const(_.str, Some(Wrapped("ConstStr!"))),
+    Arg.computed(_.int, person => Wrapped(person.int + 100))
+  )
+)
+
+``` 

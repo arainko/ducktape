@@ -1,8 +1,9 @@
 package io.github.arainko.ducktape.internal.macros
 
-import io.github.arainko.ducktape.internal.modules.*
-import scala.quoted.*
 import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.internal.modules.*
+
+import scala.quoted.*
 
 private[ducktape] final class LiftTransformationMacros(using val quotes: Quotes) extends Module, LiftTransformationModule
 
