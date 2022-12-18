@@ -7,6 +7,7 @@ import io.github.arainko.ducktape.internal.modules.*
 import scala.collection.Factory
 import scala.deriving.*
 import scala.quoted.*
+import io.github.arainko.ducktape.internal.standalone.LiftTransformation
 
 private[ducktape] final class ProductTransformerMacros(using val quotes: Quotes)
     extends Module,
@@ -14,8 +15,7 @@ private[ducktape] final class ProductTransformerMacros(using val quotes: Quotes)
       CaseModule,
       MirrorModule,
       SelectorModule,
-      ConfigurationModule,
-      LiftTransformationModule {
+      ConfigurationModule {
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
@@ -159,7 +159,7 @@ private[ducktape] final class ProductTransformerMacros(using val quotes: Quotes)
     source.transformerTo(destination) match {
       case '{ $transformer: Transformer[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
-        liftTransformation(transformer, field).asTerm
+        LiftTransformation.liftTransformation(transformer, field).asTerm
     }
 
   private def accessField(value: Expr[Any], fieldName: String)(using Quotes) = Select.unique(value.asTerm, fieldName)
