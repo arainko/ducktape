@@ -15,7 +15,8 @@ private[ducktape] final class ProductTransformerMacros(using val quotes: Quotes)
       CaseModule,
       MirrorModule,
       SelectorModule,
-      ConfigurationModule {
+      ConfigurationModule/*,
+      LiftTransformationModule */ {
   import quotes.reflect.*
   import MaterializedConfiguration.*
 

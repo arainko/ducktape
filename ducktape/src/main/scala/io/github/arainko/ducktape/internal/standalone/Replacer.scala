@@ -12,7 +12,7 @@ import scala.quoted.*
  * val name = (((param: String) => new Name(appliedTo)): Transformer.ToAnyVal[String, Name]).transform(appliedTo)
  */
 object Replacer {
-  def apply(transformerLambda: TransformerLambda, appliedTo: Expr[Any])(toBeTransformed: Expr[Any])(using Quotes): Expr[Any] = {
+  def apply(using Quotes)(transformerLambda: TransformerLambda[quotes.type], appliedTo: Expr[Any])(toBeTransformed: Expr[Any]): Expr[Any] = {
     import quotes.reflect.*
     val mapper =
       new TreeMap {

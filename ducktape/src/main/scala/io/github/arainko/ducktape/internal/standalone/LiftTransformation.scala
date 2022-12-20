@@ -3,8 +3,32 @@ package io.github.arainko.ducktape.internal.standalone
 import scala.quoted.*
 import io.github.arainko.ducktape.Transformer
 import scala.collection.Factory
+import io.github.arainko.ducktape.internal.standalone.TransformerLambda.ForProduct
+import io.github.arainko.ducktape.internal.standalone.TransformerLambda.FromAnyVal
+import io.github.arainko.ducktape.internal.standalone.TransformerLambda.ToAnyVal
 
 object LiftTransformation {
+
+  def check(expr: Expr[Any])(using Quotes) = {
+    import quotes.reflect.*
+
+    val stripped = StripNoisyNodes(expr)
+
+    val lam = TransformerLambda.fromTransformer(expr.asExprOf[Transformer[?, ?]])
+
+    val shown =
+      lam.map(_.param.show)   
+
+    report.info(shown.toString)
+
+    // MakeTransformer
+    //   .unapply(stripped.asTerm)
+    //   .map { _ => report.info("matched")}
+    //   .getOrElse(report.info("NOT MATCHED"))
+
+    '{ () }
+  }
+
   def liftTransformation[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A])(using Quotes): Expr[B] =
     liftIdentityTransformation(transformer, appliedTo)
       .orElse(liftBasicTransformation(transformer, appliedTo))
@@ -85,23 +109,23 @@ object LiftTransformation {
   }
 
   private def optimizeTransformerInvocation(using Quotes)(
-    transformerLambda: TransformerLambda,
+    transformerLambda: TransformerLambda[quotes.type],
     appliedTo: Expr[Any]
   ): quotes.reflect.Term = {
     import quotes.reflect.*
 
     transformerLambda match {
-      case t: TransformerLambda.ForProduct =>
+      case t: TransformerLambda.ForProduct[quotes.type] =>
         val replacer = Replacer(transformerLambda, appliedTo)
         val newArgs =
           t.methodArgs
-            .map(replacer) // replace all references to the lambda param
+            .map(a => replacer(a.asExpr)) // replace all references to the lambda param
             .map(transformTransformerInvocation) // recurse down into nested calls
-        Apply(t.methodCall.asTerm, newArgs)
+        Apply(t.methodCall, newArgs)
 
-      case t: TransformerLambda.ToAnyVal =>
-        Apply(t.constructorCall.asTerm, List(appliedTo.asTerm))
-      case t: TransformerLambda.FromAnyVal =>
+      case t: TransformerLambda.ToAnyVal[quotes.type] =>
+        Apply(t.constructorCall, List(appliedTo.asTerm))
+      case t: TransformerLambda.FromAnyVal[quotes.type] =>
         Select.unique(appliedTo.asTerm, t.fieldName)
     }
 

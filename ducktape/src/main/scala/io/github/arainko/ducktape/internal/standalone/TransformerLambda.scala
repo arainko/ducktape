@@ -3,36 +3,32 @@ package io.github.arainko.ducktape.internal.standalone
 import scala.quoted.*
 import scala.quoted.Expr
 import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.internal.standalone.TransformerLambda.ForProduct
+import io.github.arainko.ducktape.internal.standalone.TransformerLambda.ToAnyVal
+import io.github.arainko.ducktape.internal.standalone.TransformerLambda.FromAnyVal
 
-enum TransformerLambda {
-  final def param(using Quotes): quotes.reflect.ValDef = {
-    import quotes.reflect.*
-
-    this match {
-      case ForProduct(param, methodCall, methodArgs)        => param.asTerm.asInstanceOf[ValDef]
-      case ToAnyVal(param, constructorCall, constructorArg) => param.asTerm.asInstanceOf[ValDef]
-      case FromAnyVal(param, fieldName)                     => param.asTerm.asInstanceOf[ValDef]
-    }
-  }
-
-  case ForProduct(
-    param: Expr[Any],
-    methodCall: Expr[Any],
-    methodArgs: List[Expr[Any]]
-  )
-
-  case ToAnyVal(
-    param: Expr[Any],
-    constructorCall: Expr[Any],
-    constructorArg: Expr[Any]
-  )
-
-  case FromAnyVal(param: Expr[Any], fieldName: String)
+sealed trait TransformerLambda[Q <: Quotes & Singleton] {
+  val quotes: Q
+  val param: quotes.reflect.ValDef
 }
 
 object TransformerLambda {
 
-  def fromTransformer(transformer: Expr[Transformer[?, ?]])(using Quotes): Option[TransformerLambda] = {
+  final class ForProduct[Q <: Quotes & Singleton](using val quotes: Q)(
+    val param: quotes.reflect.ValDef,
+    val methodCall: quotes.reflect.Term,
+    val methodArgs: List[quotes.reflect.Term]
+  ) extends TransformerLambda[Q]
+
+  final class ToAnyVal[Q <: Quotes & Singleton](using val quotes: Q)(
+    val param: quotes.reflect.ValDef,
+    val constructorCall: quotes.reflect.Term,
+    val constructorArg: quotes.reflect.Term
+  ) extends TransformerLambda[Q]
+
+  final class FromAnyVal[Q <: Quotes & Singleton](using val quotes: Q)(val param: quotes.reflect.ValDef, val fieldName: String) extends TransformerLambda[Q]
+
+  def fromTransformer(transformer: Expr[Transformer[?, ?]])(using Quotes): Option[TransformerLambda[quotes.type]] = {
     import quotes.reflect.*
 
     transformer match {
@@ -59,14 +55,21 @@ object TransformerLambda {
    */
   def fromForProduct(
     expr: Expr[Transformer.ForProduct[?, ?]]
-  )(using Quotes): Option[TransformerLambda.ForProduct] = {
+  )(using Quotes): Option[TransformerLambda.ForProduct[quotes.type]] = {
     import quotes.reflect.*
 
     PartialFunction.condOpt(expr.asTerm) {
       case MakeTransformer(param, Untyped(Apply(method, methodArgs))) =>
-        TransformerLambda.ForProduct(param.asExpr, method.asExpr, methodArgs.map(_.asExpr))
+        TransformerLambda.ForProduct(param, method, methodArgs)
     }
   }
+
+  // import quotes.reflect.*
+
+  // PartialFunction.condOpt(expr.asTerm) {
+  //   case MakeTransformer(param, Untyped(Apply(method, methodArgs))) =>
+  //     TransformerLambda.ForProduct(param, method.asExpr, methodArgs.map(_.asExpr))
+  // }
 
   /**
    * Matches a .make Transformer.ToAnyVal creation eg.:
@@ -79,12 +82,12 @@ object TransformerLambda {
    */
   def fromToAnyVal(
     expr: Expr[Transformer.ToAnyVal[?, ?]]
-  )(using Quotes): Option[TransformerLambda.ToAnyVal] = {
+  )(using Quotes): Option[TransformerLambda.ToAnyVal[quotes.type]] = {
     import quotes.reflect.*
 
     PartialFunction.condOpt(expr.asTerm) {
       case MakeTransformer(param, Untyped(Block(_, Apply(Untyped(constructorCall), List(arg))))) =>
-        TransformerLambda.ToAnyVal(param.asExpr, constructorCall.asExpr, arg.asExpr)
+        TransformerLambda.ToAnyVal(param, constructorCall, arg)
     }
   }
 
@@ -99,12 +102,12 @@ object TransformerLambda {
    */
   def fromFromAnyVal(
     expr: Expr[Transformer.FromAnyVal[?, ?]]
-  )(using Quotes): Option[TransformerLambda.FromAnyVal] = {
+  )(using Quotes): Option[TransformerLambda.FromAnyVal[quotes.type]] = {
     import quotes.reflect.*
 
     PartialFunction.condOpt(expr.asTerm) {
       case MakeTransformer(param, Untyped(Block(_, Select(Untyped(_: Ident), fieldName)))) =>
-        TransformerLambda.FromAnyVal(param.asExpr, fieldName)
+        TransformerLambda.FromAnyVal(param, fieldName)
     }
   }
 }

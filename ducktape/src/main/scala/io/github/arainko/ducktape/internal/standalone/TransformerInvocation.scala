@@ -4,7 +4,7 @@ import scala.quoted.*
 import io.github.arainko.ducktape.Transformer
 
 object TransformerInvocation {
-  def unapply(using Quotes)(term: quotes.reflect.Term): Option[(TransformerLambda, quotes.reflect.Term)] = {
+  def unapply(using Quotes)(term: quotes.reflect.Term): Option[(TransformerLambda[quotes.type], quotes.reflect.Term)] = {
     import quotes.reflect.*
 
     term.asExpr match {

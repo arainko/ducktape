@@ -6,6 +6,7 @@ import io.github.arainko.ducktape.internal.macros.*
 
 import scala.annotation.targetName
 import scala.deriving.Mirror
+import io.github.arainko.ducktape.internal.standalone.LiftTransformation
 
 extension [Source](value: Source) {
   def into[Dest]: AppliedBuilder[Source, Dest] = AppliedBuilder(value)
@@ -16,10 +17,10 @@ extension [Source](value: Source) {
   // works but there's gotta be a better way)
   //
   // On hold until I get to the bottom of this.
-  /*
-  inline def transformInto[Dest](using inline transformer: Transformer[Source, Dest]): Dest =
-    LiftTransformationMacros.liftTransformation(transformer, value)
-   */
+  
+  inline def transformInto[Dest](using inline transformer: Transformer[Source, Dest]) =
+    ${ LiftTransformation.liftTransformation('transformer, 'value) }
+   
 
   def to[Dest](using Transformer[Source, Dest]): Dest = Transformer[Source, Dest].transform(value)
 
