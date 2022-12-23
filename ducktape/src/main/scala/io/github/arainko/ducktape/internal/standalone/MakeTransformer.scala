@@ -6,8 +6,13 @@ object MakeTransformer {
   def unapply(using Quotes)(term: quotes.reflect.Term): Option[(quotes.reflect.ValDef, quotes.reflect.Term)] = {
     import quotes.reflect.*
 
-    PartialFunction.condOpt(term) {
-      case Untyped(Apply(_, List(Untyped(Lambda(List(param), body))))) => param -> body
+    term match {
+      case Inlined(_, Nil, term) => 
+        unapply(term)
+      case Untyped(Apply(_, List(Uninlined(Untyped(Uninlined(Lambda(List(param), Uninlined(body)))))))) => 
+        Some(param -> body)
+      case other => 
+        None
     }
   }
 }

@@ -2,7 +2,7 @@ package io.github.arainko.ducktapetest.builder
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.DebugMacros
-import io.github.arainko.ducktapetest.DucktapeSuite
+import io.github.arainko.DucktapeSuite
 
 import scala.deriving.Mirror
 

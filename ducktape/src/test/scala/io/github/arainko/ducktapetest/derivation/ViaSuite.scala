@@ -2,7 +2,7 @@ package io.github.arainko.ducktapetest.derivation
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.DebugMacros
-import io.github.arainko.ducktapetest.DucktapeSuite
+import io.github.arainko.DucktapeSuite
 import munit.FunSuite
 
 import scala.compiletime.testing.*

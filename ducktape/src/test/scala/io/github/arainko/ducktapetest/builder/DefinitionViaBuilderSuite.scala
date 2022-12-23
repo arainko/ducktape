@@ -1,6 +1,7 @@
 package io.github.arainko.ducktapetest.builder
 
 import io.github.arainko.ducktape.*
+import io.github.arainko.*
 import io.github.arainko.ducktapetest.*
 import io.github.arainko.ducktapetest.builder.DefinitionViaBuilderSuite.*
 import munit.*

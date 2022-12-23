@@ -33,14 +33,11 @@ object TransformerLambda {
 
     transformer match {
       case '{ $t: Transformer.ForProduct[a, b] } =>
-        val stripped = StripNoisyNodes(t)
-        TransformerLambda.fromForProduct(stripped)
+        TransformerLambda.fromForProduct(t)
       case '{ $t: Transformer.FromAnyVal[a, b] } =>
-        val stripped = StripNoisyNodes(t)
-        TransformerLambda.fromFromAnyVal(stripped)
+        TransformerLambda.fromFromAnyVal(t)
       case '{ $t: Transformer.ToAnyVal[a, b] } =>
-        val stripped = StripNoisyNodes(t)
-        TransformerLambda.fromToAnyVal(stripped)
+        TransformerLambda.fromToAnyVal(t)
       case other => None
     }
   }
@@ -86,7 +83,7 @@ object TransformerLambda {
     import quotes.reflect.*
 
     PartialFunction.condOpt(expr.asTerm) {
-      case MakeTransformer(param, Untyped(Block(_, Apply(Untyped(constructorCall), List(arg))))) =>
+      case MakeTransformer(param, Untyped(Block(_, Uninlined(Apply(Untyped(constructorCall), List(arg)))))) =>
         TransformerLambda.ToAnyVal(param, constructorCall, arg)
     }
   }
@@ -106,7 +103,7 @@ object TransformerLambda {
     import quotes.reflect.*
 
     PartialFunction.condOpt(expr.asTerm) {
-      case MakeTransformer(param, Untyped(Block(_, Select(Untyped(_: Ident), fieldName)))) =>
+      case MakeTransformer(param, Untyped(Block(_, Uninlined(Select(Untyped(_: Ident), fieldName))))) =>
         TransformerLambda.FromAnyVal(param, fieldName)
     }
   }

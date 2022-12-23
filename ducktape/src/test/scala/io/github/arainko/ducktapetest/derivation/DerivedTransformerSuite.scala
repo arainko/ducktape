@@ -3,7 +3,7 @@ package io.github.arainko.ducktapetest.derivation
 import io.github.arainko.ducktape.Transformer.ForProduct
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.*
-import io.github.arainko.ducktapetest.DucktapeSuite
+import io.github.arainko.DucktapeSuite
 import io.github.arainko.ducktapetest.model.*
 import munit.FunSuite
 
@@ -171,7 +171,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actual =
       List(
-        person.to[Person2],
+        person.transformInto[Person2],
         person.into[Person2].transform(),
         person.via(Person2.apply),
         person.intoVia(Person2.apply).transform(),

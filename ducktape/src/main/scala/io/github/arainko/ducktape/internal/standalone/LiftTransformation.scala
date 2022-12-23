@@ -9,26 +9,6 @@ import io.github.arainko.ducktape.internal.standalone.TransformerLambda.ToAnyVal
 
 object LiftTransformation {
 
-  def check(expr: Expr[Any])(using Quotes) = {
-    import quotes.reflect.*
-
-    val stripped = StripNoisyNodes(expr)
-
-    val lam = TransformerLambda.fromTransformer(expr.asExprOf[Transformer[?, ?]])
-
-    val shown =
-      lam.map(_.param.show)   
-
-    report.info(shown.toString)
-
-    // MakeTransformer
-    //   .unapply(stripped.asTerm)
-    //   .map { _ => report.info("matched")}
-    //   .getOrElse(report.info("NOT MATCHED"))
-
-    '{ () }
-  }
-
   def liftTransformation[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A])(using Quotes): Expr[B] =
     liftIdentityTransformation(transformer, appliedTo)
       .orElse(liftBasicTransformation(transformer, appliedTo))
@@ -128,7 +108,6 @@ object LiftTransformation {
       case t: TransformerLambda.FromAnyVal[quotes.type] =>
         Select.unique(appliedTo.asTerm, t.fieldName)
     }
-
   }
 
   // Match on all the possibilities of method invocations (that is, named args 'field = ...' and normal (by position) terms).

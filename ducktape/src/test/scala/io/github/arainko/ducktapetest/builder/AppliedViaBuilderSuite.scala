@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.builder.AppliedViaBuilder
 import io.github.arainko.ducktape.function.FunctionArguments
 import io.github.arainko.ducktape.internal.macros.DebugMacros
-import io.github.arainko.ducktapetest.DucktapeSuite
+import io.github.arainko.DucktapeSuite
 import io.github.arainko.ducktapetest.builder.AppliedViaBuilderSuite.*
 
 class AppliedViaBuilderSuite extends DucktapeSuite {

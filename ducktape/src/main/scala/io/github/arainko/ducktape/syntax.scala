@@ -20,7 +20,6 @@ extension [Source](value: Source) {
   
   inline def transformInto[Dest](using inline transformer: Transformer[Source, Dest]) =
     ${ LiftTransformation.liftTransformation('transformer, 'value) }
-   
 
   def to[Dest](using Transformer[Source, Dest]): Dest = Transformer[Source, Dest].transform(value)
 
