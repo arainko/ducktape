@@ -25,7 +25,7 @@ object AppliedViaBuilder {
     function: Func
   ) = AppliedViaBuilder[Source, Dest, Func, ArgSelector](source, function)
 
-  transparent inline def create[Source, Func](source: Source, inline func: Func)(using Func: FunctionMirror[Func]) = {
+  transparent inline def create[Source, Func](source: Source, inline func: Func)(using Func: FunctionMirror[Func]): Any = {
     val builder = instance[Source, Func.Return, Func, Nothing](source, func)
     FunctionMacros.namedArguments(func, builder)
   }

@@ -1,8 +1,7 @@
-package io.github.arainko.ducktapetest.derivation
+package io.github.arainko.ducktape.derivation
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.DebugMacros
-import io.github.arainko.DucktapeSuite
 import munit.FunSuite
 
 import scala.compiletime.testing.*

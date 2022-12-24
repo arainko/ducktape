@@ -1,13 +1,13 @@
-package io.github.arainko.ducktape.internal.standalone
+package io.github.arainko.ducktape.internal.modules.liftTransformation
 
-import scala.quoted.*
 import io.github.arainko.ducktape.Transformer
-import scala.collection.Factory
-import io.github.arainko.ducktape.internal.standalone.TransformerLambda.ForProduct
-import io.github.arainko.ducktape.internal.standalone.TransformerLambda.FromAnyVal
-import io.github.arainko.ducktape.internal.standalone.TransformerLambda.ToAnyVal
+import io.github.arainko.ducktape.internal.modules.liftTransformation.TransformerLambda.*
+import io.github.arainko.ducktape.internal.modules.liftTransformation.*
 
-object LiftTransformation {
+import scala.collection.Factory
+import scala.quoted.*
+
+private[ducktape] object LiftTransformation {
 
   def liftTransformation[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A])(using Quotes): Expr[B] =
     liftIdentityTransformation(transformer, appliedTo)
@@ -95,26 +95,27 @@ object LiftTransformation {
     import quotes.reflect.*
 
     transformerLambda match {
-      case t: TransformerLambda.ForProduct[quotes.type] =>
+      case tl: TransformerLambda.ForProduct[quotes.type] =>
         val replacer = Replacer(transformerLambda, appliedTo)
         val newArgs =
-          t.methodArgs
-            .map(a => replacer(a.asExpr)) // replace all references to the lambda param
+          tl.methodArgs
+            .map(replacer.apply) // replace all references to the lambda param
             .map(transformTransformerInvocation) // recurse down into nested calls
-        Apply(t.methodCall, newArgs)
+        Apply(tl.methodCall, newArgs)
 
-      case t: TransformerLambda.ToAnyVal[quotes.type] =>
-        Apply(t.constructorCall, List(appliedTo.asTerm))
-      case t: TransformerLambda.FromAnyVal[quotes.type] =>
-        Select.unique(appliedTo.asTerm, t.fieldName)
+      case tl: TransformerLambda.ToAnyVal[quotes.type] =>
+        Apply(tl.constructorCall, List(appliedTo.asTerm))
+
+      case tl: TransformerLambda.FromAnyVal[quotes.type] =>
+        Select.unique(appliedTo.asTerm, tl.fieldName)
     }
   }
 
   // Match on all the possibilities of method invocations (that is, named args 'field = ...' and normal (by position) terms).
-  private def transformTransformerInvocation(using Quotes)(term: Expr[Any]): quotes.reflect.Term = {
+  private def transformTransformerInvocation(using Quotes)(term: quotes.reflect.Term): quotes.reflect.Term = {
     import quotes.reflect.*
 
-    term.asTerm match {
+    term match {
       case Untyped(TransformerInvocation(transformerLambda, appliedTo)) =>
         optimizeTransformerInvocation(transformerLambda, appliedTo.asExpr)
       case NamedArg(name, Untyped(TransformerInvocation(transformerLambda, appliedTo))) =>

@@ -1,9 +1,10 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.macros
+
+import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.internal.modules.liftTransformation.MakeTransformer
 
 import scala.quoted.*
-import io.github.arainko.ducktape.internal.standalone.*
-
-object MakeTransformerTestMacros {
+object MakeTransformerChecker {
   inline def check(inline transformer: Transformer[?, ?]): Unit = ${ checkMacro('transformer) }
 
   def checkMacro(transformer: Expr[Transformer[?, ?]])(using Quotes): Expr[Unit] = {

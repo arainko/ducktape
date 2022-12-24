@@ -1,8 +1,8 @@
-package io.github.arainko.ducktape.internal.standalone
+package io.github.arainko.ducktape.internal.modules.liftTransformation
 
 import scala.quoted.*
 
-object Uninlined {
+private[ducktape] object Uninlined {
   def unapply(using Quotes)(term: quotes.reflect.Term): Some[quotes.reflect.Term] = {
     import quotes.reflect.*
 

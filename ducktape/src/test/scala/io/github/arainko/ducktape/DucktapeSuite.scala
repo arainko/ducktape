@@ -1,4 +1,4 @@
-package io.github.arainko
+package io.github.arainko.ducktape
 
 import munit.FunSuite
 

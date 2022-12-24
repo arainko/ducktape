@@ -1,10 +1,9 @@
-package io.github.arainko.ducktapetest.derivation
+package io.github.arainko.ducktape.derivation
 
 import io.github.arainko.ducktape.Transformer.ForProduct
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.*
-import io.github.arainko.DucktapeSuite
-import io.github.arainko.ducktapetest.model.*
+import io.github.arainko.ducktape.model.*
 import munit.FunSuite
 
 import scala.compiletime.testing.*
@@ -62,7 +61,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualComplex =
       List(
-        expectedPrimitive.to[ComplexPerson],
+        expectedPrimitive.transformInto[ComplexPerson],
         expectedPrimitive.into[ComplexPerson].transform(),
         expectedPrimitive.via(ComplexPerson.apply),
         expectedPrimitive.intoVia(ComplexPerson.apply).transform(),
@@ -72,7 +71,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualPrimitive =
       List(
-        expectedComplex.to[PrimitivePerson],
+        expectedComplex.transformInto[PrimitivePerson],
         expectedComplex.into[PrimitivePerson].transform(),
         expectedComplex.via(PrimitivePerson.apply),
         expectedComplex.intoVia(PrimitivePerson.apply).transform(),
@@ -106,7 +105,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualComplex =
       List(
-        primitive.to[ComplexPerson],
+        primitive.transformInto[ComplexPerson],
         primitive.into[ComplexPerson].transform(),
         primitive.via(ComplexPerson.apply),
         primitive.intoVia(ComplexPerson.apply).transform(),
@@ -127,12 +126,12 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val expectedFromEnum2Mapping = expectedFromEnum1Mapping.map(_.swap)
 
     Enum1.values.foreach { value =>
-      val actual = value.to[Enum2]
+      val actual = value.transformInto[Enum2]
       assertEquals(expectedFromEnum1Mapping(value), actual)
     }
 
     Enum2.values.foreach { value =>
-      val actual = value.to[Enum1]
+      val actual = value.transformInto[Enum1]
       assertEquals(expectedFromEnum2Mapping(value), actual)
     }
   }
@@ -145,7 +144,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val expected = LessFields(1, 2, 3)
     val actual =
       List(
-        more.to[LessFields],
+        more.transformInto[LessFields],
         more.into[LessFields].transform(),
         more.via(LessFields.apply),
         more.intoVia(LessFields.apply).transform(),
@@ -186,8 +185,8 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val wrappedString = Wrapped("asd")
     val unwrapped = "asd"
 
-    assertEquals(wrappedString.to[String], unwrapped)
-    assertEquals(unwrapped.to[Wrapped[String]], wrappedString)
+    assertEquals(wrappedString.transformInto[String], unwrapped)
+    assertEquals(unwrapped.transformInto[Wrapped[String]], wrappedString)
   }
 
   test("products with AnyVal fields with type params roundrip to their primitives") {
@@ -199,7 +198,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualUnwrapped =
       List(
-        person.to[UnwrappedPerson[Long]],
+        person.transformInto[UnwrappedPerson[Long]],
         person.into[UnwrappedPerson[Long]].transform(),
         person.via(UnwrappedPerson.apply[Long]),
         person.intoVia(UnwrappedPerson.apply[Long]).transform(),
@@ -209,7 +208,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualPerson =
       List(
-        unwrapped.to[Person[Long]],
+        unwrapped.transformInto[Person[Long]],
         unwrapped.into[Person[Long]].transform(),
         unwrapped.via(Person.apply[Long]),
         unwrapped.intoVia(Person.apply[Long]).transform(),
@@ -229,7 +228,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
       val less = LessFields(1, 2, 3)
 
-      val derived = less.to[MoreFields]
+      val derived = less.transformInto[MoreFields]
       """
     }("No field named 'field4' found in LessFields")
   }
@@ -243,6 +242,6 @@ class DerivedTransformerSuite extends DucktapeSuite {
   }
 
   test("derivation fails when going from a sum with more cases to a sum with less cases") {
-    assertFailsToCompileWith("Transformer[MoreCases, LessCases]")("No child named 'Case4' found in LessCases")
+    assertFailsToCompileWith("MoreCases.Case3.transformInto[LessCases]")("No child named 'Case4' found in LessCases")
   }
 }

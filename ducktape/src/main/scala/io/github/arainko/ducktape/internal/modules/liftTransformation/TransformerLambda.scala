@@ -1,18 +1,17 @@
-package io.github.arainko.ducktape.internal.standalone
+package io.github.arainko.ducktape.internal.modules.liftTransformation
+
+import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.internal.modules.liftTransformation.TransformerLambda.*
+import io.github.arainko.ducktape.internal.modules.liftTransformation.*
 
 import scala.quoted.*
-import scala.quoted.Expr
-import io.github.arainko.ducktape.Transformer
-import io.github.arainko.ducktape.internal.standalone.TransformerLambda.ForProduct
-import io.github.arainko.ducktape.internal.standalone.TransformerLambda.ToAnyVal
-import io.github.arainko.ducktape.internal.standalone.TransformerLambda.FromAnyVal
 
-sealed trait TransformerLambda[Q <: Quotes & Singleton] {
+private[ducktape] sealed trait TransformerLambda[Q <: Quotes & Singleton] {
   val quotes: Q
   val param: quotes.reflect.ValDef
 }
 
-object TransformerLambda {
+private[ducktape] object TransformerLambda {
 
   final class ForProduct[Q <: Quotes & Singleton](using val quotes: Q)(
     val param: quotes.reflect.ValDef,
@@ -26,7 +25,8 @@ object TransformerLambda {
     val constructorArg: quotes.reflect.Term
   ) extends TransformerLambda[Q]
 
-  final class FromAnyVal[Q <: Quotes & Singleton](using val quotes: Q)(val param: quotes.reflect.ValDef, val fieldName: String) extends TransformerLambda[Q]
+  final class FromAnyVal[Q <: Quotes & Singleton](using val quotes: Q)(val param: quotes.reflect.ValDef, val fieldName: String)
+      extends TransformerLambda[Q]
 
   def fromTransformer(transformer: Expr[Transformer[?, ?]])(using Quotes): Option[TransformerLambda[quotes.type]] = {
     import quotes.reflect.*
@@ -60,13 +60,6 @@ object TransformerLambda {
         TransformerLambda.ForProduct(param, method, methodArgs)
     }
   }
-
-  // import quotes.reflect.*
-
-  // PartialFunction.condOpt(expr.asTerm) {
-  //   case MakeTransformer(param, Untyped(Apply(method, methodArgs))) =>
-  //     TransformerLambda.ForProduct(param, method.asExpr, methodArgs.map(_.asExpr))
-  // }
 
   /**
    * Matches a .make Transformer.ToAnyVal creation eg.:

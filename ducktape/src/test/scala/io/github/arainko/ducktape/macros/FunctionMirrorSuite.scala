@@ -1,4 +1,4 @@
-package io.github.arainko.ducktapetest
+package io.github.arainko.ducktape.macros
 
 import io.github.arainko.ducktape.function.FunctionMirror
 import munit.FunSuite

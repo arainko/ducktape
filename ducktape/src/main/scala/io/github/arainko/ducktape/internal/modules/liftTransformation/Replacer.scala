@@ -1,4 +1,6 @@
-package io.github.arainko.ducktape.internal.standalone
+package io.github.arainko.ducktape.internal.modules.liftTransformation
+
+import io.github.arainko.ducktape.internal.modules.liftTransformation.TransformerLambda
 
 import scala.quoted.*
 
@@ -11,8 +13,10 @@ import scala.quoted.*
  * After replacing this piece of code will look like this:
  * val name = (((param: String) => new Name(appliedTo)): Transformer.ToAnyVal[String, Name]).transform(appliedTo)
  */
-object Replacer {
-  def apply(using Quotes)(transformerLambda: TransformerLambda[quotes.type], appliedTo: Expr[Any])(toBeTransformed: Expr[Any]): Expr[Any] = {
+private[ducktape] object Replacer {
+  def apply(using Quotes)(transformerLambda: TransformerLambda[quotes.type], appliedTo: Expr[Any])(
+    toBeTransformed: quotes.reflect.Term
+  ): quotes.reflect.Term = {
     import quotes.reflect.*
     val mapper =
       new TreeMap {
@@ -25,6 +29,6 @@ object Replacer {
           }
       }
 
-    mapper.transformTerm(toBeTransformed.asTerm)(Symbol.spliceOwner).asExpr
+    mapper.transformTerm(toBeTransformed)(Symbol.spliceOwner)
   }
 }

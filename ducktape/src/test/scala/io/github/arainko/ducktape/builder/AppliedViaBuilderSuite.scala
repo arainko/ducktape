@@ -1,12 +1,12 @@
-package io.github.arainko.ducktapetest.builder
+package io.github.arainko.ducktape.builder
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.*
-import io.github.arainko.ducktapetest.*
-import io.github.arainko.ducktapetest.builder.DefinitionViaBuilderSuite.*
-import munit.*
+import io.github.arainko.ducktape.builder.AppliedViaBuilder
+import io.github.arainko.ducktape.builder.AppliedViaBuilderSuite.*
+import io.github.arainko.ducktape.function.FunctionArguments
+import io.github.arainko.ducktape.internal.macros.DebugMacros
 
-class DefinitionViaBuilderSuite extends DucktapeSuite {
+class AppliedViaBuilderSuite extends DucktapeSuite {
   private val testClass = TestClass("str", 1)
 
   test("Arg.const properly applies a constant to an argument") {
@@ -14,12 +14,12 @@ class DefinitionViaBuilderSuite extends DucktapeSuite {
 
     val expected = TestClassWithAdditionalList(1, "str", List("const"))
 
-    val transformer =
-      Transformer
-        .defineVia[TestClass](method)
-        .build(Arg.const(_.additionalArg, List("const")))
+    val actual =
+      testClass
+        .intoVia(method)
+        .transform(Arg.const(_.additionalArg, List("const")))
 
-    assertEquals(transformer.transform(testClass), expected)
+    assertEquals(actual, expected)
   }
 
   test("Arg.computed properly applies a function to an argument") {
@@ -27,12 +27,12 @@ class DefinitionViaBuilderSuite extends DucktapeSuite {
 
     val expected = TestClassWithAdditionalList(1, "str", List("str"))
 
-    val transformer =
-      Transformer
-        .defineVia[TestClass](method)
-        .build(Arg.computed(_.additionalArg, testClass => List(testClass.str)))
+    val actual =
+      testClass
+        .intoVia(method)
+        .transform(Arg.computed(_.additionalArg, testClass => List(testClass.str)))
 
-    assertEquals(transformer.transform(testClass), expected)
+    assertEquals(actual, expected)
   }
 
   test("Arg.renamed properly uses a different field for that argument") {
@@ -40,12 +40,12 @@ class DefinitionViaBuilderSuite extends DucktapeSuite {
 
     val expected = TestClassWithAdditionalString(1, "str", "str")
 
-    val transformer =
-      Transformer
-        .defineVia[TestClass](method)
-        .build(Arg.renamed(_.additionalArg, _.str))
+    val actual =
+      testClass
+        .intoVia(method)
+        .transform(Arg.renamed(_.additionalArg, _.str))
 
-    assertEquals(transformer.transform(testClass), expected)
+    assertEquals(actual, expected)
   }
 
   test("Builder reports a missing argument") {
@@ -53,17 +53,16 @@ class DefinitionViaBuilderSuite extends DucktapeSuite {
       """
       def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
 
-      val transformer =
-        Transformer
-          .defineVia[TestClass](method)
-          .build()
+      val actual =
+        testClass
+          .intoVia(method)
+          .transform()
       """
     }("No field named 'additionalArg' found in TestClass")
   }
-
 }
 
-object DefinitionViaBuilderSuite {
+object AppliedViaBuilderSuite {
   final case class TestClass(str: String, int: Int)
   final case class TestClassWithAdditionalList(int: Int, str: String, additionalArg: List[String])
   final case class TestClassWithAdditionalString(int: Int, str: String, additionalArg: String)

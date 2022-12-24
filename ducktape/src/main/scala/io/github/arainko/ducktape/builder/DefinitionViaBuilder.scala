@@ -25,7 +25,7 @@ object DefinitionViaBuilder {
 
   object PartiallyApplied {
     extension [Source](partial: PartiallyApplied[Source]) {
-      transparent inline def apply[Func](inline func: Func)(using Func: FunctionMirror[Func]) = {
+      transparent inline def apply[Func](inline func: Func)(using Func: FunctionMirror[Func]): Any = {
         val builder = instance[Source, Func.Return, Func, Nothing](func)
         FunctionMacros.namedArguments(func, builder)
       }

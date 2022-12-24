@@ -3,11 +3,11 @@ package io.github.arainko.ducktape.internal.macros
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.modules.*
+import io.github.arainko.ducktape.internal.modules.liftTransformation.LiftTransformation
 
 import scala.collection.Factory
 import scala.deriving.*
 import scala.quoted.*
-import io.github.arainko.ducktape.internal.standalone.LiftTransformation
 
 private[ducktape] final class ProductTransformerMacros(using val quotes: Quotes)
     extends Module,
@@ -15,8 +15,7 @@ private[ducktape] final class ProductTransformerMacros(using val quotes: Quotes)
       CaseModule,
       MirrorModule,
       SelectorModule,
-      ConfigurationModule/*,
-      LiftTransformationModule */ {
+      ConfigurationModule {
   import quotes.reflect.*
   import MaterializedConfiguration.*
 
