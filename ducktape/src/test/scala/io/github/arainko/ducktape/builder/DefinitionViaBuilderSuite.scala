@@ -1,10 +1,9 @@
-package io.github.arainko.ducktapetest.builder
+package io.github.arainko.ducktape.builder
 
+import io.github.arainko.*
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktapetest.*
-import io.github.arainko.ducktapetest.builder.DefinitionViaBuilderSuite.*
+import io.github.arainko.ducktape.builder.DefinitionViaBuilderSuite.*
 import munit.*
-
 class DefinitionViaBuilderSuite extends DucktapeSuite {
   private val testClass = TestClass("str", 1)
 
