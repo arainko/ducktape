@@ -31,4 +31,30 @@ object DefinitionViaBuilder {
       }
     }
   }
+
+  final class FailFast[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (function: Func) {
+    inline def build(
+      inline config: FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]*
+    )(using
+      F: Transformer.FailFast.Support[F],
+      Source: Mirror.ProductOf[Source]
+    ): Transformer.FailFast[F, Source, Dest] =
+      new {
+        def transform(value: Source): F[Dest] =
+          Transformations.failFastViaConfigured[F, Source, Dest, Func, ArgSelector](value, function, config*)
+      }
+  }
+
+  final class Accumulating[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (function: Func) {
+    inline def build(
+      inline config: FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]*
+    )(using
+      F: Transformer.Accumulating.Support[F],
+      Source: Mirror.ProductOf[Source]
+    ): Transformer.Accumulating[F, Source, Dest] =
+      new {
+        def transform(value: Source): F[Dest] =
+          Transformations.accumulatingViaConfigured[F, Source, Dest, Func, ArgSelector](value, function, config*)
+      }
+  }
 }

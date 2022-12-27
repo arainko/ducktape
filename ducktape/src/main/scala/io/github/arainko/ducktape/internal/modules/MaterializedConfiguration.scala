@@ -126,6 +126,19 @@ private[ducktape] object MaterializedConfiguration {
       }
   }
 
+  enum FallibleProduct[F[+x]](val destFieldName: String) extends MaterializedConfiguration {
+
+    case Const(private val fieldName: String, value: Expr[F[Any]]) extends FallibleProduct[F](fieldName)
+
+    case Computed(private val fieldName: String, function: Expr[Any => F[Any]]) extends FallibleProduct[F](fieldName)
+
+    case Total(value: Product) extends FallibleProduct[F](value.destFieldName)
+  }
+
+  object FallibleProduct {
+
+  }
+
   enum Coproduct extends MaterializedConfiguration {
     val tpe: Type[?]
 
@@ -169,6 +182,59 @@ private[ducktape] object MaterializedConfiguration {
       }
       .toList
   }
+
+  private def materializeSingleFallibleProductConfig[F[+x]: Type, Source: Type, Dest: Type](
+    config: Expr[FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]]
+  )(using Quotes, Fields.Source, Fields.Dest): List[FallibleProduct[F]] =
+    config match {
+      case '{
+            FieldConfig.fallibleConst[F, source, dest, fieldType, actualType](
+              $selector,
+              $value
+            )(using $ev1, $ev2, $ev3)
+          } =>
+        val name = Selectors.fieldName(Fields.dest, selector)
+        FallibleProduct.Const(name, value) :: Nil
+
+      case '{
+            FieldConfig.fallibleComputed[F, source, dest, fieldType, actualType](
+              $selector,
+              $function
+            )(using $ev1, $ev2, $ev3)
+          } =>
+        val name = Selectors.fieldName(Fields.dest, selector)
+        FallibleProduct.Computed(name, function.asInstanceOf[Expr[Any => F[Any]]]) :: Nil
+
+      case '{ $config: BuilderConfig[Source, Dest] } =>
+        materializeSingleProductConfig(config).map(FallibleProduct.Total(_))
+
+      // TODO: Add more suggestions to this failure
+      case other =>
+        Failure.abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Field))
+    }
+
+  private def materializeSingleFallibleArgConfig[F[+x]: Type, Source: Type, Dest: Type, ArgSelector <: FunctionArguments: Type](
+    config: Expr[FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]]
+  )(using Quotes, Fields.Source, Fields.Dest): FallibleProduct[F] =
+    config match {
+      case '{
+            type argSelector <: FunctionArguments
+            Arg.fallibleConst[F, source, dest, argType, actualType, `argSelector`]($selector, $const)(using $ev1, $ev2)
+          } =>
+        val argName = Selectors.argName(Fields.dest, selector)
+        FallibleProduct.Const(argName, const)
+
+      case '{
+            type argSelector <: FunctionArguments
+            Arg.fallibleComputed[F, source, dest, argType, actualType, `argSelector`]($selector, $function)(using $ev1, $ev2)
+          } =>
+        val argName = Selectors.argName(Fields.dest, selector)
+        FallibleProduct.Computed(argName, function.asInstanceOf[Expr[Any => F[Any]]])
+
+      case '{ $config: ArgBuilderConfig[Source, Dest, ArgSelector] } => FallibleProduct.Total(materializeSingleArgConfig(config))
+
+      case other => Failure.abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Arg))
+    }
 
   private def accessField(using Quotes)(value: quotes.reflect.Term, field: Field) = {
     import quotes.reflect.*

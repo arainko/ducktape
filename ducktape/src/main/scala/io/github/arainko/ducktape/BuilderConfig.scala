@@ -7,6 +7,7 @@ import scala.deriving.Mirror
 import scala.util.NotGiven
 
 opaque type BuilderConfig[Source, Dest] = Unit
+opaque type FallibleBuilderConfig[F[+x], Source, Dest] = Unit
 
 object Field {
 
@@ -59,6 +60,24 @@ object Field {
     @implicitNotFound("Field.allMatching is supported for product types only, but ${FieldSource} is not a product type.")
     ev3: Mirror.ProductOf[FieldSource]
   ): BuilderConfig[Source, Dest] = throw NotQuotedException("Field.allMatching")
+
+  @compileTimeOnly("'Field.fallibleConst' needs to be erased from the AST with a macro.")
+  def fallibleConst[F[+x], Source, Dest, FieldType, ActualType](selector: Dest => FieldType, value: F[ActualType])(using
+    ev1: ActualType <:< FieldType,
+    @implicitNotFound("Field.fallibleConst is supported for product types only, but ${Source} is not a product type.")
+    ev2: Mirror.ProductOf[Source],
+    @implicitNotFound("Field.fallibleConst is supported for product types only, but ${Dest} is not a product type.")
+    ev3: Mirror.ProductOf[Dest]
+  ): FallibleBuilderConfig[F, Source, Dest] = throw NotQuotedException("Field.fallibleConst")
+
+  @compileTimeOnly("'Field.fallibleComputed' needs to be erased from the AST with a macro.")
+  def fallibleComputed[F[+x], Source, Dest, FieldType, ActualType](selector: Dest => FieldType, f: Source => F[ActualType])(using
+    ev1: ActualType <:< FieldType,
+    @implicitNotFound("Field.fallibleComputed is supported for product types only, but ${Source} is not a product type.")
+    ev2: Mirror.ProductOf[Source],
+    @implicitNotFound("Field.fallibleComputed is supported for product types only, but ${Dest} is not a product type.")
+    ev3: Mirror.ProductOf[Dest]
+  ): FallibleBuilderConfig[F, Source, Dest] = throw NotQuotedException("Field.fallibleComputed")
 }
 
 object Case {
