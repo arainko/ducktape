@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.modules.liftTransformation.TransformerLambda
 
 import scala.quoted.*
+
 private[ducktape] object TransformerInvocation {
   def unapply(using Quotes)(term: quotes.reflect.Term): Option[(TransformerLambda[quotes.type], quotes.reflect.Term)] = {
     import quotes.reflect.*

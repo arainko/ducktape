@@ -15,7 +15,7 @@ private[ducktape] object DerivationMacros {
     Source: Expr[Mirror.ProductOf[Source]],
     Dest: Expr[Mirror.ProductOf[Dest]]
   )(using Quotes): Expr[Transformer[Source, Dest]] =
-    '{ source => ${ ProductTransformerMacros.transformMacro[Source, Dest]('source, Source, Dest) } }
+    '{ source => ${ ProductTransformerMacrosV2.transform[Source, Dest]('source, Source, Dest) } }
 
   inline def deriveCoproductTransformer[Source, Dest](using
     Source: Mirror.SumOf[Source],
@@ -26,17 +26,17 @@ private[ducktape] object DerivationMacros {
     Source: Expr[Mirror.SumOf[Source]],
     Dest: Expr[Mirror.SumOf[Dest]]
   )(using Quotes): Expr[Transformer[Source, Dest]] =
-    '{ source => ${ CoproductTransformerMacros.transformMacro[Source, Dest]('source, Source, Dest) } }
+    '{ source => ${ CoproductTransformerMacrosV2.transform[Source, Dest]('source, Source, Dest) } }
 
   inline def deriveToAnyValTransformer[Source, Dest <: AnyVal]: Transformer[Source, Dest] =
     ${ deriveToAnyValTransformerMacro[Source, Dest] }
 
   def deriveToAnyValTransformerMacro[Source: Type, Dest <: AnyVal: Type](using Quotes): Expr[Transformer[Source, Dest]] =
-    '{ source => ${ ProductTransformerMacros.transformToAnyValMacro('source) } }
+    '{ source => ${ ProductTransformerMacrosV2.transformToAnyVal('source) } }
 
   inline def deriveFromAnyValTransformer[Source <: AnyVal, Dest] =
     ${ deriveFromAnyValTransformerMacro[Source, Dest] }
 
   def deriveFromAnyValTransformerMacro[Source <: AnyVal: Type, Dest: Type](using Quotes): Expr[Transformer[Source, Dest]] =
-    '{ source => ${ ProductTransformerMacros.transformFromAnyValMacro('source) } }
+    '{ source => ${ ProductTransformerMacrosV2.transformFromAnyVal('source) } }
 }
