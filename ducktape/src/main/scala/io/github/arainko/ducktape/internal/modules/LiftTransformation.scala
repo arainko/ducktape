@@ -1,8 +1,8 @@
-package io.github.arainko.ducktape.internal.modules.liftTransformation
+package io.github.arainko.ducktape.internal.modules
 
 import io.github.arainko.ducktape.Transformer
-import io.github.arainko.ducktape.internal.modules.liftTransformation.TransformerLambda.*
-import io.github.arainko.ducktape.internal.modules.liftTransformation.*
+import io.github.arainko.ducktape.internal.modules.TransformerLambda.*
+import io.github.arainko.ducktape.internal.modules.*
 
 import scala.collection.Factory
 import scala.quoted.*

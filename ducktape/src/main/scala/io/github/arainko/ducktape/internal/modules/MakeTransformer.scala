@@ -1,6 +1,6 @@
-package io.github.arainko.ducktape.internal.modules.liftTransformation
+package io.github.arainko.ducktape.internal.modules
 
-import io.github.arainko.ducktape.internal.modules.liftTransformation.{ Uninlined, Untyped }
+import io.github.arainko.ducktape.internal.modules.{ Uninlined, Untyped }
 
 import scala.quoted.*
 

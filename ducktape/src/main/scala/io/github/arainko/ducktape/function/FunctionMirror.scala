@@ -16,5 +16,5 @@ object FunctionMirror extends FunctionMirror[Any => Any] {
 
   override type Return = Any
 
-  transparent inline given [F]: FunctionMirror[F] = ${ FunctionMacros.createMirror[F] }
+  transparent inline given [F]: FunctionMirror[F] = Functions.deriveMirror[F]
 }

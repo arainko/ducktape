@@ -1,7 +1,7 @@
 package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
-import io.github.arainko.ducktape.internal.modules.common.*
+import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.function.FunctionArguments
 
 object Selectors {

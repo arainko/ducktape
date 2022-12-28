@@ -15,7 +15,7 @@ final class AppliedViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArgumen
   inline def transform(
     inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
   )(using Source: Mirror.ProductOf[Source]): Dest =
-    ${ ProductTransformerMacrosV2.viaConfigured[Source, Dest, Func, ArgSelector]('source, 'function, 'config, 'Source) }
+    Transformations.viaConfigured[Source, Dest, Func, ArgSelector](source, function, config*)
 
 }
 
@@ -27,6 +27,6 @@ object AppliedViaBuilder {
 
   transparent inline def create[Source, Func](source: Source, inline func: Func)(using Func: FunctionMirror[Func]): Any = {
     val builder = instance[Source, Func.Return, Func, Nothing](source, func)
-    FunctionMacros.namedArguments(func, builder)
+    Functions.refineFunctionArguments(func, builder)
   }
 }

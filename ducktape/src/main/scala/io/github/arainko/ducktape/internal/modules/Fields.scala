@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal.modules
 import scala.quoted.*
 import scala.deriving.Mirror
 import io.github.arainko.ducktape.function.FunctionArguments
-import io.github.arainko.ducktape.internal.modules.mirror.*
+import io.github.arainko.ducktape.internal.modules.*
 
 sealed trait Fields {
   export byName.{ apply => unsafeGet, contains => containsFieldWithName, get }

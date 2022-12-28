@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.internal.modules.common
+package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 

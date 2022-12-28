@@ -2,7 +2,7 @@ package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 import scala.deriving.Mirror
-import io.github.arainko.ducktape.internal.modules.mirror.MaterializedMirror
+import io.github.arainko.ducktape.internal.modules.*
 
 sealed trait Cases {
   export byName.get

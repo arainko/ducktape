@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.internal.macros
+package io.github.arainko.ducktape.internal.modules
 
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.modules.*
@@ -28,13 +28,8 @@ private[ducktape] object FunctionMacros {
       case other => report.errorAndAbort(s"FunctionMirrors can only be created for functions. Got ${other.show} instead.")
     }
   }
-
-  transparent inline def namedArguments[Func, F[x <: FunctionArguments]](
-    inline function: Func,
-    initial: F[Nothing]
-  ): Any = ${ namedArgumentsMacro[Func, F]('function, 'initial) }
-
-  private def namedArgumentsMacro[Func: Type, F[x <: FunctionArguments]: Type](
+  
+  def namedArguments[Func: Type, F[x <: FunctionArguments]: Type](
     function: Expr[Func],
     initial: Expr[F[Nothing]]
   )(using Quotes) = {

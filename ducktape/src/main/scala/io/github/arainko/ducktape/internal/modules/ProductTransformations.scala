@@ -1,21 +1,18 @@
-package io.github.arainko.ducktape.internal.macros
+package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 import scala.deriving.*
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.modules.*
-import io.github.arainko.ducktape.internal.modules.liftTransformation.*
-import io.github.arainko.ducktape.Transformer
-import io.github.arainko.ducktape.internal.modules.common.Failure
 import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.*
 
-object ProductTransformerMacrosV2 {
+object ProductTransformations {
   def transform[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     Source: Expr[Mirror.ProductOf[Source]],
     Dest: Expr[Mirror.ProductOf[Dest]]
-  )(using quotes: Quotes): Expr[Dest] = {
+  )(using Quotes): Expr[Dest] = {
     import quotes.reflect.*
 
     given Fields.Source = Fields.Source.fromMirror(Source)

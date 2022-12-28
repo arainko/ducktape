@@ -90,10 +90,10 @@ object Transformer {
   given [Source, Dest >: Source]: Identity[Source, Dest] = Identity[Source, Dest]
 
   inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
-    ForProduct.make(DerivationMacros.deriveProductTransformer[Source, Dest])
+    ForProduct.make(DerivedTransformers.product[Source, Dest])
 
   inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): ForCoproduct[Source, Dest] =
-    ForCoproduct.make(DerivationMacros.deriveCoproductTransformer[Source, Dest])
+    ForCoproduct.make(DerivedTransformers.coproduct[Source, Dest])
 
   given [Source, Dest](using Transformer[Source, Dest]): Transformer[Source, Option[Dest]] =
     from => Transformer[Source, Dest].transform.andThen(Some.apply)(from)
@@ -112,8 +112,8 @@ object Transformer {
   ): Transformer[SourceCollection[Source], DestCollection[Dest]] = from => from.map(trans.transform).to(factory)
 
   inline given fromAnyVal[Source <: AnyVal, Dest]: FromAnyVal[Source, Dest] =
-    FromAnyVal.make(DerivationMacros.deriveFromAnyValTransformer[Source, Dest])
+    FromAnyVal.make(DerivedTransformers.fromAnyVal[Source, Dest])
 
   inline given toAnyVal[Source, Dest <: AnyVal]: ToAnyVal[Source, Dest] =
-    ToAnyVal.make(DerivationMacros.deriveToAnyValTransformer[Source, Dest])
+    ToAnyVal.make(DerivedTransformers.toAnyVal[Source, Dest])
 }
