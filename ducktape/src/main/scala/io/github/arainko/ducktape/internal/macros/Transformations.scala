@@ -6,7 +6,7 @@ import io.github.arainko.ducktape.internal.modules.*
 import scala.deriving.Mirror
 import io.github.arainko.ducktape.function.*
 
-object Transformations {
+private[ducktape] object Transformations {
   inline def via[Source, Dest, Func](source: Source, inline function: Func)(using
     Source: Mirror.ProductOf[Source],
     Func: FunctionMirror.Aux[Func, Dest]

@@ -2,9 +2,9 @@ package io.github.arainko.ducktape.internal.modules
 
 import io.github.arainko.ducktape.internal.modules.Fields
 
-opaque type Suggestion = String
+private[ducktape] opaque type Suggestion = String
 
-object Suggestion {
+private[ducktape] object Suggestion {
   def apply(text: String): Suggestion = text
 
   def all(head: String, tail: String*): List[Suggestion] = head :: tail.toList

@@ -2,14 +2,14 @@ package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 
-sealed trait Failure {
+private[ducktape] sealed trait Failure {
   def position(using Quotes): quotes.reflect.Position =
     quotes.reflect.Position.ofMacroExpansion
 
   def render(using Quotes): String
 }
 
-object Failure {
+private[ducktape] object Failure {
 
   def abort(failure: Failure)(using Quotes): Nothing =
     quotes.reflect.report.errorAndAbort(failure.render, failure.position)

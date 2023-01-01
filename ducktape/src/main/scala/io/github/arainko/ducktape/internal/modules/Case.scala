@@ -2,7 +2,7 @@ package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 
-final case class Case(
+private[ducktape] final case class Case(
   val name: String,
   val tpe: Type[?],
   val ordinal: Int

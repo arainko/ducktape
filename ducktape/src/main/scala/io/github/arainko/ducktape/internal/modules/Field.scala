@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal.modules
 import scala.quoted.*
 import io.github.arainko.ducktape.Transformer
 
-final class Field(val name: String, val tpe: Type[?]) {
+private[ducktape] final class Field(val name: String, val tpe: Type[?]) {
   def transformerTo(that: Field)(using Quotes): Expr[Transformer[?, ?]] = {
     import quotes.reflect.*
 

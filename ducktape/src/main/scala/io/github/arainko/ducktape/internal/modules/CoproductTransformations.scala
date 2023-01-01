@@ -2,11 +2,10 @@ package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 import scala.deriving.*
-import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.*
 
-object CoproductTransformations {
+private[ducktape] object CoproductTransformations {
   
   def transform[Source: Type, Dest: Type](
     sourceValue: Expr[Source],

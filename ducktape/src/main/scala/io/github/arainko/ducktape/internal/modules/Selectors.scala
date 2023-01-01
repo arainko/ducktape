@@ -1,10 +1,9 @@
 package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
-import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.function.FunctionArguments
 
-object Selectors {
+private[ducktape] object Selectors {
   def fieldName[From: Type, FieldType](
     validFields: Fields,
     selector: Expr[From => FieldType]

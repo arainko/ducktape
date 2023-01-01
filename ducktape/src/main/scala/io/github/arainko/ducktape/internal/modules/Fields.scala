@@ -3,9 +3,8 @@ package io.github.arainko.ducktape.internal.modules
 import scala.quoted.*
 import scala.deriving.Mirror
 import io.github.arainko.ducktape.function.FunctionArguments
-import io.github.arainko.ducktape.internal.modules.*
 
-sealed trait Fields {
+private[ducktape] sealed trait Fields {
   export byName.{ apply => unsafeGet, contains => containsFieldWithName, get }
 
   val value: List[Field]
@@ -13,7 +12,7 @@ sealed trait Fields {
   val byName: Map[String, Field] = value.map(f => f.name -> f).toMap
 }
 
-object Fields {
+private[ducktape] object Fields {
   def source(using sourceFields: Fields.Source): Fields.Source = sourceFields
   def dest(using destFields: Fields.Dest): Fields.Dest = destFields
 

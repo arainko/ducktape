@@ -3,7 +3,6 @@ package io.github.arainko.ducktape.internal.modules
 import scala.quoted.*
 import scala.deriving.Mirror
 import scala.annotation.tailrec
-import io.github.arainko.ducktape.internal.modules.*
 
 private[ducktape] final class MaterializedMirror[Q <: Quotes & Singleton] private (using val quotes: Q)(
   val mirroredType: quotes.reflect.TypeRepr,

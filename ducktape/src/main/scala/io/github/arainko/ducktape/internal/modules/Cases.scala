@@ -2,9 +2,8 @@ package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 import scala.deriving.Mirror
-import io.github.arainko.ducktape.internal.modules.*
 
-sealed trait Cases {
+private[ducktape] sealed trait Cases {
   export byName.get
 
   val value: List[Case]

@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape.internal.modules
 
 import io.github.arainko.ducktape.function.*
-import io.github.arainko.ducktape.internal.modules.*
 
 import scala.quoted.*
 
@@ -53,22 +52,3 @@ private[ducktape] object FunctionMacros {
 
   private type IsFuncArgs[A <: FunctionArguments] = A
 }
-
-// private[ducktape] object FunctionMacros {
-//   private type IsFuncArgs[A <: FunctionArguments] = A
-
-//   transparent inline def createMirror[F]: FunctionMirror[F] = ${ createMirrorMacro[F] }
-
-//   def createMirrorMacro[Func: Type](using Quotes): Expr[FunctionMirror[Func]] =
-//     FunctionMacros().createMirror[Func]
-
-//   transparent inline def namedArguments[Func, F[_ <: FunctionArguments]](
-//     inline function: Func,
-//     initial: F[Nothing]
-//   )(using FunctionMirror[Func]) = ${ namedArgumentsMacro[Func, F]('function, 'initial) }
-
-//   def namedArgumentsMacro[Func: Type, F[_ <: FunctionArguments]: Type](
-//     function: Expr[Func],
-//     initial: Expr[F[Nothing]]
-//   )(using Quotes) = FunctionMacros().namedArguments[Func, F](function, initial)
-// }

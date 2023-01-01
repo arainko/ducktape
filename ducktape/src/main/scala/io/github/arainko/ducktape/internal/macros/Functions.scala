@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal.macros
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.modules.FunctionMacros
 
-object Functions {
+private[ducktape] object Functions {
   transparent inline def deriveMirror[Func]: FunctionMirror[Func] = ${ FunctionMacros.createMirror[Func] }
 
   transparent inline def refineFunctionArguments[Func, F[x <: FunctionArguments]](
