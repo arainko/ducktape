@@ -6,7 +6,7 @@ import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.*
 
-private[ducktape] object ProductTransformations {
+object ProductTransformations {
   def transform[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     Source: Expr[Mirror.ProductOf[Source]],
@@ -165,11 +165,11 @@ private[ducktape] object ProductTransformations {
       }
     }
 
-  private def resolveTransformation[Source: Type](using Quotes)(
+  private def resolveTransformation[Source: Type](
     sourceValue: Expr[Source],
     source: Field,
     destination: Field
-  ) = {
+  )(using Quotes) = {
     import quotes.reflect.*
 
     source.transformerTo(destination) match {

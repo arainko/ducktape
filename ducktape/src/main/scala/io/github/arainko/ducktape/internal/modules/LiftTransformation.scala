@@ -6,7 +6,7 @@ import io.github.arainko.ducktape.internal.modules.TransformerLambda.*
 import scala.collection.Factory
 import scala.quoted.*
 
-private[ducktape] object LiftTransformation {
+object LiftTransformation {
 
   def liftTransformation[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A])(using Quotes): Expr[B] =
     liftIdentityTransformation(transformer, appliedTo)

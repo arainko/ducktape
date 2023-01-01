@@ -25,7 +25,7 @@ private[ducktape] object Transformations {
   inline def transformConfigured[Source, Dest](source: Source, inline config: BuilderConfig[Source, Dest]*) =
     ${ transformConfiguredMacro[Source, Dest]('source, 'config) }
 
-  def transformConfiguredMacro[Source: Type, Dest: Type](
+  private def transformConfiguredMacro[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     config: Expr[Seq[BuilderConfig[Source, Dest]]]
   )(using Quotes): Expr[Dest] =
@@ -42,5 +42,5 @@ private[ducktape] object Transformations {
           .errorAndAbort("Configured transformations are supported for Product -> Product and Coproduct -> Coproduct.")
       )
 
-  def mirrorOf[A: Type](using Quotes) = Expr.summon[Mirror.Of[A]]
+  private def mirrorOf[A: Type](using Quotes) = Expr.summon[Mirror.Of[A]]
 }
