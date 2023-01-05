@@ -3,16 +3,22 @@ package io.github.arainko.ducktape.issues
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.DucktapeSuite
 
-case class A(anotherCaseClass: AnotherCaseClass)
-case class AnotherCaseClass(name: String)
+case class A(anotherCaseClass: A.AnotherCaseClass)
 
 object A {
-  case class B(anotherCaseClass: AnotherCaseClass)
+  case class AnotherCaseClass(name: String)
+  case class B(anotherCaseClass: A.AnotherCaseClass)
+}
+
+object SomeOtherObject {
 }
 
 class Issue26Spec extends DucktapeSuite {
-  import A.*
+  // import A.*
 
-  val a = A(AnotherCaseClass("test"))
-  val b = a.to[A.B]
+  test("repro") {
+    val a = A(A.AnotherCaseClass("test"))
+    val b = a.to[A.B]
+  }
+
 }

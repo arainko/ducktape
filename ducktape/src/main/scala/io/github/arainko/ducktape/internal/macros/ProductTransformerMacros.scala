@@ -159,11 +159,11 @@ private[ducktape] final class ProductTransformerMacros(using val quotes: Quotes)
     source.transformerTo(destination) match {
       case '{ $transformer: Transformer[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
-        println()
-        println(Type.show[dest])
-        println(field.asTerm.tpe.show)
-        '{ $transformer.transform($field.asInstanceOf[source]) }.asTerm
-        // LiftTransformation.liftTransformation(transformer, field).asTerm
+        // println()
+        // println(Type.show[dest])
+        // println(field.asTerm.tpe.widen.show)
+        // '{ $transformer.transform($field) }.asTerm
+        LiftTransformation.liftTransformation(transformer, field).asTerm
     }
 
   private def accessField(value: Expr[Any], fieldName: String)(using Quotes) = Select.unique(value.asTerm, fieldName)
