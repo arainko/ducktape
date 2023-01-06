@@ -10,10 +10,10 @@ import scala.deriving.Mirror
 extension [Source](value: Source) {
   def into[Dest]: AppliedBuilder[Source, Dest] = AppliedBuilder(value)
 
-  inline def transformInto[Dest](using inline transformer: Transformer[Source, Dest]) =
-    ${ LiftTransformation.liftTransformation('transformer, 'value) }
+  // TODO: Introduce in ducktape 0.2 as a replacement for `.to`, this will break binary compat
+  // inline def transformInto[Dest](using inline transformer: Transformer[Source, Dest]) =
+  //   ${ LiftTransformation.liftTransformation('transformer, 'value) }
 
-  // @deprecated(message = "Use '.transformInto' instead, it includes some additional optimizations", since = "0.1.2")
   def to[Dest](using Transformer[Source, Dest]): Dest = Transformer[Source, Dest].transform(value)
 
   transparent inline def intoVia[Func](inline function: Func)(using Mirror.ProductOf[Source], FunctionMirror[Func]) =
