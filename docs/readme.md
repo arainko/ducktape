@@ -23,7 +23,7 @@ final case class PersonButMoreFields(firstName: String, lastName: String, age: I
 
 val personWithMoreFields = PersonButMoreFields("John", "Doe", 30, "SOCIAL-NUM-12345")
 
-val transformed = personWithMoreFields.transformInto[Person]
+val transformed = personWithMoreFields.to[Person]
 
 ```
 
@@ -34,7 +34,7 @@ If these requirements are not met, a compiletime error is issued:
 ```scala mdoc:fail
 val person = Person("Jerry", "Smith", 20)
 
-person.transformInto[PersonButMoreFields]
+person.to[PersonButMoreFields]
 
 ```
 
@@ -49,14 +49,14 @@ enum Size:
 enum ExtraSize:
   case ExtraSmall, Small, Medium, Large, ExtraLarge
 
-val transformed = Size.Small.transformInto[ExtraSize]
+val transformed = Size.Small.to[ExtraSize]
 // transformed: ExtraSize = Small
 ```
 
 We can't go to a coproduct that doesn't contain all of our cases (name wise):
 
 ```scala
-val size = ExtraSize.Small.transformInto[Size]
+val size = ExtraSize.Small.to[Size]
 // error:
 // No child named 'ExtraSmall' in Size
 ```
@@ -234,9 +234,9 @@ final case class WrappedString(value: String) extends AnyVal
 
 val wrapped = WrappedString("I am a String")
 
-val unwrapped = wrapped.transformInto[String]
+val unwrapped = wrapped.to[String]
 
-val wrappedAgain = unwrapped.transformInto[WrappedString]
+val wrappedAgain = unwrapped.to[WrappedString]
 ```
 
 #### 8. Defining custom `Transformers`
@@ -301,16 +301,16 @@ case class EvenMoreInside2(str: String, int: Int)
 
 val person = Person(23, Some("str"), Inside("insideStr", 24, EvenMoreInside("evenMoreInsideStr", 25)), Vector.empty)
 ```
-#### Generated code - expansion of `.transformInto`
-Calling the `.transformInto` method
+#### Generated code - expansion of `.to`
+Calling the `.to` method
 ```scala mdoc:silent
-person.transformInto[Person2]
+person.to[Person2]
 ```
 expands to:
 ```scala mdoc:passthrough
 import io.github.arainko.ducktape.docs.*
 
-Docs.printCode(person.transformInto[Person2])
+Docs.printCode(person.to[Person2])
 ```
 
 #### Generated code - expansion of `.into`

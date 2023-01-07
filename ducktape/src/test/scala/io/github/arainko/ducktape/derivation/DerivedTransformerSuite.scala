@@ -61,7 +61,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualComplex =
       List(
-        expectedPrimitive.transformInto[ComplexPerson],
+        expectedPrimitive.to[ComplexPerson],
         expectedPrimitive.into[ComplexPerson].transform(),
         expectedPrimitive.via(ComplexPerson.apply),
         expectedPrimitive.intoVia(ComplexPerson.apply).transform(),
@@ -71,7 +71,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualPrimitive =
       List(
-        expectedComplex.transformInto[PrimitivePerson],
+        expectedComplex.to[PrimitivePerson],
         expectedComplex.into[PrimitivePerson].transform(),
         expectedComplex.via(PrimitivePerson.apply),
         expectedComplex.intoVia(PrimitivePerson.apply).transform(),
@@ -105,7 +105,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualComplex =
       List(
-        primitive.transformInto[ComplexPerson],
+        primitive.to[ComplexPerson],
         primitive.into[ComplexPerson].transform(),
         primitive.via(ComplexPerson.apply),
         primitive.intoVia(ComplexPerson.apply).transform(),
@@ -126,12 +126,12 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val expectedFromEnum2Mapping = expectedFromEnum1Mapping.map(_.swap)
 
     Enum1.values.foreach { value =>
-      val actual = value.transformInto[Enum2]
+      val actual = value.to[Enum2]
       assertEquals(expectedFromEnum1Mapping(value), actual)
     }
 
     Enum2.values.foreach { value =>
-      val actual = value.transformInto[Enum1]
+      val actual = value.to[Enum1]
       assertEquals(expectedFromEnum2Mapping(value), actual)
     }
   }
@@ -144,7 +144,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val expected = LessFields(1, 2, 3)
     val actual =
       List(
-        more.transformInto[LessFields],
+        more.to[LessFields],
         more.into[LessFields].transform(),
         more.via(LessFields.apply),
         more.intoVia(LessFields.apply).transform(),
@@ -170,7 +170,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actual =
       List(
-        person.transformInto[Person2],
+        person.to[Person2],
         person.into[Person2].transform(),
         person.via(Person2.apply),
         person.intoVia(Person2.apply).transform(),
@@ -185,8 +185,8 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val wrappedString = Wrapped("asd")
     val unwrapped = "asd"
 
-    assertEquals(wrappedString.transformInto[String], unwrapped)
-    assertEquals(unwrapped.transformInto[Wrapped[String]], wrappedString)
+    assertEquals(wrappedString.to[String], unwrapped)
+    assertEquals(unwrapped.to[Wrapped[String]], wrappedString)
   }
 
   test("products with AnyVal fields with type params roundrip to their primitives") {
@@ -198,7 +198,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualUnwrapped =
       List(
-        person.transformInto[UnwrappedPerson[Long]],
+        person.to[UnwrappedPerson[Long]],
         person.into[UnwrappedPerson[Long]].transform(),
         person.via(UnwrappedPerson.apply[Long]),
         person.intoVia(UnwrappedPerson.apply[Long]).transform(),
@@ -208,7 +208,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val actualPerson =
       List(
-        unwrapped.transformInto[Person[Long]],
+        unwrapped.to[Person[Long]],
         unwrapped.into[Person[Long]].transform(),
         unwrapped.via(Person.apply[Long]),
         unwrapped.intoVia(Person.apply[Long]).transform(),
@@ -220,6 +220,26 @@ class DerivedTransformerSuite extends DucktapeSuite {
     actualPerson.foreach(actual => assertEquals(actual, person))
   }
 
+  test("transformers are derived for products with supertypes of the original product type") {
+    case class ProductSuper(iterable: Iterable[CharSequence], number: Number, charSeq: CharSequence)
+    case class ProductSub(iterable: List[String], number: java.lang.Integer, charSeq: String)
+
+    val prodSub = ProductSub(List("test"), 1, "test")
+    val expected = ProductSuper(Iterable("test"), 1, "test")
+
+    val actual =
+      List(
+        prodSub.to[ProductSuper],
+        prodSub.into[ProductSuper].transform(),
+        prodSub.via(ProductSuper.apply),
+        prodSub.intoVia(ProductSuper.apply).transform(),
+        Transformer.define[ProductSub, ProductSuper].build().transform(prodSub),
+        Transformer.defineVia[ProductSub](ProductSuper.apply).build().transform(prodSub)
+      )
+
+    actual.foreach(assertEquals(_, expected))
+  }
+
   test("derivation fails when going from a product with less fields to a product with more fields") {
     assertFailsToCompileWith {
       """
@@ -228,7 +248,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
       val less = LessFields(1, 2, 3)
 
-      val derived = less.transformInto[MoreFields]
+      val derived = less.to[MoreFields]
       """
     }("No field named 'field4' found in LessFields")
   }
@@ -242,6 +262,6 @@ class DerivedTransformerSuite extends DucktapeSuite {
   }
 
   test("derivation fails when going from a sum with more cases to a sum with less cases") {
-    assertFailsToCompileWith("MoreCases.Case3.transformInto[LessCases]")("No child named 'Case4' found in LessCases")
+    assertFailsToCompileWith("MoreCases.Case3.to[LessCases]")("No child named 'Case4' found in LessCases")
   }
 }
