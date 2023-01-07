@@ -157,6 +157,16 @@ private[ducktape] final class ProductTransformerMacros(using val quotes: Quotes)
 
   private def resolveTransformation[Source: Type](sourceValue: Expr[Source], source: Field, destination: Field)(using Quotes) =
     source.transformerTo(destination) match {
+      // even though this is taken care of in LiftTransformation.liftTransformation
+      // we need to do this here due to a compiler bug where multiple matches on a
+      // Transformer[A, B >: A] the B type get replaced with `B | dest` but only if
+      // you refer to a case class defined in an object by NOT its full path (it works if you refer to it as the full path)
+      // workaround for issue: https://github.com/arainko/ducktape/issues/26 until this gets fixed in dotty.
+      case '{
+            type a
+            $transformer: Transformer.Identity[`a`, `a`]
+          } =>
+        accessField(sourceValue, source.name)
       case '{ $transformer: Transformer[source, dest] } =>
         val field = accessField(sourceValue, source.name).asExprOf[source]
         LiftTransformation.liftTransformation(transformer, field).asTerm
