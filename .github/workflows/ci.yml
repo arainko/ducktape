@@ -1,7 +1,7 @@
 name: Continuous integration
 on:
   pull_request:
-    branches: [ master ]
+    branches: [ master, series* ]
 
 jobs:
   ci:
