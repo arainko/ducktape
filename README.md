@@ -8,7 +8,7 @@ If this project interests you, please drop a 🌟 - these things are worthless b
 
 ### Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.1"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.2"
 ```
 
 ### Examples
