@@ -1,8 +1,9 @@
 package io.github.arainko.ducktape.internal.modules
 
-import scala.quoted.*
-import scala.deriving.Mirror
 import io.github.arainko.ducktape.function.FunctionArguments
+
+import scala.deriving.Mirror
+import scala.quoted.*
 
 private[ducktape] sealed trait Fields {
   export byName.{ apply => unsafeGet, contains => containsFieldWithName, get }

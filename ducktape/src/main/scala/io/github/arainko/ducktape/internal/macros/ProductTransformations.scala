@@ -1,12 +1,17 @@
-package io.github.arainko.ducktape.internal.modules
+package io.github.arainko.ducktape.internal.macros
 
-import scala.quoted.*
-import scala.deriving.*
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.function.*
+import io.github.arainko.ducktape.internal.macros.LiftTransformation
 import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.*
+import io.github.arainko.ducktape.internal.modules.*
 
-object ProductTransformations {
+import scala.deriving.*
+import scala.quoted.*
+
+//TODO: if this is moved to `modules` the compiler crashes, investigate further (?)
+private[ducktape] object ProductTransformations {
+
   def transform[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     Source: Expr[Mirror.ProductOf[Source]],
@@ -54,7 +59,7 @@ object ProductTransformations {
     import quotes.reflect.*
 
     function.asTerm match {
-      case func @ Selectors.FunctionLambda(vals, _) =>
+      case func @ FunctionLambda(vals, _) =>
         given Fields.Source = Fields.Source.fromMirror(Source)
         given Fields.Dest = Fields.Dest.fromValDefs(vals)
 
@@ -163,7 +168,7 @@ object ProductTransformations {
 
         NamedArg(field.name, castedCall.asTerm)
       }
-    }
+  }
 
   private def resolveTransformation[Source: Type](
     sourceValue: Expr[Source],

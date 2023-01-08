@@ -1,12 +1,16 @@
-package io.github.arainko.ducktape.internal.modules
+package io.github.arainko.ducktape.internal.macros
 
-import scala.quoted.*
-import scala.deriving.*
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.*
+import io.github.arainko.ducktape.internal.modules.*
 
+import scala.deriving.*
+import scala.quoted.*
+
+// Ideally should live in `modules` but due to problems with ProductTransformations and LiftTransformation
+// is kept here for consistency
 private[ducktape] object CoproductTransformations {
-  
+
   def transform[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     Source: Expr[Mirror.SumOf[Source]],

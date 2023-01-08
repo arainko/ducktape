@@ -1,12 +1,15 @@
-package io.github.arainko.ducktape.internal.modules
+package io.github.arainko.ducktape.internal.macros
 
 import io.github.arainko.ducktape.function.*
+import io.github.arainko.ducktape.internal.modules.*
 
 import scala.quoted.*
 
+// Ideally should live in `modules` but due to problems with ProductTransformations and LiftTransformation
+// is kept here for consistency
 private[ducktape] object FunctionMacros {
 
-  def createMirror[Func: Type](using Quotes): Expr[FunctionMirror[Func]] = {
+  def deriveMirror[Func: Type](using Quotes): Expr[FunctionMirror[Func]] = {
     import quotes.reflect.*
 
     TypeRepr.of[Func] match {
@@ -27,15 +30,15 @@ private[ducktape] object FunctionMacros {
       case other => report.errorAndAbort(s"FunctionMirrors can only be created for functions. Got ${other.show} instead.")
     }
   }
-  
-  def namedArguments[Func: Type, F[x <: FunctionArguments]: Type](
+
+  def refineFunctionArguments[Func: Type, F[x <: FunctionArguments]: Type](
     function: Expr[Func],
     initial: Expr[F[Nothing]]
   )(using Quotes) = {
     import quotes.reflect.*
 
     function.asTerm match {
-      case func @ Selectors.FunctionLambda(valDefs, _) =>
+      case func @ FunctionLambda(valDefs, _) =>
         refine(TypeRepr.of[FunctionArguments], valDefs).asType match {
           case '[IsFuncArgs[args]] => '{ $initial.asInstanceOf[F[args]] }
         }

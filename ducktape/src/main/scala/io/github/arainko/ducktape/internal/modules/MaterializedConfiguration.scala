@@ -1,8 +1,9 @@
 package io.github.arainko.ducktape.internal.modules
 
-import scala.quoted.*
-import io.github.arainko.ducktape.{ Field as FieldConfig, Case as CaseConfig, * }
 import io.github.arainko.ducktape.function.FunctionArguments
+import io.github.arainko.ducktape.{ Case => CaseConfig, Field => FieldConfig, * }
+
+import scala.quoted.*
 
 private[ducktape] sealed trait MaterializedConfiguration
 

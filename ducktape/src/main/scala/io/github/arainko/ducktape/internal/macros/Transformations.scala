@@ -1,10 +1,12 @@
 package io.github.arainko.ducktape.internal.macros
 
-import scala.quoted.*
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.internal.modules.*
-import scala.deriving.Mirror
 import io.github.arainko.ducktape.function.*
+import io.github.arainko.ducktape.internal.macros.{ CoproductTransformations, LiftTransformation }
+import io.github.arainko.ducktape.internal.modules.*
+
+import scala.deriving.Mirror
+import scala.quoted.*
 
 private[ducktape] object Transformations {
   inline def via[Source, Dest, Func](source: Source, inline function: Func)(using
