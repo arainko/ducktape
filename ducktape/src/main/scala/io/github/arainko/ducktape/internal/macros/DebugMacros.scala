@@ -15,9 +15,9 @@ private[ducktape] object DebugMacros {
     value
   }
 
-  inline def code[A](inline value: A): A = ${ codeCompiletimeMacro('value) }
+  inline def code[A](inline value: A): A = ${ codeMacro('value) }
 
-  def codeCompiletimeMacro[A: Type](value: Expr[A])(using Quotes): Expr[A] = {
+  def codeMacro[A: Type](value: Expr[A])(using Quotes): Expr[A] = {
     import quotes.reflect.*
     val struct = Printer.TreeShortCode.show(value.asTerm)
     report.info(struct)

@@ -5,15 +5,13 @@ import io.github.arainko.ducktape.internal.modules.*
 
 import scala.quoted.*
 
-private[ducktape] final class FunctionMacros(using val quotes: Quotes) extends Module, SelectorModule, FieldModule, MirrorModule {
-  import FunctionMacros.*
-  import quotes.reflect.*
+// Ideally should live in `modules` but due to problems with ProductTransformations and LiftTransformation
+// is kept here for consistency
+private[ducktape] object FunctionMacros {
 
-  private val cons = TypeRepr.of[*:]
-  private val emptyTuple = TypeRepr.of[EmptyTuple]
-  private val functionArguments = TypeRepr.of[FunctionArguments]
+  def deriveMirror[Func: Type](using Quotes): Expr[FunctionMirror[Func]] = {
+    import quotes.reflect.*
 
-  def createMirror[Func: Type]: Expr[FunctionMirror[Func]] =
     TypeRepr.of[Func] match {
       case tpe @ AppliedType(_, tpeArgs) if tpe.isFunctionType =>
         val returnTpe = tpeArgs.last
@@ -31,37 +29,29 @@ private[ducktape] final class FunctionMacros(using val quotes: Quotes) extends M
 
       case other => report.errorAndAbort(s"FunctionMirrors can only be created for functions. Got ${other.show} instead.")
     }
+  }
 
-  def namedArguments[Func: Type, F[_ <: FunctionArguments]: Type](function: Expr[Func], initial: Expr[F[Nothing]]) =
+  def refineFunctionArguments[Func: Type, F[x <: FunctionArguments]: Type](
+    function: Expr[Func],
+    initial: Expr[F[Nothing]]
+  )(using Quotes) = {
+    import quotes.reflect.*
+
     function.asTerm match {
       case func @ FunctionLambda(valDefs, _) =>
-        refine(functionArguments, valDefs).asType match {
+        refine(TypeRepr.of[FunctionArguments], valDefs).asType match {
           case '[IsFuncArgs[args]] => '{ $initial.asInstanceOf[F[args]] }
         }
 
       case other => report.errorAndAbort(s"Failed to extract named arguments from ${other.show}")
     }
+  }
 
-  private def refine(tpe: TypeRepr, valDefs: List[ValDef]) =
-    valDefs.foldLeft(functionArguments)((tpe, valDef) => Refinement(tpe, valDef.name, valDef.tpt.tpe))
+  private def refine(using Quotes)(tpe: quotes.reflect.TypeRepr, valDefs: List[quotes.reflect.ValDef]) = {
+    import quotes.reflect.*
 
-}
+    valDefs.foldLeft(TypeRepr.of[FunctionArguments])((tpe, valDef) => Refinement(tpe, valDef.name, valDef.tpt.tpe))
+  }
 
-private[ducktape] object FunctionMacros {
   private type IsFuncArgs[A <: FunctionArguments] = A
-
-  transparent inline def createMirror[F]: FunctionMirror[F] = ${ createMirrorMacro[F] }
-
-  def createMirrorMacro[Func: Type](using Quotes): Expr[FunctionMirror[Func]] =
-    FunctionMacros().createMirror[Func]
-
-  transparent inline def namedArguments[Func, F[_ <: FunctionArguments]](
-    inline function: Func,
-    initial: F[Nothing]
-  )(using FunctionMirror[Func]) = ${ namedArgumentsMacro[Func, F]('function, 'initial) }
-
-  def namedArgumentsMacro[Func: Type, F[_ <: FunctionArguments]: Type](
-    function: Expr[Func],
-    initial: Expr[F[Nothing]]
-  )(using Quotes) = FunctionMacros().namedArguments[Func, F](function, initial)
 }

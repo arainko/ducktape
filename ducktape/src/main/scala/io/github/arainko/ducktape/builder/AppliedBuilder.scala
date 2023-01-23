@@ -6,6 +6,6 @@ import io.github.arainko.ducktape.internal.macros.*
 final class AppliedBuilder[Source, Dest](appliedTo: Source) {
 
   inline def transform(inline config: BuilderConfig[Source, Dest]*): Dest =
-    TransformerMacros.transformConfigured(appliedTo, config)
+    Transformations.transformConfigured(appliedTo, config*)
 
 }
