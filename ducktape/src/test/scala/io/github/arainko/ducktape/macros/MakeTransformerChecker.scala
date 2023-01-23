@@ -1,7 +1,7 @@
 package io.github.arainko.ducktape.macros
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.internal.modules.liftTransformation.MakeTransformer
+import io.github.arainko.ducktape.internal.modules.MakeTransformer
 
 import scala.quoted.*
 object MakeTransformerChecker {

@@ -1,28 +1,24 @@
 package io.github.arainko.ducktape.internal.macros
 
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.*
 import io.github.arainko.ducktape.internal.modules.*
 
 import scala.deriving.*
 import scala.quoted.*
 
-private[ducktape] final class CoproductTransformerMacros(using val quotes: Quotes)
-    extends Module,
-      CaseModule,
-      FieldModule,
-      SelectorModule,
-      MirrorModule,
-      ConfigurationModule {
-  import quotes.reflect.*
-  import MaterializedConfiguration.*
+// Ideally should live in `modules` but due to problems with ProductTransformations and LiftTransformation
+// is kept here for consistency
+private[ducktape] object CoproductTransformations {
 
   def transform[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     Source: Expr[Mirror.SumOf[Source]],
     Dest: Expr[Mirror.SumOf[Dest]]
-  ): Expr[Dest] = {
+  )(using Quotes): Expr[Dest] = {
     given Cases.Source = Cases.Source.fromMirror(Source)
     given Cases.Dest = Cases.Dest.fromMirror(Dest)
+
     val ifBranches = singletonIfBranches[Source, Dest](sourceValue, Cases.source.value)
     ifStatement(ifBranches).asExprOf[Dest]
   }
@@ -32,7 +28,9 @@ private[ducktape] final class CoproductTransformerMacros(using val quotes: Quote
     config: Expr[Seq[BuilderConfig[Source, Dest]]],
     Source: Expr[Mirror.SumOf[Source]],
     Dest: Expr[Mirror.SumOf[Dest]]
-  ): Expr[Dest] = {
+  )(using Quotes): Expr[Dest] = {
+    import quotes.reflect.*
+
     given Cases.Source = Cases.Source.fromMirror(Source)
     given Cases.Dest = Cases.Dest.fromMirror(Dest)
     val materializedConfig =
@@ -58,17 +56,17 @@ private[ducktape] final class CoproductTransformerMacros(using val quotes: Quote
           case ConfiguredCase(config, source) =>
             config match {
               case Coproduct.Computed(tpe, function) =>
-                val cond = source.tpe.asType match {
+                val cond = source.tpe match {
                   case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
                 }
-                val castedSource = tpe.asType match {
+                val castedSource = tpe match {
                   case '[tpe] => '{ $sourceValue.asInstanceOf[tpe] }
                 }
                 val value = '{ $function($castedSource) }
                 cond.asTerm -> value.asTerm
 
               case Coproduct.Const(tpe, value) =>
-                val cond = source.tpe.asType match {
+                val cond = source.tpe match {
                   case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
                 }
                 cond.asTerm -> value.asTerm
@@ -81,20 +79,27 @@ private[ducktape] final class CoproductTransformerMacros(using val quotes: Quote
   private def singletonIfBranches[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     sourceCases: List[Case]
-  )(using Cases.Dest) = {
+  )(using Quotes, Cases.Dest) = {
+    import quotes.reflect.*
+
     sourceCases.map { source =>
       source -> Cases.dest
         .get(source.name)
-        .getOrElse(abort(Failure.NoChildMapping(source.name, TypeRepr.of[Dest])))
+        .getOrElse(Failure.abort(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
     }.map { (source, dest) =>
-      val cond = source.tpe.asType match {
+      val cond = source.tpe match {
         case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
       }
-      cond.asTerm -> dest.materializeSingleton.getOrElse(abort(Failure.CannotMaterializeSingleton(dest.tpe)))
+
+      cond.asTerm ->
+        dest.materializeSingleton
+          .getOrElse(Failure.abort(Failure.CannotMaterializeSingleton(dest.tpe)))
     }
   }
 
-  private def ifStatement(branches: List[(Term, Term)]): Term = {
+  private def ifStatement(using Quotes)(branches: List[(quotes.reflect.Term, quotes.reflect.Term)]): quotes.reflect.Term = {
+    import quotes.reflect.*
+
     branches match {
       case (p1, a1) :: xs =>
         If(p1, a1, ifStatement(xs))
@@ -104,30 +109,4 @@ private[ducktape] final class CoproductTransformerMacros(using val quotes: Quote
   }
 
   private case class ConfiguredCase(config: Coproduct, subcase: Case)
-}
-
-private[ducktape] object CoproductTransformerMacros {
-  inline def transform[Source, Dest](source: Source)(using
-    Source: Mirror.SumOf[Source],
-    Dest: Mirror.SumOf[Dest]
-  ): Dest = ${ transformMacro[Source, Dest]('source, 'Source, 'Dest) }
-
-  def transformMacro[Source: Type, Dest: Type](
-    source: Expr[Source],
-    Source: Expr[Mirror.SumOf[Source]],
-    Dest: Expr[Mirror.SumOf[Dest]]
-  )(using Quotes): Expr[Dest] = CoproductTransformerMacros().transform(source, Source, Dest)
-
-  inline def transformConfigured[Source, Dest](source: Source, inline config: BuilderConfig[Source, Dest]*)(using
-    Source: Mirror.SumOf[Source],
-    Dest: Mirror.SumOf[Dest]
-  ): Dest =
-    ${ transformConfiguredMacro[Source, Dest]('source, 'config, 'Source, 'Dest) }
-
-  def transformConfiguredMacro[Source: Type, Dest: Type](
-    source: Expr[Source],
-    config: Expr[Seq[BuilderConfig[Source, Dest]]],
-    Source: Expr[Mirror.SumOf[Source]],
-    Dest: Expr[Mirror.SumOf[Dest]]
-  )(using Quotes): Expr[Dest] = CoproductTransformerMacros().transformConfigured(source, config, Source, Dest)
 }
