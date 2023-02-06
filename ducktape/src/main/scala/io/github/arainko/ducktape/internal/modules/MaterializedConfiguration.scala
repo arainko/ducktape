@@ -29,7 +29,7 @@ private[ducktape] object MaterializedConfiguration {
     Varargs
       .unapply(config)
       .getOrElse(Failure.abort(Failure.UnsupportedConfig(config, Failure.ConfigType.Field)))
-      .map(materializeSingleProductConfig)
+      .flatMap(materializeSingleProductConfig)
       .groupBy(_.destFieldName)
       .map((_, fieldConfigs) => fieldConfigs.last) // keep the last applied field config only
       .toList
@@ -58,7 +58,9 @@ private[ducktape] object MaterializedConfiguration {
 
   private def materializeSingleProductConfig[Source, Dest](
     config: Expr[BuilderConfig[Source, Dest]]
-  )(using Quotes, Fields.Source, Fields.Dest) =
+  )(using Quotes, Fields.Source, Fields.Dest) = {
+    import quotes.reflect.*
+
     config match {
       case '{
             FieldConfig.const[source, dest, fieldType, actualType](
@@ -67,7 +69,7 @@ private[ducktape] object MaterializedConfiguration {
             )(using $ev1, $ev2, $ev3)
           } =>
         val name = Selectors.fieldName(Fields.dest, selector)
-        Product.Const(name, value)
+        Product.Const(name, value) :: Nil
 
       case '{
             FieldConfig.computed[source, dest, fieldType, actualType](
@@ -76,7 +78,7 @@ private[ducktape] object MaterializedConfiguration {
             )(using $ev1, $ev2, $ev3)
           } =>
         val name = Selectors.fieldName(Fields.dest, selector)
-        Product.Computed(name, function.asInstanceOf[Expr[Any => Any]])
+        Product.Computed(name, function.asInstanceOf[Expr[Any => Any]]) :: Nil
 
       case '{
             FieldConfig.renamed[source, dest, sourceFieldType, destFieldType](
@@ -86,10 +88,25 @@ private[ducktape] object MaterializedConfiguration {
           } =>
         val destFieldName = Selectors.fieldName(Fields.dest, destSelector)
         val sourceFieldName = Selectors.fieldName(Fields.source, sourceSelector)
-        Product.Renamed(destFieldName, sourceFieldName)
+        Product.Renamed(destFieldName, sourceFieldName) :: Nil
 
+      case config @ '{ FieldConfig.allMatchingFrom[source, dest, fieldSource]($fieldSource)(using $ev1, $ev2, $fieldSourceMirror) } =>
+        val fieldSourceFields = Fields.Source.fromMirror(fieldSourceMirror)
+        val fieldSourceTerm = fieldSource.asTerm
+        val materializedConfig =
+          fieldSourceFields.value.flatMap { sourceField =>
+            Fields.dest.byName
+              .get(sourceField.name)
+              .filter(sourceField <:< _)
+              .map(field => Product.Const(field.name, accessField(fieldSourceTerm, field)))
+          }
+
+        if (materializedConfig.isEmpty)
+          Failure.abort(Failure.FieldSourceMatchesNoneOfDestFields(config, summon[Type[fieldSource]], summon[Type[dest]]))
+        else materializedConfig
       case other => Failure.abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Field))
     }
+  }
 
   private def materializeSingleCoproductConfig[Source, Dest](config: Expr[BuilderConfig[Source, Dest]])(using Quotes) =
     config match {
@@ -130,5 +147,10 @@ private[ducktape] object MaterializedConfiguration {
 
       case other => Failure.abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Arg))
     }
+
+  private def accessField(using Quotes)(value: quotes.reflect.Term, field: Field) = {
+    import quotes.reflect.*
+    Select.unique(value, field.name).asExpr
+  }
 
 }

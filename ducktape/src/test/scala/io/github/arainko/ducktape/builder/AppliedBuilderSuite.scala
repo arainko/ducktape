@@ -73,6 +73,18 @@ class AppliedBuilderSuite extends DucktapeSuite {
     }("Cannot prove that Int <:< String.")
   }
 
+  test("Field.allMatchingFrom gets all the matching fields from a field source") {
+    val initial = TestClassWithAdditionalList(0, "str", List("str"))
+    val expected = TestClassWithAdditionalList(2, "test-str", List("str"))
+    val fieldSource = TestClass("test-str", 2)
+
+    final case class Empty(dupal: Int)
+    val empty = Empty(1)
+
+    val transformed = expected.into[TestClassWithAdditionalList].transform(Field.allMatchingFrom(empty))
+    println(transformed)
+  }
+
   test("The last applied field config is the picked one") {
     val expected = TestClassWithAdditionalString(1, "str", "str-computed")
 
