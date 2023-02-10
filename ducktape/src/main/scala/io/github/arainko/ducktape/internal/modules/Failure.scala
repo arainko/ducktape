@@ -139,7 +139,7 @@ private[ducktape] object Failure {
       extends Failure {
 
     override def position(using Quotes): quotes.reflect.Position = config.pos
-    override def render(using Quotes): String = 
+    override def render(using Quotes): String =
       s"""
       |None of the fields from ${fieldSourceTpe.show} match any of the fields from ${destTpe.show}.""".stripMargin
   }

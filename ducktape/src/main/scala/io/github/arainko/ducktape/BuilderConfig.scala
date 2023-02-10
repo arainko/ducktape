@@ -43,7 +43,7 @@ object Field {
   @compileTimeOnly("'Field.allMatching' needs to be erased from the AST with a macro.")
   def allMatching[Source, Dest, FieldSource](
     fieldSource: FieldSource
-  )(using 
+  )(using
     @implicitNotFound("Field.allMatching is supported for product types only, but ${Source} is not a product type.")
     ev1: Mirror.ProductOf[Source],
     @implicitNotFound("Field.allMatching is supported for product types only, but ${Dest} is not a product type.")
