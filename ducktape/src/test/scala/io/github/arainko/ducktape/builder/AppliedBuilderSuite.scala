@@ -73,7 +73,80 @@ class AppliedBuilderSuite extends DucktapeSuite {
     }("Cannot prove that Int <:< String.")
   }
 
+  test("Field.allMatching fills in missing fields") {
+    final case class Empty()
+    final case class FieldSource(str: String, int: Int)
+
+    val initial = Empty()
+    val fieldSource = FieldSource("sourced-str", 1)
+
+    val actual = initial.into[TestClass].transform(Field.allMatching(fieldSource))
+
+    val expected = TestClass("sourced-str", 1)
+
+    assertEquals(actual, expected)
+  }
+
+  test("Field.allMatching gets all the matching fields from a field source and overwrites existing ones") {
+    final case class FieldSource(str: String, additionalArg: List[String])
+
+    val initial = TestClass("str", 1)
+    val fieldSource = FieldSource("sourced-str", List("sourced-list"))
+
+    val actual = initial.into[TestClassWithAdditionalList].transform(Field.allMatching(fieldSource))
+
+    val expected = TestClassWithAdditionalList(1, "sourced-str", List("sourced-list"))
+
+    assertEquals(actual, expected)
+  }
+
+  test("Field.allMatching only fills in fields that match by name and by type") {
+    final case class FieldSource(str: Int, additionalArg: List[String])
+
+    val initial = TestClass("str", 1)
+    val fieldSource = FieldSource(1, List("sourced-list"))
+
+    val actual = initial.into[TestClassWithAdditionalList].transform(Field.allMatching(fieldSource))
+
+    val expected = TestClassWithAdditionalList(1, "str", List("sourced-list"))
+
+    assertEquals(actual, expected)
+  }
+
+  test("Field.allMatching works with fields that match by name and are a subtype of the expected type") {
+    final case class Source(int: Int, str: String)
+    final case class FieldSource(number: Integer, list: List[String])
+    final case class Dest(int: Int, str: String, list: Seq[String], number: Number)
+
+    val initial = Source(1, "str")
+    val fieldSource = FieldSource(1, List("sourced-list"))
+
+    val actual = initial.into[Dest].transform(Field.allMatching(fieldSource))
+
+    val expected = Dest(1, "str", List("sourced-list"), 1)
+
+    assertEquals(actual, expected)
+  }
+
+  test("Field.allMatching reports a compiletime failure when none of the fields match") {
+    final case class Source(int: Int, str: String, list: List[String])
+    final case class FieldSource(int: Long, str: CharSequence, list: Vector[String])
+
+    assertFailsToCompileWith {
+      """
+      val source = Source(1, "str", List("list-str"))
+      val fieldSource = FieldSource(1L, "char-seq", Vector("vector-str"))
+
+      source.into[Source].transform(Field.allMatching(fieldSource))
+      """
+    }("None of the fields from FieldSource match any of the fields from Source.")
+  }
+
   test("The last applied field config is the picked one") {
+    final case class FieldSource(additionalArg: String)
+
+    val fieldSource = FieldSource("str-sourced")
+
     val expected = TestClassWithAdditionalString(1, "str", "str-computed")
 
     val actual =
@@ -82,6 +155,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
         .transform(
           Field.const(_.additionalArg, "FIRST"),
           Field.renamed(_.additionalArg, _.str),
+          Field.allMatching(fieldSource),
           Field.computed(_.additionalArg, _.str + "-computed")
         )
 

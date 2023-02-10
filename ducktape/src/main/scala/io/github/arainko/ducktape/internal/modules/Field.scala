@@ -16,4 +16,9 @@ private[ducktape] final class Field(val name: String, val tpe: Type[?]) {
         }
     }
   }
+
+  def <:<(that: Field)(using Quotes): Boolean = {
+    import quotes.reflect.*
+    TypeRepr.of(using tpe) <:< TypeRepr.of(using that.tpe)
+  }
 }
