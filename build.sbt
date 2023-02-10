@@ -26,6 +26,13 @@ name := "ducktape"
 sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 sonatypeCredentialHost := "s01.oss.sonatype.org"
 
+lazy val previousArtifacts =
+  Set(
+    "io.github.arainko" %% "ducktape" % "0.1.0",
+    "io.github.arainko" %% "ducktape" % "0.1.1",
+    "io.github.arainko" %% "ducktape" % "0.1.2"
+  )
+
 lazy val root =
   project
     .in(file("."))
@@ -38,7 +45,7 @@ lazy val ducktape =
     .settings(
       scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings", "-deprecation"),
       libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M7" % Test,
-      mimaPreviousArtifacts := Set("io.github.arainko" %% "ducktape" % "0.1.0", "io.github.arainko" %% "ducktape" % "0.1.1")
+      mimaPreviousArtifacts := previousArtifacts
     )
 
 lazy val docs =
