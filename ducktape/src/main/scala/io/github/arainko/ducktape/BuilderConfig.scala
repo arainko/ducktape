@@ -40,17 +40,17 @@ object Field {
     ev3: Mirror.ProductOf[Dest]
   ): BuilderConfig[Source, Dest] = throw NotQuotedException("Field.renamed")
 
-  @compileTimeOnly("'Field.allFrom' needs to be erased from the AST with a macro.")
-  def allMatchingFrom[Source, Dest, FieldSource](
+  @compileTimeOnly("'Field.allMatching' needs to be erased from the AST with a macro.")
+  def allMatching[Source, Dest, FieldSource](
     fieldSource: FieldSource
   )(using 
-    @implicitNotFound("Field.allFrom is supported for product types only, but ${Source} is not a product type.")
+    @implicitNotFound("Field.allMatching is supported for product types only, but ${Source} is not a product type.")
     ev1: Mirror.ProductOf[Source],
-    @implicitNotFound("Field.allFrom is supported for product types only, but ${Dest} is not a product type.")
+    @implicitNotFound("Field.allMatching is supported for product types only, but ${Dest} is not a product type.")
     ev2: Mirror.ProductOf[Dest],
-    @implicitNotFound("Field.allFrom is supported for product types only, but ${FieldSource} is not a product type.")
+    @implicitNotFound("Field.allMatching is supported for product types only, but ${FieldSource} is not a product type.")
     ev3: Mirror.ProductOf[FieldSource]
-  ): BuilderConfig[Source, Dest] = throw NotQuotedException("Field.allFrom")
+  ): BuilderConfig[Source, Dest] = throw NotQuotedException("Field.allMatching")
 }
 
 object Case {

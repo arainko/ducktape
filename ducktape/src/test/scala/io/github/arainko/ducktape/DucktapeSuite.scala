@@ -8,7 +8,7 @@ trait DucktapeSuite extends FunSuite {
   }
 
   transparent inline def assertFailsToCompileWith(inline code: String)(expected: String) = {
-    val errors = compiletime.testing.typeCheckErrors(code).map(_.message).mkString("\n")
+    val errors = compiletime.testing.typeCheckErrors(code).map(_.message).mkString("\n").strip()
     assertEquals(errors, expected)
   }
 }

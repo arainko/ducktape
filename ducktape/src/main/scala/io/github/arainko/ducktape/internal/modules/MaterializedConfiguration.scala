@@ -90,7 +90,7 @@ private[ducktape] object MaterializedConfiguration {
         val sourceFieldName = Selectors.fieldName(Fields.source, sourceSelector)
         Product.Renamed(destFieldName, sourceFieldName) :: Nil
 
-      case config @ '{ FieldConfig.allMatchingFrom[source, dest, fieldSource]($fieldSource)(using $ev1, $ev2, $fieldSourceMirror) } =>
+      case config @ '{ FieldConfig.allMatching[source, dest, fieldSource]($fieldSource)(using $ev1, $ev2, $fieldSourceMirror) } =>
         val fieldSourceFields = Fields.Source.fromMirror(fieldSourceMirror)
         val fieldSourceTerm = fieldSource.asTerm
         val materializedConfig =
