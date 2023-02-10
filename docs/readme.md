@@ -1,8 +1,8 @@
-# Ducktape
+# ducktape
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape_3/badge.svg?style=flat-square)](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape_3)
 
-*Ducktape* is a library for boilerplate-less and configurable transformations between case classes/enums (sealed traits) for Scala 3. Directly inspired by [chimney](https://github.com/scalalandio/chimney).
+*ducktape* is a library for boilerplate-less and configurable transformations between case classes and enums/sealed traits for Scala 3. Directly inspired by [chimney](https://github.com/scalalandio/chimney).
 
 If this project interests you, please drop a 🌟 - these things are worthless but give me a dopamine rush nonetheless.
 
@@ -67,12 +67,13 @@ we want to transform into, otherwise a compiletime errors is issued.
 #### 3. *Case class to case class with config*
 
 As we established earlier, going from `Person` to `PersonButMoreFields` cannot happen automatically as the former
-doesn't have the `socialSecurityNo` field, but it has all the other fields so it's almost there, we just have to nudge it a lil' bit.
+doesn't have the `socialSecurityNo` field, but it has all the other fields - so it's almost there, we just have to nudge it a lil' bit.
 
 We can do so with field configurations in 3 ways:
   1. Set a constant to a specific field with `Field.const`
   2. Compute the value for a specific field by applying a function with `Field.computed`
   3. Use a different field in its place - 'rename' it with `Field.renamed`
+  4. Grab all matching fields from another case class with `Field.allMatching`
 
 ```scala mdoc:reset
 import io.github.arainko.ducktape.*
@@ -99,6 +100,14 @@ val withRename =
   person
     .into[PersonButMoreFields]
     .transform(Field.renamed(_.socialSecurityNo, _.firstName))
+
+final case class FieldSource(lastName: String, socialSecurityNo: String)
+
+// 4. Grab and use all matching fields from a different case class (a compiletime error will be issued if none of the fields match)
+val withAllMatchingFields = 
+  person
+    .into[PersonButMoreFields]
+    .transform(Field.allMatching(FieldSource("SourcedLastName", "SOURCED-SSN")))
 ```
 
 In case we repeatedly apply configurations to the same field, the latest one is chosen:
@@ -111,6 +120,7 @@ val withRepeatedConfig =
     .transform(
       Field.renamed(_.socialSecurityNo, _.firstName),
       Field.computed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN"),
+      Field.allMatching(FieldSource("SourcedLastName", "SOURCED-SSN")),
       Field.const(_.socialSecurityNo, "CONSTANT-SSN")
     )
 
@@ -185,7 +195,7 @@ val person2: Person2 = person1.via(methodToExpand)
 ```
 
 In this case, `ducktape` will match the fields from `Person` to parameter names of `methodToExpand` failing at compiletime if
-a parameter cannot be matched (be it there's no name correspondence or a `Transformer` between types of two fields named the same isn't available):
+a parameter cannot be matched (be it there's no name correspondence or a `Transformer` between types of two fields with the same name isn't available):
 
 ```scala mdoc:fail:silent
 def methodToExpandButOneMoreArg(lastName: String, age: Int, firstName: String, additionalArg: String): Person2 =
@@ -224,7 +234,7 @@ val withRenamed =
 #### 7. Automatic wrapping and unwrapping of `AnyVal`
 
 Despite being a really flawed abstraction `AnyVal` is pretty prevalent in Scala 2 code that you may want to interop with
-and `ducktape` is here to assist you. `Transformer` definitions for wrapping and uwrapping `AnyVals`
+and `ducktape` is here to assist you. `Transformer` definitions for wrapping and uwrapping `AnyVals` are
 automatically available:
 
 ```scala mdoc:reset-object

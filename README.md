@@ -1,14 +1,14 @@
-# Ducktape
+# ducktape
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape_3/badge.svg?style=flat-square)](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape_3)
 
-*Ducktape* is a library for boilerplate-less and configurable transformations between case classes/enums (sealed traits) for Scala 3. Directly inspired by [chimney](https://github.com/scalalandio/chimney).
+*ducktape* is a library for boilerplate-less and configurable transformations between case classes and enums/sealed traits for Scala 3. Directly inspired by [chimney](https://github.com/scalalandio/chimney).
 
 If this project interests you, please drop a 🌟 - these things are worthless but give me a dopamine rush nonetheless.
 
 ### Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.2"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.3
 ```
 
 ### Examples
@@ -77,12 +77,13 @@ we want to transform into, otherwise a compiletime errors is issued.
 #### 3. *Case class to case class with config*
 
 As we established earlier, going from `Person` to `PersonButMoreFields` cannot happen automatically as the former
-doesn't have the `socialSecurityNo` field, but it has all the other fields so it's almost there, we just have to nudge it a lil' bit.
+doesn't have the `socialSecurityNo` field, but it has all the other fields - so it's almost there, we just have to nudge it a lil' bit.
 
 We can do so with field configurations in 3 ways:
   1. Set a constant to a specific field with `Field.const`
   2. Compute the value for a specific field by applying a function with `Field.computed`
   3. Use a different field in its place - 'rename' it with `Field.renamed`
+  4. Grab all matching fields from another case class with `Field.allMatching`
 
 ```scala
 import io.github.arainko.ducktape.*
@@ -128,6 +129,20 @@ val withRename =
 //   age = 20,
 //   socialSecurityNo = "Jerry"
 // )
+
+final case class FieldSource(lastName: String, socialSecurityNo: String)
+
+// 4. Grab and use all matching fields from a different case class (a compiletime error will be issued if none of the fields match)
+val withAllMatchingFields = 
+  person
+    .into[PersonButMoreFields]
+    .transform(Field.allMatching(FieldSource("SourcedLastName", "SOURCED-SSN")))
+// withAllMatchingFields: PersonButMoreFields = PersonButMoreFields(
+//   firstName = "Jerry",
+//   lastName = "SourcedLastName",
+//   age = 20,
+//   socialSecurityNo = "SOURCED-SSN"
+// )
 ```
 
 In case we repeatedly apply configurations to the same field, the latest one is chosen:
@@ -139,11 +154,12 @@ val withRepeatedConfig =
     .transform(
       Field.renamed(_.socialSecurityNo, _.firstName),
       Field.computed(_.socialSecurityNo, p => s"${p.firstName}-COMPUTED-SSN"),
+      Field.allMatching(FieldSource("SourcedLastName", "SOURCED-SSN")),
       Field.const(_.socialSecurityNo, "CONSTANT-SSN")
     )
 // withRepeatedConfig: PersonButMoreFields = PersonButMoreFields(
 //   firstName = "Jerry",
-//   lastName = "Smith",
+//   lastName = "SourcedLastName",
 //   age = 20,
 //   socialSecurityNo = "CONSTANT-SSN"
 // )
@@ -225,7 +241,7 @@ val person2: Person2 = person1.via(methodToExpand)
 ```
 
 In this case, `ducktape` will match the fields from `Person` to parameter names of `methodToExpand` failing at compiletime if
-a parameter cannot be matched (be it there's no name correspondence or a `Transformer` between types of two fields named the same isn't available):
+a parameter cannot be matched (be it there's no name correspondence or a `Transformer` between types of two fields with the same name isn't available):
 
 ```scala
 def methodToExpandButOneMoreArg(lastName: String, age: Int, firstName: String, additionalArg: String): Person2 =
@@ -279,7 +295,7 @@ val withRenamed =
 #### 7. Automatic wrapping and unwrapping of `AnyVal`
 
 Despite being a really flawed abstraction `AnyVal` is pretty prevalent in Scala 2 code that you may want to interop with
-and `ducktape` is here to assist you. `Transformer` definitions for wrapping and uwrapping `AnyVals`
+and `ducktape` is here to assist you. `Transformer` definitions for wrapping and uwrapping `AnyVals` are
 automatically available:
 
 ```scala
@@ -322,13 +338,13 @@ val definedViaTransformer =
   Transformer
     .defineVia[TestClass](method)
     .build(Arg.const(_.additionalArg, List("const")))
-// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$91804/0x00000001037e0c40@3fcb542c
+// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$19527/0x00000008039cd230@7da66add
 
 val definedTransformer =
   Transformer
     .define[TestClass, TestClassWithAdditionalList]   
     .build(Field.const(_.additionalArg, List("const")))
-// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$91805/0x00000001037e6440@538893e6
+// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$19528/0x00000008039cd678@6af36cd0
 
 val transformedVia = definedViaTransformer.transform(testClass)
 // transformedVia: TestClassWithAdditionalList = TestClassWithAdditionalList(
@@ -417,21 +433,21 @@ expands to:
     val AppliedBuilder_this: AppliedBuilder[Person, Person2] = into[Person](person)[Person2]
 
     {
-      val sourceValue$proxy9: Person = AppliedBuilder_this.inline$appliedTo
+      val source$proxy13: Person = AppliedBuilder_this.inline$appliedTo
 
       {
         val inside$2: Inside2 = new Inside2(
-          int = sourceValue$proxy9.inside.int,
-          str = sourceValue$proxy9.inside.str,
+          int = source$proxy13.inside.int,
+          str = source$proxy13.inside.str,
           inside = Some.apply[EvenMoreInside2](
-            new EvenMoreInside2(str = sourceValue$proxy9.inside.inside.str, int = sourceValue$proxy9.inside.inside.int)
+            new EvenMoreInside2(str = source$proxy13.inside.inside.str, int = source$proxy13.inside.inside.int)
           )
         )
-        val collectionOfNumbers$2: List[Wrapped[Float]] = sourceValue$proxy9.collectionOfNumbers
+        val collectionOfNumbers$2: List[Wrapped[Float]] = source$proxy13.collectionOfNumbers
           .map[Wrapped[Float]]((src: Float) => new Wrapped[Float](src))
           .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])
         val str$2: Some[Wrapped[String]] = Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstString!"))
-        val int$2: Wrapped[Int] = Wrapped.apply[Int](sourceValue$proxy9.int.+(100))
+        val int$2: Wrapped[Int] = Wrapped.apply[Int](source$proxy13.int.+(100))
         new Person2(int = int$2, str = str$2, inside = inside$2, collectionOfNumbers = collectionOfNumbers$2)
       }: Person2
     }: Person2
@@ -504,9 +520,9 @@ expands to:
   }]]
 
   ({
-    val source$proxy5: Person = AppliedViaBuilder_this.inline$source
+    val source$proxy15: Person = AppliedViaBuilder_this.inline$source
 
-    (AppliedViaBuilder_this.inline$function.apply(Wrapped.apply[Int](source$proxy5.int.+(100)), Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstStr!")), new Inside2(int = source$proxy5.inside.int, str = source$proxy5.inside.str, inside = Some.apply[EvenMoreInside2](new EvenMoreInside2(str = source$proxy5.inside.inside.str, int = source$proxy5.inside.inside.int))), source$proxy5.collectionOfNumbers.map[Wrapped[Float]](((src: Float) => new Wrapped[Float](src))).to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])): Person2)
+    (AppliedViaBuilder_this.inline$function.apply(Wrapped.apply[Int](source$proxy15.int.+(100)), Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstStr!")), new Inside2(int = source$proxy15.inside.int, str = source$proxy15.inside.str, inside = Some.apply[EvenMoreInside2](new EvenMoreInside2(str = source$proxy15.inside.inside.str, int = source$proxy15.inside.inside.int))), source$proxy15.collectionOfNumbers.map[Wrapped[Float]](((src: Float) => new Wrapped[Float](src))).to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])): Person2)
   }: Person2)
 }
 ```
