@@ -339,13 +339,13 @@ val definedViaTransformer =
   Transformer
     .defineVia[TestClass](method)
     .build(Arg.const(_.additionalArg, List("const")))
-// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$18327/0x000000080304f608@5b3594f4
+// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$38661/0x0000000106842c40@680998bb
 
 val definedTransformer =
   Transformer
     .define[TestClass, TestClassWithAdditionalList]   
     .build(Field.const(_.additionalArg, List("const")))
-// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$18328/0x000000080304fa50@5655156
+// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$38662/0x0000000106840040@44a6c67d
 
 val transformedVia = definedViaTransformer.transform(testClass)
 // transformedVia: TestClassWithAdditionalList = TestClassWithAdditionalList(
@@ -362,6 +362,29 @@ val transformed = definedTransformer.transform(testClass)
 // )
 ```
 
+#### Usecase: recursive `Transformers`
+
+Recursive instances are lazy by nature so automatic derivation will be of no use here, we need to get our hands a little bit dirty:
+
+```scala
+import io.github.arainko.ducktape.*
+
+final case class Rec[A](value: A, rec: Option[Rec[A]])
+
+given recursive[A, B](using Transformer[A, B]): Transformer[Rec[A], Rec[B]] = 
+  Transformer.define[Rec[A], Rec[B]].build()
+
+Rec("1", Some(Rec("2", Some(Rec("3", None))))).to[Rec[Option[String]]]
+// res8: Rec[Option[String]] = Rec(
+//   value = Some(value = "1"),
+//   rec = Some(
+//     value = Rec(
+//       value = Some(value = "2"),
+//       rec = Some(value = Rec(value = Some(value = "3"), rec = None))
+//     )
+//   )
+// )
+```
 
 ### A look at the generated code
 

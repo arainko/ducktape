@@ -144,6 +144,16 @@ private[ducktape] object Failure {
       |None of the fields from ${fieldSourceTpe.show} match any of the fields from ${destTpe.show}.""".stripMargin
   }
 
+  final case class TransformerNotFound(sourceField: Field, destField: Field, implicitSearchExplanation: String) extends Failure {
+    override def render(using Quotes): String =
+      s"""
+      |No instance of Transformer[${sourceField.tpe.show}, ${destField.tpe.show}] was found.
+      |
+      |Compiler supplied explanation (may or may not be helpful):
+      |$implicitSearchExplanation
+      """.stripMargin
+  }
+
   extension (tpe: Type[?]) {
     private def show(using Quotes): String = quotes.reflect.TypeRepr.of(using tpe).show
   }

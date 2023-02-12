@@ -285,6 +285,20 @@ val transformedVia = definedViaTransformer.transform(testClass)
 val transformed = definedTransformer.transform(testClass)
 ```
 
+#### Usecase: recursive `Transformers`
+
+Recursive instances are lazy by nature so automatic derivation will be of no use here, we need to get our hands a little bit dirty:
+
+```scala mdoc:reset
+import io.github.arainko.ducktape.*
+
+final case class Rec[A](value: A, rec: Option[Rec[A]])
+
+given recursive[A, B](using Transformer[A, B]): Transformer[Rec[A], Rec[B]] = 
+  Transformer.define[Rec[A], Rec[B]].build()
+
+Rec("1", Some(Rec("2", Some(Rec("3", None))))).to[Rec[Option[String]]]
+```
 
 ### A look at the generated code
 
