@@ -22,6 +22,19 @@ private[ducktape] object ProductTransformations {
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromMirror(Dest)
 
+    // find dest fields that don't exist in source
+    val surplusDestFields = Fields.dest.byName -- Fields.source.byName.keys
+    println(surplusDestFields)
+    // check those if they have default values
+    val destFieldsWithDefault = surplusDestFields.values.foreach { field =>
+      val tpr: TypeRepr = TypeRepr.of(using field.tpe)
+      tpr.typeSymbol.flags.is(Flags.HasDefault)
+    }
+    println(destFieldsWithDefault)
+    // TODO: no need to transform these fields, just construct the Dest, do we even need to make something special?
+    // TODO: think about the order: configuration first, then existing values, then default values
+    // TODO: opt-in to using default values
+
     val transformerFields = fieldTransformations(sourceValue, Fields.dest.value)
 
     constructor(TypeRepr.of[Dest])
@@ -102,7 +115,7 @@ private[ducktape] object ProductTransformations {
 
     Select
       .unique(function.asTerm, "apply")
-      .appliedToArgs(callsInOrder.toList)
+      .appliedToArgs(callsInOrder)
       .asExprOf[Dest]
   }
 
@@ -136,10 +149,7 @@ private[ducktape] object ProductTransformations {
     import quotes.reflect.*
 
     fieldsToTransformInto.map { field =>
-      field ->
-        Fields.source
-          .get(field.name)
-          .getOrElse(Failure.abort(Failure.NoFieldMapping(field.name, Type.of[Source])))
+      field -> Fields.source.getOrElse(field.name, Failure.abort(Failure.NoFieldMapping(field.name, Type.of[Source])))
     }.map { (dest, source) =>
       val call = resolveTransformation(sourceValue, source, dest)
 
