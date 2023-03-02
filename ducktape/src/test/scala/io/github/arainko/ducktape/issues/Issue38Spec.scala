@@ -10,8 +10,6 @@ class Issue38Spec extends DucktapeSuite {
 
   test("derive a correct transformer no matter how you refer to A.AnotherCaseClass inside of `A.B`") {
     val testClass = TestClass("str", 1)
-    testClass.to[TestClassWithAdditionalList]
-
     val expected = TestClassWithAdditionalList("str", 1, Nil)
 
     val actual =
