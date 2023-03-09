@@ -12,21 +12,6 @@ import scala.quoted.*
 //TODO: if this is moved to `modules` the compiler crashes, investigate further (?)
 private[ducktape] object ProductTransformations {
 
-  private def defaultParams[T](using quotes: Quotes, tpe: Type[T]): Map[String, Any] = {
-    import quotes.reflect.*
-
-    val sym = TypeTree.of[T].symbol
-    val mod = Ref(sym.companionModule)
-    val names = sym.caseFields.filter(_.flags.is(Flags.HasDefault)).map(_.name)
-
-    val body = sym.companionClass.tree.asInstanceOf[ClassDef].body
-    val idents: List[Ref] = body.collect {
-      case deff @ DefDef(name, _, _, _) if name.startsWith("$lessinit$greater$default") => mod.select(deff.symbol)
-    }
-
-    names.zip(idents).toMap
-  }
-
   def transform[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     Source: Expr[Mirror.ProductOf[Source]],
@@ -41,7 +26,28 @@ private[ducktape] object ProductTransformations {
     val surplusDestFields = Fields.dest.byName -- Fields.source.byName.keys
     println(surplusDestFields)
     // check those if they have default values
-    println(surplusDestFields.keys.forall(name => defaultParams[Dest].keys.exists(_ == name)))
+
+    val typ = TypeRepr.of[Dest]
+    val sym = typ.typeSymbol
+    val typeArgs = typ.typeArgs
+    val mod = Ref(sym.companionModule)
+    val names = sym.caseFields.filter(_.flags.is(Flags.HasDefault)).map(_.name)
+    val namesExpr: Expr[List[String]] =
+      Expr.ofList(names.map(Expr(_)))
+    println(names)
+
+    val body = sym.companionClass.tree.asInstanceOf[ClassDef].body
+    val idents: List[Term] = body.collect {
+      case deff @ DefDef(name, _, _, _) if name.startsWith("$lessinit$greater$default") =>
+        println(deff)
+        mod.select(deff.symbol).appliedToTypes(typeArgs)
+    }
+    println(idents)
+    val identsExpr: Expr[List[Any]] =
+      Expr.ofList(idents.map(_.asExpr))
+
+    println(names.zip(idents).toMap)
+    // println(surplusDestFields.keys.forall(name => defaultParams[Dest].keys.exists(_ == name)))
     // TODO: no need to transform these fields, just construct the Dest
     // TODO: think about the order: configuration first, then existing values, then default values
     // TODO: opt-in to using default values via configuration

@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.issues
 
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.internal.macros.*
 
 // https://github.com/arainko/ducktape/issues/38
 class Issue38Spec extends DucktapeSuite {
@@ -8,9 +9,12 @@ class Issue38Spec extends DucktapeSuite {
 
   final case class TestClassWithAdditionalList(str: String, int: Int, additionalArg: List[String] = Nil)
 
-  test("derive a correct transformer no matter how you refer to A.AnotherCaseClass inside of `A.B`") {
+  test("derive a transformer for case classes with default values") {
     val testClass = TestClass("str", 1)
     val expected = TestClassWithAdditionalList("str", 1, Nil)
+
+    println(testClass)
+    println(defaultParams[TestClassWithAdditionalList])
 
     val actual =
       List(
