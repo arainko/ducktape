@@ -89,7 +89,8 @@ private[ducktape] object Failure {
       Suggestion.all(
         s"""${capitalized}.const(_.${fieldOrArg}Name, "value")""",
         s"""${capitalized}.computed(_.${fieldOrArg}Name, source => source.value)""",
-        s"""${capitalized}.renamed(_.${fieldOrArg}Name1, _.${fieldOrArg}Name2)"""
+        s"""${capitalized}.renamed(_.${fieldOrArg}Name1, _.${fieldOrArg}Name2)""",
+        s"""${capitalized}.default(_.${fieldOrArg}Name)"""
       )
     }
 

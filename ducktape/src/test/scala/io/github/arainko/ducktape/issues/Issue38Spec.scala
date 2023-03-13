@@ -9,23 +9,51 @@ class Issue38Spec extends DucktapeSuite {
 
   final case class TestClassWithAdditionalList(str: String, int: Int, additionalArg: List[String] = Nil)
 
-  test("derive a transformer for case classes with default values") {
+  private def method(str: String, int: Int, additionalArg: List[String] = Nil): TestClassWithAdditionalList =
+    TestClassWithAdditionalList(str, int, additionalArg)
+
+  test("derive a transformer for case classes with default values if configured") {
     val testClass = TestClass("str", 1)
     val expected = TestClassWithAdditionalList("str", 1, Nil)
 
-    println(testClass)
-
     val actual =
       List(
-        testClass.to[TestClassWithAdditionalList],
-        //testClass.into[TestClassWithAdditionalList].transform(),
-        //testClass.via(TestClassWithAdditionalList.apply),
-        //testClass.intoVia(TestClassWithAdditionalList.apply).transform(),
-        //Transformer.define[TestClass, TestClassWithAdditionalList].build().transform(testClass),
-        //Transformer.defineVia[TestClass](TestClassWithAdditionalList.apply).build().transform(testClass)
+        testClass.to[TestClassWithAdditionalList], // TODO: this should fail without configuration
+        testClass
+          .into[TestClassWithAdditionalList]
+          .transform(
+            Field.default(_.additionalArg)
+          ),
+        testClass
+          .intoVia(TestClassWithAdditionalList.apply)
+          .transform(
+            Arg.default(_.additionalArg)
+          ),
+        testClass
+          .intoVia(method)
+          .transform(
+            Arg.default(_.additionalArg)
+          ),
+        Transformer
+          .define[TestClass, TestClassWithAdditionalList]
+          .build(
+            Field.default(_.additionalArg)
+          )
+          .transform(testClass),
+        Transformer
+          .defineVia[TestClass](TestClassWithAdditionalList.apply)
+          .build(
+            Arg.default(_.additionalArg)
+          )
+          .transform(testClass),
+        Transformer
+          .defineVia[TestClass](method)
+          .build(
+            Arg.default(_.additionalArg)
+          )
+          .transform(testClass)
       )
 
     actual.foreach(actual => assertEquals(actual, expected))
   }
-
 }

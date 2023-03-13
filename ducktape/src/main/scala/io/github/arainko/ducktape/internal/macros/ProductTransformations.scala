@@ -25,7 +25,7 @@ private[ducktape] object ProductTransformations {
     // find dest fields that don't exist in source
     val surplusDestFields = Fields.dest.byName -- Fields.source.byName.keys
     // no need to try to transform these fields
-    val fieldsToTransform = (Fields.dest.byName -- surplusDestFields.keys)
+    val fieldsToTransform = Fields.dest.byName -- surplusDestFields.keys
     val transformerFields = fieldTransformations(sourceValue, fieldsToTransform.values.toList)
     // construct dest field for these if they have default values or fail otherwise
     val defaultFields = surplusDestFields.values.map { field =>
@@ -53,7 +53,7 @@ private[ducktape] object ProductTransformations {
     val materializedConfig = MaterializedConfiguration.materializeProductConfig(config)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
     val transformedFields = fieldTransformations(sourceValue, nonConfiguredFields.values.toList)
-    val configuredFields = fieldConfigurations(materializedConfig, sourceValue)
+    val configuredFields = fieldConfigurations[Source, Dest](materializedConfig, sourceValue)
 
     constructor(TypeRepr.of[Dest])
       .appliedToArgs(transformedFields ++ configuredFields)
@@ -88,7 +88,7 @@ private[ducktape] object ProductTransformations {
     import quotes.reflect.*
 
     given Fields.Source = Fields.Source.fromMirror(Source)
-    given Fields.Dest = Fields.Dest.fromFunctionArguments[ArgSelector]
+    given Fields.Dest = Fields.Dest.fromFunctionArguments[ArgSelector, Dest]
     val materializedConfig = MaterializedConfiguration.materializeArgConfig(config)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
 
@@ -98,7 +98,7 @@ private[ducktape] object ProductTransformations {
         .toMap
 
     val configuredFields =
-      fieldConfigurations(
+      fieldConfigurations[Source, Dest](
         materializedConfig,
         sourceValue
       ).map(field => field.name -> field).toMap
@@ -156,7 +156,7 @@ private[ducktape] object ProductTransformations {
     }
   }
 
-  private def fieldConfigurations[Source: Type](
+  private def fieldConfigurations[Source: Type, Dest: Type](
     config: List[MaterializedConfiguration.Product],
     sourceValue: Expr[Source]
   )(using Quotes, Fields.Dest) = {
@@ -169,6 +169,8 @@ private[ducktape] object ProductTransformations {
           case Product.Const(label, value)       => value
           case Product.Computed(label, function) => '{ $function($sourceValue) }
           case Product.Renamed(dest, source)     => accessField(sourceValue, source).asExpr
+          case Product.Default(label) =>
+            field.default.getOrElse(Failure.abort(Failure.DefaultMissing(field.name, Type.of[Dest])))
         }
 
         val castedCall = field.tpe match {

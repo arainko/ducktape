@@ -40,4 +40,12 @@ object Arg {
     ev2: FieldType <:< ArgType
   ): ArgBuilderConfig[Source, Dest, ArgSelector] = throw NotQuotedException("Arg.renamed")
 
+  @compileTimeOnly("'Arg.default' needs to be erased from the AST with a macro.")
+  def default[Source, Dest, ArgType, ArgSelector <: FunctionArguments](
+    selector: ArgSelector => ArgType
+  )(using 
+    @implicitNotFound("Arg.default is only supported for product types but ${Dest} is not a product type.")
+    ev1: Mirror.ProductOf[Dest]
+  ): ArgBuilderConfig[Source, Dest, ArgSelector] = throw NotQuotedException("Arg.default")
+
 }
