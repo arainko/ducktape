@@ -24,38 +24,18 @@ private[ducktape] object ProductTransformations {
 
     // find dest fields that don't exist in source
     val surplusDestFields = Fields.dest.byName -- Fields.source.byName.keys
-    println(surplusDestFields)
-    // check those if they have default values
-
-    val typ = TypeRepr.of[Dest]
-    val sym = typ.typeSymbol
-    val typeArgs = typ.typeArgs
-    val mod = Ref(sym.companionModule)
-    val names = sym.caseFields.filter(_.flags.is(Flags.HasDefault)).map(_.name)
-    val namesExpr: Expr[List[String]] =
-      Expr.ofList(names.map(Expr(_)))
-    println(names)
-
-    val body = sym.companionClass.tree.asInstanceOf[ClassDef].body
-    val idents: List[Term] = body.collect {
-      case deff @ DefDef(name, _, _, _) if name.startsWith("$lessinit$greater$default") =>
-        println(deff)
-        mod.select(deff.symbol).appliedToTypes(typeArgs)
+    // no need to try to transform these fields
+    val fieldsToTransform = (Fields.dest.byName -- surplusDestFields.keys)
+    val transformerFields = fieldTransformations(sourceValue, fieldsToTransform.values.toList)
+    // construct dest field for these if they have default values or fail otherwise
+    val defaultFields = surplusDestFields.values.map { field =>
+      NamedArg(field.name, field.default.getOrElse(Failure.abort(Failure.DefaultMissing(field.name, Type.of[Dest]))).asTerm)
     }
-    println(idents)
-    val identsExpr: Expr[List[Any]] =
-      Expr.ofList(idents.map(_.asExpr))
 
-    println(names.zip(idents).toMap)
-    // println(surplusDestFields.keys.forall(name => defaultParams[Dest].keys.exists(_ == name)))
-    // TODO: no need to transform these fields, just construct the Dest
-    // TODO: think about the order: configuration first, then existing values, then default values
     // TODO: opt-in to using default values via configuration
 
-    val transformerFields = fieldTransformations(sourceValue, Fields.dest.value)
-
     constructor(TypeRepr.of[Dest])
-      .appliedToArgs(transformerFields.toList)
+      .appliedToArgs(transformerFields.toList ++ defaultFields.toList)
       .asExprOf[Dest]
   }
 
@@ -162,11 +142,13 @@ private[ducktape] object ProductTransformations {
   private def fieldTransformations[Source: Type](
     sourceValue: Expr[Source],
     fieldsToTransformInto: List[Field]
-  )(using Quotes, Fields.Source) = {
+  )(using Quotes, Fields.Source): List[quotes.reflect.NamedArg] = {
     import quotes.reflect.*
 
-    fieldsToTransformInto.flatMap { field =>
-      Fields.source.get(field.name).map(x => field -> x)//.getOrElse(Failure.abort(Failure.NoFieldMapping(field.name, Type.of[Source])))
+    fieldsToTransformInto.map { field =>
+      field -> Fields.source
+        .get(field.name)
+        .getOrElse(Failure.abort(Failure.NoFieldMapping(field.name, Type.of[Source])))
     }.map { (dest, source) =>
       val call = resolveTransformation(sourceValue, source, dest)
 
@@ -201,7 +183,7 @@ private[ducktape] object ProductTransformations {
     sourceValue: Expr[Source],
     source: Field,
     destination: Field
-  )(using Quotes) = {
+  )(using Quotes): quotes.reflect.Term = {
     import quotes.reflect.*
 
     source.transformerTo(destination) match {
@@ -221,7 +203,7 @@ private[ducktape] object ProductTransformations {
     }
   }
 
-  private def accessField(value: Expr[Any], fieldName: String)(using Quotes) = {
+  private def accessField(value: Expr[Any], fieldName: String)(using Quotes): quotes.reflect.Select = {
     import quotes.reflect.*
 
     Select.unique(value.asTerm, fieldName)

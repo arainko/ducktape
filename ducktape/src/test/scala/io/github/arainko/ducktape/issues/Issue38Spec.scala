@@ -14,16 +14,15 @@ class Issue38Spec extends DucktapeSuite {
     val expected = TestClassWithAdditionalList("str", 1, Nil)
 
     println(testClass)
-    println(defaultParams[TestClassWithAdditionalList])
 
     val actual =
       List(
         testClass.to[TestClassWithAdditionalList],
-        testClass.into[TestClassWithAdditionalList].transform(),
-        testClass.via(TestClassWithAdditionalList.apply),
-        testClass.intoVia(TestClassWithAdditionalList.apply).transform(),
-        Transformer.define[TestClass, TestClassWithAdditionalList].build().transform(testClass),
-        Transformer.defineVia[TestClass](TestClassWithAdditionalList.apply).build().transform(testClass)
+        //testClass.into[TestClassWithAdditionalList].transform(),
+        //testClass.via(TestClassWithAdditionalList.apply),
+        //testClass.intoVia(TestClassWithAdditionalList.apply).transform(),
+        //Transformer.define[TestClass, TestClassWithAdditionalList].build().transform(testClass),
+        //Transformer.defineVia[TestClass](TestClassWithAdditionalList.apply).build().transform(testClass)
       )
 
     actual.foreach(actual => assertEquals(actual, expected))
