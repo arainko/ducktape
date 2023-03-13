@@ -22,20 +22,10 @@ private[ducktape] object ProductTransformations {
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromMirror(Dest)
 
-    // find dest fields that don't exist in source
-    val surplusDestFields = Fields.dest.byName -- Fields.source.byName.keys
-    // no need to try to transform these fields
-    val fieldsToTransform = Fields.dest.byName -- surplusDestFields.keys
-    val transformerFields = fieldTransformations(sourceValue, fieldsToTransform.values.toList)
-    // construct dest field for these if they have default values or fail otherwise
-    val defaultFields = surplusDestFields.values.map { field =>
-      NamedArg(field.name, field.default.getOrElse(Failure.abort(Failure.DefaultMissing(field.name, Type.of[Dest]))).asTerm)
-    }
-
-    // TODO: opt-in to using default values via configuration
+    val transformerFields = fieldTransformations(sourceValue, Fields.dest.value)
 
     constructor(TypeRepr.of[Dest])
-      .appliedToArgs(transformerFields.toList ++ defaultFields.toList)
+      .appliedToArgs(transformerFields.toList)
       .asExprOf[Dest]
   }
 

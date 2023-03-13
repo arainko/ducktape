@@ -18,7 +18,6 @@ class Issue38Spec extends DucktapeSuite {
 
     val actual =
       List(
-        testClass.to[TestClassWithAdditionalList], // TODO: this should fail without configuration
         testClass
           .into[TestClassWithAdditionalList]
           .transform(
