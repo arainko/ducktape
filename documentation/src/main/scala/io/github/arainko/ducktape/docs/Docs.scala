@@ -22,7 +22,14 @@ object Docs {
   def printCodeMacro[A: Type](value: Expr[A])(using Quotes): Expr[A] = {
     import quotes.reflect.*
 
-    val struct = Printer.TreeShortCode.show(value.asTerm)
+    /*
+     * Printer.TreeShortCode prints type lambdas with a => instead of =>> which makes scalafmt REALLY, REALLY upset
+     * this beauty fixes it until https://github.com/lampepfl/dotty/pull/16968 is merged to dotty
+     */
+    val typeLambdaRegex = """\[(\[\p{L}+ >: Nothing <: \p{L}+\]) =>""".r
+    def fixTypeLambdas(input: String): String = typeLambdaRegex.replaceAllIn(input, "[$1 =>>")
+
+    val struct = fixTypeLambdas(Printer.TreeShortCode.show(value.asTerm))
 
     // we need to enclose it inside a class/object, otherwise scalafmt doesn't run
     val enclosedCode =

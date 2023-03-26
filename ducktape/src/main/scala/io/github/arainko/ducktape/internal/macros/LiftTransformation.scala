@@ -102,7 +102,13 @@ private[ducktape] object LiftTransformation {
           tl.methodArgs
             .map(replacer.apply) // replace all references to the lambda param
             .map(transformTransformerInvocation) // recurse down into nested calls
-        Apply(tl.methodCall, newArgs)
+
+        tl.defs match {
+          case Nil =>
+            Apply(tl.methodCall, newArgs)
+          case nonEmpty =>
+            Inlined(None, nonEmpty, Apply(tl.methodCall, newArgs))
+        }
 
       case tl: TransformerLambda.ToAnyVal[quotes.type] =>
         Apply(tl.constructorCall, List(appliedTo.asTerm))
