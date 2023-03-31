@@ -1,14 +1,13 @@
 package io.github.arainko.ducktape.builder
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.builder.AppliedBuilder.FailFast
 import io.github.arainko.ducktape.internal.macros.*
 
 import scala.deriving.Mirror
 
 final class AppliedBuilder[Source, Dest](appliedTo: Source) {
 
-  def failFast[F[+x]]: FailFast[F, Source, Dest] =
+  def failFast[F[+x]]: AppliedBuilder.FailFast[F, Source, Dest] =
     AppliedBuilder.FailFast[F, Source, Dest](appliedTo)
 
   def accumulating[F[+x]]: AppliedBuilder.Accumulating[F, Source, Dest] =
