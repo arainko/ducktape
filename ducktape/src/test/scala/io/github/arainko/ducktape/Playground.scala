@@ -40,7 +40,7 @@ object Playground extends App {
   DebugMacros.code {
     person
       .intoVia(PersonRefined.apply)
-      .failFast[Option]
+      .accumulating[Option]
       .transform(
         // Arg.const(_.int, 1),
         Arg.fallibleConst(_.int, None)

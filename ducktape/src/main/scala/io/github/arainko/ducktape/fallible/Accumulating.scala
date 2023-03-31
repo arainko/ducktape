@@ -60,18 +60,6 @@ object Accumulating extends LowPriorityAccumulatingInstances {
   }
 
   object Support {
-    given eitherConsAccumulatingSupport[E]: Support[[A] =>> Either[::[E], A]] =
-      new Support[[A] =>> Either[::[E], A]] {
-        def pure[A](value: A): Either[::[E], A] = Right(value)
-        def map[A, B](fa: Either[::[E], A], f: A => B): Either[::[E], B] = fa.map(f)
-        def product[A, B](fa: Either[::[E], A], fb: Either[::[E], B]): Either[::[E], (A, B)] =
-          (fa, fb) match {
-            case (Right(a), Right(b))           => Right(a -> b)
-            case (Right(_), err @ Left(_))      => err.asInstanceOf[Either[::[E], (A, B)]]
-            case (err @ Left(_), Right(_))      => err.asInstanceOf[Either[::[E], (A, B)]]
-            case (Left(errorsA), Left(errorsB)) => Left((errorsA ::: errorsB).asInstanceOf[::[E]])
-          }
-      }
 
     given eitherIterableAccumulatingSupport[E, Coll[x] <: Iterable[x]](using
       factory: Factory[E, Coll[E]]

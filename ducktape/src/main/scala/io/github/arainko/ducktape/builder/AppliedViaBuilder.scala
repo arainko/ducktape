@@ -36,7 +36,7 @@ object AppliedViaBuilder {
     Functions.refineFunctionArguments(func, builder)
   }
 
-  final class FailFast[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[AppliedViaBuilder] (
+  final class FailFast[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (
     source: Source,
     function: Func
   ) {
@@ -46,7 +46,7 @@ object AppliedViaBuilder {
       Transformations.failFastViaConfigured[F, Source, Dest, Func, ArgSelector](source, function, config*)
   }
 
-  final class Accumulating[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[AppliedViaBuilder] (
+  final class Accumulating[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (
     source: Source,
     function: Func
   ) {
