@@ -12,7 +12,7 @@ libraryDependencies += "io.github.arainko" %% "ducktape" % "@VERSION@"
 ```
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
 
-### Examples
+### Total transformations - examples
 
 #### 1. *Case class to case class*
 
@@ -308,6 +308,152 @@ given recursive[A, B](using Transformer[A, B]): Transformer[Rec[A], Rec[B]] =
   Transformer.define[Rec[A], Rec[B]].build()
 
 Rec("1", Some(Rec("2", Some(Rec("3", None))))).to[Rec[Option[String]]]
+```
+
+### Fallible transfomations - examples
+Sometimes ordinary field mappings just do not cut it, more often than not our domain model's constructors are hidden behind a safe factory method, eg.:
+
+```scala mdoc:reset
+import io.github.arainko.ducktape.*
+
+final case class ValidatedPerson private (name: String, age: Int)
+
+object ValidatedPerson {
+  def create(name: String, age: Int): Either[String, ValidatedPerson] =
+    for {
+      validatedName <- Either.cond(!name.isBlank, name, "Name should not be blank")
+      validatedAge  <- Either.cond(age > 0, age, "Age should be positive")
+    } yield ValidatedPerson(validatedName, validatedAge)
+}
+```
+
+The `via` method expansion mechanism has us covered in the most straight-forward of use cases where there are no nested fallible transformations:
+
+```scala mdoc
+
+final case class UnvalidatedPerson(name: String, age: Int)
+
+val unvalidatedPerson = UnvalidatedPerson("ValidName", -1)
+
+val transformed = unvalidatedPerson.via(ValidatedPerson.create)
+```
+
+But this quickly falls apart when nested transformations are introduced and we're pretty much back to square one where we're on our own to write the boilerplate.
+
+That's where `Fallible Transformers` and their flavors come in: 
+* `Accumulating` for error accumulation,
+* `FailFast` for the cases where we just want to bail at the very first sight of trouble.
+
+Let's look at the definition of both of these, starting with `Accumulating`.
+
+#### Definition of `Transformer.Accumulating`
+
+```scala
+trait Accumulating[F[+x], Source, Dest] {
+  def transform(value: Source): F[Dest]
+}
+
+object Accumulating {
+  trait Support[F[+x]] {
+    def pure[A](value: A): F[A]
+    def map[A, B](fa: F[A], f: A => B): F[B]
+    def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
+  }
+}
+```
+
+So an `Accumulating` transformer takes a `Source` and gives back a `Dest` wrapped in an `F` where `F` is the wrapper type for our transformations eg. if `F[+x]` = `Either[List[String], x]` then the `transform` method will return an `Either[List[String], Dest]` (the `List` on the left side will accumulate errors when multiple fallible transformations are involved).
+
+Moving on to `Accumulating.Support`, what exactly is it and why do we need it? So the `Accumulating.Support` typeclass gives some meaning to an abstract wrapper type `F` so that we can actually operate on it in some way, let's go through all the methods that `Accumulating.Support` exposes:
+* `pure` is for wrapping arbitrary values into `F`, eg. if `F[+x] = Either[List[String], x]` then calling `pure` would involve just wrapping the value in a `Right.apply` call.
+
+* `map` is for operating on the wrapped values, eg. if we find ourselves with a `F[Int]` in hand and we want to transform the value 'inside' to a `String` we can call `.map(_.toString)` to yield a `F[String]`
+
+* `product` enables composition of two unrelated values wrapped in an `F` which is THE operator for accumulating errors.
+
+`ducktape` provides instances for `Either` with any subtype of `Iterable` on the left side, so that eg. `Transformer.Accumulating.Support[[A] =>> Either[List[String], A]]` is available out of the box.
+
+#### Definition of `Transformer.FailFast`
+
+```scala
+trait FailFast[F[+x], Source, Dest] {
+  def transform(value: Source): F[Dest]
+}
+
+object FailFast {
+  trait Support[F[+x]] {
+    def pure[A](value: A): F[A]
+    def map[A, B](fa: F[A], f: A => B): F[B]
+    def flatMap[A, B](fa: F[A], f: A => F[B]): F[B]
+  }
+}
+```
+
+The definition itself is pretty much the same as in `Accumulating` with one key change, `FailFast.Support` exchanges the `product` method for `flatMap` which implies short-circuit semantics for the composition operator.
+
+`ducktape` provides instances for `Transformer.FailFast.Support[Option]` and for `Either` no matter what is on the left side (eg. `Transformer.FailFast.Support[[A] =>> Either[String, A]]`) out of the box.
+
+#### Automatic fallible transformations
+
+Now for the meat and potatoes of `Fallible Transformers`. To make use of the derivation mechanism that `ducktape` provides we should strive for our model to be modeled in a specific way - with a new nominal type per each validated field, which comes down to... Newtypes! (eg. [monix-newtypes](https://github.com/monix/newtypes))
+
+Let's define a minimalist newtype abstraction that will also do validation (this is a one-time effort that can easily be extracted to a library):
+
+```scala mdoc
+type FailFastValidation[+A] = Either[String, A]
+type AccValidation[+A] = Either[List[String], A]
+
+abstract class NewtypeValidated[A](pred: A => Boolean, errorMessage: String) {
+  opaque type Type = A
+
+  protected def unsafe(value: A): Type = value
+
+  def make(value: A): Either[String, Type] = Either.cond(pred(value), value, errorMessage)
+
+  def makeAccumulating(value: A): Either[List[String], Type] = 
+    make(value).left.map(_ :: Nil)
+
+  extension (self: Type) {
+    def value: A = self
+  }
+
+  // these instances will be available in the implicit scope of `Type` (that is, our newtype)
+  given accumulatingWrappingTransformer: Transformer.Accumulating[[a] =>> Either[List[String], a], A, Type] = makeAccumulating(_)
+
+  given failFastWrappingTransformer: Transformer.FailFast[[a] =>> Either[String, a], A, Type] = make(_)
+
+  given unwrappingTransformer: Transformer[Type, A] = _.value
+
+}
+```
+
+Now let's get back to the definition of `ValidatedPerson` and tweak it a little:
+
+```scala mdoc:nest
+final case class ValidatedPerson(name: ValidatedPerson.Name, age: ValidatedPerson.Age)
+
+object ValidatedPerson {
+  object Name extends NewtypeValidated[String](str => !str.isBlank, "Name should not be blank!")
+  export Name.Type as Name
+
+  object Age extends NewtypeValidated[Int](int => int > 0, "Age should be positive!")
+  export Age.Type as Age
+}
+```
+
+We introduce a newtype for each field, this way we can keep our invariants at compiletime and also let `ducktape` do it's thing:
+
+```scala mdoc
+
+val bad = UnvalidatedPerson(name = "", age = -1)
+val good = UnvalidatedPerson(name = "ValidName", age = 24)
+
+
+bad.accumulatingTo[[A] =>> Either[List[String], A], ValidatedPerson]
+good.accumulatingTo[[A] =>> Either[List[String], A], ValidatedPerson]
+
+bad.failFastTo[[A] =>> Either[String, A], ValidatedPerson]
+good.failFastTo[[A] =>> Either[String, A], ValidatedPerson]
 ```
 
 ### A look at the generated code
