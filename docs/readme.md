@@ -331,9 +331,9 @@ The `via` method expansion mechanism has us covered in the most straight-forward
 
 ```scala mdoc
 
-final case class UnvalidatedPerson(name: String, age: Int)
+final case class UnvalidatedPerson(name: String, age: Int, socialSecurityNo: String)
 
-val unvalidatedPerson = UnvalidatedPerson("ValidName", -1)
+val unvalidatedPerson = UnvalidatedPerson("ValidName", -1, "SSN")
 
 val transformed = unvalidatedPerson.via(ValidatedPerson.create)
 ```
@@ -391,7 +391,7 @@ object FailFast {
 
 The definition itself is pretty much the same as in `Accumulating` with one key change, `FailFast.Support` exchanges the `product` method for `flatMap` which implies short-circuit semantics for the composition operator.
 
-`ducktape` provides instances for `Transformer.FailFast.Support[Option]` and for `Either` no matter what is on the left side (eg. `Transformer.FailFast.Support[[A] =>> Either[String, A]]`) out of the box.
+`ducktape` provides instances for `Transformer.FailFast.Support[Option]` and for `Either`(no matter what is on the left side eg. `Transformer.FailFast.Support[[A] =>> Either[String, A]]`) out of the box.
 
 #### Automatic fallible transformations
 
@@ -400,9 +400,6 @@ Now for the meat and potatoes of `Fallible Transformers`. To make use of the der
 Let's define a minimalist newtype abstraction that will also do validation (this is a one-time effort that can easily be extracted to a library):
 
 ```scala mdoc
-type FailFastValidation[+A] = Either[String, A]
-type AccValidation[+A] = Either[List[String], A]
-
 abstract class NewtypeValidated[A](pred: A => Boolean, errorMessage: String) {
   opaque type Type = A
 
@@ -430,7 +427,7 @@ abstract class NewtypeValidated[A](pred: A => Boolean, errorMessage: String) {
 Now let's get back to the definition of `ValidatedPerson` and tweak it a little:
 
 ```scala mdoc:nest
-final case class ValidatedPerson(name: ValidatedPerson.Name, age: ValidatedPerson.Age)
+final case class ValidatedPerson(name: ValidatedPerson.Name, age: ValidatedPerson.Age, socialSecurityNo: ValidatedPerson.SSN)
 
 object ValidatedPerson {
   object Name extends NewtypeValidated[String](str => !str.isBlank, "Name should not be blank!")
@@ -438,23 +435,160 @@ object ValidatedPerson {
 
   object Age extends NewtypeValidated[Int](int => int > 0, "Age should be positive!")
   export Age.Type as Age
+
+  object SSN extends NewtypeValidated[String](str => str.length > 5, "SSN should be longer than 5!")
+  export SSN.Type as SSN
+
 }
 ```
 
-We introduce a newtype for each field, this way we can keep our invariants at compiletime and also let `ducktape` do it's thing:
+We introduce a newtype for each field, this way we can keep our invariants at compiletime and also let `ducktape` do its thing.
 
 ```scala mdoc
+// this should trip up our validation
+val bad = UnvalidatedPerson(name = "", age = -1, socialSecurityNo = "SOCIALNO")
 
-val bad = UnvalidatedPerson(name = "", age = -1)
-val good = UnvalidatedPerson(name = "ValidName", age = 24)
+// this one should pass
+val good = UnvalidatedPerson(name = "ValidName", age = 24, socialSecurityNo = "SOCIALNO")
+```
 
+Instances of `Transformer.Accumulating` wrapped in some type `F` are derived automatically for case classes given that a `Transformer.Accumulating.Support` instance exists for `F` and all of the fields of the source type have a corresponding counterpart in the destination type and each one of them has an instance of either `Transformer.Accumulating` or a total `Transformer` in scope.
 
+```scala mdoc
 bad.accumulatingTo[[A] =>> Either[List[String], A], ValidatedPerson]
 good.accumulatingTo[[A] =>> Either[List[String], A], ValidatedPerson]
+```
 
+and the generated code looks like this:
+
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(bad.accumulatingTo[[A] =>> Either[List[String], A], ValidatedPerson])
+```
+
+Same goes for instances of `Transformer.FailFast`.
+
+```scala mdoc
 bad.failFastTo[[A] =>> Either[String, A], ValidatedPerson]
 good.failFastTo[[A] =>> Either[String, A], ValidatedPerson]
 ```
+
+and the generated code looks like this:
+```scala mdoc:passthrough
+Docs.printCode(bad.failFastTo[[A] =>> Either[String, A], ValidatedPerson])
+```
+
+#### Configured fallible transformations
+Fallible transformations support a superset of total transformations' configuration options.
+
+##### `Field` config
+All of these work the very same way they do in total transformations:
+* `Field.const`
+* `Field.computed`
+* `Field.renamed`
+* `Field.allMatching`
+
+plus two fallible-specific config options:
+* `Field.fallibleConst`
+* `Field.fallibleComputed`
+
+which work like so for `Accumulating` transformations:
+```scala mdoc
+bad
+  .into[ValidatedPerson]
+  .accumulating[[A] =>> Either[List[String], A]]
+  .transform(
+    Field.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("ConstValidName")),
+    Field.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.makeAccumulating(unvPerson.age + 100))
+  )
+```
+
+and for `FailFast` transformations:
+```scala mdoc
+bad
+  .into[ValidatedPerson]
+  .failFast[[A] =>> Either[String, A]]
+  .transform(
+    Field.fallibleConst(_.name, ValidatedPerson.Name.make("ConstValidName")),
+    Field.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.make(unvPerson.age + 100))
+  )
+```
+
+##### `Arg` config
+All of these work the very same way they do in total transformations:
+* `Arg.const`
+* `Arg.computed`
+* `Arg.renamed`
+
+plus two fallible-specific config options:
+* `Arg.fallibleConst`
+* `Arg.fallibleComputed`
+
+which work like so for `Accumulating` transformations:
+```scala mdoc
+bad
+  .intoVia(ValidatedPerson.apply)
+  .accumulating[[A] =>> Either[List[String], A]]
+  .transform(
+    Arg.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("ConstValidName")),
+    Arg.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.makeAccumulating(unvPerson.age + 100))
+  )
+```
+
+and for `FailFast` transformations:
+```scala mdoc
+bad
+  .intoVia(ValidatedPerson.apply)
+  .failFast[[A] =>> Either[String, A]]
+  .transform(
+    Arg.fallibleConst(_.name, ValidatedPerson.Name.make("ConstValidName")),
+    Arg.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.make(unvPerson.age + 100))
+  )
+```
+
+#### Building custom instances of fallible transformers
+Life is not always lolipops and crisps and sometimes you need to write a typeclass instance by hand. Worry not though, just like in the case of total transformers, we can easily define custom instances with the help of the configuration DSL (which, let's write it down once again, is a superset of total transformers' DSL).
+
+By all means go wild with the configuration options, I'm too lazy to write them all out here again.
+```scala mdoc
+val customAccumulating =
+  Transformer
+    .define[UnvalidatedPerson, ValidatedPerson]
+    .accumulating[[A] =>> Either[List[String], A]]
+    .build(
+      Field.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
+    )
+
+val customFailFast =
+  Transformer
+    .define[UnvalidatedPerson, ValidatedPerson]
+    .failFast[[A] =>> Either[String, A]]
+    .build(
+      Field.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
+    )
+```
+
+And for the ones that are not keen on writing out method arguments:
+```scala mdoc
+val customAccumulatingVia =
+  Transformer
+    .defineVia[UnvalidatedPerson](ValidatedPerson.apply)
+    .accumulating[[A] =>> Either[List[String], A]]
+    .build(
+      Arg.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
+    )
+
+val customFailFastVia =
+  Transformer
+    .defineVia[UnvalidatedPerson](ValidatedPerson.apply)
+    .failFast[[A] =>> Either[String, A]]
+    .build(
+      Arg.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
+    )
+```
+
+
 
 ### A look at the generated code
 

@@ -37,7 +37,7 @@ object DefinitionBuilder {
       F: Transformer.Accumulating.Support[F],
       Source: Mirror.ProductOf[Source],
       Dest: Mirror.ProductOf[Dest]
-    ): Transformer.FailFast[F, Source, Dest] =
+    ): Transformer.Accumulating[F, Source, Dest] =
       new {
         def transform(value: Source): F[Dest] = Transformations.transformAccumulatingConfigured[F, Source, Dest](value, config*)
       }
