@@ -8,6 +8,12 @@ import scala.deriving.*
 
 final class DefinitionViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArguments] private (function: Func) {
 
+  def failFast[F[+x]]: DefinitionViaBuilder.FailFast[F, Source, Dest, Func, ArgSelector] =
+    DefinitionViaBuilder.FailFast[F, Source, Dest, Func, ArgSelector](function)
+
+  def accumulating[F[+x]]: DefinitionViaBuilder.Accumulating[F, Source, Dest, Func, ArgSelector] =
+    DefinitionViaBuilder.Accumulating[F, Source, Dest, Func, ArgSelector](function)
+
   inline def build(
     inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
   )(using Mirror.ProductOf[Source]): Transformer[Source, Dest] =
