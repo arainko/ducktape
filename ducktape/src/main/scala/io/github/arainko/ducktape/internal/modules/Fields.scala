@@ -37,13 +37,12 @@ private[ducktape] object Fields {
       apply(fields)
     }
 
-    final def fromFunctionArguments[ArgSelector <: FunctionArguments: Type, T: Type](using Quotes): FieldsSubtype = {
+    final def fromFunctionArguments[ArgSelector <: FunctionArguments: Type](using Quotes): FieldsSubtype = {
       import quotes.reflect.*
 
-      val defaults = defaultParams[T]
       val fields = List.unfold(TypeRepr.of[ArgSelector]) { state =>
         PartialFunction.condOpt(state) {
-          case Refinement(parent, name, fieldTpe) => Field(name, fieldTpe.asType, defaults.get(name)) -> parent
+          case Refinement(parent, name, fieldTpe) => Field(name, fieldTpe.asType, None) -> parent
         }
       }
       apply(fields.reverse)
