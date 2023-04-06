@@ -38,31 +38,32 @@ object Accumulating extends LowPriorityAccumulatingInstances {
       def transform(value: Source): F[Option[Dest]] = F.map(transformer.transform(value), Some.apply)
     }
 
-  // very-very naive impl, can probably lead to stack overflows given big enough collections and a data type that is not stack safe...
   given betweenCollections[F[+x], Source, Dest, SourceColl[x] <: Iterable[x], DestColl[x] <: Iterable[x]](using
     transformer: Accumulating[F, Source, Dest],
     F: Support[F],
     factory: Factory[Dest, DestColl[Dest]]
   ): Accumulating[F, SourceColl[Source], DestColl[Dest]] =
     new {
-      def transform(value: SourceColl[Source]): F[DestColl[Dest]] = {
-        val traversed = value.foldLeft(F.pure(factory.newBuilder)) { (builder, elem) =>
-          F.map(F.product(builder, transformer.transform(elem)), _ += _)
-        }
-        F.map(traversed, _.result())
-      }
+      def transform(value: SourceColl[Source]): F[DestColl[Dest]] = F.traverseCollection(value)
     }
 
   trait Support[F[+x]] {
     def pure[A](value: A): F[A]
     def map[A, B](fa: F[A], f: A => B): F[B]
     def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
+
+    // Kind of a bummer this has to exist, the 'foldLeft' and 'product' based implementation either blew up
+    // the stack or took to long to finish for very long collections...
+    def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](collection: AColl[A])(using
+      transformer: Accumulating[F, A, B],
+      factory: Factory[B, BColl[B]]
+    ): F[BColl[B]]
   }
 
   object Support {
 
     given eitherIterableAccumulatingSupport[E, Coll[x] <: Iterable[x]](using
-      factory: Factory[E, Coll[E]]
+      errorCollFactory: Factory[E, Coll[E]]
     ): Support[[A] =>> Either[Coll[E], A]] =
       new {
         override def pure[A](value: A): Either[Coll[E], A] = Right(value)
@@ -73,10 +74,37 @@ object Accumulating extends LowPriorityAccumulatingInstances {
             case (Right(_), err @ Left(_)) => err.asInstanceOf[Either[Coll[E], (A, B)]]
             case (err @ Left(_), Right(_)) => err.asInstanceOf[Either[Coll[E], (A, B)]]
             case (Left(errorsA), Left(errorsB)) =>
-              val builder = factory.newBuilder
+              val builder = errorCollFactory.newBuilder
               val accumulated = builder ++= errorsA ++= errorsB
               Left(accumulated.result())
           }
+
+        // Inspired by chimney's implementation: https://github.com/scalalandio/chimney/blob/53125c0a55479763157909ef920e11f5b487b182/chimney/src/main/scala/io/scalaland/chimney/TransformerFSupport.scala#L153
+        override def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](collection: AColl[A])(using
+          transformer: Accumulating[[A] =>> Either[Coll[E], A], A, B],
+          factory: Factory[B, BColl[B]]
+        ): Either[Coll[E], BColl[B]] = {
+          val accumulatedErrors = errorCollFactory.newBuilder
+          val accumulatedSuccesses = factory.newBuilder
+          var isErroredOut = false
+
+          collection.foreach { elem =>
+            transformer.transform(elem) match {
+              case Left(errors) =>
+                accumulatedErrors.addAll(errors)
+                if (isErroredOut == false) {
+                  isErroredOut = true
+                  accumulatedSuccesses.clear()
+                }
+              case Right(value) =>
+                if (isErroredOut == false) {
+                  accumulatedSuccesses.addOne(value)
+                }
+            }
+          }
+
+          if (isErroredOut) Left(accumulatedErrors.result()) else Right(accumulatedSuccesses.result())
+        }
       }
   }
 }

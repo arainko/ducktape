@@ -39,7 +39,7 @@ abstract class FallibleProductTransformations[
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromMirror(Dest)
 
-    val materializedConfig = MaterializedConfiguration.materializeFallibleProductConfig(config)
+    val materializedConfig = MaterializedConfiguration.FallibleProduct.fromFallibleFieldConfig(config)
     val nonConfiguredFields = (Fields.dest.byName -- materializedConfig.map(_.destFieldName)).values.toList
     val (wrappedFields, unwrappedFields) = configuredFieldTransformations(materializedConfig, sourceValue)
 
@@ -79,7 +79,7 @@ abstract class FallibleProductTransformations[
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromFunctionArguments[ArgSelector]
 
-    val materializedConfig = MaterializedConfiguration.materializeFallibleArgConfig(config)
+    val materializedConfig = MaterializedConfiguration.FallibleProduct.fromFallibleArgConfig(config)
     val nonConfiguredFields = (Fields.dest.byName -- materializedConfig.map(_.destFieldName)).values.toList
     val (wrappedFields, unwrappedFields) = configuredFieldTransformations(materializedConfig, sourceValue)
 
