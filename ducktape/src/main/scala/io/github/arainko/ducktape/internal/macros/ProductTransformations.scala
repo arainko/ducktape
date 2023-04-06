@@ -78,7 +78,7 @@ private[ducktape] object ProductTransformations {
     import quotes.reflect.*
 
     given Fields.Source = Fields.Source.fromMirror(Source)
-    given Fields.Dest = Fields.Dest.fromFunctionArguments[ArgSelector, Dest]
+    given Fields.Dest = Fields.Dest.fromFunctionArguments[ArgSelector]
     val materializedConfig = MaterializedConfiguration.materializeArgConfig(config)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
 
@@ -132,7 +132,7 @@ private[ducktape] object ProductTransformations {
   private def fieldTransformations[Source: Type](
     sourceValue: Expr[Source],
     fieldsToTransformInto: List[Field]
-  )(using Quotes, Fields.Source): List[quotes.reflect.NamedArg] = {
+  )(using Quotes, Fields.Source) = {
     import quotes.reflect.*
 
     fieldsToTransformInto.map { field =>
@@ -159,8 +159,6 @@ private[ducktape] object ProductTransformations {
           case Product.Const(label, value)       => value
           case Product.Computed(label, function) => '{ $function($sourceValue) }
           case Product.Renamed(dest, source)     => accessField(sourceValue, source).asExpr
-          case Product.Default(label) =>
-            field.default.getOrElse(Failure.abort(Failure.DefaultMissing(field.name, Type.of[Dest])))
         }
 
         val castedCall = field.tpe match {
@@ -175,7 +173,7 @@ private[ducktape] object ProductTransformations {
     sourceValue: Expr[Source],
     source: Field,
     destination: Field
-  )(using Quotes): quotes.reflect.Term = {
+  )(using Quotes) = {
     import quotes.reflect.*
 
     source.transformerTo(destination) match {
@@ -195,7 +193,7 @@ private[ducktape] object ProductTransformations {
     }
   }
 
-  private def accessField(value: Expr[Any], fieldName: String)(using Quotes): quotes.reflect.Select = {
+  private def accessField(value: Expr[Any], fieldName: String)(using Quotes) = {
     import quotes.reflect.*
 
     Select.unique(value.asTerm, fieldName)

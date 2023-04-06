@@ -14,7 +14,6 @@ private[ducktape] object MaterializedConfiguration {
     case Const(destFieldName: String, value: Expr[Any])
     case Computed(destFieldName: String, fuction: Expr[Any => Any])
     case Renamed(destFieldName: String, sourceFieldName: String)
-    case Default(destFieldName: String)
   }
 
   enum Coproduct extends MaterializedConfiguration {
@@ -91,11 +90,11 @@ private[ducktape] object MaterializedConfiguration {
         val sourceFieldName = Selectors.fieldName(Fields.source, sourceSelector)
         Product.Renamed(destFieldName, sourceFieldName) :: Nil
 
-      case '{
-            FieldConfig.default[source, dest, destFieldType]($destSelector)(using $ev1, $ev2)
-          } =>
+      case '{ FieldConfig.default[source, dest, destFieldType]($destSelector)(using $ev1, $ev2) } =>
         val destFieldName = Selectors.fieldName(Fields.dest, destSelector)
-        Product.Default(destFieldName) :: Nil
+        val field = Fields.dest.byName.get(destFieldName).getOrElse(Failure.abort(Failure.InvalidFieldSelector(destSelector, summon, Suggestion.fromFields(Fields.dest))))
+        val default = field.default.getOrElse(Failure.abort(Failure.DefaultMissing(field.name, Type.of[dest]))) 
+        Product.Const(field.name, default) :: Nil
 
       case config @ '{ FieldConfig.allMatching[source, dest, fieldSource]($fieldSource)(using $ev1, $ev2, $fieldSourceMirror) } =>
         val fieldSourceFields = Fields.Source.fromMirror(fieldSourceMirror)
@@ -111,6 +110,7 @@ private[ducktape] object MaterializedConfiguration {
         if (materializedConfig.isEmpty)
           Failure.abort(Failure.FieldSourceMatchesNoneOfDestFields(config, summon[Type[fieldSource]], summon[Type[dest]]))
         else materializedConfig
+
       case other => Failure.abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Field))
     }
   }
@@ -151,13 +151,6 @@ private[ducktape] object MaterializedConfiguration {
         val argName = Selectors.argName(Fields.dest, destSelector)
         val fieldName = Selectors.fieldName(Fields.source, sourceSelector)
         Product.Renamed(argName, fieldName)
-
-      case '{
-            type argSelector <: FunctionArguments
-            Arg.default[source, deest, argType, `argSelector`]($destSelector)(using $ev1)
-          } =>
-        val argName = Selectors.argName(Fields.dest, destSelector)
-        Product.Default(argName)
 
       case other => Failure.abort(Failure.UnsupportedConfig(other, Failure.ConfigType.Arg))
     }
