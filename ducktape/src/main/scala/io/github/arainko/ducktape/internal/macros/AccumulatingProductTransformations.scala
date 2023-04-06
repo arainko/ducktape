@@ -33,7 +33,7 @@ private[ducktape] object AccumulatingProductTransformations {
         val source =
           Fields.source
             .get(dest.name)
-            .getOrElse(Failure.abort(Failure.NoFieldMapping(dest.name, summon[Type[Source]])))
+            .getOrElse(Failure.emit(Failure.NoFieldMapping(dest.name, summon[Type[Source]])))
 
         source.partialTransformerTo[F, Accumulating](dest).asExpr match {
           case '{ Accumulating.partialFromTotal[F, src, dest](using $total, $support) } =>

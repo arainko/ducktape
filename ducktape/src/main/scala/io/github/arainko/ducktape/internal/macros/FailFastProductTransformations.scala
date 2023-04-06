@@ -27,7 +27,7 @@ private[ducktape] object FailFastProductTransformations {
           val source =
             Fields.source
               .get(dest.name)
-              .getOrElse(Failure.abort(Failure.NoFieldMapping(dest.name, summon[Type[Source]])))
+              .getOrElse(Failure.emit(Failure.NoFieldMapping(dest.name, summon[Type[Source]])))
 
           source.partialTransformerTo[F, FailFast](dest).asExpr match {
             case '{ FailFast.partialFromTotal[F, src, dest](using $total, $support) } =>

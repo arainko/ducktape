@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.builder
+package io.github.arainko.ducktape.total.builder
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.DebugMacros

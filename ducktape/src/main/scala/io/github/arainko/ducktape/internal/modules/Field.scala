@@ -29,11 +29,11 @@ private[ducktape] final class Field(val name: String, val tpe: Type[?], val defa
         Implicits.search(TypeRepr.of[PartialTransformer[F, src, dest]]) match {
           case success: ImplicitSearchSuccess => success.tree
           case err: DivergingImplicit =>
-            Failure.abort(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
+            Failure.emit(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
           case err: NoMatchingImplicits =>
-            Failure.abort(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
+            Failure.emit(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
           case err: AmbiguousImplicits =>
-            Failure.abort(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
+            Failure.emit(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
           case err: ImplicitSearchFailure =>
             // probably hitting another compiler bug here, derivation works for
             // FailFast[Option, TypeA, TypeB] but bugs out on things like:
