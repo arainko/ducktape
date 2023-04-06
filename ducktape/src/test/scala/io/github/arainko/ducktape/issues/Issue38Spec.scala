@@ -7,48 +7,36 @@ import io.github.arainko.ducktape.internal.macros.*
 class Issue38Spec extends DucktapeSuite {
   final case class TestClass(str: String, int: Int)
 
-  final case class TestClassWithAdditionalList(str: String, int: Int, additionalArg: List[String] = Nil)
+  final case class TestClassWithAdditionalList[A](str: String, int: Int, additionalArg: List[A] = Nil)
 
-  private def method(str: String, int: Int, additionalArg: List[String] = Nil): TestClassWithAdditionalList =
-    TestClassWithAdditionalList(str, int, additionalArg)
+  final case class TestClassWithMandatoryAdditionalList(str: String, int: Int, additionalArg: List[String])
 
   test("derive a transformer for case classes with default values if configured") {
     val testClass = TestClass("str", 1)
-    val expected = TestClassWithAdditionalList("str", 1, Nil)
+    val expected = TestClassWithAdditionalList[String]("str", 1, Nil)
 
     val actual =
       List(
         testClass
-          .into[TestClassWithAdditionalList]
+          .into[TestClassWithAdditionalList[String]]
           .transform(
             Field.default(_.additionalArg)
           ),
-        testClass
-          .intoVia(TestClassWithAdditionalList.apply)
-          .transform(
-            Arg.default(_.additionalArg)
-          ),
-        testClass
-          .intoVia(method)
-          .transform(
-            Arg.default(_.additionalArg)
-          ),
         Transformer
-          .define[TestClass, TestClassWithAdditionalList]
+          .define[TestClass, TestClassWithAdditionalList[String]]
           .build(
             Field.default(_.additionalArg)
           )
           .transform(testClass),
+        testClass
+          .into[TestClassWithAdditionalList[String]]
+          .transform(
+            Field.default(_.additionalArg)
+          ),
         Transformer
-          .defineVia[TestClass](TestClassWithAdditionalList.apply)
+          .define[TestClass, TestClassWithAdditionalList[String]]
           .build(
-            Arg.default(_.additionalArg)
-          )
-          .transform(testClass),
-        Transformer
-          .defineVia[TestClass](method)
-          .build(
-            Arg.default(_.additionalArg)
+            Field.default(_.additionalArg)
           )
           .transform(testClass)
       )
