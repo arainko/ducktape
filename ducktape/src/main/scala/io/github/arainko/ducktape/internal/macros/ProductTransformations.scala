@@ -43,7 +43,7 @@ private[ducktape] object ProductTransformations {
     val materializedConfig = MaterializedConfiguration.materializeProductConfig(config)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
     val transformedFields = fieldTransformations(sourceValue, nonConfiguredFields.values.toList)
-    val configuredFields = fieldConfigurations[Source, Dest](materializedConfig, sourceValue)
+    val configuredFields = fieldConfigurations(materializedConfig, sourceValue)
 
     constructor(TypeRepr.of[Dest])
       .appliedToArgs(transformedFields ++ configuredFields)
@@ -88,7 +88,7 @@ private[ducktape] object ProductTransformations {
         .toMap
 
     val configuredFields =
-      fieldConfigurations[Source, Dest](
+      fieldConfigurations(
         materializedConfig,
         sourceValue
       ).map(field => field.name -> field).toMap
@@ -136,9 +136,10 @@ private[ducktape] object ProductTransformations {
     import quotes.reflect.*
 
     fieldsToTransformInto.map { field =>
-      field -> Fields.source
-        .get(field.name)
-        .getOrElse(Failure.abort(Failure.NoFieldMapping(field.name, Type.of[Source])))
+      field ->
+        Fields.source
+          .get(field.name)
+          .getOrElse(Failure.abort(Failure.NoFieldMapping(field.name, Type.of[Source])))
     }.map { (dest, source) =>
       val call = resolveTransformation(sourceValue, source, dest)
 
@@ -146,7 +147,7 @@ private[ducktape] object ProductTransformations {
     }
   }
 
-  private def fieldConfigurations[Source: Type, Dest: Type](
+  private def fieldConfigurations[Source: Type](
     config: List[MaterializedConfiguration.Product],
     sourceValue: Expr[Source]
   )(using Quotes, Fields.Dest) = {
