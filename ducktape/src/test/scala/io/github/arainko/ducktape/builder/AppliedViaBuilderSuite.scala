@@ -48,6 +48,21 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
+  test("When an Arg is configured multiple times a warning is emitted") {
+    def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
+
+    assertFailsToCompileWith {
+      """
+      testClass
+        .intoVia(method)
+        .transform(
+          Arg.renamed(_.additionalArg, _.str),
+          Arg.renamed(_.additionalArg, _.str)
+        )
+      """
+    }("Arg 'additionalArg' is configured multiple times")
+  }
+
   test("Builder reports a missing argument") {
     assertFailsToCompileWith {
       """

@@ -34,8 +34,8 @@ private[ducktape] object CoproductTransformations {
     given Cases.Source = Cases.Source.fromMirror(Source)
     given Cases.Dest = Cases.Dest.fromMirror(Dest)
     val materializedConfig =
-      MaterializedConfiguration
-        .materializeCoproductConfig(config)
+      MaterializedConfiguration.Coproduct
+        .fromCaseConfig(config)
         .map(c => c.tpe.fullName -> c)
         .toMap
 
@@ -85,7 +85,7 @@ private[ducktape] object CoproductTransformations {
     sourceCases.map { source =>
       source -> Cases.dest
         .get(source.name)
-        .getOrElse(Failure.abort(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
+        .getOrElse(Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
     }.map { (source, dest) =>
       val cond = source.tpe match {
         case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
@@ -93,7 +93,7 @@ private[ducktape] object CoproductTransformations {
 
       cond.asTerm ->
         dest.materializeSingleton
-          .getOrElse(Failure.abort(Failure.CannotMaterializeSingleton(dest.tpe)))
+          .getOrElse(Failure.emit(Failure.CannotMaterializeSingleton(dest.tpe)))
     }
   }
 

@@ -17,7 +17,7 @@ private[ducktape] final class MaterializedMirror[Q <: Quotes & Singleton] privat
 private[ducktape] object MaterializedMirror {
 
   def createOrAbort[A: Type](mirror: Expr[Mirror.Of[A]])(using Quotes): MaterializedMirror[quotes.type] =
-    create(mirror).fold(memberName => Failure.abort(Failure.MirrorMaterialization(summon, memberName)), identity)
+    create(mirror).fold(memberName => Failure.emit(Failure.MirrorMaterialization(summon, memberName)), identity)
 
   private def create(mirror: Expr[Mirror])(using Quotes): Either[String, MaterializedMirror[quotes.type]] = {
     import quotes.reflect.*

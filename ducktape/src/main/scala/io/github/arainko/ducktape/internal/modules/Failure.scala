@@ -11,8 +11,11 @@ private[ducktape] sealed trait Failure {
 
 private[ducktape] object Failure {
 
-  def abort(failure: Failure)(using Quotes): Nothing =
+  def emit(failure: Failure)(using Quotes): Nothing =
     quotes.reflect.report.errorAndAbort(failure.render, failure.position)
+
+  def cond[A](successCondition: Boolean, value: A, failure: => Failure)(using Quotes): A =
+    if (successCondition) value else Failure.emit(failure)
 
   private given (using quotes: Quotes): quotes.reflect.Printer[quotes.reflect.Tree] =
     quotes.reflect.Printer.TreeShortCode

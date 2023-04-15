@@ -111,9 +111,9 @@ val withAllMatchingFields =
     .transform(Field.allMatching(FieldSource("SourcedLastName", "SOURCED-SSN")))
 ```
 
-In case we repeatedly apply configurations to the same field, the latest one is chosen:
+In case we repeatedly apply configurations to the same field a warning is emitted (which can be ignored with `@nowarn`) and the latest one is chosen:
 
-```scala mdoc
+```scala mdoc:warn
 
 val withRepeatedConfig =
   person
@@ -124,7 +124,10 @@ val withRepeatedConfig =
       Field.allMatching(FieldSource("SourcedLastName", "SOURCED-SSN")),
       Field.const(_.socialSecurityNo, "CONSTANT-SSN")
     )
-
+// warning: 
+//  Field 'socialSecurityNo' is configured multiple times
+//  
+//  If this is desired you can ignore this warning with @nowarn(msg=Field 'socialSecurityNo' is configured multiple times)
 ```
 
 Of course we can use this to override the automatic derivation for each field:
