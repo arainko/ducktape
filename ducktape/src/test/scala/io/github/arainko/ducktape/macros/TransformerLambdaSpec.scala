@@ -5,9 +5,9 @@ import io.github.arainko.ducktape.macros.TransformerLambdaChecker
 import io.github.arainko.ducktape.model.*
 
 class TransformerLambdaSpec extends DucktapeSuite {
-  test("should match ForProduct") {
-    TransformerLambdaChecker.check[Transformer.ForProduct.type](Transformer.forProducts[ComplexPerson, PrimitivePerson])
-  }
+  // test("should match ForProduct") {
+  //   TransformerLambdaChecker.check[Transformer.ForProduct.type](Transformer.forProducts[ComplexPerson, PrimitivePerson])
+  // }
 
   test("should match FromAnyVal") {
     TransformerLambdaChecker

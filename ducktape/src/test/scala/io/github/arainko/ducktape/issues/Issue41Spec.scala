@@ -14,7 +14,7 @@ class Issue41Spec extends DucktapeSuite {
     final case class Inside2(str: String)
 
     val roughAstCount = AstInstanceCounter.roughlyCount[Transformer[?, ?]](summon[Transformer[TestClass, TestClass2]])
-    assert(roughAstCount == 10)
+    assert(clue(roughAstCount) == 10)
   }
 
   test("Nested transformers are optimized away when case class' companion has vals inside") {
@@ -45,6 +45,6 @@ class Issue41Spec extends DucktapeSuite {
     val roughAstCount =
       AstInstanceCounter.roughlyCount[Transformer[?, ?]](summon[Transformer[TestClass, TestClass2]])
 
-    assert(roughAstCount == 10)
+    assert(clue(roughAstCount) == 10)
   }
 }

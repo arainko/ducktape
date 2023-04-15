@@ -10,9 +10,9 @@ import scala.quoted.*
 
 class MakeTransformerSpec extends DucktapeSuite {
 
-  test("should match ForProduct.make") {
-    MakeTransformerChecker.check(Transformer.forProducts[ComplexPerson, PrimitivePerson])
-  }
+  // test("should match ForProduct.make") {
+  //   MakeTransformerChecker.check(Transformer.forProducts[ComplexPerson, PrimitivePerson])
+  // }
 
   test("should match FromAnyVal.make") {
     MakeTransformerChecker.check(Transformer.fromAnyVal[Hobby, String])

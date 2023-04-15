@@ -111,6 +111,8 @@ private[ducktape] object ProductTransformations {
   )(using Quotes): Expr[Dest] = {
     import quotes.reflect.*
 
+    println(s"FROM ANY VAL: ${Type.show[Source]} ${Type.show[Dest]}")
+
     val tpe = TypeRepr.of[Source]
     val fieldSymbol =
       tpe.typeSymbol.fieldMembers.headOption
@@ -123,6 +125,8 @@ private[ducktape] object ProductTransformations {
     sourceValue: Expr[Source]
   )(using Quotes): Expr[Dest] = {
     import quotes.reflect.*
+
+    println(s"TO ANY VAL: ${Type.show[Source]} ${Type.show[Dest]}")
 
     constructor(TypeRepr.of[Dest])
       .appliedTo(sourceValue.asTerm)

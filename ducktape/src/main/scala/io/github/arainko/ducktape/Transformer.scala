@@ -87,33 +87,100 @@ object Transformer {
       }
   }
 
-  given [Source, Dest >: Source]: Identity[Source, Dest] = Identity[Source, Dest]
+  @deprecated(message = "Use 'Transformer.identity' instead", since = "0.1.5")
+  final def given_Identity_Source_Dest[Source, Dest >: Source]: Identity[Source, Dest] = identity[Source, Dest]
 
-  inline given forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
+  given identity[Source, Dest >: Source]: Identity[Source, Dest] = Identity[Source, Dest]
+
+  @deprecated(message = "Use 'Transformer.betweenProducts' instead", since = "0.1.5")
+  inline def forProducts[Source, Dest](using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): ForProduct[Source, Dest] =
     ForProduct.make(DerivedTransformers.product[Source, Dest])
 
-  inline given forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): ForCoproduct[Source, Dest] =
+  @deprecated(message = "Use 'Transformer.betweenCoproducts' instead", since = "0.1.5")
+  inline def forCoproducts[Source, Dest](using Mirror.SumOf[Source], Mirror.SumOf[Dest]): ForCoproduct[Source, Dest] =
     ForCoproduct.make(DerivedTransformers.coproduct[Source, Dest])
 
-  given [Source, Dest](using Transformer[Source, Dest]): Transformer[Source, Option[Dest]] =
+  inline given betweenProducts[Source, Dest](using
+    Mirror.ProductOf[Source],
+    Mirror.ProductOf[Dest]
+  ): Transformer.ForProduct[Source, Dest] =
+    Transformer.ForProduct.make(DerivedTransformers.product[Source, Dest])
+
+  inline given betweenCoproducts[Source, Dest](using
+    Mirror.SumOf[Source],
+    Mirror.SumOf[Dest]
+  ): Transformer.ForCoproduct[Source, Dest] =
+    Transformer.ForCoproduct.make(DerivedTransformers.coproduct[Source, Dest])
+
+  @deprecated(message = "Use 'Transformer.betweenNonOptionOption' instead", since = "0.1.5")
+  final def given_Transformer_Source_Option[Source, Dest](using Transformer[Source, Dest]): Transformer[Source, Option[Dest]] =
+    betweenNonOptionOption[Source, Dest]
+
+  given betweenNonOptionOption[Source, Dest](using Transformer[Source, Dest]): Transformer[Source, Option[Dest]] =
     from => Transformer[Source, Dest].transform.andThen(Some.apply)(from)
 
-  given [Source, Dest](using Transformer[Source, Dest]): Transformer[Option[Source], Option[Dest]] =
+  @deprecated(message = "Use 'Transformer.betweenOptions' instead", since = "0.1.5")
+  final def given_Transformer_Option_Option[Source, Dest](using
+    Transformer[Source, Dest]
+  ): Transformer[Option[Source], Option[Dest]] =
     from => from.map(Transformer[Source, Dest].transform)
 
-  given [A1, A2, B1, B2](using Transformer[A1, A2], Transformer[B1, B2]): Transformer[Either[A1, B1], Either[A2, B2]] = {
+  given betweenOptions[Source, Dest](using
+    Transformer[Source, Dest]
+  ): Transformer[Option[Source], Option[Dest]] =
+    from => from.map(Transformer[Source, Dest].transform)
+
+  @deprecated(message = "Use 'Transformer.betweenEithers' instead", since = "0.1.5")
+  final def given_Transformer_Either_Either[A1, A2, B1, B2](using
+    Transformer[A1, A2],
+    Transformer[B1, B2]
+  ): Transformer[Either[A1, B1], Either[A2, B2]] = {
     case Right(value) => Right(Transformer[B1, B2].transform(value))
     case Left(value)  => Left(Transformer[A1, A2].transform(value))
   }
 
-  given [Source, Dest, SourceCollection[elem] <: Iterable[elem], DestCollection[elem] <: Iterable[elem]](using
+  given betweenEithers[A1, A2, B1, B2](using
+    Transformer[A1, A2],
+    Transformer[B1, B2]
+  ): Transformer[Either[A1, B1], Either[A2, B2]] = {
+    case Right(value) => Right(Transformer[B1, B2].transform(value))
+    case Left(value)  => Left(Transformer[A1, A2].transform(value))
+  }
+
+  @deprecated(message = "Use 'Transformer.betweenCollections' instead", since = "0.1.5")
+  final def given_Transformer_SourceCollection_DestCollection[
+    Source,
+    Dest,
+    SourceCollection[elem] <: Iterable[elem],
+    DestCollection[elem] <: Iterable[elem]
+  ](using
+    trans: Transformer[Source, Dest],
+    factory: Factory[Dest, DestCollection[Dest]]
+  ): Transformer[SourceCollection[Source], DestCollection[Dest]] =
+    betweenCollections[Source, Dest, SourceCollection, DestCollection]
+
+  given betweenCollections[Source, Dest, SourceCollection[elem] <: Iterable[elem], DestCollection[elem] <: Iterable[elem]](using
     trans: Transformer[Source, Dest],
     factory: Factory[Dest, DestCollection[Dest]]
   ): Transformer[SourceCollection[Source], DestCollection[Dest]] = from => from.map(trans.transform).to(factory)
 
-  inline given fromAnyVal[Source <: AnyVal, Dest]: FromAnyVal[Source, Dest] =
+  @deprecated
+  inline def fromAnyVal[Source <: AnyVal, Dest]: FromAnyVal[Source, Dest] =
     FromAnyVal.make(DerivedTransformers.fromAnyVal[Source, Dest])
 
-  inline given toAnyVal[Source, Dest <: AnyVal]: ToAnyVal[Source, Dest] =
+  @deprecated
+  inline def toAnyVal[Source, Dest <: AnyVal]: ToAnyVal[Source, Dest] =
     ToAnyVal.make(DerivedTransformers.toAnyVal[Source, Dest])
+
+  inline given costamToAnyVal[Source, Dest](using
+    Dest <:< AnyVal,
+    Dest <:< Product
+  ): Transformer.ToAnyVal[Source, Dest] =
+    Transformer.ToAnyVal.make(DerivedTransformers.toAnyVal[Source, Dest])
+
+  inline given costamFromAnyVal[Source <: AnyVal, Dest](using
+    Source <:< AnyVal,
+    Source <:< Product
+  ): Transformer.FromAnyVal[Source, Dest] =
+    Transformer.FromAnyVal.make(DerivedTransformers.fromAnyVal[Source, Dest])
 }
