@@ -13,7 +13,7 @@ private[ducktape] object Selectors {
       case FieldSelector(fieldName) if validFields.containsFieldWithName(fieldName) =>
         fieldName
       case other =>
-        Failure.abort(Failure.InvalidFieldSelector(other, summon, Suggestion.fromFields(validFields)))
+        Failure.emit(Failure.InvalidFieldSelector(other, summon, Suggestion.fromFields(validFields)))
     }
   }
 
@@ -27,9 +27,9 @@ private[ducktape] object Selectors {
       case ArgSelector(argumentName) if validArgs.containsFieldWithName(argumentName) =>
         argumentName
       case ArgSelector(argumentName) =>
-        Failure.abort(Failure.InvalidArgSelector.NotFound(selector, argumentName, Suggestion.fromFields(validArgs)))
+        Failure.emit(Failure.InvalidArgSelector.NotFound(selector, argumentName, Suggestion.fromFields(validArgs)))
       case other =>
-        Failure.abort(Failure.InvalidArgSelector.NotAnArgSelector(selector, Suggestion.fromFields(validArgs)))
+        Failure.emit(Failure.InvalidArgSelector.NotAnArgSelector(selector, Suggestion.fromFields(validArgs)))
     }
   }
 

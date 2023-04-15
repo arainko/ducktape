@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.DebugMacros
 
 import scala.deriving.Mirror
+import scala.annotation.nowarn
 
 class AppliedBuilderSuite extends DucktapeSuite {
   import AppliedBuilderSuite.*
@@ -149,6 +150,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
 
     val expected = TestClassWithAdditionalString(1, "str", "str-computed")
 
+    @nowarn("msg=Field 'additionalArg' is configured multiple times")
     val actual =
       testClass
         .into[TestClassWithAdditionalString]
@@ -160,6 +162,19 @@ class AppliedBuilderSuite extends DucktapeSuite {
         )
 
     assertEquals(actual, expected)
+  }
+
+  test("When configs are applied to the same field repeateadly a warning is emitted") {
+    assertFailsToCompileWith {
+      """
+      testClass
+        .into[TestClassWithAdditionalString]
+        .transform(
+          Field.const(_.additionalArg, "FIRST"),
+          Field.renamed(_.additionalArg, _.str),
+        )
+      """
+    }
   }
 
   test("Case.const properly applies the constant for that subtype") {

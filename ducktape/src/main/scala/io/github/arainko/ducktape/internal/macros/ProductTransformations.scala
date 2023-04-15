@@ -40,7 +40,7 @@ private[ducktape] object ProductTransformations {
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromMirror(Dest)
 
-    val materializedConfig = MaterializedConfiguration.materializeProductConfig(config)
+    val materializedConfig = MaterializedConfiguration.Product.fromFieldConfig(config)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
     val transformedFields = fieldTransformations(sourceValue, nonConfiguredFields.values.toList)
     val configuredFields = fieldConfigurations(materializedConfig, sourceValue)
@@ -79,7 +79,7 @@ private[ducktape] object ProductTransformations {
 
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromFunctionArguments[ArgSelector]
-    val materializedConfig = MaterializedConfiguration.materializeArgConfig(config)
+    val materializedConfig = MaterializedConfiguration.Product.fromArgConfig(config)
     val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
 
     val transformedFields =
@@ -139,7 +139,7 @@ private[ducktape] object ProductTransformations {
       field ->
         Fields.source
           .get(field.name)
-          .getOrElse(Failure.abort(Failure.NoFieldMapping(field.name, Type.of[Source])))
+          .getOrElse(Failure.emit(Failure.NoFieldMapping(field.name, Type.of[Source])))
     }.map { (dest, source) =>
       val call = resolveTransformation(sourceValue, source, dest)
 
