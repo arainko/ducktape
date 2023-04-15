@@ -9,6 +9,6 @@ trait DucktapeSuite extends FunSuite {
 
   transparent inline def assertFailsToCompileWith(inline code: String)(expected: String)(using Location) = {
     val errors = compiletime.testing.typeCheckErrors(code).map(_.message).mkString("\n").strip()
-    assert(errors.strip().contains(clue(expected)), "Error did not contain expected value")
+    assert(clue(errors).strip().contains(clue(expected)), "Error did not contain expected value")
   }
 }
