@@ -146,7 +146,7 @@ val withAllMatchingFields =
 // )
 ```
 
-In case we repeatedly apply configurations to the same field, the latest one is chosen:
+In case we repeatedly apply configurations to the same field a warning is emitted (which can be ignored with `@nowarn`) and the latest one is chosen:
 
 ```scala
 val withRepeatedConfig =
@@ -158,12 +158,11 @@ val withRepeatedConfig =
       Field.allMatching(FieldSource("SourcedLastName", "SOURCED-SSN")),
       Field.const(_.socialSecurityNo, "CONSTANT-SSN")
     )
-// withRepeatedConfig: PersonButMoreFields = PersonButMoreFields(
-//   firstName = "Jerry",
-//   lastName = "SourcedLastName",
-//   age = 20,
-//   socialSecurityNo = "CONSTANT-SSN"
-// )
+// warning: 
+//  Field 'socialSecurityNo' is configured multiple times
+//  
+//  If this is desired you can ignore this warning with @nowarn(msg=Field 'socialSecurityNo' is configured multiple times)
+//
 ```
 
 Of course we can use this to override the automatic derivation for each field:
@@ -339,13 +338,13 @@ val definedViaTransformer =
   Transformer
     .defineVia[TestClass](method)
     .build(Arg.const(_.additionalArg, List("const")))
-// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$25310/0x00000001049ae040@117b21b7
+// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$38064/0x0000000803db5230@5f090e15
 
 val definedTransformer =
   Transformer
     .define[TestClass, TestClassWithAdditionalList]   
     .build(Field.const(_.additionalArg, List("const")))
-// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$25311/0x00000001049ae440@3c96fd7f
+// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$38065/0x0000000803db5678@3d1b49c6
 
 val transformedVia = definedViaTransformer.transform(testClass)
 // transformedVia: TestClassWithAdditionalList = TestClassWithAdditionalList(
@@ -375,7 +374,7 @@ given recursive[A, B](using Transformer[A, B]): Transformer[Rec[A], Rec[B]] =
   Transformer.define[Rec[A], Rec[B]].build()
 
 Rec("1", Some(Rec("2", Some(Rec("3", None))))).to[Rec[Option[String]]]
-// res8: Rec[Option[String]] = Rec(
+// res9: Rec[Option[String]] = Rec(
 //   value = Some(value = "1"),
 //   rec = Some(
 //     value = Rec(
@@ -457,21 +456,21 @@ expands to:
     val AppliedBuilder_this: AppliedBuilder[Person, Person2] = into[Person](person)[Person2]
 
     {
-      val source$proxy13: Person = AppliedBuilder_this.inline$appliedTo
+      val source$proxy12: Person = AppliedBuilder_this.inline$appliedTo
 
       {
         val inside$2: Inside2 = new Inside2(
-          int = source$proxy13.inside.int,
-          str = source$proxy13.inside.str,
+          int = source$proxy12.inside.int,
+          str = source$proxy12.inside.str,
           inside = Some.apply[EvenMoreInside2](
-            new EvenMoreInside2(str = source$proxy13.inside.inside.str, int = source$proxy13.inside.inside.int)
+            new EvenMoreInside2(str = source$proxy12.inside.inside.str, int = source$proxy12.inside.inside.int)
           )
         )
-        val collectionOfNumbers$2: List[Wrapped[Float]] = source$proxy13.collectionOfNumbers
+        val collectionOfNumbers$2: List[Wrapped[Float]] = source$proxy12.collectionOfNumbers
           .map[Wrapped[Float]]((src: Float) => new Wrapped[Float](src))
           .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])
         val str$2: Some[Wrapped[String]] = Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstString!"))
-        val int$2: Wrapped[Int] = Wrapped.apply[Int](source$proxy13.int.+(100))
+        val int$2: Wrapped[Int] = Wrapped.apply[Int](source$proxy12.int.+(100))
         new Person2(int = int$2, str = str$2, inside = inside$2, collectionOfNumbers = collectionOfNumbers$2)
       }: Person2
     }: Person2
@@ -564,19 +563,19 @@ expands to:
       ]]
 
     {
-      val source$proxy15: Person = AppliedViaBuilder_this.inline$source
+      val source$proxy14: Person = AppliedViaBuilder_this.inline$source
 
       AppliedViaBuilder_this.inline$function.apply(
-        Wrapped.apply[Int](source$proxy15.int.+(100)),
+        Wrapped.apply[Int](source$proxy14.int.+(100)),
         Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstStr!")),
         new Inside2(
-          int = source$proxy15.inside.int,
-          str = source$proxy15.inside.str,
+          int = source$proxy14.inside.int,
+          str = source$proxy14.inside.str,
           inside = Some.apply[EvenMoreInside2](
-            new EvenMoreInside2(str = source$proxy15.inside.inside.str, int = source$proxy15.inside.inside.int)
+            new EvenMoreInside2(str = source$proxy14.inside.inside.str, int = source$proxy14.inside.inside.int)
           )
         ),
-        source$proxy15.collectionOfNumbers
+        source$proxy14.collectionOfNumbers
           .map[Wrapped[Float]]((src: Float) => new Wrapped[Float](src))
           .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])
       ): Person2

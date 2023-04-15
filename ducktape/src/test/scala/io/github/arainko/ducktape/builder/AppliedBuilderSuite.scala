@@ -3,8 +3,8 @@ package io.github.arainko.ducktape.builder
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.DebugMacros
 
-import scala.deriving.Mirror
 import scala.annotation.nowarn
+import scala.deriving.Mirror
 
 class AppliedBuilderSuite extends DucktapeSuite {
   import AppliedBuilderSuite.*
@@ -174,7 +174,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
           Field.renamed(_.additionalArg, _.str),
         )
       """
-    }
+    }("Field 'additionalArg' is configured multiple times")
   }
 
   test("Case.const properly applies the constant for that subtype") {
