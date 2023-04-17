@@ -106,7 +106,7 @@ private[ducktape] object ProductTransformations {
       .asExprOf[Dest]
   }
 
-  def transformFromAnyVal[Source <: AnyVal: Type, Dest: Type](
+  def transformFromAnyVal[Source: Type, Dest: Type](
     sourceValue: Expr[Source]
   )(using Quotes): Expr[Dest] = {
     import quotes.reflect.*
@@ -119,7 +119,7 @@ private[ducktape] object ProductTransformations {
     accessField(sourceValue, fieldSymbol.name).asExprOf[Dest]
   }
 
-  def transformToAnyVal[Source: Type, Dest <: AnyVal: Type](
+  def transformToAnyVal[Source: Type, Dest: Type](
     sourceValue: Expr[Source]
   )(using Quotes): Expr[Dest] = {
     import quotes.reflect.*
