@@ -106,12 +106,10 @@ private[ducktape] object ProductTransformations {
       .asExprOf[Dest]
   }
 
-  def transformFromAnyVal[Source <: AnyVal: Type, Dest: Type](
+  def transformFromAnyVal[Source: Type, Dest: Type](
     sourceValue: Expr[Source]
   )(using Quotes): Expr[Dest] = {
     import quotes.reflect.*
-
-    println(s"FROM ANY VAL: ${Type.show[Source]} ${Type.show[Dest]}")
 
     val tpe = TypeRepr.of[Source]
     val fieldSymbol =
@@ -121,12 +119,10 @@ private[ducktape] object ProductTransformations {
     accessField(sourceValue, fieldSymbol.name).asExprOf[Dest]
   }
 
-  def transformToAnyVal[Source: Type, Dest <: AnyVal: Type](
+  def transformToAnyVal[Source: Type, Dest: Type](
     sourceValue: Expr[Source]
   )(using Quotes): Expr[Dest] = {
     import quotes.reflect.*
-
-    println(s"TO ANY VAL: ${Type.show[Source]} ${Type.show[Dest]}")
 
     constructor(TypeRepr.of[Dest])
       .appliedTo(sourceValue.asTerm)

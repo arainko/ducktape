@@ -30,7 +30,9 @@ lazy val previousArtifacts =
   Set(
     "io.github.arainko" %% "ducktape" % "0.1.0",
     "io.github.arainko" %% "ducktape" % "0.1.1",
-    "io.github.arainko" %% "ducktape" % "0.1.2"
+    "io.github.arainko" %% "ducktape" % "0.1.2",
+    "io.github.arainko" %% "ducktape" % "0.1.3",
+    "io.github.arainko" %% "ducktape" % "0.1.4",
   )
 
 lazy val root =
