@@ -36,12 +36,12 @@ private[ducktape] object LiftTransformation {
     appliedTo: Expr[A]
   )(using Quotes): Option[Expr[B]] =
     PartialFunction.condOpt(transformer) {
-      case '{ Transformer.given_Transformer_Source_Option[source, dest](using $transformer) } =>
+      case '{ Transformer.betweenNonOptionOption[source, dest](using $transformer) } =>
         val field = appliedTo.asExprOf[source]
         val lifted = liftTransformation(transformer, field)
         '{ Some($lifted) }.asExprOf[B]
 
-      case '{ Transformer.given_Transformer_Option_Option[source, dest](using $transformer) } =>
+      case '{ Transformer.betweenOptions[source, dest](using $transformer) } =>
         val field = appliedTo.asExprOf[Option[source]]
         '{ $field.map(src => ${ liftTransformation(transformer, 'src) }) }.asExprOf[B]
 
@@ -50,7 +50,7 @@ private[ducktape] object LiftTransformation {
       // https://github.com/lampepfl/dotty/discussions/12446
       // Because of that we need to do some more shenanigans to get the exact collection type we transform into
       case '{
-            Transformer.given_Transformer_SourceCollection_DestCollection[
+            Transformer.betweenCollections[
               source,
               dest,
               Iterable,
@@ -102,7 +102,13 @@ private[ducktape] object LiftTransformation {
           tl.methodArgs
             .map(replacer.apply) // replace all references to the lambda param
             .map(transformTransformerInvocation) // recurse down into nested calls
-        Apply(tl.methodCall, newArgs)
+
+        tl.defs match {
+          case Nil =>
+            Apply(tl.methodCall, newArgs)
+          case nonEmpty =>
+            Inlined(None, nonEmpty, Apply(tl.methodCall, newArgs))
+        }
 
       case tl: TransformerLambda.ToAnyVal[quotes.type] =>
         Apply(tl.constructorCall, List(appliedTo.asTerm))

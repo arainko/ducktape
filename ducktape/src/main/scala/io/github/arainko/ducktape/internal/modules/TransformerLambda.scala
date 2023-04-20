@@ -14,6 +14,7 @@ private[ducktape] object TransformerLambda {
 
   final class ForProduct[Q <: Quotes & Singleton](using val quotes: Q)(
     val param: quotes.reflect.ValDef,
+    val defs: List[quotes.reflect.Definition],
     val methodCall: quotes.reflect.Term,
     val methodArgs: List[quotes.reflect.Term]
   ) extends TransformerLambda[Q]
@@ -55,8 +56,10 @@ private[ducktape] object TransformerLambda {
     import quotes.reflect.*
 
     PartialFunction.condOpt(expr.asTerm) {
-      case MakeTransformer(param, Untyped(Apply(method, methodArgs))) =>
-        TransformerLambda.ForProduct(param, method, methodArgs)
+      case MakeTransformer(param, defs, Untyped(Apply(method, methodArgs))) =>
+        TransformerLambda.ForProduct(param, defs, method, methodArgs)
+      case MakeTransformer(param, defs, Block(Nil, Uninlined(Apply(method, methodArgs)))) =>
+        TransformerLambda.ForProduct(param, defs, method, methodArgs)
     }
   }
 
@@ -75,7 +78,7 @@ private[ducktape] object TransformerLambda {
     import quotes.reflect.*
 
     PartialFunction.condOpt(expr.asTerm) {
-      case MakeTransformer(param, Untyped(Block(_, Uninlined(Apply(Untyped(constructorCall), List(arg)))))) =>
+      case MakeTransformer(param, defs, Untyped(Block(_, Uninlined(Apply(Untyped(constructorCall), List(arg)))))) =>
         TransformerLambda.ToAnyVal(param, constructorCall, arg)
     }
   }
@@ -95,7 +98,7 @@ private[ducktape] object TransformerLambda {
     import quotes.reflect.*
 
     PartialFunction.condOpt(expr.asTerm) {
-      case MakeTransformer(param, Untyped(Block(_, Uninlined(Select(Untyped(_: Ident), fieldName))))) =>
+      case MakeTransformer(param, defs, Untyped(Block(_, Uninlined(Select(Untyped(_: Ident), fieldName))))) =>
         TransformerLambda.FromAnyVal(param, fieldName)
     }
   }

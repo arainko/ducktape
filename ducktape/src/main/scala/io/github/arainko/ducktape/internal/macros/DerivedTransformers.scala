@@ -30,15 +30,15 @@ private[ducktape] object DerivedTransformers {
   )(using Quotes): Expr[Transformer[Source, Dest]] =
     '{ source => ${ CoproductTransformations.transform[Source, Dest]('source, Source, Dest) } }
 
-  inline def toAnyVal[Source, Dest <: AnyVal]: Transformer[Source, Dest] =
+  inline def toAnyVal[Source, Dest]: Transformer[Source, Dest] =
     ${ deriveToAnyValTransformerMacro[Source, Dest] }
 
-  def deriveToAnyValTransformerMacro[Source: Type, Dest <: AnyVal: Type](using Quotes): Expr[Transformer[Source, Dest]] =
+  def deriveToAnyValTransformerMacro[Source: Type, Dest: Type](using Quotes): Expr[Transformer[Source, Dest]] =
     '{ source => ${ ProductTransformations.transformToAnyVal('source) } }
 
-  inline def fromAnyVal[Source <: AnyVal, Dest] =
+  inline def fromAnyVal[Source, Dest] =
     ${ deriveFromAnyValTransformerMacro[Source, Dest] }
 
-  def deriveFromAnyValTransformerMacro[Source <: AnyVal: Type, Dest: Type](using Quotes): Expr[Transformer[Source, Dest]] =
+  def deriveFromAnyValTransformerMacro[Source: Type, Dest: Type](using Quotes): Expr[Transformer[Source, Dest]] =
     '{ source => ${ ProductTransformations.transformFromAnyVal('source) } }
 }

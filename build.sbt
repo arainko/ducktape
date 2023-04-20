@@ -14,7 +14,7 @@ ThisBuild / developers := List(
     url("https://github.com/arainko")
   )
 )
-ThisBuild / scalaVersion := "3.2.1"
+ThisBuild / scalaVersion := "3.2.2"
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
 
 ThisBuild / versionPolicyIntention := Compatibility.BinaryCompatible
@@ -30,7 +30,9 @@ lazy val previousArtifacts =
   Set(
     "io.github.arainko" %% "ducktape" % "0.1.0",
     "io.github.arainko" %% "ducktape" % "0.1.1",
-    "io.github.arainko" %% "ducktape" % "0.1.2"
+    "io.github.arainko" %% "ducktape" % "0.1.2",
+    "io.github.arainko" %% "ducktape" % "0.1.3",
+    "io.github.arainko" %% "ducktape" % "0.1.4",
   )
 
 lazy val root =

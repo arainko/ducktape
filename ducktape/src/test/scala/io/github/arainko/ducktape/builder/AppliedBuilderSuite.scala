@@ -3,6 +3,7 @@ package io.github.arainko.ducktape.builder
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.DebugMacros
 
+import scala.annotation.nowarn
 import scala.deriving.Mirror
 
 class AppliedBuilderSuite extends DucktapeSuite {
@@ -149,6 +150,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
 
     val expected = TestClassWithAdditionalString(1, "str", "str-computed")
 
+    @nowarn("msg=Field 'additionalArg' is configured multiple times")
     val actual =
       testClass
         .into[TestClassWithAdditionalString]
@@ -160,6 +162,19 @@ class AppliedBuilderSuite extends DucktapeSuite {
         )
 
     assertEquals(actual, expected)
+  }
+
+  test("When configs are applied to the same field repeateadly a warning is emitted") {
+    assertFailsToCompileWith {
+      """
+      testClass
+        .into[TestClassWithAdditionalString]
+        .transform(
+          Field.const(_.additionalArg, "FIRST"),
+          Field.renamed(_.additionalArg, _.str),
+        )
+      """
+    }("Field 'additionalArg' is configured multiple times")
   }
 
   test("Case.const properly applies the constant for that subtype") {
@@ -190,6 +205,19 @@ class AppliedBuilderSuite extends DucktapeSuite {
 
     assertEquals(actual(NotEnumMoreCases.Case4(1)), expectedForValue1)
     assertEquals(actual(NotEnumMoreCases.Case4(2)), expectedForOther)
+  }
+
+  test("When a Case is configured multiple times a warning is emitted") {
+    assertFailsToCompileWith {
+      """
+      MoreCases.Case4
+        .into[LessCases]
+        .transform(
+          Case.const[MoreCases.Case4.type](LessCases.Case3),
+          Case.const[MoreCases.Case4.type](LessCases.Case3)
+        )
+      """
+    }("Case 'io.github.arainko.ducktape.builder.AppliedBuilderSuite.MoreCases.Case4' is configured multiple times")
   }
 
 }

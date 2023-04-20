@@ -12,7 +12,7 @@ private[ducktape] final class Field(val name: String, val tpe: Type[?], val defa
       case '[src] -> '[dest] =>
         Implicits.search(TypeRepr.of[Transformer[src, dest]]) match {
           case success: ImplicitSearchSuccess => success.tree.asExprOf[Transformer[src, dest]]
-          case err: ImplicitSearchFailure     => Failure.abort(Failure.TransformerNotFound(this, that, err.explanation))
+          case err: ImplicitSearchFailure     => Failure.emit(Failure.TransformerNotFound(this, that, err.explanation))
         }
     }
   }
