@@ -91,7 +91,7 @@ We can do so with field configurations in 3 ways:
 import io.github.arainko.ducktape.*
 
 final case class Person(firstName: String, lastName: String, age: Int)
-final case class PersonButMoreFields(firstName: String, lastName: String, age: Int, socialSecurityNo: String = "ssn)
+final case class PersonButMoreFields(firstName: String, lastName: String, age: Int, socialSecurityNo: String = "ssn")
 
 val person = Person("Jerry", "Smith", 20)
 // person: Person = Person(firstName = "Jerry", lastName = "Smith", age = 20)
@@ -133,11 +133,11 @@ val withRename =
 // )
 
 // 4. Use the default value of a specific field (a compiletime error will be issued if the field doesn't have a default)
-val withAllMatchingFields = 
+val withDefault = 
   person
     .into[PersonButMoreFields]
     .transform(Field.default(_.socialSecurityNo))
-// withAllMatchingFields: PersonButMoreFields = PersonButMoreFields(
+// withDefault: PersonButMoreFields = PersonButMoreFields(
 //   firstName = "Jerry",
 //   lastName = "Smith",
 //   age = 20,
@@ -352,13 +352,13 @@ val definedViaTransformer =
   Transformer
     .defineVia[TestClass](method)
     .build(Arg.const(_.additionalArg, List("const")))
-// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$38661/0x0000000106842c40@680998bb
+// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$10316/0x00000008029ac5e8@1022617
 
 val definedTransformer =
   Transformer
     .define[TestClass, TestClassWithAdditionalList]   
     .build(Field.const(_.additionalArg, List("const")))
-// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$38662/0x0000000106840040@44a6c67d
+// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$10317/0x00000008029aca10@6aa2d041
 
 val transformedVia = definedViaTransformer.transform(testClass)
 // transformedVia: TestClassWithAdditionalList = TestClassWithAdditionalList(
@@ -470,21 +470,21 @@ expands to:
     val AppliedBuilder_this: AppliedBuilder[Person, Person2] = into[Person](person)[Person2]
 
     {
-      val source$proxy13: Person = AppliedBuilder_this.inline$appliedTo
+      val source$proxy14: Person = AppliedBuilder_this.inline$appliedTo
 
       {
         val inside$2: Inside2 = new Inside2(
-          int = source$proxy13.inside.int,
-          str = source$proxy13.inside.str,
+          int = source$proxy14.inside.int,
+          str = source$proxy14.inside.str,
           inside = Some.apply[EvenMoreInside2](
-            new EvenMoreInside2(str = source$proxy13.inside.inside.str, int = source$proxy13.inside.inside.int)
+            new EvenMoreInside2(str = source$proxy14.inside.inside.str, int = source$proxy14.inside.inside.int)
           )
         )
-        val collectionOfNumbers$2: List[Wrapped[Float]] = source$proxy13.collectionOfNumbers
+        val collectionOfNumbers$2: List[Wrapped[Float]] = source$proxy14.collectionOfNumbers
           .map[Wrapped[Float]]((src: Float) => new Wrapped[Float](src))
           .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])
         val str$2: Some[Wrapped[String]] = Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstString!"))
-        val int$2: Wrapped[Int] = Wrapped.apply[Int](source$proxy13.int.+(100))
+        val int$2: Wrapped[Int] = Wrapped.apply[Int](source$proxy14.int.+(100))
         new Person2(int = int$2, str = str$2, inside = inside$2, collectionOfNumbers = collectionOfNumbers$2)
       }: Person2
     }: Person2
@@ -557,9 +557,9 @@ expands to:
   }]]
 
   ({
-    val source$proxy15: Person = AppliedViaBuilder_this.inline$source
+    val source$proxy16: Person = AppliedViaBuilder_this.inline$source
 
-    (AppliedViaBuilder_this.inline$function.apply(Wrapped.apply[Int](source$proxy15.int.+(100)), Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstStr!")), new Inside2(int = source$proxy15.inside.int, str = source$proxy15.inside.str, inside = Some.apply[EvenMoreInside2](new EvenMoreInside2(str = source$proxy15.inside.inside.str, int = source$proxy15.inside.inside.int))), source$proxy15.collectionOfNumbers.map[Wrapped[Float]](((src: Float) => new Wrapped[Float](src))).to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])): Person2)
+    (AppliedViaBuilder_this.inline$function.apply(Wrapped.apply[Int](source$proxy16.int.+(100)), Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstStr!")), new Inside2(int = source$proxy16.inside.int, str = source$proxy16.inside.str, inside = Some.apply[EvenMoreInside2](new EvenMoreInside2(str = source$proxy16.inside.inside.str, int = source$proxy16.inside.inside.int))), source$proxy16.collectionOfNumbers.map[Wrapped[Float]](((src: Float) => new Wrapped[Float](src))).to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])): Person2)
   }: Person2)
 }
 ```

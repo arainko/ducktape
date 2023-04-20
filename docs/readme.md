@@ -74,13 +74,14 @@ We can do so with field configurations in 3 ways:
   1. Set a constant to a specific field with `Field.const`
   2. Compute the value for a specific field by applying a function with `Field.computed`
   3. Use a different field in its place - 'rename' it with `Field.renamed`
-  4. Grab all matching fields from another case class with `Field.allMatching`
+  4. Use the default value of the target case class with `Field.default`
+  5. Grab all matching fields from another case class with `Field.allMatching`
 
 ```scala mdoc:reset
 import io.github.arainko.ducktape.*
 
 final case class Person(firstName: String, lastName: String, age: Int)
-final case class PersonButMoreFields(firstName: String, lastName: String, age: Int, socialSecurityNo: String)
+final case class PersonButMoreFields(firstName: String, lastName: String, age: Int, socialSecurityNo: String = "ssn")
 
 val person = Person("Jerry", "Smith", 20)
 
@@ -102,9 +103,15 @@ val withRename =
     .into[PersonButMoreFields]
     .transform(Field.renamed(_.socialSecurityNo, _.firstName))
 
+// 4. Use the default value of a specific field (a compiletime error will be issued if the field doesn't have a default)
+val withDefault = 
+  person
+    .into[PersonButMoreFields]
+    .transform(Field.default(_.socialSecurityNo))
+
 final case class FieldSource(lastName: String, socialSecurityNo: String)
 
-// 4. Grab and use all matching fields from a different case class (a compiletime error will be issued if none of the fields match)
+// 5. Grab and use all matching fields from a different case class (a compiletime error will be issued if none of the fields match)
 val withAllMatchingFields = 
   person
     .into[PersonButMoreFields]
