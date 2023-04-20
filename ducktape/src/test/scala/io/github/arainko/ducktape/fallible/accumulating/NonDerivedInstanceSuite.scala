@@ -2,16 +2,11 @@ package io.github.arainko.ducktape.fallible.accumulating
 
 import io.github.arainko.ducktape.DucktapeSuite
 import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.fallible.model.*
 import scala.collection.Factory
 
 class NonDerivedInstanceSuite extends DucktapeSuite {
-  case class Positive(value: Int)
-  type AccumulatingFailure[+A] = Either[List[String], A]
-
-  object Positive {
-    given transformer: Transformer.Accumulating[AccumulatingFailure, Int, Positive] =
-      int => if (int > 0) Right(Positive(int)) else Left(s"$int" :: Nil)
-  }
+  
 
   test("Transformer.Accumulating.betweenCollections succeeds when all of the transformations succeed") {
     val actual =
@@ -52,27 +47,27 @@ class NonDerivedInstanceSuite extends DucktapeSuite {
   }
 
   test("Transformer.Accumulating.betweenOptions returns None when input is None") {
-    val actual = Transformer.Accumulating.betweenOptions(using Positive.transformer, summon).transform(None)
+    val actual = Transformer.Accumulating.betweenOptions(using Positive.accTransformer, summon).transform(None)
     assertEquals(actual, Right(None))
   }
 
   test("Transformer.Accumulating.betweenOptions returns Some when input is a Some and the transformation is successful") {
-    val actual = Transformer.Accumulating.betweenOptions(using Positive.transformer, summon).transform(Some(1))
+    val actual = Transformer.Accumulating.betweenOptions(using Positive.accTransformer, summon).transform(Some(1))
     assertEquals(actual, Right(Some(Positive(1))))
   }
 
   test("Transformer.Accumulating.betweenOptions fails when input is Some and the transformation fails") {
-    val actual = Transformer.Accumulating.betweenOptions(using Positive.transformer, summon).transform(Some(0))
+    val actual = Transformer.Accumulating.betweenOptions(using Positive.accTransformer, summon).transform(Some(0))
     assertEquals(actual, Left("0" :: Nil))
   }
 
   test("Transformer.Accumulating.betweenNonOptionOption returns Some when the transformation is successful") {
-    val actual = Transformer.Accumulating.betweenNonOptionOption(using Positive.transformer, summon).transform(1)
+    val actual = Transformer.Accumulating.betweenNonOptionOption(using Positive.accTransformer, summon).transform(1)
     assertEquals(actual, Right(Some(Positive(1))))
   }
 
   test("Transformer.Accumulating.betweenNonOptionOption fails when the transformation fails") {
-    val actual = Transformer.Accumulating.betweenNonOptionOption(using Positive.transformer, summon).transform(0)
+    val actual = Transformer.Accumulating.betweenNonOptionOption(using Positive.accTransformer, summon).transform(0)
     assertEquals(actual, Left("0" :: Nil))
   }
 }
