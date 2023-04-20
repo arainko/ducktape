@@ -7,34 +7,21 @@ import io.github.arainko.ducktape.internal.macros.*
 class Issue38Spec extends DucktapeSuite {
   final case class TestClass(str: String, int: Int)
 
-  final case class TestClassWithAdditionalList[A](str: String, int: Int, additionalArg: List[A] = Nil)
-
-  final case class TestClassWithMandatoryAdditionalList(str: String, int: Int, additionalArg: List[String])
+  final case class TestClassWithAdditionalGenericArg[A](str: String, int: Int, additionalArg: A = "defaultStr")
 
   test("derive a transformer for case classes with default values if configured") {
     val testClass = TestClass("str", 1)
-    val expected = TestClassWithAdditionalList[String]("str", 1, Nil)
+    val expected = TestClassWithAdditionalGenericArg[String]("str", 1, "defaultStr")
 
     val actual =
       List(
         testClass
-          .into[TestClassWithAdditionalList[String]]
+          .into[TestClassWithAdditionalGenericArg[String]]
           .transform(
             Field.default(_.additionalArg)
           ),
         Transformer
-          .define[TestClass, TestClassWithAdditionalList[String]]
-          .build(
-            Field.default(_.additionalArg)
-          )
-          .transform(testClass),
-        testClass
-          .into[TestClassWithAdditionalList[String]]
-          .transform(
-            Field.default(_.additionalArg)
-          ),
-        Transformer
-          .define[TestClass, TestClassWithAdditionalList[String]]
+          .define[TestClass, TestClassWithAdditionalGenericArg[String]]
           .build(
             Field.default(_.additionalArg)
           )

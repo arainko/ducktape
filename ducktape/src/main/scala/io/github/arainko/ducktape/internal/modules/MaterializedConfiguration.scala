@@ -62,39 +62,26 @@ private[ducktape] object MaterializedConfiguration {
     import quotes.reflect.*
 
     config match {
-      case '{
-            FieldConfig.const[source, dest, fieldType, actualType](
-              $selector,
-              $value
-            )(using $ev1, $ev2, $ev3)
-          } =>
+      case '{ FieldConfig.const[source, dest, fieldType, actualType]($selector, $value)(using $ev1, $ev2, $ev3) } =>
         val name = Selectors.fieldName(Fields.dest, selector)
         Product.Const(name, value) :: Nil
 
-      case '{
-            FieldConfig.computed[source, dest, fieldType, actualType](
-              $selector,
-              $function
-            )(using $ev1, $ev2, $ev3)
-          } =>
+      case '{ FieldConfig.computed[source, dest, fieldType, actualType]($selector, $function)(using $ev1, $ev2, $ev3) } =>
         val name = Selectors.fieldName(Fields.dest, selector)
         Product.Computed(name, function.asInstanceOf[Expr[Any => Any]]) :: Nil
 
-      case '{
-            FieldConfig.renamed[source, dest, sourceFieldType, destFieldType](
-              $destSelector,
-              $sourceSelector
-            )(using $ev1, $ev2, $ev3)
-          } =>
+      case '{ FieldConfig.renamed[source, dest, sourceFieldType, destFieldType]($destSelector, $sourceSelector)(using $ev1, $ev2, $ev3) } =>
         val destFieldName = Selectors.fieldName(Fields.dest, destSelector)
         val sourceFieldName = Selectors.fieldName(Fields.source, sourceSelector)
         Product.Renamed(destFieldName, sourceFieldName) :: Nil
 
       case '{ FieldConfig.default[source, dest, destFieldType]($destSelector)(using $ev1, $ev2) } =>
         val destFieldName = Selectors.fieldName(Fields.dest, destSelector)
-        val field = Fields.dest.byName.get(destFieldName).getOrElse(Failure.abort(Failure.InvalidFieldSelector(destSelector, summon, Suggestion.fromFields(Fields.dest))))
-        val default = field.default.getOrElse(Failure.abort(Failure.DefaultMissing(field.name, Type.of[dest]))) 
-        Product.Const(field.name, default) :: Nil
+        val field = Fields.dest.unsafeGet(destFieldName)
+        val default = field.default.getOrElse(Failure.abort(Failure.DefaultMissing(field.name, Type.of[dest])))
+
+        if (default.asTerm.tpe <:< TypeRepr.of(using field.tpe)) Product.Const(field.name, default) :: Nil
+        else Failure.abort(Failure.InvalidDefaultType(field, Type.of[dest]))
 
       case config @ '{ FieldConfig.allMatching[source, dest, fieldSource]($fieldSource)(using $ev1, $ev2, $fieldSourceMirror) } =>
         val fieldSourceFields = Fields.Source.fromMirror(fieldSourceMirror)

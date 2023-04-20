@@ -126,6 +126,10 @@ private[ducktape] object Failure {
     override final def render(using Quotes): String = s"No default value for '$fieldName' found in ${destType.show}"
   }
 
+  final case class InvalidDefaultType(defaultField: Field, destType: Type[?]) extends Failure {
+    override final def render(using Quotes): String = s"The default value of '${destType.show}.${defaultField.name}' is not a subtype of ${defaultField.tpe.show}"
+  }
+
   final case class NoChildMapping(childName: String, destinationType: Type[?]) extends Failure {
     override final def render(using Quotes): String = s"No child named '$childName' found in ${destinationType.show}"
   }
