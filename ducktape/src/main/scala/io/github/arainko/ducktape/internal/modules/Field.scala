@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.Transformer
 
 import scala.quoted.*
 
-private[ducktape] final class Field(val name: String, val tpe: Type[?]) {
+private[ducktape] final class Field(val name: String, val tpe: Type[?], val default: Option[Expr[Any]]) {
   def transformerTo(that: Field)(using Quotes): Expr[Transformer[?, ?]] = {
     import quotes.reflect.*
 
@@ -16,6 +16,8 @@ private[ducktape] final class Field(val name: String, val tpe: Type[?]) {
         }
     }
   }
+
+  override def toString: String = s"Field($name)"
 
   def <:<(that: Field)(using Quotes): Boolean = {
     import quotes.reflect.*

@@ -102,7 +102,7 @@ private[ducktape] object ProductTransformations {
 
     Select
       .unique(function.asTerm, "apply")
-      .appliedToArgs(callsInOrder.toList)
+      .appliedToArgs(callsInOrder)
       .asExprOf[Dest]
   }
 

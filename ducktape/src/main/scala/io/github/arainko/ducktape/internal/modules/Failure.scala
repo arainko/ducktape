@@ -92,7 +92,8 @@ private[ducktape] object Failure {
       Suggestion.all(
         s"""${capitalized}.const(_.${fieldOrArg}Name, "value")""",
         s"""${capitalized}.computed(_.${fieldOrArg}Name, source => source.value)""",
-        s"""${capitalized}.renamed(_.${fieldOrArg}Name1, _.${fieldOrArg}Name2)"""
+        s"""${capitalized}.renamed(_.${fieldOrArg}Name1, _.${fieldOrArg}Name2)""",
+        s"""${capitalized}.default(_.${fieldOrArg}Name)"""
       )
     }
 
@@ -122,6 +123,14 @@ private[ducktape] object Failure {
 
   final case class NoFieldMapping(fieldName: String, sourceType: Type[?]) extends Failure {
     override final def render(using Quotes): String = s"No field named '$fieldName' found in ${sourceType.show}"
+  }
+
+  final case class DefaultMissing(fieldName: String, destType: Type[?]) extends Failure {
+    override final def render(using Quotes): String = s"No default value for '$fieldName' found in ${destType.show}"
+  }
+
+  final case class InvalidDefaultType(defaultField: Field, destType: Type[?]) extends Failure {
+    override final def render(using Quotes): String = s"The default value of '${destType.show}.${defaultField.name}' is not a subtype of ${defaultField.tpe.show}"
   }
 
   final case class NoChildMapping(childName: String, destinationType: Type[?]) extends Failure {
