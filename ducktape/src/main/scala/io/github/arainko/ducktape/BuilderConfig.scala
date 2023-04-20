@@ -41,7 +41,7 @@ object Field {
   ): BuilderConfig[Source, Dest] = throw NotQuotedException("Field.renamed")
 
   @compileTimeOnly("'Field.default' needs to be erased from the AST with a macro.")
-  def default[Source, Dest, FieldType](selector: Dest => FieldType)(using 
+  def default[Source, Dest, FieldType](selector: Dest => FieldType)(using
     @implicitNotFound("Field.default is supported for product types only, but ${Source} is not a product type.")
     ev1: Mirror.ProductOf[Source],
     @implicitNotFound("Field.default is supported for product types only, but ${Dest} is not a product type.")

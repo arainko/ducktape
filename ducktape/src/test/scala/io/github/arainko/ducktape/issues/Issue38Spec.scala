@@ -17,17 +17,41 @@ class Issue38Spec extends DucktapeSuite {
       List(
         testClass
           .into[TestClassWithAdditionalGenericArg[String]]
-          .transform(
-            Field.default(_.additionalArg)
-          ),
+          .transform(Field.default(_.additionalArg)),
         Transformer
           .define[TestClass, TestClassWithAdditionalGenericArg[String]]
-          .build(
-            Field.default(_.additionalArg)
-          )
+          .build(Field.default(_.additionalArg))
           .transform(testClass)
       )
 
     actual.foreach(actual => assertEquals(actual, expected))
+  }
+
+  test("Field.default fails when a field doesn't have a default value") {
+    val testClass = TestClass("str", 1)
+
+    assertFailsToCompileWith {
+      """
+      testClass
+        .into[TestClassWithAdditionalGenericArg[String]]
+        .transform(
+          Field.default(_.int)
+        )
+      """
+    }("No default value for 'int' found in TestClassWithAdditionalGenericArg[String]")
+  }
+
+  test("Field.default fails when the default doesn't match the expected type") {
+    val testClass = TestClass("str", 1)
+
+    assertFailsToCompileWith {
+      """
+      testClass
+        .into[TestClassWithAdditionalGenericArg[Int]]
+        .transform(
+          Field.default(_.additionalArg)
+        )
+      """
+    }("The default value of 'TestClassWithAdditionalGenericArg[Int].additionalArg' is not a subtype of Int")
   }
 }
