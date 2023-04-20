@@ -37,25 +37,26 @@ object FailFast extends LowPriorityFailFastInstances {
       def transform(value: Source): F[Option[Dest]] = F.map(transformer.transform(value), Some.apply)
     }
 
-  // very-very naive impl, can probably lead to stack overflows given big enough collections and a data type that is not stack safe...
   given betweenCollections[F[+x], Source, Dest, SourceColl[x] <: Iterable[x], DestColl[x] <: Iterable[x]](using
     transformer: FailFast[F, Source, Dest],
     F: Support[F],
     factory: Factory[Dest, DestColl[Dest]]
   ): FailFast[F, SourceColl[Source], DestColl[Dest]] =
     new {
-      def transform(value: SourceColl[Source]): F[DestColl[Dest]] = {
-        val traversed = value.foldLeft(F.pure(factory.newBuilder)) { (builder, elem) =>
-          F.flatMap(builder, currentBuilder => F.map(transformer.transform(elem), currentBuilder += _))
-        }
-        F.map(traversed, _.result())
-      }
+      def transform(value: SourceColl[Source]): F[DestColl[Dest]] = F.traverseCollection(value)
     }
 
   trait Support[F[+x]] {
     def pure[A](value: A): F[A]
     def map[A, B](fa: F[A], f: A => B): F[B]
     def flatMap[A, B](fa: F[A], f: A => F[B]): F[B]
+
+    // Kind of a bummer this has to exist, the 'foldLeft' and 'product' based implementation either blew up
+    // the stack or took to long to finish for very long collections...
+    def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](collection: AColl[A])(using
+      transformer: FailFast[F, A, B],
+      factory: Factory[B, BColl[B]]
+    ): F[BColl[B]]
   }
 
   object Support {
@@ -64,6 +65,25 @@ object FailFast extends LowPriorityFailFastInstances {
         def pure[A](value: A): Option[A] = Some(value)
         def map[A, B](fa: Option[A], f: A => B): Option[B] = fa.map(f)
         def flatMap[A, B](fa: Option[A], f: A => Option[B]): Option[B] = fa.flatMap(f)
+
+        def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
+          collection: AColl[A]
+        )(using transformer: FailFast[Option, A, B], factory: Factory[B, BColl[B]]): Option[BColl[B]] = {
+          var isErroredOut = false
+          val resultBuilder = factory.newBuilder
+          val iterator = collection.iterator
+          while (iterator.hasNext && !isErroredOut) {
+            transformer.transform(iterator.next()) match {
+              case None => 
+                isErroredOut = true
+                resultBuilder.clear()
+              case Some(value) =>
+                resultBuilder += value
+            }
+          }
+
+          if (isErroredOut) None else Some(resultBuilder.result())
+        }
       }
 
     given eitherFailFastSupport[E]: Support[[A] =>> Either[E, A]] =
@@ -71,6 +91,26 @@ object FailFast extends LowPriorityFailFastInstances {
         def pure[A](value: A): Either[E, A] = Right(value)
         def map[A, B](fa: Either[E, A], f: A => B): Either[E, B] = fa.map(f)
         def flatMap[A, B](fa: Either[E, A], f: A => Either[E, B]): Either[E, B] = fa.flatMap(f)
+        def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
+          collection: AColl[A]
+        )(using transformer: FailFast[[A] =>> Either[E, A], A, B], factory: Factory[B, BColl[B]]): Either[E, BColl[B]] = {
+          var error: Left[E, Nothing] = null
+          def isErroredOut = !(error eq null)
+
+          val resultBuilder = factory.newBuilder
+          val iterator = collection.iterator
+          while (iterator.hasNext && !isErroredOut) {
+            transformer.transform(iterator.next()) match {
+              case err @ Left(_) => 
+                error = err.asInstanceOf[Left[E, Nothing]]
+                resultBuilder.clear()
+              case Right(value) =>
+                resultBuilder += value
+            }
+          }
+
+          if (isErroredOut) error else Right(resultBuilder.result())
+        }
       }
   }
 }
