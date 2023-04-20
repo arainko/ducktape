@@ -66,10 +66,13 @@ private[ducktape] object MaterializedConfiguration {
         case '{ FieldConfig.default[source, dest, destFieldType]($destSelector)(using $ev1, $ev2) } =>
           val destFieldName = Selectors.fieldName(Fields.dest, destSelector)
           val field = Fields.dest.unsafeGet(destFieldName)
-          val default = field.default.getOrElse(Failure.abort(Failure.DefaultMissing(field.name, Type.of[dest])))
+          val default = field.default.getOrElse(Failure.emit(Failure.DefaultMissing(field.name, Type.of[dest])))
 
-          if (default.asTerm.tpe <:< TypeRepr.of(using field.tpe)) Product.Const(field.name, default) :: Nil
-          else Failure.abort(Failure.InvalidDefaultType(field, Type.of[dest]))
+          Failure.cond(
+            successCondition = default.asTerm.tpe <:< TypeRepr.of(using field.tpe),
+            value = Product.Const(field.name, default)(Pos.fromExpr(config)) :: Nil,
+            failure = Failure.InvalidDefaultType(field, Type.of[dest])
+          )
 
         case config @ '{
               FieldConfig.allMatching[source, dest, fieldSource]($fieldSource)(using $ev1, $ev2, $fieldSourceMirror)
