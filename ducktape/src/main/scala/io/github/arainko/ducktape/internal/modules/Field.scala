@@ -28,18 +28,8 @@ private[ducktape] final class Field(val name: String, val tpe: Type[?], val defa
       case '[src] -> '[dest] =>
         Implicits.search(TypeRepr.of[PartialTransformer[F, src, dest]]) match {
           case success: ImplicitSearchSuccess => success.tree
-          case err: DivergingImplicit =>
-            Failure.emit(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
-          case err: NoMatchingImplicits =>
-            Failure.emit(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
-          case err: AmbiguousImplicits =>
-            Failure.emit(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
           case err: ImplicitSearchFailure =>
-            // probably hitting another compiler bug here, derivation works for
-            // FailFast[Option, TypeA, TypeB] but bugs out on things like:
-            // FailFast[[A] =>> Either[::[String], A], TypeA, TypeB]
-            // the line below fixes it...
-            '{ compiletime.summonInline[PartialTransformer[F, src, dest]] }.asTerm
+            Failure.emit(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
         }
     }
   }

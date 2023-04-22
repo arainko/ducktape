@@ -11,10 +11,10 @@ object Conference {
   object Id extends NewtypeValidated[UUID](AlwaysValid)
   export Id.Type as Id
 
-  object Name extends NewtypeValidated[String](MaxSize(20))
+  object Name extends NewtypeValidated[String](MaxSize(20, "Conference.Name"))
   export Name.Type as Name
 
-  object City extends NewtypeValidated[String](MaxSize(20))
+  object City extends NewtypeValidated[String](MaxSize(20, "Conference.City"))
   export City.Type as City
 }
 

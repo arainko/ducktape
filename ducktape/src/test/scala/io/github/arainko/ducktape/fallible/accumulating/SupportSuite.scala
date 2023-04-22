@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.DucktapeSuite
 import io.github.arainko.ducktape.Transformer
 
 class SupportSuite extends DucktapeSuite {
-  private val support = Transformer.Accumulating.Support.eitherIterableAccumulatingSupport[String, List]
+  private val support = Transformer.Mode.Accumulating.either[String, List]
 
   test("eitherIterableAccumulatingSupport#product succeeds with two Rights") {
     val actual = support.product(Right(1), Right(2))

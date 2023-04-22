@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape.internal.macros
 
-import io.github.arainko.ducktape.fallible.Accumulating
 import io.github.arainko.ducktape.function.FunctionMirror
 import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.internal.util.NonEmptyList
@@ -10,13 +9,14 @@ import scala.annotation.tailrec
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.util.chaining.*
+import io.github.arainko.ducktape.Transformer
 
 private[ducktape] object AccumulatingProductTransformations {
   export fallibleTransformations.{ transform, transformConfigured, via, viaConfigured }
 
-  private val fallibleTransformations = new FallibleProductTransformations[Accumulating.Support] {
+  private val fallibleTransformations = new FallibleProductTransformations[Transformer.Accumulating.Support] {
     override protected def createTransformation[F[+x]: Type, Source: Type, Dest: Type](
-      F: Expr[Accumulating.Support[F]],
+      F: Expr[Transformer.Accumulating.Support[F]],
       sourceValue: Expr[Source],
       fieldsToTransformInto: List[Field],
       unwrappedFieldsFromConfig: List[Field.Unwrapped],
@@ -35,12 +35,12 @@ private[ducktape] object AccumulatingProductTransformations {
             .get(dest.name)
             .getOrElse(Failure.emit(Failure.NoFieldMapping(dest.name, summon[Type[Source]])))
 
-        source.partialTransformerTo[F, Accumulating](dest).asExpr match {
-          case '{ Accumulating.partialFromTotal[F, src, dest](using $total, $support) } =>
+        source.partialTransformerTo[F, Transformer.Accumulating](dest).asExpr match {
+          case '{ Transformer.Accumulating.partialFromTotal[F, src, dest](using $total, $support) } =>
             val sourceField = sourceValue.accessField(source).asExprOf[src]
             val transformed = LiftTransformation.liftTransformation[src, dest](total, sourceField)
             unwrappedFields += Field.Unwrapped(dest, transformed)
-          case '{ $transformer: Accumulating[F, src, dest] } =>
+          case '{ $transformer: Transformer.Accumulating[F, src, dest] } =>
             val sourceField = sourceValue.accessField(source).asExprOf[src]
             wrappedFields += Field.Wrapped(dest, '{ $transformer.transform($sourceField) })
         }
