@@ -4,8 +4,8 @@ import io.github.arainko.ducktape.Transformer
 
 def AlwaysValid[A]: A => Either[String, Unit] = _ => Right(())
 
-def MaxSize(value: Int): String => Either[String, Unit] = 
-  str => Either.cond(str.size <= value, (), "")
+def MaxSize(value: Int, name: String): String => Either[String, Unit] = 
+  str => Either.cond(str.size <= value, (), s"Invalid $name")
 
 abstract class NewtypeValidated[A](f: A => Either[String, Unit]) {
   opaque type Type = A

@@ -7,9 +7,9 @@ import scala.compiletime.*
 import scala.deriving.Mirror
 
 final class DefinitionBuilder[Source, Dest] {
-  def accumulating[F[+x]]: DefinitionBuilder.Accumulating[F, Source, Dest] = DefinitionBuilder.Accumulating[F, Source, Dest]
+  def accumulating[F[+x]](using Transformer.Accumulating.Support[F]): DefinitionBuilder.Accumulating[F, Source, Dest] = DefinitionBuilder.Accumulating[F, Source, Dest]
 
-  def failFast[F[+x]]: DefinitionBuilder.FailFast[F, Source, Dest] = DefinitionBuilder.FailFast[F, Source, Dest]
+  def failFast[F[+x]](using Transformer.FailFast.Support[F]): DefinitionBuilder.FailFast[F, Source, Dest] = DefinitionBuilder.FailFast[F, Source, Dest]
 
   inline def build(inline config: BuilderConfig[Source, Dest]*): Transformer[Source, Dest] =
     from => Transformations.transformConfigured(from, config*)
@@ -17,11 +17,10 @@ final class DefinitionBuilder[Source, Dest] {
 
 object DefinitionBuilder {
 
-  final class FailFast[F[+x], Source, Dest] private[ducktape] () {
+  final class FailFast[F[+x], Source, Dest] private[ducktape] (using private val F: Transformer.FailFast.Support[F]) {
     inline def build(
       inline config: FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]*
     )(using
-      F: Transformer.FailFast.Support[F],
       Source: Mirror.ProductOf[Source],
       Dest: Mirror.ProductOf[Dest]
     ): Transformer.FailFast[F, Source, Dest] =
@@ -30,11 +29,10 @@ object DefinitionBuilder {
       }
   }
 
-  final class Accumulating[F[+x], Source, Dest] private[ducktape] () {
+  final class Accumulating[F[+x], Source, Dest] private[ducktape] (using private val F: Transformer.Accumulating.Support[F]) {
     inline def build(
       inline config: FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]*
     )(using
-      F: Transformer.Accumulating.Support[F],
       Source: Mirror.ProductOf[Source],
       Dest: Mirror.ProductOf[Dest]
     ): Transformer.Accumulating[F, Source, Dest] =

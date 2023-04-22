@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape.internal.macros
 
-import io.github.arainko.ducktape.fallible.FailFast
 import io.github.arainko.ducktape.internal.modules.Field.{ Unwrapped, Wrapped }
 import io.github.arainko.ducktape.internal.modules.*
 
@@ -8,13 +7,14 @@ import scala.annotation.*
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.util.chaining.*
+import io.github.arainko.ducktape.Transformer
 
 private[ducktape] object FailFastProductTransformations {
   export fallibleTransformations.{ transform, transformConfigured, via, viaConfigured }
 
-  private val fallibleTransformations = new FallibleProductTransformations[FailFast.Support] {
+  private val fallibleTransformations = new FallibleProductTransformations[Transformer.FailFast.Support] {
     override protected def createTransformation[F[+x]: Type, Source: Type, Dest: Type](
-      F: Expr[FailFast.Support[F]],
+      F: Expr[Transformer.FailFast.Support[F]],
       sourceValue: Expr[Source],
       fieldsToTransformInto: List[Field],
       unwrappedFieldsFromConfig: List[Field.Unwrapped],
@@ -29,12 +29,12 @@ private[ducktape] object FailFastProductTransformations {
               .get(dest.name)
               .getOrElse(Failure.emit(Failure.NoFieldMapping(dest.name, summon[Type[Source]])))
 
-          source.partialTransformerTo[F, FailFast](dest).asExpr match {
-            case '{ FailFast.partialFromTotal[F, src, dest](using $total, $support) } =>
+          source.partialTransformerTo[F, Transformer.FailFast](dest).asExpr match {
+            case '{ Transformer.FailFast.partialFromTotal[F, src, dest](using $total, $support) } =>
               val sourceField = sourceValue.accessField(source).asExprOf[src]
               val lifted = LiftTransformation.liftTransformation[src, dest](total, sourceField)
               Field.Unwrapped(dest, lifted)
-            case '{ $transformer: FailFast[F, src, dest] } =>
+            case '{ $transformer: Transformer.FailFast[F, src, dest] } =>
               val sourceField = sourceValue.accessField(source).asExprOf[src]
               Field.Wrapped(dest, '{ $transformer.transform($sourceField) })
           }
@@ -49,7 +49,7 @@ private[ducktape] object FailFastProductTransformations {
     }
 
     private def nestFlatMapsAndConstruct[F[+x]: Type, Dest: Type](
-      F: Expr[FailFast.Support[F]],
+      F: Expr[Transformer.FailFast.Support[F]],
       fields: List[Field.Wrapped[F] | Field.Unwrapped],
       construct: List[Field.Unwrapped] => Expr[Dest]
     )(using Quotes): Expr[F[Dest]] = {

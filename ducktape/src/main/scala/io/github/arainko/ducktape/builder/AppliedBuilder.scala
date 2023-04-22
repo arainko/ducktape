@@ -20,6 +20,8 @@ final class AppliedBuilder[Source, Dest](appliedTo: Source) {
 
 object AppliedBuilder {
 
+  final class Fallible[F[+x], Source, Dest]
+
   final class FailFast[F[+x], Source, Dest] private[ducktape] (private val source: Source) {
     inline def transform(
       inline config: FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]*

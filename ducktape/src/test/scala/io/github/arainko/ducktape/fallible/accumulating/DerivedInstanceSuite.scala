@@ -2,48 +2,96 @@ package io.github.arainko.ducktape.fallible.accumulating
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.fallible.model.*
+import io.github.arainko.ducktape.fallible.model.basic.{ CreateConference, CreateTalk, UpdateTalk }
+
 import java.time.LocalDate
-import io.github.arainko.ducktape.fallible.model.basic.CreateConference
 
 class DerivedInstanceSuite extends DucktapeSuite {
-  test("CreateConference sucessfully transforms into Conference.Info") {
-    val createConf = basic.CreateConference("name", basic.DateSpan(LocalDate.of(2020, 1, 1), LocalDate.of(2020, 1, 2)), "Larks")
 
-    val expected =
-      Conference.Info(
-        Conference.Name.unsafe("name"),
-        DateSpan.unsafe(LocalDate.of(2020, 1, 1), LocalDate.of(2020, 1, 2)),
-        Conference.City.unsafe("Larks")
-      )
+  private given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+    Transformer.Mode.Accumulating.either[String, List]
 
-    val actual =
-      List(
-        createConf
-          .into[Conference.Info]
-          .accumulating[[A] =>> Either[List[String], A]]
-          .transform(Field.fallibleComputed(_.dateSpan, _.dateSpan.via(DateSpan.create))),
-        createConf
-          .intoVia(Conference.Info.apply)
-          .accumulating[[A] =>> Either[List[String], A]]
-          .transform(Arg.fallibleComputed(_.dateSpan, _.dateSpan.via(DateSpan.create))),
-        Transformer
-          .define[CreateConference, Conference.Info]
-          .accumulating[[A] =>> Either[List[String], A]]
-          .build(Field.fallibleComputed(_.dateSpan, _.dateSpan.via(DateSpan.create)))
-          .transform(createConf),
-        Transformer
-          .defineVia[CreateConference](Conference.Info.apply)
-          .accumulating[[A] =>> Either[List[String], A]]
-          .build(Arg.fallibleComputed(_.dateSpan, _.dateSpan.via(DateSpan.create)))
-          .transform(createConf)
-      )
+  val a: CreateTalk = ???
 
-    actual.foreach(actual => assertEquals(actual, Right(expected)))
-  }
+  val cos = 
+    Transformer.Debug.showCode(
+      a.fallibleTo[Talk]
+    )
 
-  //TODO: Use Talk and Create or UpdateTalk instead of Conference (or in addition to)
-  test("transforming into Conference.Info accumulates all errors") {
-    val createConf = basic.CreateConference("name", basic.DateSpan(LocalDate.of(2020, 1, 1), LocalDate.of(2020, 1, 2)), "Larks")
+  val cos2 =
+    Transformer.Debug.showCode(
+      a.fallibleVia(Talk.apply)
+    )
 
-  }
+
+  // summon[cos.type <:< Transformer.Accumulating[[A] =>> Either[List[String], A], Int, String]]
+
+  successfulTransformationTest("accumulatingTo")(
+    _.fallibleTo[Talk]
+  )
+
+  successfulTransformationTest("accumulatingVia")(
+    _.fallibleVia(Talk.apply)
+  )
+
+  successfulTransformationTest("into.accumulating")(
+    _.into[Talk].accumulating.transform()
+  )
+
+  successfulTransformationTest("Transformer.define.accumulating")(
+    Transformer.define[basic.CreateTalk, Talk].accumulating.build().transform
+  )
+
+  failingTransformationTest("accumulatingTo")(
+    _.accumulatingTo[Talk]
+  )
+
+  failingTransformationTest("accumulatingVia")(
+    _.accumulatingVia(Talk.apply)
+  )
+
+  failingTransformationTest("into.accumulating")(
+    _.into[Talk].accumulating.transform()
+  )
+
+  failingTransformationTest("Transformer.define.accumulating")(
+    Transformer.define[basic.CreateTalk, Talk].accumulating.build().transform
+  )
+
+  private def successfulTransformationTest(name: String)(transformation: basic.CreateTalk => Either[List[String], Talk]) =
+    test(s"CreateTalk transform into Talk using - $name") {
+      val createTalk =
+        basic.CreateTalk("talk", "pitch", basic.Presenter("Presenter", "bio", Some(basic.Presenter.Pronouns.`They/them`)))
+
+      val expected =
+        Talk(
+          Talk.Name.unsafe("talk"),
+          Talk.ElevatorPitch.unsafe("pitch"),
+          Presenter(
+            Presenter.Name.unsafe("Presenter"),
+            Presenter.Bio.unsafe("bio"),
+            Some(Pronouns.`They/them`)
+          )
+        )
+
+      assertEquals(transformation(createTalk), Right(expected))
+    }
+
+  private def failingTransformationTest(name: String)(transformation: basic.CreateTalk => Either[List[String], Talk]) =
+    test(s"CreateTalk fails to transform into Talk and accumulates all errors using - $name") {
+      val createTalk =
+        basic.CreateTalk(
+          "talk" * 10,
+          "pitch" * 100,
+          basic.Presenter("Presenter" * 10, "bio" * 200, Some(basic.Presenter.Pronouns.`They/them`))
+        )
+
+      val expected =
+        Left(
+          "Text is longer than 20" :: "Text is longer than 300" :: "Text is longer than 20" :: "Text is longer than 300" :: Nil
+        )
+
+      assertEquals(transformation(createTalk), expected)
+    }
+
 }
