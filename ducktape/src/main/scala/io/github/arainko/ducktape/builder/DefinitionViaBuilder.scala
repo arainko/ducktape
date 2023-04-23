@@ -8,10 +8,14 @@ import scala.deriving.*
 
 final class DefinitionViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArguments] private (function: Func) {
 
-  def failFast[F[+x]]: DefinitionViaBuilder.FailFast[F, Source, Dest, Func, ArgSelector] =
+  def failFast[F[+x]](using
+    Transformer.FailFast.Support[F]
+  ): DefinitionViaBuilder.FailFast[F, Source, Dest, Func, ArgSelector] =
     DefinitionViaBuilder.FailFast[F, Source, Dest, Func, ArgSelector](function)
 
-  def accumulating[F[+x]]: DefinitionViaBuilder.Accumulating[F, Source, Dest, Func, ArgSelector] =
+  def accumulating[F[+x]](using
+    Transformer.Accumulating.Support[F]
+  ): DefinitionViaBuilder.Accumulating[F, Source, Dest, Func, ArgSelector] =
     DefinitionViaBuilder.Accumulating[F, Source, Dest, Func, ArgSelector](function)
 
   inline def build(
@@ -38,26 +42,26 @@ object DefinitionViaBuilder {
     }
   }
 
-  final class FailFast[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (function: Func) {
+  final class FailFast[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (
+    private val function: Func
+  )(using private val F: Transformer.FailFast.Support[F]) {
+    
     inline def build(
       inline config: FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]*
-    )(using
-      F: Transformer.FailFast.Support[F],
-      Source: Mirror.ProductOf[Source]
-    ): Transformer.FailFast[F, Source, Dest] =
+    )(using Mirror.ProductOf[Source]): Transformer.FailFast[F, Source, Dest] =
       new {
         def transform(value: Source): F[Dest] =
           Transformations.failFastViaConfigured[F, Source, Dest, Func, ArgSelector](value, function, config*)
       }
   }
 
-  final class Accumulating[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (function: Func) {
+  final class Accumulating[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (
+    private val function: Func
+  )(using private val F: Transformer.Accumulating.Support[F]) {
+
     inline def build(
       inline config: FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]*
-    )(using
-      F: Transformer.Accumulating.Support[F],
-      Source: Mirror.ProductOf[Source]
-    ): Transformer.Accumulating[F, Source, Dest] =
+    )(using Mirror.ProductOf[Source]): Transformer.Accumulating[F, Source, Dest] =
       new {
         def transform(value: Source): F[Dest] =
           Transformations.accumulatingViaConfigured[F, Source, Dest, Func, ArgSelector](value, function, config*)

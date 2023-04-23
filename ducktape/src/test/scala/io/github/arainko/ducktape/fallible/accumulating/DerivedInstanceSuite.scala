@@ -8,30 +8,15 @@ import java.time.LocalDate
 
 class DerivedInstanceSuite extends DucktapeSuite {
 
-  private given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
-    Transformer.Mode.Accumulating.either[String, List]
-
-  val a: CreateTalk = ???
-
-  val cos = 
-    Transformer.Debug.showCode(
-      a.fallibleTo[Talk]
-    )
-
-  val cos2 =
-    Transformer.Debug.showCode(
-      a.fallibleVia(Talk.apply)
-    )
-
-
-  // summon[cos.type <:< Transformer.Accumulating[[A] =>> Either[List[String], A], Int, String]]
+  private given Transformer.Accumulating.Support[[A] =>> Either[List[String], A]] = 
+    Transformer.Accumulating.Support.either[String, List]
 
   successfulTransformationTest("accumulatingTo")(
-    _.fallibleTo[Talk]
+    _.accumulatingTo[Talk]
   )
 
   successfulTransformationTest("accumulatingVia")(
-    _.fallibleVia(Talk.apply)
+    _.accumulatingVia(Talk.apply)
   )
 
   successfulTransformationTest("into.accumulating")(
@@ -40,6 +25,10 @@ class DerivedInstanceSuite extends DucktapeSuite {
 
   successfulTransformationTest("Transformer.define.accumulating")(
     Transformer.define[basic.CreateTalk, Talk].accumulating.build().transform
+  )
+
+  successfulTransformationTest("Transforme.defineVia.accumulating")(
+    Transformer.defineVia[basic.CreateTalk](Talk.apply).accumulating.build().transform
   )
 
   failingTransformationTest("accumulatingTo")(
@@ -88,7 +77,7 @@ class DerivedInstanceSuite extends DucktapeSuite {
 
       val expected =
         Left(
-          "Text is longer than 20" :: "Text is longer than 300" :: "Text is longer than 20" :: "Text is longer than 300" :: Nil
+          "Invalid Talk.Name" :: "Invalid Talk.ElevatorPitch" :: "Invalid Presenter.Name" :: "Invalid Presenter.Bio" :: Nil
         )
 
       assertEquals(transformation(createTalk), expected)

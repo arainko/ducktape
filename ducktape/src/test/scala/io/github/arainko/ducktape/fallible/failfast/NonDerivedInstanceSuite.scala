@@ -6,11 +6,12 @@ import io.github.arainko.ducktape.fallible.model.*
 
 abstract class NonDerivedInstanceSuite[F[+x]](
   isFailed: [A] => F[A] => Boolean,
-  deriveError: Int => F[Positive]
+  deriveError: Int => F[Positive],
+  F: Transformer.FailFast.Support[F]
 )(using
   transformer: Transformer.FailFast[F, Int, Positive],
-  F: Transformer.FailFast.Support[F]
 ) extends DucktapeSuite {
+  private given Transformer.FailFast.Support[F] = F
 
   test("Transformer.FailFast.betweenCollections succeeds when all of the transformations succeed") {
     val actual =
