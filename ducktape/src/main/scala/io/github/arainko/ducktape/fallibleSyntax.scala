@@ -7,16 +7,14 @@ import io.github.arainko.ducktape.internal.macros.Transformations
 import scala.annotation.implicitNotFound
 import scala.compiletime.*
 import scala.deriving.Mirror
+import io.github.arainko.ducktape.fallible.FallibleTransformer
 
 extension [F[+x], Source](
   value: Source
-)(using @implicitNotFound("MESSAGE MESSAGE") F: Transformer.Mode.FailFast[F] | Transformer.Mode.Accumulating[F]) {
+)(using @implicitNotFound("MESSAGE MESSAGE") F: Transformer.Mode[F]) {
 
-  inline def fallibleTo[Dest](using transformer: F.FallibleTransformer[Source, Dest]): F[Dest] =
-    inline transformer match {
-      case acc: Transformer.Accumulating[F, Source, Dest] => acc.transform(value)
-      case ff: Transformer.FailFast[F, Source, Dest]      => ff.transform(value)
-    }
+  def fallibleTo[Dest](using transformer: FallibleTransformer[F, Source, Dest]): F[Dest] =
+    transformer.transform(value)
 
   inline def fallibleVia[Func](inline function: Func)(using
     Func: FunctionMirror[Func]

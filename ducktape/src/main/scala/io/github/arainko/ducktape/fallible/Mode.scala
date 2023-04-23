@@ -5,20 +5,16 @@ import scala.collection.Factory
 import scala.annotation.implicitNotFound
 
 sealed trait Mode[F[+x]] {
-  type FallibleTransformer[Source, Dest] <: fallible.FallibleTransformer[F, Source, Dest]
-
   def pure[A](value: A): F[A]
   def map[A, B](fa: F[A], f: A => B): F[B]
   def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](collection: AColl[A])(using
-    transformer: FallibleTransformer[A, B],
+    transformer: FallibleTransformer[F, A, B],
     factory: Factory[B, BColl[B]]
   ): F[BColl[B]]
 }
 
 object Mode {
   trait Accumulating[F[+x]] extends Mode[F] {
-    override final type FallibleTransformer[Source, Dest] = Transformer.Accumulating[F, Source, Dest]
-
     def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
   }
 
@@ -40,7 +36,7 @@ object Mode {
 
         // Inspired by chimney's implementation: https://github.com/scalalandio/chimney/blob/53125c0a55479763157909ef920e11f5b487b182/chimney/src/main/scala/io/scalaland/chimney/TransformerFSupport.scala#L153
         override def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](collection: AColl[A])(using
-          transformer: Transformer.Accumulating[[A] =>> Either[Coll[E], A], A, B],
+          transformer: FallibleTransformer[[A] =>> Either[Coll[E], A], A, B],
           factory: Factory[B, BColl[B]]
         ): Either[Coll[E], BColl[B]] = {
           val accumulatedErrors = errorCollFactory.newBuilder
@@ -68,8 +64,6 @@ object Mode {
   }
 
   trait FailFast[F[+x]] extends Mode[F] {
-    override final type FallibleTransformer[Source, Dest] = Transformer.FailFast[F, Source, Dest]
-
     def flatMap[A, B](fa: F[A], f: A => F[B]): F[B]
   }
 
@@ -82,7 +76,7 @@ object Mode {
 
         def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
           collection: AColl[A]
-        )(using transformer: Transformer.FailFast[Option, A, B], factory: Factory[B, BColl[B]]): Option[BColl[B]] = {
+        )(using transformer: FallibleTransformer[Option, A, B], factory: Factory[B, BColl[B]]): Option[BColl[B]] = {
           var isErroredOut = false
           val resultBuilder = factory.newBuilder
           val iterator = collection.iterator
@@ -108,7 +102,7 @@ object Mode {
         def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
           collection: AColl[A]
         )(using
-          transformer: Transformer.FailFast[[A] =>> Either[E, A], A, B],
+          transformer: FallibleTransformer[[A] =>> Either[E, A], A, B],
           factory: Factory[B, BColl[B]]
         ): Either[E, BColl[B]] = {
           var error: Left[E, Nothing] = null

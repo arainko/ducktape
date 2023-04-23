@@ -187,11 +187,8 @@ private[ducktape] object Failure {
       |$implicitSearchExplanation
       """.stripMargin
 
-    private def renderTransformerType(using Quotes) = 
-      transformerTpe match {
-        case '[Transformer.Accumulating[?, ?, ?]] => s"Transformer.Accumulating[${sourceField.tpe.show}, ${destField.tpe.show}]"
-        case '[Transformer.FailFast[?, ?, ?]] => s"Transformer.FailFast[${sourceField.tpe.show}, ${destField.tpe.show}]"
-      }
+    private def renderTransformerType(using Quotes) = transformerTpe.show
+      
   }
 
   extension (tpe: Type[?]) {

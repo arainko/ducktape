@@ -13,7 +13,7 @@ trait Transformer[Source, Dest] {
 }
 
 object Transformer {
-  export fallible.FallibleTransformer.{ Accumulating, FailFast }
+  // export fallible.FallibleTransformer.{ Accumulating, FailFast }
   export fallible.Mode
 
   def apply[Source, Dest](using transformer: Transformer[Source, Dest]): Transformer[Source, Dest] = transformer

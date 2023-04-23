@@ -11,7 +11,7 @@ import scala.quoted.*
 import Transformer.*
 
 abstract class FallibleProductTransformations[
-  Support[f[+x]] <: Accumulating.Support[f] | FailFast.Support[f]
+  Support[f[+x]] <: Mode[f]
 ] {
   final def transform[F[+x]: Type, Source: Type, Dest: Type](
     Source: Expr[Mirror.ProductOf[Source]],

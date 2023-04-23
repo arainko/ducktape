@@ -7,6 +7,7 @@ import io.github.arainko.ducktape.internal.modules.*
 
 import scala.deriving.Mirror
 import scala.quoted.*
+import io.github.arainko.ducktape.fallible.Mode
 
 private[ducktape] object Transformations {
   inline def via[Source, Dest, Func](source: Source, inline function: Func)(using
@@ -23,7 +24,7 @@ private[ducktape] object Transformations {
 
   inline def accumulatingVia[F[+x], Source, Func](inline function: Func)(using
     Func: FunctionMirror[Func]
-  )(source: Source)(using Source: Mirror.ProductOf[Source], F: Transformer.Accumulating.Support[F]): F[Func.Return] = ${
+  )(source: Source)(using Source: Mirror.ProductOf[Source], F: Mode.Accumulating[F]): F[Func.Return] = ${
     AccumulatingProductTransformations.via[F, Source, Func.Return, Func]('source, 'function, 'Source, 'F)
   }
 
@@ -31,13 +32,13 @@ private[ducktape] object Transformations {
     source: Source,
     inline function: Func,
     inline config: FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]*
-  )(using F: Transformer.Accumulating.Support[F], Source: Mirror.ProductOf[Source]): F[Dest] = ${
+  )(using F: Mode.Accumulating[F], Source: Mirror.ProductOf[Source]): F[Dest] = ${
     AccumulatingProductTransformations.viaConfigured[F, Source, Dest, Func, ArgSelector]('source, 'function, 'config, 'Source, 'F)
   }
 
   inline def failFastVia[F[+x], Source, Func](inline function: Func)(using
     Func: FunctionMirror[Func]
-  )(source: Source)(using Source: Mirror.ProductOf[Source], F: Transformer.FailFast.Support[F]): F[Func.Return] = ${
+  )(source: Source)(using Source: Mirror.ProductOf[Source], F: Mode.FailFast[F]): F[Func.Return] = ${
     FailFastProductTransformations.via[F, Source, Func.Return, Func]('source, 'function, 'Source, 'F)
   }
 
@@ -45,7 +46,7 @@ private[ducktape] object Transformations {
     source: Source,
     inline function: Func,
     inline config: FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]*
-  )(using F: Transformer.FailFast.Support[F], Source: Mirror.ProductOf[Source]): F[Dest] = ${
+  )(using F: Mode.FailFast[F], Source: Mirror.ProductOf[Source]): F[Dest] = ${
     FailFastProductTransformations.viaConfigured[F, Source, Dest, Func, ArgSelector]('source, 'function, 'config, 'Source, 'F)
   }
 
@@ -55,14 +56,14 @@ private[ducktape] object Transformations {
   inline def transformAccumulatingConfigured[F[+x], Source, Dest](
     source: Source,
     inline config: FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]*
-  )(using F: Transformer.Accumulating.Support[F], Source: Mirror.ProductOf[Source], Dest: Mirror.ProductOf[Dest]) = ${
+  )(using F: Mode.Accumulating[F], Source: Mirror.ProductOf[Source], Dest: Mirror.ProductOf[Dest]) = ${
     AccumulatingProductTransformations.transformConfigured[F, Source, Dest]('Source, 'Dest, 'F, 'config, 'source)
   }
 
   inline def transformFailFastConfigured[F[+x], Source, Dest](
     source: Source,
     inline config: FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]*
-  )(using F: Transformer.FailFast.Support[F], Source: Mirror.ProductOf[Source], Dest: Mirror.ProductOf[Dest]) = ${
+  )(using F: Mode.FailFast[F], Source: Mirror.ProductOf[Source], Dest: Mirror.ProductOf[Dest]) = ${
     FailFastProductTransformations.transformConfigured[F, Source, Dest]('Source, 'Dest, 'F, 'config, 'source)
   }
 

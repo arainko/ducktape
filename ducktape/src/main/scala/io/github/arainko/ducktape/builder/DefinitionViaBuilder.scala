@@ -8,11 +8,11 @@ import scala.deriving.*
 
 final class DefinitionViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArguments] private (function: Func) {
 
-  def failFast[F[+x]]: DefinitionViaBuilder.FailFast[F, Source, Dest, Func, ArgSelector] =
-    DefinitionViaBuilder.FailFast[F, Source, Dest, Func, ArgSelector](function)
+  // def failFast[F[+x]]: DefinitionViaBuilder.FailFast[F, Source, Dest, Func, ArgSelector] =
+  //   DefinitionViaBuilder.FailFast[F, Source, Dest, Func, ArgSelector](function)
 
-  def accumulating[F[+x]]: DefinitionViaBuilder.Accumulating[F, Source, Dest, Func, ArgSelector] =
-    DefinitionViaBuilder.Accumulating[F, Source, Dest, Func, ArgSelector](function)
+  // def accumulating[F[+x]]: DefinitionViaBuilder.Accumulating[F, Source, Dest, Func, ArgSelector] =
+  //   DefinitionViaBuilder.Accumulating[F, Source, Dest, Func, ArgSelector](function)
 
   inline def build(
     inline config: ArgBuilderConfig[Source, Dest, ArgSelector]*
@@ -38,29 +38,29 @@ object DefinitionViaBuilder {
     }
   }
 
-  final class FailFast[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (function: Func) {
-    inline def build(
-      inline config: FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]*
-    )(using
-      F: Transformer.FailFast.Support[F],
-      Source: Mirror.ProductOf[Source]
-    ): Transformer.FailFast[F, Source, Dest] =
-      new {
-        def transform(value: Source): F[Dest] =
-          Transformations.failFastViaConfigured[F, Source, Dest, Func, ArgSelector](value, function, config*)
-      }
-  }
+  // final class FailFast[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (function: Func) {
+  //   inline def build(
+  //     inline config: FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]*
+  //   )(using
+  //     F: Transformer.FailFast.Support[F],
+  //     Source: Mirror.ProductOf[Source]
+  //   ): Transformer.FailFast[F, Source, Dest] =
+  //     new {
+  //       def transform(value: Source): F[Dest] =
+  //         Transformations.failFastViaConfigured[F, Source, Dest, Func, ArgSelector](value, function, config*)
+  //     }
+  // }
 
-  final class Accumulating[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (function: Func) {
-    inline def build(
-      inline config: FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]*
-    )(using
-      F: Transformer.Accumulating.Support[F],
-      Source: Mirror.ProductOf[Source]
-    ): Transformer.Accumulating[F, Source, Dest] =
-      new {
-        def transform(value: Source): F[Dest] =
-          Transformations.accumulatingViaConfigured[F, Source, Dest, Func, ArgSelector](value, function, config*)
-      }
-  }
+  // final class Accumulating[F[+x], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (function: Func) {
+  //   inline def build(
+  //     inline config: FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] | ArgBuilderConfig[Source, Dest, ArgSelector]*
+  //   )(using
+  //     F: Transformer.Accumulating.Support[F],
+  //     Source: Mirror.ProductOf[Source]
+  //   ): Transformer.Accumulating[F, Source, Dest] =
+  //     new {
+  //       def transform(value: Source): F[Dest] =
+  //         Transformations.accumulatingViaConfigured[F, Source, Dest, Func, ArgSelector](value, function, config*)
+  //     }
+  // }
 }

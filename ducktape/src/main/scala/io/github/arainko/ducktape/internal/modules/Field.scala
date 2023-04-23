@@ -3,6 +3,7 @@ package io.github.arainko.ducktape.internal.modules
 import io.github.arainko.ducktape.Transformer
 
 import scala.quoted.*
+import io.github.arainko.ducktape.fallible.FallibleTransformer
 
 private[ducktape] final class Field(val name: String, val tpe: Type[?], val default: Option[Expr[Any]]) {
   def transformerTo(that: Field)(using Quotes): Expr[Transformer[?, ?]] = {
@@ -20,7 +21,7 @@ private[ducktape] final class Field(val name: String, val tpe: Type[?], val defa
   // This untyped due to not being able to reduce a HKT with wildcards
   def partialTransformerTo[
     F[+x],
-    PartialTransformer[f[+x], a, b] <: Transformer.FailFast[f, a, b] | Transformer.Accumulating[f, a, b]
+    PartialTransformer[f[+x], a, b] <: FallibleTransformer[f, a, b]
   ](that: Field)(using quotes: Quotes, F: Type[F], PartialTransformer: Type[PartialTransformer]): quotes.reflect.Term = {
     import quotes.reflect.*
 

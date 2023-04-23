@@ -10,13 +10,15 @@ import scala.deriving.Mirror
 import scala.quoted.*
 import scala.util.chaining.*
 import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.fallible.FallibleTransformer
+import io.github.arainko.ducktape.fallible.Mode
 
 private[ducktape] object AccumulatingProductTransformations {
   export fallibleTransformations.{ transform, transformConfigured, via, viaConfigured }
 
-  private val fallibleTransformations = new FallibleProductTransformations[Transformer.Accumulating.Support] {
+  private val fallibleTransformations = new FallibleProductTransformations[Mode.Accumulating] {
     override protected def createTransformation[F[+x]: Type, Source: Type, Dest: Type](
-      F: Expr[Transformer.Accumulating.Support[F]],
+      F: Expr[Mode.Accumulating[F]],
       sourceValue: Expr[Source],
       fieldsToTransformInto: List[Field],
       unwrappedFieldsFromConfig: List[Field.Unwrapped],
@@ -35,12 +37,12 @@ private[ducktape] object AccumulatingProductTransformations {
             .get(dest.name)
             .getOrElse(Failure.emit(Failure.NoFieldMapping(dest.name, summon[Type[Source]])))
 
-        source.partialTransformerTo[F, Transformer.Accumulating](dest).asExpr match {
-          case '{ Transformer.Accumulating.partialFromTotal[F, src, dest](using $total, $support) } =>
+        source.partialTransformerTo[F, FallibleTransformer](dest).asExpr match {
+          case '{ FallibleTransformer.partialFromTotal[F, src, dest](using $total, $support) } =>
             val sourceField = sourceValue.accessField(source).asExprOf[src]
             val transformed = LiftTransformation.liftTransformation[src, dest](total, sourceField)
             unwrappedFields += Field.Unwrapped(dest, transformed)
-          case '{ $transformer: Transformer.Accumulating[F, src, dest] } =>
+          case '{ $transformer: FallibleTransformer[F, src, dest] } =>
             val sourceField = sourceValue.accessField(source).asExprOf[src]
             wrappedFields += Field.Wrapped(dest, '{ $transformer.transform($sourceField) })
         }

@@ -7,6 +7,7 @@ import io.github.arainko.ducktape.internal.util.*
 
 import scala.annotation.tailrec
 import scala.quoted.*
+import io.github.arainko.ducktape.fallible.Mode
 
 object ZippedProduct {
 
@@ -19,7 +20,7 @@ object ZippedProduct {
    * @param construct function that allows the caller to create trees with the unpacked values
    */
   def zipAndConstruct[F[+x]: Type, Dest: Type](
-    F: Expr[Transformer.Accumulating.Support[F]],
+    F: Expr[Mode.Accumulating[F]],
     wrappedFields: NonEmptyList[Field.Wrapped[F]],
     unwrappedFields: List[Field.Unwrapped]
   )(construct: List[Field.Unwrapped] => Expr[Dest])(using Quotes): Expr[F[Dest]] = {
@@ -35,7 +36,7 @@ object ZippedProduct {
   }
 
   private def zipFields[F[+x]: Type](
-    F: Expr[Transformer.Accumulating.Support[F]],
+    F: Expr[Mode.Accumulating[F]],
     wrappedFields: NonEmptyList[Field.Wrapped[F]]
   )(using Quotes): Expr[F[Any]] =
     wrappedFields.map(_.value).reduceLeft { (accumulated, current) =>

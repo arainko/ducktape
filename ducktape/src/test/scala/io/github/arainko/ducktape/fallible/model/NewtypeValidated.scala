@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.fallible.model
 
 import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.fallible.FallibleTransformer
 
 def AlwaysValid[A]: A => Either[String, Unit] = _ => Right(())
 
@@ -14,9 +15,9 @@ abstract class NewtypeValidated[A](f: A => Either[String, Unit]) {
 
   def unsafe(value: A): Type = value
 
-  given failFastTransformer: Transformer.FailFast[[A] =>> Either[String, A], A, Type] = make(_)
+  given failFastTransformer: FallibleTransformer[[A] =>> Either[String, A], A, Type] = make(_)
 
-  given accTransformer: Transformer.Accumulating[[A] =>> Either[List[String], A], A, Type] = make(_).left.map(_ :: Nil)
+  given accTransformer: FallibleTransformer[[A] =>> Either[List[String], A], A, Type] = make(_).left.map(_ :: Nil)
 
   extension (self: Type) def value: A = self
 }

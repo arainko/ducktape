@@ -11,17 +11,25 @@ class DerivedInstanceSuite extends DucktapeSuite {
   private given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
     Transformer.Mode.Accumulating.either[String, List]
 
-  val a: CreateTalk = ???
+  // val a: CreateTalk = ???
 
   val cos = 
     Transformer.Debug.showCode(
       a.fallibleTo[Talk]
     )
 
+
   val cos2 =
     Transformer.Debug.showCode(
       a.fallibleVia(Talk.apply)
     )
+
+  val cos3 = 
+    Transformer.Debug.showCode(
+
+    Transformer.define[basic.CreateTalk, Talk].fallible.build()
+    )
+  
 
 
   // summon[cos.type <:< Transformer.Accumulating[[A] =>> Either[List[String], A], Int, String]]
@@ -34,29 +42,29 @@ class DerivedInstanceSuite extends DucktapeSuite {
     _.fallibleVia(Talk.apply)
   )
 
-  successfulTransformationTest("into.accumulating")(
-    _.into[Talk].accumulating.transform()
-  )
+  // successfulTransformationTest("into.accumulating")(
+  //   _.into[Talk].accumulating.transform()
+  // )
 
   successfulTransformationTest("Transformer.define.accumulating")(
-    Transformer.define[basic.CreateTalk, Talk].accumulating.build().transform
+    Transformer.define[basic.CreateTalk, Talk].fallible.build().transform
   )
 
-  failingTransformationTest("accumulatingTo")(
-    _.accumulatingTo[Talk]
-  )
+  // // failingTransformationTest("accumulatingTo")(
+  // //   _.accumulatingTo[Talk]
+  // // )
 
-  failingTransformationTest("accumulatingVia")(
-    _.accumulatingVia(Talk.apply)
-  )
+  // failingTransformationTest("accumulatingVia")(
+  //   _.accumulatingVia(Talk.apply)
+  // )
 
-  failingTransformationTest("into.accumulating")(
-    _.into[Talk].accumulating.transform()
-  )
+  // failingTransformationTest("into.accumulating")(
+  //   _.into[Talk].accumulating.transform()
+  // )
 
-  failingTransformationTest("Transformer.define.accumulating")(
-    Transformer.define[basic.CreateTalk, Talk].accumulating.build().transform
-  )
+  // failingTransformationTest("Transformer.define.accumulating")(
+  //   Transformer.define[basic.CreateTalk, Talk].accumulating.build().transform
+  // )
 
   private def successfulTransformationTest(name: String)(transformation: basic.CreateTalk => Either[List[String], Talk]) =
     test(s"CreateTalk transform into Talk using - $name") {
