@@ -1,8 +1,9 @@
 package io.github.arainko.ducktape.fallible
 
 import io.github.arainko.ducktape.*
-import scala.collection.Factory
+
 import scala.annotation.implicitNotFound
+import scala.collection.Factory
 
 sealed trait Mode[F[+x]] {
   def pure[A](value: A): F[A]
@@ -19,7 +20,9 @@ object Mode {
   }
 
   object Accumulating {
-    def either[E, Coll[x] <: Iterable[x]](using errorCollFactory: Factory[E, Coll[E]]): Mode.Accumulating[[A] =>> Either[Coll[E], A]] =
+    def either[E, Coll[x] <: Iterable[x]](using
+      errorCollFactory: Factory[E, Coll[E]]
+    ): Mode.Accumulating[[A] =>> Either[Coll[E], A]] =
       new {
         override def pure[A](value: A): Either[Coll[E], A] = Right(value)
         override def map[A, B](fa: Either[Coll[E], A], f: A => B): Either[Coll[E], B] = fa.map(f)

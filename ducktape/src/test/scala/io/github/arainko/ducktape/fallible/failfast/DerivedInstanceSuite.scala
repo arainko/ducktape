@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.fallible.accumulating
+package io.github.arainko.ducktape.fallible.failfast
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.fallible.model.*
@@ -8,8 +8,8 @@ import java.time.LocalDate
 
 class DerivedInstanceSuite extends DucktapeSuite {
 
-  private given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] =
-    Transformer.Mode.Accumulating.either[String, List]
+  private given Transformer.Mode.FailFast[[A] =>> Either[String, A]] =
+    Transformer.Mode.FailFast.either[String]
 
   successfulTransformationTest("fallibleTo")(
     _.fallibleTo[Talk]
@@ -27,7 +27,7 @@ class DerivedInstanceSuite extends DucktapeSuite {
     Transformer.define[basic.CreateTalk, Talk].fallible.build().transform
   )
 
-  successfulTransformationTest("Transformer.define.fallible")(
+  successfulTransformationTest("Transformer.defineVia.fallible")(
     Transformer.defineVia[basic.CreateTalk](Talk.apply).fallible.build().transform
   )
 
@@ -43,11 +43,11 @@ class DerivedInstanceSuite extends DucktapeSuite {
     _.into[Talk].fallible.transform()
   )
 
-  failingTransformationTest("Transformer.defineVia.fallible")(
+  failingTransformationTest("Transformer.define.fallible")(
     Transformer.define[basic.CreateTalk, Talk].fallible.build().transform
   )
 
-  private def successfulTransformationTest(name: String)(transformation: basic.CreateTalk => Either[List[String], Talk]) =
+  private def successfulTransformationTest(name: String)(transformation: basic.CreateTalk => Either[String, Talk]) =
     test(s"CreateTalk transform into Talk using - $name") {
       val createTalk =
         basic.CreateTalk("talk", "pitch", basic.Presenter("Presenter", "bio", Some(basic.Presenter.Pronouns.`They/them`)))
@@ -66,7 +66,7 @@ class DerivedInstanceSuite extends DucktapeSuite {
       assertEquals(transformation(createTalk), Right(expected))
     }
 
-  private def failingTransformationTest(name: String)(transformation: basic.CreateTalk => Either[List[String], Talk]) =
+  private def failingTransformationTest(name: String)(transformation: basic.CreateTalk => Either[String, Talk]) =
     test(s"CreateTalk fails to transform into Talk and accumulates all errors using - $name") {
       val createTalk =
         basic.CreateTalk(
@@ -76,13 +76,7 @@ class DerivedInstanceSuite extends DucktapeSuite {
         )
 
       val expected =
-        Left(
-          "Invalid Talk.Name" ::
-            "Invalid Talk.ElevatorPitch" ::
-            "Invalid Presenter.Name" ::
-            "Invalid Presenter.Bio" ::
-            Nil
-        )
+        Left("Invalid Talk.Name")
 
       assertEquals(transformation(createTalk), expected)
     }

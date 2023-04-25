@@ -1,22 +1,23 @@
 package io.github.arainko.ducktape.fallible
 
-import io.github.arainko.ducktape.internal.macros.DerivedTransformers
-import scala.deriving.Mirror
-import scala.collection.Factory
 import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.internal.macros.DerivedTransformers
+
+import scala.collection.Factory
+import scala.deriving.Mirror
 
 trait FallibleTransformer[F[+x], Source, Dest] {
   def transform(value: Source): F[Dest]
 }
 
 object FallibleTransformer extends LowPriorityAccumulatingInstances {
-  inline given derivedAccumulating[F[+x], Source, Dest](using
+  inline given betweenProductsAccumulating[F[+x], Source, Dest](using
     Source: Mirror.ProductOf[Source],
     Dest: Mirror.ProductOf[Dest],
     F: Mode.Accumulating[F]
   ): FallibleTransformer[F, Source, Dest] = DerivedTransformers.accumulatingProduct[F, Source, Dest]
 
-  inline given derivedFailFast[F[+x], Source, Dest](using
+  inline given betweenProductsFailFast[F[+x], Source, Dest](using
     Source: Mirror.ProductOf[Source],
     Dest: Mirror.ProductOf[Dest],
     F: Mode.FailFast[F]

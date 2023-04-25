@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.fallible.accumulating
 import io.github.arainko.ducktape.DucktapeSuite
 import io.github.arainko.ducktape.Transformer
 
-class SupportSuite extends DucktapeSuite {
+class ModeSuite extends DucktapeSuite {
   private val support = Transformer.Mode.Accumulating.either[String, List]
 
   test("eitherIterableAccumulatingSupport#product succeeds with two Rights") {
