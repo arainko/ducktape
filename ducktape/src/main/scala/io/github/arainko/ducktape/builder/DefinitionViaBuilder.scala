@@ -50,6 +50,8 @@ object DefinitionViaBuilder {
               Transformations.accumulatingViaConfigured[F, Source, Dest, Func, ArgSelector](value, function, config*)
             case given Mode.FailFast[F] =>
               Transformations.failFastViaConfigured[F, Source, Dest, Func, ArgSelector](value, function, config*)
+            case other =>
+              Errors.cannotDetermineTransformationMode
           }
       }
   }

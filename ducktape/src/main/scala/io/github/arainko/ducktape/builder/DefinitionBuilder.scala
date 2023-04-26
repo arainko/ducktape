@@ -31,6 +31,8 @@ object DefinitionBuilder {
               Transformations.transformAccumulatingConfigured[F, Source, Dest](value, config*)
             case given Mode.FailFast[F] =>
               Transformations.transformFailFastConfigured[F, Source, Dest](value, config*)
+            case other =>
+              Errors.cannotDetermineTransformationMode
           }
       }
   }

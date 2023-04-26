@@ -27,6 +27,8 @@ object AppliedBuilder {
           Transformations.transformAccumulatingConfigured[F, Source, Dest](source, config*)
         case given Mode.FailFast[F] =>
           Transformations.transformFailFastConfigured[F, Source, Dest](source, config*)
+        case other =>
+          Errors.cannotDetermineTransformationMode
       }
   }
 }

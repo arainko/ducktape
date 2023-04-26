@@ -67,7 +67,7 @@ class DerivedInstanceSuite extends DucktapeSuite {
     }
 
   private def failingTransformationTest(name: String)(transformation: basic.CreateTalk => Either[String, Talk]) =
-    test(s"CreateTalk fails to transform into Talk and accumulates all errors using - $name") {
+    test(s"CreateTalk fails to transform into Talk and returns the first failure - $name") {
       val createTalk =
         basic.CreateTalk(
           "talk" * 10,

@@ -340,62 +340,62 @@ val transformed = unvalidatedPerson.via(ValidatedPerson.create)
 
 But this quickly falls apart when nested transformations are introduced and we're pretty much back to square one where we're on our own to write the boilerplate.
 
-That's where `Fallible Transformers` and their flavors come in: 
-* `Accumulating` for error accumulation,
-* `FailFast` for the cases where we just want to bail at the very first sight of trouble.
+That's where `Fallible Transformers` and their modes come in: 
+* `Transformer.Mode.Accumulating` for error accumulation,
+* `Transformer.Mode.FailFast` for the cases where we just want to bail at the very first sight of trouble.
 
-Let's look at the definition of both of these, starting with `Accumulating`.
+Let's look at the definition of all of these:
 
-#### Definition of `Transformer.Accumulating`
+#### Definition of `FallibleTransformer` aka `Transformer.Fallible` and `Transformer.Mode`
 
 ```scala
-trait Accumulating[F[+x], Source, Dest] {
+trait FallibleTransformer[F[+x], Source, Dest] {
   def transform(value: Source): F[Dest]
 }
+```
+So a `Fallible` transformer takes a `Source` and gives back a `Dest` wrapped in an `F` where `F` is the wrapper type for our transformations eg. if `F[+x]` = `Either[List[String], x]` then the `transform` method will return an `Either[List[String], Dest]`.
 
-object Accumulating {
-  trait Support[F[+x]] {
-    def pure[A](value: A): F[A]
-    def map[A, B](fa: F[A], f: A => B): F[B]
-    def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
-  }
+```scala
+sealed trait Mode[F[+x]] {
+  def pure[A](value: A): F[A]
+  def map[A, B](fa: F[A], f: A => B): F[B]
+  def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](collection: AColl[A])(using
+    transformer: FallibleTransformer[F, A, B],
+    factory: Factory[B, BColl[B]]
+  ): F[BColl[B]]
 }
 ```
 
-So an `Accumulating` transformer takes a `Source` and gives back a `Dest` wrapped in an `F` where `F` is the wrapper type for our transformations eg. if `F[+x]` = `Either[List[String], x]` then the `transform` method will return an `Either[List[String], Dest]` (the `List` on the left side will accumulate errors when multiple fallible transformations are involved).
+Moving on to `Transformer.Mode`, what exactly is it and why do we need it? So a `Mode[F]` is typeclass that gives us two bits of information:
+* a hint for the derivation mechanism which transformation mode to use (hence the name!)
+* some operations on the abstract `F` wrapper type, namely:
+  * `pure` is for wrapping arbitrary values into `F`, eg. if `F[+x] = Either[List[String], x]` then calling `pure` would involve just wrapping the value in a `Right.apply` call.
+  * `map` is for operating on the wrapped values, eg. if we find ourselves with a `F[Int]` in hand and we want to transform the value 'inside' to a `String` we can call `.map(_.toString)` to yield a `F[String]`
+  * `traverseCollection` is for the cases where we end up with eg. a `List[F[String]]` and we want to transform that into a `F[List[String]]` according to the rules of the `F` type wrapper and not blow up the stack in the process
 
-Moving on to `Accumulating.Support`, what exactly is it and why do we need it? So the `Accumulating.Support` typeclass gives some meaning to an abstract wrapper type `F` so that we can actually operate on it in some way, let's go through all the methods that `Accumulating.Support` exposes:
-* `pure` is for wrapping arbitrary values into `F`, eg. if `F[+x] = Either[List[String], x]` then calling `pure` would involve just wrapping the value in a `Right.apply` call.
-
-* `map` is for operating on the wrapped values, eg. if we find ourselves with a `F[Int]` in hand and we want to transform the value 'inside' to a `String` we can call `.map(_.toString)` to yield a `F[String]`
-
-* `product` enables composition of two unrelated values wrapped in an `F` which is THE operator for accumulating errors.
-
-`ducktape` provides instances for `Either` with any subtype of `Iterable` on the left side, so that eg. `Transformer.Accumulating.Support[[A] =>> Either[List[String], A]]` is available out of the box.
-
-#### Definition of `Transformer.FailFast`
+As mentioned earlier, `Modes` come in two flavors - one for error accumulating transformations (`Transformer.Mode.Accumulating[F]`) and one for fail fast transformations (`Transformer.Mode.FailFast[F]`):
 
 ```scala
-trait FailFast[F[+x], Source, Dest] {
-  def transform(value: Source): F[Dest]
-}
+object Mode {
+  trait Accumulating[F[+x]] extends Mode[F] {
+    def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
+  }
 
-object FailFast {
-  trait Support[F[+x]] {
-    def pure[A](value: A): F[A]
-    def map[A, B](fa: F[A], f: A => B): F[B]
+  trait FailFast[F[+x]] extends Mode[F] {
     def flatMap[A, B](fa: F[A], f: A => F[B]): F[B]
   }
 }
 ```
 
-The definition itself is pretty much the same as in `Accumulating` with one key change, `FailFast.Support` exchanges the `product` method for `flatMap` which implies short-circuit semantics for the composition operator.
+Each one of these exposes one operation that dictates its approach to errors, `flatMap` entails a dependency between fallible transformations so if we chain multiple `flatMaps` together our transformation will stop at the very first error, contrary to this `Transformer.Mode.Accumulating` exposes a `product` operation that given two independent transformations wrapped in `F` gives us back a tuple wrapped in an `F`, what that means is that each one of the transformations is independent from each other so we're able to accumulate all of the errors produced by these.
 
-`ducktape` provides instances for `Transformer.FailFast.Support[Option]` and for `Either`(no matter what is on the left side eg. `Transformer.FailFast.Support[[A] =>> Either[String, A]]`) out of the box.
+For accumulating transformations `ducktape` provides instances for `Either` with any subtype of `Iterable` on the left side, so that eg. `Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]]` is available out of the box.
+
+For fail fast transformations instances for `Option` and `Either` are avaiable out of the box.
 
 #### Automatic fallible transformations
 
-Now for the meat and potatoes of `Fallible Transformers`. To make use of the derivation mechanism that `ducktape` provides we should strive for our model to be modeled in a specific way - with a new nominal type per each validated field, which comes down to... Newtypes! (eg. [monix-newtypes](https://github.com/monix/newtypes))
+Now for the meat and potatoes of `Fallible Transformers`. To make use of the derivation mechanism that `ducktape` provides we should strive for our model to be modeled in a specific way - with a new nominal type per each validated field, which comes down to... Newtypes!
 
 Let's define a minimalist newtype abstraction that will also do validation (this is a one-time effort that can easily be extracted to a library):
 
@@ -415,9 +415,9 @@ abstract class NewtypeValidated[A](pred: A => Boolean, errorMessage: String) {
   }
 
   // these instances will be available in the implicit scope of `Type` (that is, our newtype)
-  given accumulatingWrappingTransformer: Transformer.Accumulating[[a] =>> Either[List[String], a], A, Type] = makeAccumulating(_)
+  given accumulatingWrappingTransformer: Transformer.Fallible[[a] =>> Either[List[String], a], A, Type] = makeAccumulating(_)
 
-  given failFastWrappingTransformer: Transformer.FailFast[[a] =>> Either[String, a], A, Type] = make(_)
+  given failFastWrappingTransformer: Transformer.Fallible[[a] =>> Either[String, a], A, Type] = make(_)
 
   given unwrappingTransformer: Transformer[Type, A] = _.value
 
@@ -452,11 +452,14 @@ val bad = UnvalidatedPerson(name = "", age = -1, socialSecurityNo = "SOCIALNO")
 val good = UnvalidatedPerson(name = "ValidName", age = 24, socialSecurityNo = "SOCIALNO")
 ```
 
-Instances of `Transformer.Accumulating` wrapped in some type `F` are derived automatically for case classes given that a `Transformer.Accumulating.Support` instance exists for `F` and all of the fields of the source type have a corresponding counterpart in the destination type and each one of them has an instance of either `Transformer.Accumulating` or a total `Transformer` in scope.
+Instances of `Transformer.Fallible` wrapped in some type `F` are derived automatically for case classes given that a `Transformer.Mode.Accumulating` instance exists for `F` and all of the fields of the source type have a corresponding counterpart in the destination type and each one of them has an instance of either `Transformer.Fallible` or a total `Transformer` in scope.
 
 ```scala mdoc
-bad.accumulatingTo[[A] =>> Either[List[String], A], ValidatedPerson]
-good.accumulatingTo[[A] =>> Either[List[String], A], ValidatedPerson]
+given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+
+bad.fallibleTo[ValidatedPerson]
+good.fallibleTo[ValidatedPerson]
 ```
 
 and the generated code looks like this:
@@ -464,19 +467,22 @@ and the generated code looks like this:
 ```scala mdoc:passthrough
 import io.github.arainko.ducktape.docs.*
 
-Docs.printCode(bad.accumulatingTo[[A] =>> Either[List[String], A], ValidatedPerson])
+Docs.printCode(bad.fallibleTo[ValidatedPerson])
 ```
 
-Same goes for instances of `Transformer.FailFast`.
+Same goes for instances that do fail fast transformations (you need `Transformer.Mode.FailFast[F]` in scope in this case)
 
-```scala mdoc
-bad.failFastTo[[A] =>> Either[String, A], ValidatedPerson]
-good.failFastTo[[A] =>> Either[String, A], ValidatedPerson]
+```scala mdoc:nest
+given Transformer.Mode.FailFast[[A] =>> Either[String, A]] = 
+  Transformer.Mode.FailFast.either[String]
+
+bad.fallibleTo[ValidatedPerson]
+good.fallibleTo[ValidatedPerson]
 ```
 
 and the generated code looks like this:
 ```scala mdoc:passthrough
-Docs.printCode(bad.failFastTo[[A] =>> Either[String, A], ValidatedPerson])
+Docs.printCode(bad.fallibleTo[ValidatedPerson])
 ```
 
 #### Configured fallible transformations
@@ -488,16 +494,20 @@ All of these work the very same way they do in total transformations:
 * `Field.computed`
 * `Field.renamed`
 * `Field.allMatching`
+* `Field.default`
 
 plus two fallible-specific config options:
 * `Field.fallibleConst`
 * `Field.fallibleComputed`
 
 which work like so for `Accumulating` transformations:
-```scala mdoc
+```scala mdoc:nest
+given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+
 bad
   .into[ValidatedPerson]
-  .accumulating[[A] =>> Either[List[String], A]]
+  .fallible
   .transform(
     Field.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("ConstValidName")),
     Field.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.makeAccumulating(unvPerson.age + 100))
@@ -505,10 +515,13 @@ bad
 ```
 
 and for `FailFast` transformations:
-```scala mdoc
+```scala mdoc:nest
+given Transformer.Mode.FailFast[[A] =>> Either[String, A]] = 
+  Transformer.Mode.FailFast.either[String]
+
 bad
   .into[ValidatedPerson]
-  .failFast[[A] =>> Either[String, A]]
+  .fallible
   .transform(
     Field.fallibleConst(_.name, ValidatedPerson.Name.make("ConstValidName")),
     Field.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.make(unvPerson.age + 100))
@@ -526,10 +539,13 @@ plus two fallible-specific config options:
 * `Arg.fallibleComputed`
 
 which work like so for `Accumulating` transformations:
-```scala mdoc
+```scala mdoc:nest
+given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+
 bad
   .intoVia(ValidatedPerson.apply)
-  .accumulating[[A] =>> Either[List[String], A]]
+  .fallible
   .transform(
     Arg.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("ConstValidName")),
     Arg.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.makeAccumulating(unvPerson.age + 100))
@@ -537,10 +553,13 @@ bad
 ```
 
 and for `FailFast` transformations:
-```scala mdoc
+```scala mdoc:nest
+given Transformer.Mode.FailFast[[A] =>> Either[String, A]] = 
+  Transformer.Mode.FailFast.either[String]
+
 bad
   .intoVia(ValidatedPerson.apply)
-  .failFast[[A] =>> Either[String, A]]
+  .fallible
   .transform(
     Arg.fallibleConst(_.name, ValidatedPerson.Name.make("ConstValidName")),
     Arg.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.make(unvPerson.age + 100))
@@ -551,43 +570,58 @@ bad
 Life is not always lolipops and crisps and sometimes you need to write a typeclass instance by hand. Worry not though, just like in the case of total transformers, we can easily define custom instances with the help of the configuration DSL (which, let's write it down once again, is a superset of total transformers' DSL).
 
 By all means go wild with the configuration options, I'm too lazy to write them all out here again.
-```scala mdoc
+```scala mdoc:nest
+given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+
 val customAccumulating =
   Transformer
     .define[UnvalidatedPerson, ValidatedPerson]
-    .accumulating[[A] =>> Either[List[String], A]]
+    .fallible
     .build(
       Field.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
     )
+```
+
+```scala mdoc:nest
+given Transformer.Mode.FailFast[[A] =>> Either[String, A]] = 
+  Transformer.Mode.FailFast.either[String]
 
 val customFailFast =
   Transformer
     .define[UnvalidatedPerson, ValidatedPerson]
-    .failFast[[A] =>> Either[String, A]]
+    .fallible
     .build(
       Field.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
     )
 ```
 
 And for the ones that are not keen on writing out method arguments:
-```scala mdoc
+```scala mdoc:nest
+given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+
 val customAccumulatingVia =
   Transformer
     .defineVia[UnvalidatedPerson](ValidatedPerson.apply)
-    .accumulating[[A] =>> Either[List[String], A]]
+    .fallible
     .build(
       Arg.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
     )
+```
+
+```scala mdoc:nest
+given Transformer.Mode.FailFast[[A] =>> Either[String, A]] = 
+  Transformer.Mode.FailFast.either[String]
 
 val customFailFastVia =
   Transformer
     .defineVia[UnvalidatedPerson](ValidatedPerson.apply)
-    .failFast[[A] =>> Either[String, A]]
+    .fallible
     .build(
       Arg.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
     )
 ```
-
 
 
 ### A look at the generated code

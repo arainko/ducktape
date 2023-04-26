@@ -1,8 +1,8 @@
 package io.github.arainko.ducktape.internal.modules
 
-import scala.quoted.*
-import javax.xml.crypto.dsig.Transform
 import io.github.arainko.ducktape.Transformer
+
+import scala.quoted.*
 
 private[ducktape] sealed trait Failure {
   def position(using Quotes): quotes.reflect.Position =
@@ -174,21 +174,19 @@ private[ducktape] object Failure {
   }
 
   final case class FallibleTransformerNotFound(
-    transformerTpe: Type[?], // this is always one of the fallible transformer types
+    wrapperTpe: Type[?],
     sourceField: Field,
     destField: Field,
     implicitSearchExplanation: String
   ) extends Failure {
     override def render(using Quotes): String =
       s"""
-      |No instance of $renderTransformerType was found.
+      |No instance of Transformer.Fallible[${wrapperTpe.show}, ${sourceField.tpe.show}, ${destField.tpe.show}] was found.
       |
       |Compiler supplied explanation (may or may not be helpful):
       |$implicitSearchExplanation
       """.stripMargin
 
-    private def renderTransformerType(using Quotes) = transformerTpe.show
-      
   }
 
   extension (tpe: Type[?]) {

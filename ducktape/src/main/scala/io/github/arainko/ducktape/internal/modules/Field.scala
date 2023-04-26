@@ -1,9 +1,9 @@
 package io.github.arainko.ducktape.internal.modules
 
 import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.fallible.FallibleTransformer
 
 import scala.quoted.*
-import io.github.arainko.ducktape.fallible.FallibleTransformer
 
 private[ducktape] final class Field(val name: String, val tpe: Type[?], val default: Option[Expr[Any]]) {
   def transformerTo(that: Field)(using Quotes): Expr[Transformer[?, ?]] = {
@@ -18,19 +18,15 @@ private[ducktape] final class Field(val name: String, val tpe: Type[?], val defa
     }
   }
 
-  // This untyped due to not being able to reduce a HKT with wildcards
-  def partialTransformerTo[
-    F[+x],
-    PartialTransformer[f[+x], a, b] <: FallibleTransformer[f, a, b]
-  ](that: Field)(using quotes: Quotes, F: Type[F], PartialTransformer: Type[PartialTransformer]): quotes.reflect.Term = {
+  def fallibleTransformerTo[F[+x]](that: Field)(using quotes: Quotes, F: Type[F]): Expr[FallibleTransformer[F, ?, ?]] = {
     import quotes.reflect.*
 
     (tpe -> that.tpe) match {
       case '[src] -> '[dest] =>
-        Implicits.search(TypeRepr.of[PartialTransformer[F, src, dest]]) match {
-          case success: ImplicitSearchSuccess => success.tree
+        Implicits.search(TypeRepr.of[FallibleTransformer[F, src, dest]]) match {
+          case success: ImplicitSearchSuccess => success.tree.asExprOf[FallibleTransformer[F, src, dest]]
           case err: ImplicitSearchFailure =>
-            Failure.emit(Failure.FallibleTransformerNotFound(PartialTransformer, this, that, err.explanation))
+            Failure.emit(Failure.FallibleTransformerNotFound(F, this, that, err.explanation))
         }
     }
   }

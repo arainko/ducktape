@@ -1,17 +1,15 @@
 package io.github.arainko.ducktape.internal.macros
 
+import io.github.arainko.ducktape.fallible.{ FallibleTransformer, Mode }
 import io.github.arainko.ducktape.function.FunctionMirror
 import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.internal.util.NonEmptyList
-import io.github.arainko.ducktape.{ BuilderConfig, FallibleBuilderConfig }
+import io.github.arainko.ducktape.{ BuilderConfig, FallibleBuilderConfig, Transformer }
 
 import scala.annotation.tailrec
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.util.chaining.*
-import io.github.arainko.ducktape.Transformer
-import io.github.arainko.ducktape.fallible.FallibleTransformer
-import io.github.arainko.ducktape.fallible.Mode
 
 private[ducktape] object AccumulatingProductTransformations {
   export fallibleTransformations.{ transform, transformConfigured, via, viaConfigured }
@@ -37,8 +35,8 @@ private[ducktape] object AccumulatingProductTransformations {
             .get(dest.name)
             .getOrElse(Failure.emit(Failure.NoFieldMapping(dest.name, summon[Type[Source]])))
 
-        source.partialTransformerTo[F, FallibleTransformer](dest).asExpr match {
-          case '{ FallibleTransformer.partialFromTotal[F, src, dest](using $total, $support) } =>
+        source.fallibleTransformerTo[F](dest) match {
+          case '{ FallibleTransformer.fallibleFromTotal[F, src, dest](using $total, $support) } =>
             val sourceField = sourceValue.accessField(source).asExprOf[src]
             val transformed = LiftTransformation.liftTransformation[src, dest](total, sourceField)
             unwrappedFields += Field.Unwrapped(dest, transformed)

@@ -51,7 +51,7 @@ object FallibleTransformer extends LowPriorityAccumulatingInstances {
 }
 
 transparent trait LowPriorityAccumulatingInstances {
-  given partialFromTotal[F[+x], Source, Dest](using
+  given fallibleFromTotal[F[+x], Source, Dest](using
     total: Transformer[Source, Dest],
     F: Mode[F]
   ): FallibleTransformer[F, Source, Dest] =

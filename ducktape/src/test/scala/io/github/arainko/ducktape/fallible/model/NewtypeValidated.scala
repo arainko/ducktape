@@ -5,7 +5,7 @@ import io.github.arainko.ducktape.fallible.FallibleTransformer
 
 def AlwaysValid[A]: A => Either[String, Unit] = _ => Right(())
 
-def MaxSize(value: Int, name: String): String => Either[String, Unit] = 
+def MaxSize(value: Int, name: String): String => Either[String, Unit] =
   str => Either.cond(str.size <= value, (), s"Invalid $name")
 
 abstract class NewtypeValidated[A](f: A => Either[String, Unit]) {

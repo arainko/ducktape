@@ -12,9 +12,9 @@ object Positive {
   given accTransformer: FallibleTransformer[AccumulatingFailure, Int, Positive] =
     int => if (int > 0) Right(Positive(int)) else Left(s"$int" :: Nil)
 
-  given failFastTransformer:  FallibleTransformer[FailFastFailure, Int, Positive] =
+  given failFastTransformer: FallibleTransformer[FailFastFailure, Int, Positive] =
     int => accTransformer.transform(int).left.map(_.head)
 
-  given failFastOptTransformer:  FallibleTransformer[Option, Int, Positive] =
+  given failFastOptTransformer: FallibleTransformer[Option, Int, Positive] =
     int => accTransformer.transform(int).toOption
 }

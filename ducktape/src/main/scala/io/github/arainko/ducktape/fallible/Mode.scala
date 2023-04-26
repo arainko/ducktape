@@ -5,6 +5,15 @@ import io.github.arainko.ducktape.*
 import scala.annotation.implicitNotFound
 import scala.collection.Factory
 
+@implicitNotFound(
+  """ducktape needs an instance of either Transformer.Mode.Accumulating[F] or Transformer.Mode.FailFast[F] in implicit scope to infer the wrapper type F and determine the mode of fallible transformations.
+
+For example, if you want your fallible transformations to accumulate errors and to return an Either[List[String], A] for some type A you can do this:
+
+private given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+"""
+)
 sealed trait Mode[F[+x]] {
   def pure[A](value: A): F[A]
   def map[A, B](fa: F[A], f: A => B): F[B]

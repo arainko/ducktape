@@ -1,10 +1,10 @@
 package io.github.arainko.ducktape.fallible.accumulating
 
-import io.github.arainko.ducktape.DucktapeSuite
-import io.github.arainko.ducktape.Transformer
-import io.github.arainko.ducktape.fallible.model.*
-import scala.collection.Factory
 import io.github.arainko.ducktape.fallible.Mode.Accumulating
+import io.github.arainko.ducktape.fallible.model.*
+import io.github.arainko.ducktape.{ DucktapeSuite, Transformer }
+
+import scala.collection.Factory
 
 class NonDerivedInstanceSuite extends DucktapeSuite {
 

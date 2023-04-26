@@ -17,4 +17,3 @@ object Conference {
   object City extends NewtypeValidated[String](MaxSize(20, "Conference.City"))
   export City.Type as City
 }
-

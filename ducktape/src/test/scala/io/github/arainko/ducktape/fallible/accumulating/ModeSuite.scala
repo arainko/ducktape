@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape.fallible.accumulating
 
-import io.github.arainko.ducktape.DucktapeSuite
-import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.{ DucktapeSuite, Transformer }
 
 class ModeSuite extends DucktapeSuite {
   private val support = Transformer.Mode.Accumulating.either[String, List]

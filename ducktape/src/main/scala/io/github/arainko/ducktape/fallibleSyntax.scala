@@ -1,19 +1,17 @@
 package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.builder.*
+import io.github.arainko.ducktape.fallible.FallibleTransformer
 import io.github.arainko.ducktape.function.*
-import io.github.arainko.ducktape.internal.macros.Transformations
+import io.github.arainko.ducktape.internal.macros.{ Errors, Transformations }
 
 import scala.annotation.implicitNotFound
 import scala.compiletime.*
 import scala.deriving.Mirror
-import io.github.arainko.ducktape.fallible.FallibleTransformer
 
-extension [F[+x], Source](
-  value: Source
-)(using @implicitNotFound("MESSAGE MESSAGE") F: Transformer.Mode[F]) {
+extension [F[+x], Source](value: Source)(using F: Transformer.Mode[F]) {
 
-  def fallibleTo[Dest](using transformer: FallibleTransformer[F, Source, Dest]): F[Dest] =
+  inline def fallibleTo[Dest](using transformer: FallibleTransformer[F, Source, Dest]): F[Dest] =
     transformer.transform(value)
 
   inline def fallibleVia[Func](inline function: Func)(using
@@ -24,6 +22,8 @@ extension [F[+x], Source](
         Transformations.failFastVia[F, Source, Func](function)(value)
       case given fallible.Mode.Accumulating[F] =>
         Transformations.accumulatingVia[F, Source, Func](function)(value)
+      case other =>
+        Errors.cannotDetermineTransformationMode
     }
 
 }
