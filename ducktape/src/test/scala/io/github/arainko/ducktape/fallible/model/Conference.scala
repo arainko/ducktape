@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape.fallible.model
 
-import java.time.LocalDate
 import java.util.UUID
 
 final case class Conference(id: Conference.Id, info: Conference.Info, talks: Vector[Talk])

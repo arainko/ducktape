@@ -7,7 +7,6 @@ import io.github.arainko.ducktape.model.*
 import munit.FunSuite
 
 import scala.compiletime.testing.*
-import scala.deriving.Mirror
 
 object DerivedTransformerSuite {
 // If these are declared inside their tests the compiler crashes 🤔

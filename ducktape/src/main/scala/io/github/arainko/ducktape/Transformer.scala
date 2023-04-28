@@ -3,8 +3,7 @@ package io.github.arainko.ducktape
 import io.github.arainko.ducktape.builder.*
 import io.github.arainko.ducktape.internal.macros.*
 
-import scala.collection.{ BuildFrom, Factory }
-import scala.compiletime.*
+import scala.collection.Factory
 import scala.deriving.Mirror
 
 @FunctionalInterface

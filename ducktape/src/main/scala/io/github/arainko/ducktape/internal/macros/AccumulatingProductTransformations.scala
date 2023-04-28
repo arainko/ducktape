@@ -1,15 +1,11 @@
 package io.github.arainko.ducktape.internal.macros
 
 import io.github.arainko.ducktape.fallible.{ FallibleTransformer, Mode }
-import io.github.arainko.ducktape.function.FunctionMirror
 import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.internal.util.NonEmptyList
 import io.github.arainko.ducktape.{ BuilderConfig, FallibleBuilderConfig, Transformer }
 
-import scala.annotation.tailrec
-import scala.deriving.Mirror
 import scala.quoted.*
-import scala.util.chaining.*
 
 private[ducktape] object AccumulatingProductTransformations {
   export fallibleTransformations.{ transform, transformConfigured, via, viaConfigured }

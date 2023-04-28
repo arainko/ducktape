@@ -3,8 +3,6 @@ package io.github.arainko.ducktape.internal.macros
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.fallible.Mode
 import io.github.arainko.ducktape.function.*
-import io.github.arainko.ducktape.internal.macros.{ CoproductTransformations, LiftTransformation }
-import io.github.arainko.ducktape.internal.modules.*
 
 import scala.deriving.Mirror
 import scala.quoted.*

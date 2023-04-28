@@ -1,10 +1,8 @@
 package io.github.arainko.ducktape.total.builder
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.internal.macros.DebugMacros
 
 import scala.annotation.nowarn
-import scala.deriving.Mirror
 
 class AppliedBuilderSuite extends DucktapeSuite {
   import AppliedBuilderSuite.*
@@ -130,7 +128,10 @@ class AppliedBuilderSuite extends DucktapeSuite {
   }
 
   test("Field.allMatching reports a compiletime failure when none of the fields match") {
+    @nowarn("msg=unused local definition")
     final case class Source(int: Int, str: String, list: List[String])
+
+    @nowarn("msg=unused local definition")
     final case class FieldSource(int: Long, str: CharSequence, list: Vector[String])
 
     assertFailsToCompileWith {

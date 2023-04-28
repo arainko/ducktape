@@ -4,7 +4,6 @@ import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.fallible.{ FallibleTransformer, Mode }
 import io.github.arainko.ducktape.internal.macros.*
 
-import scala.compiletime.*
 import scala.deriving.Mirror
 
 final class DefinitionBuilder[Source, Dest] {

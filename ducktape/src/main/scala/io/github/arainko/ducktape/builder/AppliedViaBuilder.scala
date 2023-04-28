@@ -6,7 +6,6 @@ import io.github.arainko.ducktape.fallible.Mode.{ Accumulating, FailFast }
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.macros.*
 
-import scala.compiletime.*
 import scala.deriving.Mirror
 
 final class AppliedViaBuilder[Source, Dest, Func, ArgSelector <: FunctionArguments] private (

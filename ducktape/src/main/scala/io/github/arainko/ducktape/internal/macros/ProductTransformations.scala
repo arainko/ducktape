@@ -2,7 +2,6 @@ package io.github.arainko.ducktape.internal.macros
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.function.*
-import io.github.arainko.ducktape.internal.macros.LiftTransformation
 import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.*
 import io.github.arainko.ducktape.internal.modules.*
 

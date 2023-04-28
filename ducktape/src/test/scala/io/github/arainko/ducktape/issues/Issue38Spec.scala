@@ -1,7 +1,8 @@
 package io.github.arainko.ducktape.issues
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.internal.macros.*
+
+import scala.annotation.nowarn
 
 // https://github.com/arainko/ducktape/issues/38
 class Issue38Spec extends DucktapeSuite {
@@ -28,6 +29,7 @@ class Issue38Spec extends DucktapeSuite {
   }
 
   test("Field.default fails when a field doesn't have a default value") {
+    @nowarn("msg=unused local definition")
     val testClass = TestClass("str", 1)
 
     assertFailsToCompileWith {
@@ -42,6 +44,7 @@ class Issue38Spec extends DucktapeSuite {
   }
 
   test("Field.default fails when the default doesn't match the expected type") {
+    @nowarn("msg=unused local definition")
     val testClass = TestClass("str", 1)
 
     assertFailsToCompileWith {

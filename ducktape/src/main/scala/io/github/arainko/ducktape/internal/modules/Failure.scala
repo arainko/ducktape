@@ -1,7 +1,5 @@
 package io.github.arainko.ducktape.internal.modules
 
-import io.github.arainko.ducktape.Transformer
-
 import scala.quoted.*
 
 private[ducktape] sealed trait Failure {

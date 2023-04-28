@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape.internal.macros
 
 import io.github.arainko.ducktape.function.*
-import io.github.arainko.ducktape.internal.macros.FunctionMacros
 
 private[ducktape] object Functions {
   transparent inline def deriveMirror[Func]: FunctionMirror[Func] = ${ FunctionMacros.deriveMirror[Func] }

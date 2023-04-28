@@ -1,12 +1,9 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.builder.*
 import io.github.arainko.ducktape.fallible.FallibleTransformer
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.macros.{ Errors, Transformations }
 
-import scala.annotation.implicitNotFound
-import scala.compiletime.*
 import scala.deriving.Mirror
 
 extension [F[+x], Source](value: Source)(using F: Transformer.Mode[F]) {

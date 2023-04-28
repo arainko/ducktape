@@ -2,9 +2,7 @@ package io.github.arainko.ducktape.fallible.accumulating
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.fallible.model.*
-import io.github.arainko.ducktape.fallible.model.basic.{ CreateConference, CreateTalk, UpdateTalk }
-
-import java.time.LocalDate
+import io.github.arainko.ducktape.fallible.model.basic.CreateTalk
 
 class DerivedInstanceSuite extends DucktapeSuite {
 

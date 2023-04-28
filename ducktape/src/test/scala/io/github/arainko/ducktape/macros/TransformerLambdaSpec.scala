@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape.macros
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.macros.TransformerLambdaChecker
 import io.github.arainko.ducktape.model.*
 
 class TransformerLambdaSpec extends DucktapeSuite {
