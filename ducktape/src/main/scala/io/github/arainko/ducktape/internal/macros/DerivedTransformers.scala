@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.internal.macros
 
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.fallible.{ FallibleTransformer, Mode }
 import io.github.arainko.ducktape.internal.macros.{ CoproductTransformations, ProductTransformations }
 import io.github.arainko.ducktape.internal.modules.*
 
@@ -41,4 +42,30 @@ private[ducktape] object DerivedTransformers {
 
   def deriveFromAnyValTransformerMacro[Source: Type, Dest: Type](using Quotes): Expr[Transformer[Source, Dest]] =
     '{ source => ${ ProductTransformations.transformFromAnyVal('source) } }
+
+  inline def failFastProduct[F[+x], Source, Dest](using
+    F: Mode.FailFast[F],
+    Source: Mirror.ProductOf[Source],
+    Dest: Mirror.ProductOf[Dest]
+  ): FallibleTransformer[F, Source, Dest] = ${ deriveFailFastProductTransformerMacro[F, Source, Dest]('F, 'Source, 'Dest) }
+
+  def deriveFailFastProductTransformerMacro[F[+x]: Type, Source: Type, Dest: Type](
+    F: Expr[Mode.FailFast[F]],
+    Source: Expr[Mirror.ProductOf[Source]],
+    Dest: Expr[Mirror.ProductOf[Dest]]
+  )(using Quotes): Expr[FallibleTransformer[F, Source, Dest]] =
+    '{ source => ${ FailFastProductTransformations.transform[F, Source, Dest](Source, Dest, F, 'source) } }
+
+  inline def accumulatingProduct[F[+x], Source, Dest](using
+    F: Mode.Accumulating[F],
+    Source: Mirror.ProductOf[Source],
+    Dest: Mirror.ProductOf[Dest]
+  ): FallibleTransformer[F, Source, Dest] = ${ deriveAccumulatingProductTransformerMacro[F, Source, Dest]('F, 'Source, 'Dest) }
+
+  def deriveAccumulatingProductTransformerMacro[F[+x]: Type, Source: Type, Dest: Type](
+    F: Expr[Mode.Accumulating[F]],
+    Source: Expr[Mirror.ProductOf[Source]],
+    Dest: Expr[Mirror.ProductOf[Dest]]
+  )(using Quotes): Expr[FallibleTransformer[F, Source, Dest]] =
+    '{ source => ${ AccumulatingProductTransformations.transform[F, Source, Dest](Source, Dest, F, 'source) } }
 }

@@ -13,6 +13,8 @@ trait Transformer[Source, Dest] {
 }
 
 object Transformer {
+  export fallible.{ FallibleTransformer as Fallible, Mode }
+
   def apply[Source, Dest](using transformer: Transformer[Source, Dest]): Transformer[Source, Dest] = transformer
 
   def define[Source, Dest]: DefinitionBuilder[Source, Dest] = DefinitionBuilder[Source, Dest]

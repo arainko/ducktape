@@ -12,7 +12,7 @@ libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.5"
 ```
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
 
-### Examples
+### Total transformations - examples
 
 #### 1. *Case class to case class*
 
@@ -351,13 +351,13 @@ val definedViaTransformer =
   Transformer
     .defineVia[TestClass](method)
     .build(Arg.const(_.additionalArg, List("const")))
-// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp6$$Lambda$10316/0x00000008029ac5e8@1022617
+// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$22627/0x0000000104f25840@74a678ab
 
 val definedTransformer =
   Transformer
     .define[TestClass, TestClassWithAdditionalList]   
     .build(Field.const(_.additionalArg, List("const")))
-// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$38065/0x0000000803db5678@3d1b49c6
+// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$22628/0x0000000104f25c40@52654e16
 
 val transformedVia = definedViaTransformer.transform(testClass)
 // transformedVia: TestClassWithAdditionalList = TestClassWithAdditionalList(
@@ -398,6 +398,485 @@ Rec("1", Some(Rec("2", Some(Rec("3", None))))).to[Rec[Option[String]]]
 // )
 ```
 
+### Fallible transfomations - examples
+Sometimes ordinary field mappings just do not cut it, more often than not our domain model's constructors are hidden behind a safe factory method, eg.:
+
+```scala
+import io.github.arainko.ducktape.*
+
+final case class ValidatedPerson private (name: String, age: Int)
+
+object ValidatedPerson {
+  def create(name: String, age: Int): Either[String, ValidatedPerson] =
+    for {
+      validatedName <- Either.cond(!name.isBlank, name, "Name should not be blank")
+      validatedAge  <- Either.cond(age > 0, age, "Age should be positive")
+    } yield ValidatedPerson(validatedName, validatedAge)
+}
+```
+
+The `via` method expansion mechanism has us covered in the most straight-forward of use cases where there are no nested fallible transformations:
+
+```scala
+final case class UnvalidatedPerson(name: String, age: Int, socialSecurityNo: String)
+
+val unvalidatedPerson = UnvalidatedPerson("ValidName", -1, "SSN")
+// unvalidatedPerson: UnvalidatedPerson = UnvalidatedPerson(
+//   name = "ValidName",
+//   age = -1,
+//   socialSecurityNo = "SSN"
+// )
+
+val transformed = unvalidatedPerson.via(ValidatedPerson.create)
+// transformed: Either[String, ValidatedPerson] = Left(
+//   value = "Age should be positive"
+// )
+```
+
+But this quickly falls apart when nested transformations are introduced and we're pretty much back to square one where we're on our own to write the boilerplate.
+
+That's where `Fallible Transformers` and their modes come in: 
+* `Transformer.Mode.Accumulating` for error accumulation,
+* `Transformer.Mode.FailFast` for the cases where we just want to bail at the very first sight of trouble.
+
+Let's look at the definition of all of these:
+
+#### Definition of `FallibleTransformer` aka `Transformer.Fallible` and `Transformer.Mode`
+
+```scala
+trait FallibleTransformer[F[+x], Source, Dest] {
+  def transform(value: Source): F[Dest]
+}
+```
+So a `Fallible` transformer takes a `Source` and gives back a `Dest` wrapped in an `F` where `F` is the wrapper type for our transformations eg. if `F[+x]` = `Either[List[String], x]` then the `transform` method will return an `Either[List[String], Dest]`.
+
+```scala
+sealed trait Mode[F[+x]] {
+  def pure[A](value: A): F[A]
+  def map[A, B](fa: F[A], f: A => B): F[B]
+  def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](collection: AColl[A])(using
+    transformer: FallibleTransformer[F, A, B],
+    factory: Factory[B, BColl[B]]
+  ): F[BColl[B]]
+}
+```
+
+Moving on to `Transformer.Mode`, what exactly is it and why do we need it? So a `Mode[F]` is typeclass that gives us two bits of information:
+* a hint for the derivation mechanism which transformation mode to use (hence the name!)
+* some operations on the abstract `F` wrapper type, namely:
+  * `pure` is for wrapping arbitrary values into `F`, eg. if `F[+x] = Either[List[String], x]` then calling `pure` would involve just wrapping the value in a `Right.apply` call.
+  * `map` is for operating on the wrapped values, eg. if we find ourselves with a `F[Int]` in hand and we want to transform the value 'inside' to a `String` we can call `.map(_.toString)` to yield a `F[String]`
+  * `traverseCollection` is for the cases where we end up with eg. a `List[F[String]]` and we want to transform that into a `F[List[String]]` according to the rules of the `F` type wrapper and not blow up the stack in the process
+
+As mentioned earlier, `Modes` come in two flavors - one for error accumulating transformations (`Transformer.Mode.Accumulating[F]`) and one for fail fast transformations (`Transformer.Mode.FailFast[F]`):
+
+```scala
+object Mode {
+  trait Accumulating[F[+x]] extends Mode[F] {
+    def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
+  }
+
+  trait FailFast[F[+x]] extends Mode[F] {
+    def flatMap[A, B](fa: F[A], f: A => F[B]): F[B]
+  }
+}
+```
+
+Each one of these exposes one operation that dictates its approach to errors, `flatMap` entails a dependency between fallible transformations so if we chain multiple `flatMaps` together our transformation will stop at the very first error, contrary to this `Transformer.Mode.Accumulating` exposes a `product` operation that given two independent transformations wrapped in `F` gives us back a tuple wrapped in an `F`, what that means is that each one of the transformations is independent from each other so we're able to accumulate all of the errors produced by these.
+
+For accumulating transformations `ducktape` provides instances for `Either` with any subtype of `Iterable` on the left side, so that eg. `Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]]` is available out of the box.
+
+For fail fast transformations instances for `Option` and `Either` are avaiable out of the box.
+
+#### Automatic fallible transformations
+
+Now for the meat and potatoes of `Fallible Transformers`. To make use of the derivation mechanism that `ducktape` provides we should strive for our model to be modeled in a specific way - with a new nominal type per each validated field, which comes down to... Newtypes!
+
+Let's define a minimalist newtype abstraction that will also do validation (this is a one-time effort that can easily be extracted to a library):
+
+```scala
+abstract class NewtypeValidated[A](pred: A => Boolean, errorMessage: String) {
+  opaque type Type = A
+
+  protected def unsafe(value: A): Type = value
+
+  def make(value: A): Either[String, Type] = Either.cond(pred(value), value, errorMessage)
+
+  def makeAccumulating(value: A): Either[List[String], Type] = 
+    make(value).left.map(_ :: Nil)
+
+  extension (self: Type) {
+    def value: A = self
+  }
+
+  // these instances will be available in the implicit scope of `Type` (that is, our newtype)
+  given accumulatingWrappingTransformer: Transformer.Fallible[[a] =>> Either[List[String], a], A, Type] = makeAccumulating(_)
+
+  given failFastWrappingTransformer: Transformer.Fallible[[a] =>> Either[String, a], A, Type] = make(_)
+
+  given unwrappingTransformer: Transformer[Type, A] = _.value
+
+}
+```
+
+Now let's get back to the definition of `ValidatedPerson` and tweak it a little:
+
+```scala
+final case class ValidatedPerson(name: ValidatedPerson.Name, age: ValidatedPerson.Age, socialSecurityNo: ValidatedPerson.SSN)
+
+object ValidatedPerson {
+  object Name extends NewtypeValidated[String](str => !str.isBlank, "Name should not be blank!")
+  export Name.Type as Name
+
+  object Age extends NewtypeValidated[Int](int => int > 0, "Age should be positive!")
+  export Age.Type as Age
+
+  object SSN extends NewtypeValidated[String](str => str.length > 5, "SSN should be longer than 5!")
+  export SSN.Type as SSN
+
+}
+```
+
+We introduce a newtype for each field, this way we can keep our invariants at compiletime and also let `ducktape` do its thing.
+
+```scala
+// this should trip up our validation
+val bad = UnvalidatedPerson(name = "", age = -1, socialSecurityNo = "SOCIALNO")
+// bad: UnvalidatedPerson = UnvalidatedPerson(
+//   name = "",
+//   age = -1,
+//   socialSecurityNo = "SOCIALNO"
+// )
+
+// this one should pass
+val good = UnvalidatedPerson(name = "ValidName", age = 24, socialSecurityNo = "SOCIALNO")
+// good: UnvalidatedPerson = UnvalidatedPerson(
+//   name = "ValidName",
+//   age = 24,
+//   socialSecurityNo = "SOCIALNO"
+// )
+```
+
+Instances of `Transformer.Fallible` wrapped in some type `F` are derived automatically for case classes given that a `Transformer.Mode.Accumulating` instance exists for `F` and all of the fields of the source type have a corresponding counterpart in the destination type and each one of them has an instance of either `Transformer.Fallible` or a total `Transformer` in scope.
+
+```scala
+given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+
+bad.fallibleTo[ValidatedPerson]
+// res11: Either[List[String], ValidatedPerson] = Left(
+//   value = List("Name should not be blank!", "Age should be positive!")
+// )
+good.fallibleTo[ValidatedPerson]
+// res12: Either[List[String], ValidatedPerson] = Right(
+//   value = ValidatedPerson(
+//     name = "ValidName",
+//     age = 24,
+//     socialSecurityNo = "SOCIALNO"
+//   )
+// )
+```
+
+and the generated code looks like this:
+
+``` scala 
+  {
+    val transformer$proxy3
+      : FallibleTransformer[[A >: Nothing <: Any] =>> Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = {
+      val Dest$proxy3: Product {
+        type MirroredMonoType >: ValidatedPerson <: ValidatedPerson
+        type MirroredType >: ValidatedPerson <: ValidatedPerson
+        type MirroredLabel >: "ValidatedPerson" <: "ValidatedPerson"
+        type MirroredElemTypes >: *:[Name, *:[Age, *:[SSN, EmptyTuple]]] <: *:[Name, *:[Age, *:[SSN, EmptyTuple]]]
+        type MirroredElemLabels >: *:["name", *:["age", *:["socialSecurityNo", EmptyTuple]]] <: *:[
+          "name",
+          *:["age", *:["socialSecurityNo", EmptyTuple]]
+        ]
+      } = ValidatedPerson.$asInstanceOf$[
+        Product {
+          type MirroredMonoType >: ValidatedPerson <: ValidatedPerson
+          type MirroredType >: ValidatedPerson <: ValidatedPerson
+          type MirroredLabel >: "ValidatedPerson" <: "ValidatedPerson"
+          type MirroredElemTypes >: *:[Name, *:[Age, *:[SSN, EmptyTuple]]] <: *:[Name, *:[Age, *:[SSN, EmptyTuple]]]
+          type MirroredElemLabels >: *:["name", *:["age", *:["socialSecurityNo", EmptyTuple]]] <: *:[
+            "name",
+            *:["age", *:["socialSecurityNo", EmptyTuple]]
+          ]
+        }
+      ]
+
+      ((
+        (source: UnvalidatedPerson) =>
+          given_Accumulating_Either.map[Tuple2[Tuple2[Type, Type], Type], ValidatedPerson](
+            given_Accumulating_Either.product[Tuple2[Type, Type], Type](
+              given_Accumulating_Either.product[Type, Type](
+                ValidatedPerson.Name.accumulatingWrappingTransformer.transform(source.name),
+                ValidatedPerson.Age.accumulatingWrappingTransformer.transform(source.age)
+              ),
+              ValidatedPerson.SSN.accumulatingWrappingTransformer.transform(source.socialSecurityNo)
+            ),
+            (value: Tuple2[Tuple2[Type, Type], Type]) =>
+              value match {
+                case Tuple2(Tuple2(name, age), socialSecurityNo) =>
+                  new ValidatedPerson(name = name, age = age, socialSecurityNo = socialSecurityNo)
+                case x =>
+                  throw new MatchError(x)
+              }
+          )
+      ): FallibleTransformer[
+        [A >: Nothing <: Any] =>> Either[List[String], A],
+        UnvalidatedPerson,
+        ValidatedPerson
+      ]): FallibleTransformer[[A >: Nothing <: Any] =>> Either[List[String], A], UnvalidatedPerson, ValidatedPerson]
+    }
+
+    transformer$proxy3.transform(bad): Either[List[String], ValidatedPerson]
+  }
+```
+
+Same goes for instances that do fail fast transformations (you need `Transformer.Mode.FailFast[F]` in scope in this case)
+
+```scala
+given Transformer.Mode.FailFast[[A] =>> Either[String, A]] = 
+  Transformer.Mode.FailFast.either[String]
+
+bad.fallibleTo[ValidatedPerson]
+// res14: Either[String, ValidatedPerson] = Left(
+//   value = "Name should not be blank!"
+// )
+good.fallibleTo[ValidatedPerson]
+// res15: Either[String, ValidatedPerson] = Right(
+//   value = ValidatedPerson(
+//     name = "ValidName",
+//     age = 24,
+//     socialSecurityNo = "SOCIALNO"
+//   )
+// )
+```
+
+and the generated code looks like this:
+``` scala 
+  {
+    val transformer$proxy6
+      : FallibleTransformer[[A >: Nothing <: Any] =>> Either[String, A], UnvalidatedPerson, ValidatedPerson] = {
+      val Dest$proxy6: Product {
+        type MirroredMonoType >: ValidatedPerson <: ValidatedPerson
+        type MirroredType >: ValidatedPerson <: ValidatedPerson
+        type MirroredLabel >: "ValidatedPerson" <: "ValidatedPerson"
+        type MirroredElemTypes >: *:[Name, *:[Age, *:[SSN, EmptyTuple]]] <: *:[Name, *:[Age, *:[SSN, EmptyTuple]]]
+        type MirroredElemLabels >: *:["name", *:["age", *:["socialSecurityNo", EmptyTuple]]] <: *:[
+          "name",
+          *:["age", *:["socialSecurityNo", EmptyTuple]]
+        ]
+      } = ValidatedPerson.$asInstanceOf$[
+        Product {
+          type MirroredMonoType >: ValidatedPerson <: ValidatedPerson
+          type MirroredType >: ValidatedPerson <: ValidatedPerson
+          type MirroredLabel >: "ValidatedPerson" <: "ValidatedPerson"
+          type MirroredElemTypes >: *:[Name, *:[Age, *:[SSN, EmptyTuple]]] <: *:[Name, *:[Age, *:[SSN, EmptyTuple]]]
+          type MirroredElemLabels >: *:["name", *:["age", *:["socialSecurityNo", EmptyTuple]]] <: *:[
+            "name",
+            *:["age", *:["socialSecurityNo", EmptyTuple]]
+          ]
+        }
+      ]
+
+      ((
+        (source: UnvalidatedPerson) =>
+          given_FailFast_Either.flatMap[Type, ValidatedPerson](
+            ValidatedPerson.Name.failFastWrappingTransformer.transform(source.name),
+            (name: Type) =>
+              given_FailFast_Either.flatMap[Type, ValidatedPerson](
+                ValidatedPerson.Age.failFastWrappingTransformer.transform(source.age),
+                (age: Type) =>
+                  given_FailFast_Either.map[Type, ValidatedPerson](
+                    ValidatedPerson.SSN.failFastWrappingTransformer.transform(source.socialSecurityNo),
+                    (socialSecurityNo: Type) => new ValidatedPerson(name = name, age = age, socialSecurityNo = socialSecurityNo)
+                  )
+              )
+          )
+      ): FallibleTransformer[
+        [A >: Nothing <: Any] =>> Either[String, A],
+        UnvalidatedPerson,
+        ValidatedPerson
+      ]): FallibleTransformer[[A >: Nothing <: Any] =>> Either[String, A], UnvalidatedPerson, ValidatedPerson]
+    }
+
+    transformer$proxy6.transform(bad): Either[String, ValidatedPerson]
+  }
+```
+
+#### Configured fallible transformations
+Fallible transformations support a superset of total transformations' configuration options.
+
+##### `Field` config
+All of these work the very same way they do in total transformations:
+* `Field.const`
+* `Field.computed`
+* `Field.renamed`
+* `Field.allMatching`
+* `Field.default`
+
+plus two fallible-specific config options:
+* `Field.fallibleConst`
+* `Field.fallibleComputed`
+
+which work like so for `Accumulating` transformations:
+```scala
+given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+
+bad
+  .into[ValidatedPerson]
+  .fallible
+  .transform(
+    Field.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("ConstValidName")),
+    Field.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.makeAccumulating(unvPerson.age + 100))
+  )
+// res17: Either[List[String], ValidatedPerson] = Right(
+//   value = ValidatedPerson(
+//     name = "ConstValidName",
+//     age = 99,
+//     socialSecurityNo = "SOCIALNO"
+//   )
+// )
+```
+
+and for `FailFast` transformations:
+```scala
+given Transformer.Mode.FailFast[[A] =>> Either[String, A]] = 
+  Transformer.Mode.FailFast.either[String]
+
+bad
+  .into[ValidatedPerson]
+  .fallible
+  .transform(
+    Field.fallibleConst(_.name, ValidatedPerson.Name.make("ConstValidName")),
+    Field.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.make(unvPerson.age + 100))
+  )
+// res18: Either[String, ValidatedPerson] = Right(
+//   value = ValidatedPerson(
+//     name = "ConstValidName",
+//     age = 99,
+//     socialSecurityNo = "SOCIALNO"
+//   )
+// )
+```
+
+##### `Arg` config
+All of these work the very same way they do in total transformations:
+* `Arg.const`
+* `Arg.computed`
+* `Arg.renamed`
+
+plus two fallible-specific config options:
+* `Arg.fallibleConst`
+* `Arg.fallibleComputed`
+
+which work like so for `Accumulating` transformations:
+```scala
+given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+
+bad
+  .intoVia(ValidatedPerson.apply)
+  .fallible
+  .transform(
+    Arg.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("ConstValidName")),
+    Arg.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.makeAccumulating(unvPerson.age + 100))
+  )
+// res19: Either[List[String], ValidatedPerson] = Right(
+//   value = ValidatedPerson(
+//     name = "ConstValidName",
+//     age = 99,
+//     socialSecurityNo = "SOCIALNO"
+//   )
+// )
+```
+
+and for `FailFast` transformations:
+```scala
+given Transformer.Mode.FailFast[[A] =>> Either[String, A]] = 
+  Transformer.Mode.FailFast.either[String]
+
+bad
+  .intoVia(ValidatedPerson.apply)
+  .fallible
+  .transform(
+    Arg.fallibleConst(_.name, ValidatedPerson.Name.make("ConstValidName")),
+    Arg.fallibleComputed(_.age, unvPerson => ValidatedPerson.Age.make(unvPerson.age + 100))
+  )
+// res20: Either[String, ValidatedPerson] = Right(
+//   value = ValidatedPerson(
+//     name = "ConstValidName",
+//     age = 99,
+//     socialSecurityNo = "SOCIALNO"
+//   )
+// )
+```
+
+#### Building custom instances of fallible transformers
+Life is not always lolipops and crisps and sometimes you need to write a typeclass instance by hand. Worry not though, just like in the case of total transformers, we can easily define custom instances with the help of the configuration DSL (which, let's write it down once again, is a superset of total transformers' DSL).
+
+By all means go wild with the configuration options, I'm too lazy to write them all out here again.
+```scala
+given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+
+val customAccumulating =
+  Transformer
+    .define[UnvalidatedPerson, ValidatedPerson]
+    .fallible
+    .build(
+      Field.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
+    )
+// customAccumulating: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$45@3a3fc11
+```
+
+```scala
+given Transformer.Mode.FailFast[[A] =>> Either[String, A]] = 
+  Transformer.Mode.FailFast.either[String]
+
+val customFailFast =
+  Transformer
+    .define[UnvalidatedPerson, ValidatedPerson]
+    .fallible
+    .build(
+      Field.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
+    )
+// customFailFast: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$47@6f4a05b7
+```
+
+And for the ones that are not keen on writing out method arguments:
+```scala
+given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
+  Transformer.Mode.Accumulating.either[String, List]
+
+val customAccumulatingVia =
+  Transformer
+    .defineVia[UnvalidatedPerson](ValidatedPerson.apply)
+    .fallible
+    .build(
+      Arg.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
+    )
+// customAccumulatingVia: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$49@2ba817e1
+```
+
+```scala
+given Transformer.Mode.FailFast[[A] =>> Either[String, A]] = 
+  Transformer.Mode.FailFast.either[String]
+
+val customFailFastVia =
+  Transformer
+    .defineVia[UnvalidatedPerson](ValidatedPerson.apply)
+    .fallible
+    .build(
+      Arg.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
+    )
+// customFailFastVia: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$51@77ca5d27
+```
+
+
 ### A look at the generated code
 
 To inspect the code that is generated you can use `Transformer.Debug.showCode`, this method will print 
@@ -432,7 +911,7 @@ person.to[Person2]
 expands to:
 ``` scala 
   to[Person](person)[Person2](
-    inline$make$i1[Person, Person2](ForProduct)(
+    inline$make$i1[Person, Person2](Transformer.ForProduct)(
       (
         (source: Person) =>
           new Person2(
@@ -469,21 +948,21 @@ expands to:
     val AppliedBuilder_this: AppliedBuilder[Person, Person2] = into[Person](person)[Person2]
 
     {
-      val source$proxy12: Person = AppliedBuilder_this.inline$appliedTo
+      val source$proxy17: Person = AppliedBuilder_this.inline$appliedTo
 
       {
         val inside$2: Inside2 = new Inside2(
-          int = source$proxy12.inside.int,
-          str = source$proxy12.inside.str,
+          int = source$proxy17.inside.int,
+          str = source$proxy17.inside.str,
           inside = Some.apply[EvenMoreInside2](
-            new EvenMoreInside2(str = source$proxy12.inside.inside.str, int = source$proxy12.inside.inside.int)
+            new EvenMoreInside2(str = source$proxy17.inside.inside.str, int = source$proxy17.inside.inside.int)
           )
         )
-        val collectionOfNumbers$2: List[Wrapped[Float]] = source$proxy12.collectionOfNumbers
+        val collectionOfNumbers$2: List[Wrapped[Float]] = source$proxy17.collectionOfNumbers
           .map[Wrapped[Float]]((src: Float) => new Wrapped[Float](src))
           .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])
         val str$2: Some[Wrapped[String]] = Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstString!"))
-        val int$2: Wrapped[Int] = Wrapped.apply[Int](source$proxy12.int.+(100))
+        val int$2: Wrapped[Int] = Wrapped.apply[Int](source$proxy17.int.+(100))
         new Person2(int = int$2, str = str$2, inside = inside$2, collectionOfNumbers = collectionOfNumbers$2)
       }: Person2
     }: Person2
@@ -499,7 +978,7 @@ person.via(Person2.apply)
 expands to:
 ``` scala 
   {
-    val Func$proxy4: FunctionMirror[Function4[Wrapped[Int], Option[Wrapped[String]], Inside2, List[Wrapped[Float]], Person2]] {
+    val Func$proxy7: FunctionMirror[Function4[Wrapped[Int], Option[Wrapped[String]], Inside2, List[Wrapped[Float]], Person2]] {
       type Return >: Person2 <: Person2
     } = FunctionMirror.asInstanceOf[
       FunctionMirror[Function4[Wrapped[Int], Option[Wrapped[String]], Inside2, List[Wrapped[Float]], Person2]] {
@@ -537,7 +1016,7 @@ person
 expands to:
 ``` scala 
   {
-    val x$4$proxy5: FunctionMirror[Function4[Wrapped[Int], Option[Wrapped[String]], Inside2, List[Wrapped[Float]], Person2]] {
+    val x$4$proxy7: FunctionMirror[Function4[Wrapped[Int], Option[Wrapped[String]], Inside2, List[Wrapped[Float]], Person2]] {
       type Return >: Person2 <: Person2
     } = FunctionMirror.asInstanceOf[
       FunctionMirror[Function4[Wrapped[Int], Option[Wrapped[String]], Inside2, List[Wrapped[Float]], Person2]] {
@@ -546,7 +1025,7 @@ expands to:
     ]
     val builder: AppliedViaBuilder[Person, Return, Function4[Wrapped[Int], Option[Wrapped[String]], Inside2, List[
       Wrapped[Float]
-    ], Person2], Nothing] = inline$instance[Person, x$4$proxy5.Return, Function4[Wrapped[Int], Option[
+    ], Person2], Nothing] = inline$instance[Person, x$4$proxy7.Return, Function4[Wrapped[Int], Option[
       Wrapped[String]
     ], Inside2, List[Wrapped[Float]], Person2], Nothing](
       person,
@@ -576,19 +1055,19 @@ expands to:
       ]]
 
     {
-      val source$proxy14: Person = AppliedViaBuilder_this.inline$source
+      val source$proxy19: Person = AppliedViaBuilder_this.inline$source
 
       AppliedViaBuilder_this.inline$function.apply(
-        Wrapped.apply[Int](source$proxy14.int.+(100)),
+        Wrapped.apply[Int](source$proxy19.int.+(100)),
         Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstStr!")),
         new Inside2(
-          int = source$proxy14.inside.int,
-          str = source$proxy14.inside.str,
+          int = source$proxy19.inside.int,
+          str = source$proxy19.inside.str,
           inside = Some.apply[EvenMoreInside2](
-            new EvenMoreInside2(str = source$proxy14.inside.inside.str, int = source$proxy14.inside.inside.int)
+            new EvenMoreInside2(str = source$proxy19.inside.inside.str, int = source$proxy19.inside.inside.int)
           )
         ),
-        source$proxy14.collectionOfNumbers
+        source$proxy19.collectionOfNumbers
           .map[Wrapped[Float]]((src: Float) => new Wrapped[Float](src))
           .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])
       ): Person2

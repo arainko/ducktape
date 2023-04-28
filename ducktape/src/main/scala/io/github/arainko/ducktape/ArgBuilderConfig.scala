@@ -8,6 +8,8 @@ import scala.deriving.Mirror
 
 opaque type ArgBuilderConfig[Source, Dest, ArgSelector <: FunctionArguments] = Unit
 
+opaque type FallibleArgBuilderConfig[F[+x], Source, Dest, ArgSelector <: FunctionArguments] = Unit
+
 object Arg {
 
   @compileTimeOnly("'Arg.const' needs to be erased from the AST with a macro.")
@@ -40,4 +42,23 @@ object Arg {
     ev2: FieldType <:< ArgType
   ): ArgBuilderConfig[Source, Dest, ArgSelector] = throw NotQuotedException("Arg.renamed")
 
+  @compileTimeOnly("'Arg.fallibleConst' needs to be erased from the AST with a macro.")
+  def fallibleConst[F[+x], Source, Dest, ArgType, ActualType, ArgSelector <: FunctionArguments](
+    selector: ArgSelector => ArgType,
+    const: F[ActualType]
+  )(using
+    @implicitNotFound("Arg.fallibleConst is only supported for product types but ${Source} is not a product type.")
+    ev1: Mirror.ProductOf[Source],
+    ev2: ActualType <:< ArgType
+  ): FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] = throw NotQuotedException("Arg.fallibleConst")
+
+  @compileTimeOnly("'Arg.fallibleComputed' needs to be erased from the AST with a macro.")
+  def fallibleComputed[F[+x], Source, Dest, ArgType, ActualType, ArgSelector <: FunctionArguments](
+    selector: ArgSelector => ArgType,
+    f: Source => F[ActualType]
+  )(using
+    @implicitNotFound("Arg.fallibleComputed is only supported for product types but ${Source} is not a product type.")
+    ev1: Mirror.ProductOf[Source],
+    ev2: ActualType <:< ArgType
+  ): FallibleArgBuilderConfig[F, Source, Dest, ArgSelector] = throw NotQuotedException("Arg.computed")
 }

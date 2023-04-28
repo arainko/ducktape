@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.derivation
+package io.github.arainko.ducktape.total.derivation
 
 import io.github.arainko.ducktape.Transformer.ForProduct
 import io.github.arainko.ducktape.*

@@ -1,10 +1,10 @@
-package io.github.arainko.ducktape.builder
+package io.github.arainko.ducktape.total.builder
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.builder.AppliedViaBuilder
-import io.github.arainko.ducktape.builder.AppliedViaBuilderSuite.*
 import io.github.arainko.ducktape.function.FunctionArguments
 import io.github.arainko.ducktape.internal.macros.DebugMacros
+import io.github.arainko.ducktape.total.builder.AppliedViaBuilderSuite.*
 
 class AppliedViaBuilderSuite extends DucktapeSuite {
   private val testClass = TestClass("str", 1)

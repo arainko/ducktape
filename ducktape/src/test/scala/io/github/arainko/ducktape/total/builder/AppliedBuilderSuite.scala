@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.builder
+package io.github.arainko.ducktape.total.builder
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.macros.DebugMacros
@@ -208,16 +208,17 @@ class AppliedBuilderSuite extends DucktapeSuite {
   }
 
   test("When a Case is configured multiple times a warning is emitted") {
+
     assertFailsToCompileWith {
       """
-      MoreCases.Case4
-        .into[LessCases]
+      LessCases.Case1
+        .into[MoreCases]
         .transform(
-          Case.const[MoreCases.Case4.type](LessCases.Case3),
-          Case.const[MoreCases.Case4.type](LessCases.Case3)
+          Case.const[LessCases.Case3.type](MoreCases.Case3),
+          Case.const[LessCases.Case3.type](MoreCases.Case3)
         )
       """
-    }("Case 'io.github.arainko.ducktape.builder.AppliedBuilderSuite.MoreCases.Case4' is configured multiple times")
+    }("Case 'io.github.arainko.ducktape.total.builder.AppliedBuilderSuite.LessCases.Case3' is configured multiple times")
   }
 
 }

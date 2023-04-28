@@ -1,5 +1,7 @@
 package io.github.arainko.ducktape.internal.modules
 
+import io.github.arainko.ducktape.Transformer
+
 import scala.quoted.*
 
 private[ducktape] sealed trait Failure {
@@ -169,6 +171,22 @@ private[ducktape] object Failure {
       |Compiler supplied explanation (may or may not be helpful):
       |$implicitSearchExplanation
       """.stripMargin
+  }
+
+  final case class FallibleTransformerNotFound(
+    wrapperTpe: Type[?],
+    sourceField: Field,
+    destField: Field,
+    implicitSearchExplanation: String
+  ) extends Failure {
+    override def render(using Quotes): String =
+      s"""
+      |No instance of Transformer.Fallible[${wrapperTpe.show}, ${sourceField.tpe.show}, ${destField.tpe.show}] was found.
+      |
+      |Compiler supplied explanation (may or may not be helpful):
+      |$implicitSearchExplanation
+      """.stripMargin
+
   }
 
   extension (tpe: Type[?]) {

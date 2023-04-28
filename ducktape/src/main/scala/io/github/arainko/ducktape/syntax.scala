@@ -5,14 +5,11 @@ import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.macros.*
 import io.github.arainko.ducktape.internal.modules.*
 
+import scala.annotation.experimental
 import scala.deriving.Mirror
 
 extension [Source](value: Source) {
   def into[Dest]: AppliedBuilder[Source, Dest] = AppliedBuilder(value)
-
-  // TODO: Introduce in ducktape 0.2 as a replacement for `.to`, this will break binary compat
-  // inline def transformInto[Dest](using inline transformer: Transformer[Source, Dest]) =
-  //   ${ LiftTransformation.liftTransformation('transformer, 'value) }
 
   def to[Dest](using Transformer[Source, Dest]): Dest = Transformer[Source, Dest].transform(value)
 

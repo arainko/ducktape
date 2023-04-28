@@ -24,7 +24,7 @@ private[ducktape] object ProductTransformations {
 
     val transformerFields = fieldTransformations(sourceValue, Fields.dest.value)
 
-    constructor(TypeRepr.of[Dest])
+    Constructor(TypeRepr.of[Dest])
       .appliedToArgs(transformerFields.toList)
       .asExprOf[Dest]
   }
@@ -45,7 +45,7 @@ private[ducktape] object ProductTransformations {
     val transformedFields = fieldTransformations(sourceValue, nonConfiguredFields.values.toList)
     val configuredFields = fieldConfigurations(materializedConfig, sourceValue)
 
-    constructor(TypeRepr.of[Dest])
+    Constructor(TypeRepr.of[Dest])
       .appliedToArgs(transformedFields ++ configuredFields)
       .asExprOf[Dest]
   }
@@ -116,7 +116,7 @@ private[ducktape] object ProductTransformations {
       tpe.typeSymbol.fieldMembers.headOption
         .getOrElse(report.errorAndAbort(s"Failed to fetch the wrapped field name of ${tpe.show}"))
 
-    accessField(sourceValue, fieldSymbol.name).asExprOf[Dest]
+    sourceValue.accessFieldByName(fieldSymbol.name).asExprOf[Dest]
   }
 
   def transformToAnyVal[Source: Type, Dest: Type](
@@ -124,7 +124,7 @@ private[ducktape] object ProductTransformations {
   )(using Quotes): Expr[Dest] = {
     import quotes.reflect.*
 
-    constructor(TypeRepr.of[Dest])
+    Constructor(TypeRepr.of[Dest])
       .appliedTo(sourceValue.asTerm)
       .asExprOf[Dest]
   }
@@ -159,7 +159,7 @@ private[ducktape] object ProductTransformations {
         val call = cfg match {
           case Product.Const(label, value)       => value
           case Product.Computed(label, function) => '{ $function($sourceValue) }
-          case Product.Renamed(dest, source)     => accessField(sourceValue, source).asExpr
+          case Product.Renamed(dest, source)     => sourceValue.accessFieldByName(source).asExpr
         }
 
         val castedCall = field.tpe match {
@@ -187,30 +187,10 @@ private[ducktape] object ProductTransformations {
             type a
             $transformer: Transformer.Identity[`a`, `a`]
           } =>
-        accessField(sourceValue, source.name)
+        sourceValue.accessField(source)
       case '{ $transformer: Transformer[source, dest] } =>
-        val field = accessField(sourceValue, source.name).asExprOf[source]
+        val field = sourceValue.accessField(source).asExprOf[source]
         LiftTransformation.liftTransformation(transformer, field).asTerm
     }
-  }
-
-  private def accessField(value: Expr[Any], fieldName: String)(using Quotes) = {
-    import quotes.reflect.*
-
-    Select.unique(value.asTerm, fieldName)
-  }
-
-  private def constructor(using Quotes)(tpe: quotes.reflect.TypeRepr): quotes.reflect.Term = {
-    import quotes.reflect.*
-
-    val (repr, constructor, tpeArgs) =
-      tpe match {
-        case AppliedType(repr, reprArguments) => (repr, repr.typeSymbol.primaryConstructor, reprArguments)
-        case notApplied                       => (tpe, tpe.typeSymbol.primaryConstructor, Nil)
-      }
-
-    New(Inferred(repr))
-      .select(constructor)
-      .appliedToTypes(tpeArgs)
   }
 }
