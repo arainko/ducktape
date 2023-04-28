@@ -236,18 +236,15 @@ private[ducktape] object MaterializedConfiguration {
   )(
     extractor: Seq[Expr[Config]] => Seq[MaterializedConfig],
     discriminator: MaterializedConfig => String
-  )(using Quotes) = {
-    import quotes.reflect.*
-
+  )(using Quotes) =
     extractor(Varargs.unapply(config).getOrElse(Failure.emit(Failure.UnsupportedConfig(config, configType))))
       .groupBy(discriminator)
-      .map { (name, configs) =>
+      .map { (_, configs) =>
         if (configs.sizeIs > 1) configs.foreach(cfg => Warning.emit(Warning.ConfiguredRepeatedly(cfg, configType)))
 
         configs.last // keep the last applied field config only
       }
       .toList
-  }
 
   private def accessField(using Quotes)(value: quotes.reflect.Term, field: Field) = {
     import quotes.reflect.*

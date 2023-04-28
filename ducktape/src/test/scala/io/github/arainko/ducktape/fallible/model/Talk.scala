@@ -1,7 +1,5 @@
 package io.github.arainko.ducktape.fallible.model
 
-import java.util.UUID
-
 final case class Talk(name: Talk.Name, elevatorPitch: Talk.ElevatorPitch, presenter: Presenter)
 
 object Talk {

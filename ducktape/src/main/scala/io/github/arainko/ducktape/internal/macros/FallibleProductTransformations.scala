@@ -2,7 +2,6 @@ package io.github.arainko.ducktape.internal.macros
 
 import io.github.arainko.ducktape.function.FunctionArguments
 import io.github.arainko.ducktape.internal.modules.*
-import io.github.arainko.ducktape.internal.util.*
 import io.github.arainko.ducktape.{ Field as _, * }
 
 import scala.deriving.Mirror
@@ -19,8 +18,6 @@ abstract class FallibleProductTransformations[
     F: Expr[Support[F]],
     sourceValue: Expr[Source]
   )(using Quotes): Expr[F[Dest]] = {
-    import quotes.reflect.*
-
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromMirror(Dest)
 
@@ -34,8 +31,6 @@ abstract class FallibleProductTransformations[
     config: Expr[Seq[FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]]],
     sourceValue: Expr[Source]
   )(using Quotes): Expr[F[Dest]] = {
-    import quotes.reflect.*
-
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromMirror(Dest)
 
@@ -61,7 +56,7 @@ abstract class FallibleProductTransformations[
 
         createTransformation[F, Source, Dest](F, sourceValue, Fields.dest.value, Nil, Nil) { unwrappedFields =>
           val rearrangedFields = rearrangeFieldsToDestOrder(unwrappedFields).map(_.value.asTerm)
-          Select.unique(func, "apply").appliedToArgs(rearrangedFields).asExprOf[Dest]
+          Expr.betaReduce(Select.unique(func, "apply").appliedToArgs(rearrangedFields).asExprOf[Dest])
         }
       case other => report.errorAndAbort(s"'via' is only supported on eta-expanded methods!")
     }
@@ -86,7 +81,7 @@ abstract class FallibleProductTransformations[
     createTransformation[F, Source, Dest](F, sourceValue, nonConfiguredFields, unwrappedFields, wrappedFields) {
       unwrappedFields =>
         val rearrangedFields = rearrangeFieldsToDestOrder(unwrappedFields).map(_.value.asTerm)
-        Select.unique(function.asTerm, "apply").appliedToArgs(rearrangedFields).asExprOf[Dest]
+        Expr.betaReduce(Select.unique(function.asTerm, "apply").appliedToArgs(rearrangedFields).asExprOf[Dest])
     }
   }
 
@@ -102,7 +97,6 @@ abstract class FallibleProductTransformations[
     configs: List[MaterializedConfiguration.FallibleProduct[F]],
     sourceValue: Expr[Source]
   )(using Quotes, Fields.Dest): (List[Field.Wrapped[F]], List[Field.Unwrapped]) = {
-    import quotes.reflect.*
     import MaterializedConfiguration.*
 
     val wrappedFields = List.newBuilder[Field.Wrapped[F]]

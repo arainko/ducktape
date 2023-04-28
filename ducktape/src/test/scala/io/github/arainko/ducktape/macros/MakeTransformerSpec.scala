@@ -1,12 +1,8 @@
 package io.github.arainko.ducktape.macros
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.internal.macros.*
-import io.github.arainko.ducktape.macros.MakeTransformerChecker
 import io.github.arainko.ducktape.model.*
 import munit.*
-
-import scala.quoted.*
 
 class MakeTransformerSpec extends DucktapeSuite {
 

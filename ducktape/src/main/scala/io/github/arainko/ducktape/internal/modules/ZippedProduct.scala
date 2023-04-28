@@ -1,12 +1,9 @@
 package io.github.arainko.ducktape.internal.modules
 
-import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.fallible.Mode
-import io.github.arainko.ducktape.internal.macros.*
 import io.github.arainko.ducktape.internal.modules.Field.Unwrapped
 import io.github.arainko.ducktape.internal.util.*
 
-import scala.annotation.tailrec
 import scala.quoted.*
 
 object ZippedProduct {

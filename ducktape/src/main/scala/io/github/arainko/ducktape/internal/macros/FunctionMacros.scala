@@ -3,12 +3,14 @@ package io.github.arainko.ducktape.internal.macros
 import io.github.arainko.ducktape.function.*
 import io.github.arainko.ducktape.internal.modules.*
 
+import scala.annotation.nowarn
 import scala.quoted.*
 
 // Ideally should live in `modules` but due to problems with ProductTransformations and LiftTransformation
 // is kept here for consistency
 private[ducktape] object FunctionMacros {
 
+  @nowarn("msg=unused local definition")
   def deriveMirror[Func: Type](using Quotes): Expr[FunctionMirror[Func]] = {
     import quotes.reflect.*
 
@@ -39,7 +41,7 @@ private[ducktape] object FunctionMacros {
 
     function.asTerm match {
       case func @ FunctionLambda(valDefs, _) =>
-        refine(TypeRepr.of[FunctionArguments], valDefs).asType match {
+        refine(valDefs).asType match {
           case '[IsFuncArgs[args]] => '{ $initial.asInstanceOf[F[args]] }
         }
 
@@ -47,7 +49,7 @@ private[ducktape] object FunctionMacros {
     }
   }
 
-  private def refine(using Quotes)(tpe: quotes.reflect.TypeRepr, valDefs: List[quotes.reflect.ValDef]) = {
+  private def refine(using Quotes)(valDefs: List[quotes.reflect.ValDef]) = {
     import quotes.reflect.*
 
     valDefs.foldLeft(TypeRepr.of[FunctionArguments])((tpe, valDef) => Refinement(tpe, valDef.name, valDef.tpt.tpe))

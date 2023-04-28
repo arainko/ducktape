@@ -3,8 +3,9 @@ package io.github.arainko.ducktape.total.builder
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.builder.AppliedViaBuilder
 import io.github.arainko.ducktape.function.FunctionArguments
-import io.github.arainko.ducktape.internal.macros.DebugMacros
 import io.github.arainko.ducktape.total.builder.AppliedViaBuilderSuite.*
+
+import scala.annotation.nowarn
 
 class AppliedViaBuilderSuite extends DucktapeSuite {
   private val testClass = TestClass("str", 1)
@@ -49,6 +50,7 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
   }
 
   test("When an Arg is configured multiple times a warning is emitted") {
+    @nowarn("msg=unused local definition")
     def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
 
     assertFailsToCompileWith {

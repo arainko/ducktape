@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape.fallible.model
 
-import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.fallible.FallibleTransformer
 
 def AlwaysValid[A]: A => Either[String, Unit] = _ => Right(())

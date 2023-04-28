@@ -1,7 +1,5 @@
 package io.github.arainko.ducktape.internal.util
 
-import scala.NonEmptyTuple
-
 private[ducktape] opaque type NonEmptyList[+A] = ::[A]
 
 private[ducktape] object NonEmptyList {

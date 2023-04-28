@@ -6,7 +6,6 @@ import io.github.arainko.ducktape.internal.modules.Field.{ Unwrapped, Wrapped }
 import io.github.arainko.ducktape.internal.modules.*
 
 import scala.annotation.*
-import scala.deriving.Mirror
 import scala.quoted.*
 import scala.util.chaining.*
 

@@ -1,7 +1,5 @@
 package io.github.arainko.ducktape.internal.modules
 
-import io.github.arainko.ducktape.internal.modules.Fields
-
 private[ducktape] opaque type Suggestion = String
 
 private[ducktape] object Suggestion {

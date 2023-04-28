@@ -4,8 +4,6 @@ import io.github.arainko.ducktape.fallible.Mode.Accumulating
 import io.github.arainko.ducktape.fallible.model.*
 import io.github.arainko.ducktape.{ DucktapeSuite, Transformer }
 
-import scala.collection.Factory
-
 class NonDerivedInstanceSuite extends DucktapeSuite {
 
   private given Accumulating[[A] =>> Either[List[Predef.String], A]] =
