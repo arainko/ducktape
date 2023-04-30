@@ -20,6 +20,7 @@ ThisBuild / mimaBinaryIssueFilters ++= Seq(
   ProblemFilters.exclude[Problem]("io.github.arainko.ducktape.internal.*")
 )
 
+ThisBuild / tlCiReleaseBranches := Seq("master")
 ThisBuild / tlCiScalafixCheck := true
 ThisBuild / tlCiScalafmtCheck := true
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
