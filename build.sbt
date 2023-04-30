@@ -6,10 +6,11 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 ThisBuild / tlBaseVersion := "0.1"
 ThisBuild / organization := "io.github.arainko"
+ThisBuild / organizationName := "arainko"
 ThisBuild / startYear := Some(2023)
 ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
-ThisBuild / tlSonatypeUseLegacyHost := true
+ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / scalaVersion := "3.2.2"
 
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
