@@ -117,7 +117,7 @@ jobs:
 
   publish:
     name: Publish Artifacts
-    if:  github.ref == 'refs/heads/master')
+    if: github.ref == 'refs/heads/master'
     strategy:
       matrix:
         os: [ubuntu-latest]
