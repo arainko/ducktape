@@ -9,7 +9,11 @@ If this project interests you, please drop a 🌟 - these things are worthless b
 ### Installation
 ```scala
 libraryDependencies += "io.github.arainko" %% "ducktape" % "@VERSION@"
+
+// or if you're using Scala.js or Scala Native
+libraryDependencies += "io.github.arainko" %%% "ducktape" % "@VERSION@"
 ```
+
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
 
 ### Total transformations - examples
