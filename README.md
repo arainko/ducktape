@@ -8,8 +8,12 @@ If this project interests you, please drop a 🌟 - these things are worthless b
 
 ### Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.5"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.6"
+
+// or if you're using Scala.js or Scala Native
+libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.1.6"
 ```
+
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
 
 ### Total transformations - examples
@@ -351,13 +355,13 @@ val definedViaTransformer =
   Transformer
     .defineVia[TestClass](method)
     .build(Arg.const(_.additionalArg, List("const")))
-// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$22627/0x0000000104f25840@74a678ab
+// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$14740/0x00000001038ae040@1aa3f2e7
 
 val definedTransformer =
   Transformer
     .define[TestClass, TestClassWithAdditionalList]   
     .build(Field.const(_.additionalArg, List("const")))
-// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$22628/0x0000000104f25c40@52654e16
+// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$14741/0x00000001038ae440@ef9fbf9
 
 val transformedVia = definedViaTransformer.transform(testClass)
 // transformedVia: TestClassWithAdditionalList = TestClassWithAdditionalList(
@@ -830,7 +834,7 @@ val customAccumulating =
     .build(
       Field.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
     )
-// customAccumulating: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$45@3a3fc11
+// customAccumulating: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$45@33d12ba0
 ```
 
 ```scala
@@ -844,7 +848,7 @@ val customFailFast =
     .build(
       Field.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
     )
-// customFailFast: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$47@6f4a05b7
+// customFailFast: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$47@107378dd
 ```
 
 And for the ones that are not keen on writing out method arguments:
@@ -859,7 +863,7 @@ val customAccumulatingVia =
     .build(
       Arg.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
     )
-// customAccumulatingVia: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$49@2ba817e1
+// customAccumulatingVia: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$49@527b7c4f
 ```
 
 ```scala
@@ -873,7 +877,7 @@ val customFailFastVia =
     .build(
       Arg.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
     )
-// customFailFastVia: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$51@77ca5d27
+// customFailFastVia: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$51@480fac89
 ```
 
 
