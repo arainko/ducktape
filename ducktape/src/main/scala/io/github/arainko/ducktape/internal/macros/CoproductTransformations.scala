@@ -91,9 +91,19 @@ private[ducktape] object CoproductTransformations {
         case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
       }
 
-      cond.asTerm ->
-        dest.materializeSingleton
-          .getOrElse(Failure.emit(Failure.CannotMaterializeSingleton(dest.tpe)))
+      (source.tpe -> dest.tpe) match {
+        case '[src] -> '[dest] =>
+          cond.asTerm ->
+            source
+              .transformerTo(dest)
+              .map { case '{ $t: Transformer[src, dest] } => 
+                val casted = '{ $sourceValue.asInstanceOf[src] }
+                val lifted  = LiftTransformation.liftTransformation(t, casted)
+                lifted.asTerm 
+              }
+              .orElse(dest.materializeSingleton)
+              .getOrElse(Failure.emit(Failure.CannotMaterializeSingleton(dest.tpe)))
+      }
     }
   }
 

@@ -36,6 +36,18 @@ object DerivedTransformerSuite {
   }
 
   final case class Wrapped[A](value: A) extends AnyVal
+
+  enum AdtDerivationTest1 {
+    case Case1
+    case Case2
+    case Case3(str: String, int: Int)
+  }
+
+  enum AdtDerivationTest2 {
+    case Case1
+    case Case2
+    case Case3(str: String, int: Int)
+  }
 }
 
 class DerivedTransformerSuite extends DucktapeSuite {
@@ -258,6 +270,15 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val actual = transformer.transform(LessCases.Case3)
 
     assertEquals(actual, expected)
+  }
+
+  test("test") {
+
+    Transformer.Debug.showCode {
+
+    Transformer.betweenCoproducts[AdtDerivationTest1, AdtDerivationTest2]
+    }
+
   }
 
   test("derivation fails when going from a sum with more cases to a sum with less cases") {
