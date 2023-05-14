@@ -37,6 +37,18 @@ object DerivedTransformerSuite {
   }
 
   final case class Wrapped[A](value: A) extends AnyVal
+
+  enum AdtDerivationTest1 {
+    case Case1
+    case Case2
+    case Case3(str: String, int: Int)
+  }
+
+  enum AdtDerivationTest2 {
+    case Case1
+    case Case2
+    case Case3(str: String, int: Int)
+  }
 }
 
 class DerivedTransformerSuite extends DucktapeSuite {

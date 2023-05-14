@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.fallible.FallibleTransformer
 
 import scala.quoted.*
+import io.github.arainko.ducktape.Transformer
 
 private[ducktape] final case class Case(
   val name: String,
