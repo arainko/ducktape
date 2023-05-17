@@ -8,10 +8,10 @@ If this project interests you, please drop a 🌟 - these things are worthless b
 
 ### Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.7"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.8"
 
 // or if you're using Scala.js or Scala Native
-libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.1.7"
+libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.1.8"
 ```
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
@@ -355,13 +355,13 @@ val definedViaTransformer =
   Transformer
     .defineVia[TestClass](method)
     .build(Arg.const(_.additionalArg, List("const")))
-// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$14740/0x00000001038ae040@1aa3f2e7
+// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$16768/0x0000000103e06040@132ae379
 
 val definedTransformer =
   Transformer
     .define[TestClass, TestClassWithAdditionalList]   
     .build(Field.const(_.additionalArg, List("const")))
-// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$14741/0x00000001038ae440@ef9fbf9
+// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$16769/0x0000000103e06440@164c09ad
 
 val transformedVia = definedViaTransformer.transform(testClass)
 // transformedVia: TestClassWithAdditionalList = TestClassWithAdditionalList(
@@ -834,7 +834,7 @@ val customAccumulating =
     .build(
       Field.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
     )
-// customAccumulating: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$45@33d12ba0
+// customAccumulating: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$45@48b750b3
 ```
 
 ```scala
@@ -848,7 +848,7 @@ val customFailFast =
     .build(
       Field.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
     )
-// customFailFast: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$47@107378dd
+// customFailFast: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$47@64e5eba5
 ```
 
 And for the ones that are not keen on writing out method arguments:
@@ -863,7 +863,7 @@ val customAccumulatingVia =
     .build(
       Arg.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
     )
-// customAccumulatingVia: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$49@527b7c4f
+// customAccumulatingVia: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$49@1689562c
 ```
 
 ```scala
@@ -877,7 +877,7 @@ val customFailFastVia =
     .build(
       Arg.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
     )
-// customFailFastVia: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$51@480fac89
+// customFailFastVia: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$51@1ac7a2bc
 ```
 
 
@@ -914,26 +914,33 @@ person.to[Person2]
 ```
 expands to:
 ``` scala 
-  to[Person](person)[Person2](
-    inline$make$i1[Person, Person2](Transformer.ForProduct)(
+  to[Person](person)[Person2] {
+    val LowPriorityTransformerInstances_this: Transformer.type = Transformer
+
+    LowPriorityTransformerInstances_this.inline$make$i5[Person, Person2](Transformer.ForProduct)(
       (
         (source: Person) =>
           new Person2(
             int = new Wrapped[Int](source.int),
             str = source.str.map[Wrapped[String]]((src: String) => new Wrapped[String](src)),
-            inside = new Inside2(
-              int = source.inside.int,
-              str = source.inside.str,
-              inside =
-                Some.apply[EvenMoreInside2](new EvenMoreInside2(str = source.inside.inside.str, int = source.inside.inside.int))
-            ),
+            inside = {
+              val `LowPriorityTransformerInstances_this₂` : Transformer.type = Transformer
+              new Inside2(
+                int = source.inside.int,
+                str = source.inside.str,
+                inside = Some.apply[EvenMoreInside2] {
+                  val `LowPriorityTransformerInstances_this₃` : Transformer.type = Transformer
+                  new EvenMoreInside2(str = source.inside.inside.str, int = source.inside.inside.int)
+                }
+              )
+            },
             collectionOfNumbers = source.collectionOfNumbers
               .map[Wrapped[Float]]((`src₂`: Float) => new Wrapped[Float](`src₂`))
               .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])
           )
       ): Transformer[Person, Person2]
     ): ForProduct[Person, Person2]
-  )
+  }
 ```
 
 #### Generated code - expansion of `.into`
@@ -955,13 +962,17 @@ expands to:
       val source$proxy17: Person = AppliedBuilder_this.inline$appliedTo
 
       {
-        val inside$2: Inside2 = new Inside2(
-          int = source$proxy17.inside.int,
-          str = source$proxy17.inside.str,
-          inside = Some.apply[EvenMoreInside2](
-            new EvenMoreInside2(str = source$proxy17.inside.inside.str, int = source$proxy17.inside.inside.int)
+        val inside$2: Inside2 = {
+          val LowPriorityTransformerInstances_this: Transformer.type = Transformer
+          new Inside2(
+            int = source$proxy17.inside.int,
+            str = source$proxy17.inside.str,
+            inside = Some.apply[EvenMoreInside2] {
+              val `LowPriorityTransformerInstances_this₂` : Transformer.type = Transformer
+              new EvenMoreInside2(str = source$proxy17.inside.inside.str, int = source$proxy17.inside.inside.int)
+            }
           )
-        )
+        }
         val collectionOfNumbers$2: List[Wrapped[Float]] = source$proxy17.collectionOfNumbers
           .map[Wrapped[Float]]((src: Float) => new Wrapped[Float](src))
           .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])
@@ -993,11 +1004,17 @@ expands to:
     ({
       val int$proxy2: Wrapped[Int] = new Wrapped[Int](person.int)
       val str$proxy2: Option[Wrapped[String]] = person.str.map[Wrapped[String]]((src: String) => new Wrapped[String](src))
-      val inside$proxy2: Inside2 = new Inside2(
-        int = person.inside.int,
-        str = person.inside.str,
-        inside = Some.apply[EvenMoreInside2](new EvenMoreInside2(str = person.inside.inside.str, int = person.inside.inside.int))
-      )
+      val inside$proxy2: Inside2 = {
+        val LowPriorityTransformerInstances_this: Transformer.type = Transformer
+        new Inside2(
+          int = person.inside.int,
+          str = person.inside.str,
+          inside = Some.apply[EvenMoreInside2] {
+            val `LowPriorityTransformerInstances_this₂` : Transformer.type = Transformer
+            new EvenMoreInside2(str = person.inside.inside.str, int = person.inside.inside.int)
+          }
+        )
+      }
       val collectionOfNumbers$proxy2: List[Wrapped[Float]] = person.collectionOfNumbers
         .map[Wrapped[Float]]((`src₂`: Float) => new Wrapped[Float](`src₂`))
         .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])
@@ -1063,14 +1080,17 @@ expands to:
 
       AppliedViaBuilder_this.inline$function.apply(
         Wrapped.apply[Int](source$proxy19.int.+(100)),
-        Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstStr!")),
-        new Inside2(
-          int = source$proxy19.inside.int,
-          str = source$proxy19.inside.str,
-          inside = Some.apply[EvenMoreInside2](
-            new EvenMoreInside2(str = source$proxy19.inside.inside.str, int = source$proxy19.inside.inside.int)
+        Some.apply[Wrapped[String]](Wrapped.apply[String]("ConstStr!")), {
+          val LowPriorityTransformerInstances_this: Transformer.type = Transformer
+          new Inside2(
+            int = source$proxy19.inside.int,
+            str = source$proxy19.inside.str,
+            inside = Some.apply[EvenMoreInside2] {
+              val `LowPriorityTransformerInstances_this₂` : Transformer.type = Transformer
+              new EvenMoreInside2(str = source$proxy19.inside.inside.str, int = source$proxy19.inside.inside.int)
+            }
           )
-        ),
+        },
         source$proxy19.collectionOfNumbers
           .map[Wrapped[Float]]((src: Float) => new Wrapped[Float](src))
           .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])

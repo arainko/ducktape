@@ -11,7 +11,7 @@ trait Transformer[Source, Dest] {
   def transform(from: Source): Dest
 }
 
-object Transformer {
+object Transformer extends LowPriorityTransformerInstances {
   export fallible.{ FallibleTransformer as Fallible, Mode }
 
   def apply[Source, Dest](using transformer: Transformer[Source, Dest]): Transformer[Source, Dest] = transformer
@@ -46,30 +46,6 @@ object Transformer {
     case Right(value) => Right(Transformer[Dest1, Dest2].transform(value))
     case Left(value)  => Left(Transformer[Source1, Source2].transform(value))
   }
-
-  inline given betweenProducts[Source, Dest](using
-    Mirror.ProductOf[Source],
-    Mirror.ProductOf[Dest]
-  ): Transformer.ForProduct[Source, Dest] =
-    Transformer.ForProduct.make(DerivedTransformers.product[Source, Dest])
-
-  inline given betweenCoproducts[Source, Dest](using
-    Mirror.SumOf[Source],
-    Mirror.SumOf[Dest]
-  ): Transformer.ForCoproduct[Source, Dest] =
-    Transformer.ForCoproduct.make(DerivedTransformers.coproduct[Source, Dest])
-
-  inline given betweenUnwrappedWrapped[Source, Dest](using
-    Dest <:< AnyVal,
-    Dest <:< Product
-  ): Transformer.ToAnyVal[Source, Dest] =
-    Transformer.ToAnyVal.make(DerivedTransformers.toAnyVal[Source, Dest])
-
-  inline given betweenWrappedUnwrapped[Source, Dest](using
-    Source <:< AnyVal,
-    Source <:< Product
-  ): Transformer.FromAnyVal[Source, Dest] =
-    Transformer.FromAnyVal.make(DerivedTransformers.fromAnyVal[Source, Dest])
 
   @deprecated(message = "Use 'Transformer.identity' instead", since = "0.1.5")
   final def given_Identity_Source_Dest[Source, Dest >: Source]: Identity[Source, Dest] = identity[Source, Dest]
@@ -184,4 +160,30 @@ object Transformer {
         def transform(from: Source): Dest = transformer.transform(from)
       }
   }
+}
+
+transparent sealed trait LowPriorityTransformerInstances {
+  inline given betweenProducts[Source, Dest](using
+    Mirror.ProductOf[Source],
+    Mirror.ProductOf[Dest]
+  ): Transformer.ForProduct[Source, Dest] =
+    Transformer.ForProduct.make(DerivedTransformers.product[Source, Dest])
+
+  inline given betweenCoproducts[Source, Dest](using
+    Mirror.SumOf[Source],
+    Mirror.SumOf[Dest]
+  ): Transformer.ForCoproduct[Source, Dest] =
+    Transformer.ForCoproduct.make(DerivedTransformers.coproduct[Source, Dest])
+
+  inline given betweenUnwrappedWrapped[Source, Dest](using
+    Dest <:< AnyVal,
+    Dest <:< Product
+  ): Transformer.ToAnyVal[Source, Dest] =
+    Transformer.ToAnyVal.make(DerivedTransformers.toAnyVal[Source, Dest])
+
+  inline given betweenWrappedUnwrapped[Source, Dest](using
+    Source <:< AnyVal,
+    Source <:< Product
+  ): Transformer.FromAnyVal[Source, Dest] =
+    Transformer.FromAnyVal.make(DerivedTransformers.fromAnyVal[Source, Dest])
 }
