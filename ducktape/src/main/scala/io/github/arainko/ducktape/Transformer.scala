@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.internal.macros.*
 
 import scala.collection.Factory
 import scala.deriving.Mirror
+import scala.annotation.implicitNotFound
 
 @FunctionalInterface
 trait Transformer[Source, Dest] {

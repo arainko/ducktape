@@ -30,7 +30,7 @@ private[ducktape] object Fields {
     final def fromMirror[A: Type](mirror: Expr[Mirror.ProductOf[A]])(using Quotes): FieldsSubtype = {
       val materializedMirror = MaterializedMirror.createOrAbort(mirror)
 
-      val defaults = defaultParams[A]
+      lazy val defaults = defaultParams[A]
       val fields = materializedMirror.mirroredElemLabels
         .zip(materializedMirror.mirroredElemTypes)
         .map((name, tpe) => Field(name, tpe.asType, defaults.get(name)))
