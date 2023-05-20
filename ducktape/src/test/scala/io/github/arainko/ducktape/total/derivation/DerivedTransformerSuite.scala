@@ -274,10 +274,23 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
   test("test") {
 
-    Transformer.Debug.showCode {
+    object Costam1 {
+      case object Cos
+    }
+
+    object Costam2 {
+      case object Cos
+    }
+
+    // Transformer.Debug.showCode {
 
     Transformer.betweenCoproducts[AdtDerivationTest1, AdtDerivationTest2]
-    }
+
+    Transformer.Debug.showCode {
+      summon[Transformer[Costam1.Cos.type, Costam2.Cos.type]]
+    }    
+
+    // }
 
   }
 

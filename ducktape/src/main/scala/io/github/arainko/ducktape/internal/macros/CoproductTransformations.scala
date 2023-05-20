@@ -50,26 +50,19 @@ private[ducktape] object CoproductTransformations {
         .toMap
         .map {
           case (fullName, source) =>
-            ConfiguredCase(materializedConfig(fullName), source)
-        }
-        .map {
-          case ConfiguredCase(config, source) =>
-            config match {
+            materializedConfig(fullName) match {
               case Coproduct.Computed(tpe, function) =>
-                val cond = source.tpe match {
-                  case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
+                val value = tpe match {
+                  case '[tpe] =>
+                    '{
+                      val casted = $sourceValue.asInstanceOf[tpe]
+                      $function(casted)
+                    }
                 }
-                val castedSource = tpe match {
-                  case '[tpe] => '{ $sourceValue.asInstanceOf[tpe] }
-                }
-                val value = '{ $function($castedSource) }
-                cond.asTerm -> value.asTerm
+                IfBranch(IsInstanceOf(sourceValue, source.tpe), value)
 
               case Coproduct.Const(tpe, value) =>
-                val cond = source.tpe match {
-                  case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
-                }
-                cond.asTerm -> value.asTerm
+                IfBranch(IsInstanceOf(sourceValue, source.tpe), value)
             }
         }
 
@@ -87,36 +80,42 @@ private[ducktape] object CoproductTransformations {
         .get(source.name)
         .getOrElse(Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
     }.map { (source, dest) =>
-      val cond = source.tpe match {
-        case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
-      }
+      val cond = IsInstanceOf(sourceValue, source.tpe)
 
       (source.tpe -> dest.tpe) match {
         case '[src] -> '[dest] =>
-          cond.asTerm ->
+          val value =
             source
               .transformerTo(dest)
-              .map { case '{ $t: Transformer[src, dest] } => 
-                val casted = '{ $sourceValue.asInstanceOf[src] }
-                val lifted  = LiftTransformation.liftTransformation(t, casted)
-                lifted.asTerm 
+              .map {
+                case '{ $t: Transformer[src, dest] } =>
+                  '{
+                    val castedSource = $sourceValue.asInstanceOf[src]
+                    ${ LiftTransformation.liftTransformation(t, 'castedSource) }
+                  }
               }
               .orElse(dest.materializeSingleton)
               .getOrElse(Failure.emit(Failure.CannotMaterializeSingleton(dest.tpe)))
+          IfBranch(cond, value)
       }
     }
   }
 
-  private def ifStatement(using Quotes)(branches: List[(quotes.reflect.Term, quotes.reflect.Term)]): quotes.reflect.Term = {
+  private def ifStatement(using Quotes)(branches: List[IfBranch]): quotes.reflect.Term = {
     import quotes.reflect.*
 
     branches match {
-      case (p1, a1) :: xs =>
-        If(p1, a1, ifStatement(xs))
+      case IfBranch(cond, value) :: xs =>
+        If(cond.asTerm, value.asTerm, ifStatement(xs))
       case Nil =>
         '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }.asTerm
     }
   }
 
-  private case class ConfiguredCase(config: Coproduct, subcase: Case)
+  private def IsInstanceOf(value: Expr[Any], tpe: Type[?])(using Quotes) =
+    tpe match {
+      case '[tpe] => '{ $value.isInstanceOf[tpe] }
+    }
+
+  private case class IfBranch(cond: Expr[Boolean], value: Expr[Any])
 }

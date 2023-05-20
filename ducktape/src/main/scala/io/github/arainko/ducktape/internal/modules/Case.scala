@@ -21,13 +21,13 @@ private[ducktape] final case class Case(
     }
   }
 
-  def materializeSingleton(using Quotes): Option[quotes.reflect.Term] = {
+  def materializeSingleton(using Quotes): Option[Expr[Any]] = {
     import quotes.reflect.*
 
     val typeRepr = TypeRepr.of(using tpe)
 
     Option.when(typeRepr.isSingleton) {
-      typeRepr match { case TermRef(a, b) => Ident(TermRef(a, b)) }
+      typeRepr match { case TermRef(a, b) => Ident(TermRef(a, b)).asExpr }
     }
   }
 }
