@@ -5,18 +5,17 @@ import io.github.arainko.ducktape.Transformer
 
 private[ducktape] final case class Case(
   val name: String,
-  val tpe: Type[?],
-  val ordinal: Int
+  val tpe: Type[?]
 ) {
 
-  def transformerTo(that: Case)(using Quotes): Option[Expr[Transformer[?, ?]]] = {
+  def transformerTo(that: Case)(using Quotes): Either[String, Expr[Transformer[?, ?]]] = {
     import quotes.reflect.*
 
     (tpe -> that.tpe) match {
       case '[src] -> '[dest] =>
         Implicits.search(TypeRepr.of[Transformer[src, dest]]) match {
-          case success: ImplicitSearchSuccess => Some(success.tree.asExprOf[Transformer[src, dest]])
-          case err: ImplicitSearchFailure     => None
+          case success: ImplicitSearchSuccess => Right(success.tree.asExprOf[Transformer[src, dest]])
+          case err: ImplicitSearchFailure     => Left(err.explanation)
         }
     }
   }
@@ -27,7 +26,7 @@ private[ducktape] final case class Case(
     val typeRepr = TypeRepr.of(using tpe)
 
     Option.when(typeRepr.isSingleton) {
-      typeRepr match { case TermRef(a, b) => Ident(TermRef(a, b)).asExpr }
+      typeRepr match { case ref: TermRef => Ident(ref).asExpr }
     }
   }
 }

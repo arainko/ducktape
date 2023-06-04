@@ -12,6 +12,9 @@ private[ducktape] object Constructor {
         case notApplied                       => (tpe, tpe.typeSymbol.primaryConstructor, Nil)
       }
 
+    //workaround for invoking constructors of singleton which in turn actually create new instances of singletons!
+    if (tpe.typeSymbol.flags.is(Flags.Module)) report.errorAndAbort("Cannot invoke constructor of a singleton")
+
     New(Inferred(repr))
       .select(constructor)
       .appliedToTypes(tpeArgs)

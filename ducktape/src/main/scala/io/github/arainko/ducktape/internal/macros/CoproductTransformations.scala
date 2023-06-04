@@ -19,7 +19,7 @@ private[ducktape] object CoproductTransformations {
     given Cases.Source = Cases.Source.fromMirror(Source)
     given Cases.Dest = Cases.Dest.fromMirror(Dest)
 
-    val ifBranches = singletonIfBranches[Source, Dest](sourceValue, Cases.source.value)
+    val ifBranches = coproductBranches[Source, Dest](sourceValue, Cases.source.value)
     ifStatement(ifBranches).asExprOf[Dest]
   }
 
@@ -42,7 +42,7 @@ private[ducktape] object CoproductTransformations {
     val (nonConfiguredCases, configuredCases) =
       Cases.source.value.partition(c => !materializedConfig.contains(c.tpe.fullName))
 
-    val nonConfiguredIfBranches = singletonIfBranches[Source, Dest](sourceValue, nonConfiguredCases)
+    val nonConfiguredIfBranches = coproductBranches[Source, Dest](sourceValue, nonConfiguredCases)
 
     val configuredIfBranches =
       configuredCases
@@ -69,7 +69,7 @@ private[ducktape] object CoproductTransformations {
     ifStatement(nonConfiguredIfBranches ++ configuredIfBranches).asExprOf[Dest]
   }
 
-  private def singletonIfBranches[Source: Type, Dest: Type](
+  private def coproductBranches[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     sourceCases: List[Case]
   )(using Quotes, Cases.Dest) = {
@@ -85,17 +85,19 @@ private[ducktape] object CoproductTransformations {
       (source.tpe -> dest.tpe) match {
         case '[src] -> '[dest] =>
           val value =
-            source
-              .transformerTo(dest)
-              .map {
-                case '{ $t: Transformer[src, dest] } =>
-                  '{
-                    val castedSource = $sourceValue.asInstanceOf[src]
-                    ${ LiftTransformation.liftTransformation(t, 'castedSource) }
-                  }
-              }
-              .orElse(dest.materializeSingleton)
-              .getOrElse(Failure.emit(Failure.CannotMaterializeSingleton(dest.tpe)))
+            source.transformerTo(dest).map {
+              case '{ $t: Transformer[src, dest] } =>
+                '{
+                  val castedSource = $sourceValue.asInstanceOf[src]
+                  ${ LiftTransformation.liftTransformation(t, 'castedSource) }
+                }
+            } match {
+              case Right(value) => value
+              case Left(explanation) =>
+                dest.materializeSingleton
+                  .getOrElse(Failure.emit(Failure.CannotTransformCoproductCase(source.tpe, dest.tpe, explanation)))
+            }
+
           IfBranch(cond, value)
       }
     }

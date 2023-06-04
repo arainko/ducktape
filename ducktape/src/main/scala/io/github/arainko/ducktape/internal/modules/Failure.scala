@@ -142,13 +142,14 @@ private[ducktape] object Failure {
     override final def render(using Quotes): String = s"No child named '$childName' found in ${destinationType.show}"
   }
 
-  final case class CannotMaterializeSingleton(tpe: Type[?]) extends Failure {
-    private def suggestions(using Quotes) = Suggestion.all(s"${tpe.show} is not a singleton type")
-
+  final case class CannotTransformCoproductCase(source: Type[?], dest: Type[?], implicitSearchExplanation: String) extends Failure {
     override final def render(using Quotes): String =
       s"""
-        |Cannot materialize singleton for ${tpe.show}.
-        |Possible causes: ${Suggestion.renderAll(suggestions)}
+        |Neither an instance of Transformer[${source.fullName}, ${dest.fullName}] was found nor are '${source.show}' '${dest.show}' 
+        |singletons with the same name.
+        |
+        |Compiler supplied explanation for the failed Transformer derivation (may or may not be helpful):
+        |$implicitSearchExplanation
         """.stripMargin
   }
 

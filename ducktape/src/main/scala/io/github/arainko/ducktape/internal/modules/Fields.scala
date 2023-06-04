@@ -28,12 +28,14 @@ private[ducktape] object Fields {
     def apply(fields: List[Field]): FieldsSubtype
 
     final def fromMirror[A: Type](mirror: Expr[Mirror.ProductOf[A]])(using Quotes): FieldsSubtype = {
-      val materializedMirror = MaterializedMirror.createOrAbort(mirror)
+      val materializedMirror = MaterializedMirror.create(mirror)
 
       lazy val defaults = defaultParams[A]
+
       val fields = materializedMirror.mirroredElemLabels
         .zip(materializedMirror.mirroredElemTypes)
-        .map((name, tpe) => Field(name, tpe.asType, defaults.get(name)))
+        .map((name, tpe) => Field(name, tpe, defaults.get(name)))
+
       apply(fields)
     }
 
@@ -53,21 +55,21 @@ private[ducktape] object Fields {
       apply(fields)
     }
 
-    private def defaultParams[T: Type](using Quotes): Map[String, Expr[Any]] = {
+    private def defaultParams[A: Type](using Quotes): Map[String, Expr[Any]] = {
       import quotes.reflect.*
 
-      val typ = TypeRepr.of[T]
-      val sym = typ.typeSymbol
-      val typeArgs = typ.typeArgs
-      val mod = Ref(sym.companionModule)
-      val names = sym.caseFields.filter(_.flags.is(Flags.HasDefault)).map(_.name)
-      val body = sym.companionClass.tree.asInstanceOf[ClassDef].body
-      val idents: List[Term] = body.collect {
+      val tpe = TypeRepr.of[A]
+      val sym = tpe.typeSymbol
+      val typeArgs = tpe.typeArgs
+      val companion = Ref(sym.companionModule)
+      val fieldNamesWithDefaults = sym.caseFields.filter(_.flags.is(Flags.HasDefault)).map(_.name)
+      val companionBody = sym.companionClass.tree.asInstanceOf[ClassDef].body
+      val defaultValues = companionBody.collect {
         case deff @ DefDef(name, _, _, _) if name.startsWith("$lessinit$greater$default") =>
-          mod.select(deff.symbol).appliedToTypes(typeArgs)
+          companion.select(deff.symbol).appliedToTypes(typeArgs).asExpr
       }
 
-      names.zip(idents.map(_.asExpr)).toMap
+      fieldNamesWithDefaults.zip(defaultValues).toMap
     }
   }
 }
