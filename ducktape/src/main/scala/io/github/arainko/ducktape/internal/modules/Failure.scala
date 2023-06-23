@@ -142,7 +142,8 @@ private[ducktape] object Failure {
     override final def render(using Quotes): String = s"No child named '$childName' found in ${destinationType.show}"
   }
 
-  final case class CannotTransformCoproductCase(source: Type[?], dest: Type[?], implicitSearchExplanation: String) extends Failure {
+  final case class CannotTransformCoproductCase(source: Type[?], dest: Type[?], implicitSearchExplanation: String)
+      extends Failure {
     override final def render(using Quotes): String =
       s"""
         |Neither an instance of Transformer[${source.fullName}, ${dest.fullName}] was found nor are '${source.show}' '${dest.show}' 

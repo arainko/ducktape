@@ -3,9 +3,9 @@ package io.github.arainko.ducktape
 import io.github.arainko.ducktape.builder.*
 import io.github.arainko.ducktape.internal.macros.*
 
+import scala.annotation.implicitNotFound
 import scala.collection.Factory
 import scala.deriving.Mirror
-import scala.annotation.implicitNotFound
 
 @FunctionalInterface
 trait Transformer[Source, Dest] {

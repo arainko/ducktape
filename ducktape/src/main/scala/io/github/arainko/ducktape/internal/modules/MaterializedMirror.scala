@@ -21,7 +21,9 @@ private[ducktape] object MaterializedMirror {
           } =>
         import quotes.reflect.*
         val elemTypes = tupleTypeElements(TypeRepr.of[types])
-        val labels = tupleTypeElements(TypeRepr.of[labels]).map { case '[IsString[tpe]] => Type.valueOfConstant[tpe].getOrElse(report.errorAndAbort("Couldn't extract constact value")) }
+        val labels = tupleTypeElements(TypeRepr.of[labels]).map {
+          case '[IsString[tpe]] => Type.valueOfConstant[tpe].getOrElse(report.errorAndAbort("Couldn't extract constact value"))
+        }
         MaterializedMirror(elemTypes, labels)
     }
 

@@ -1,7 +1,8 @@
 package io.github.arainko.ducktape.internal.modules
 
-import scala.quoted.*
 import io.github.arainko.ducktape.Transformer
+
+import scala.quoted.*
 
 private[ducktape] final case class Case(
   val name: String,
