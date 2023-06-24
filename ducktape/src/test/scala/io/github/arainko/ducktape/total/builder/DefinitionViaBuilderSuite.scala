@@ -47,6 +47,41 @@ class DefinitionViaBuilderSuite extends DucktapeSuite {
     assertEquals(transformer.transform(testClass), expected)
   }
 
+  test("sums of products can be configured") {
+    enum Sum1 {
+      case Leaf1(int: Int, str: String)
+      case Leaf2(int1: Int, str2: String, list: List[Int])
+      case Leaf3(int3: Int, str3: String, opt: Option[Int])
+      case Singleton
+    }
+
+    enum Sum2 {
+      case Leaf1(int: Int, str: String)
+      case Leaf3(int3: Int, str3: String, opt: Option[Int])
+      case Singleton2
+    }
+
+    val transformer =
+      Transformer
+        .define[Sum1, Sum2]
+        .build(
+          Case.computed[Sum1.Leaf2](leaf2 => Sum2.Leaf1(leaf2.int1, leaf2.str2)),
+          Case.const[Sum1.Singleton.type](Sum2.Singleton2)
+        )
+
+    val expectedMappings =
+      Map(
+        Sum1.Leaf1(1, "str") -> Sum2.Leaf1(1, "str"),
+        Sum1.Leaf2(2, "str2", List(1, 2, 3)) -> Sum2.Leaf1(2, "str2"),
+        Sum1.Leaf3(3, "str3", Some(1)) -> Sum2.Leaf3(3, "str3", Some(1)),
+        Sum1.Singleton -> Sum2.Singleton2
+      )
+
+    expectedMappings.foreach { (sum1, expected) =>
+      assertEquals(transformer.transform(sum1), expected)
+    }
+  }
+
   test("Builder reports a missing argument") {
     assertFailsToCompileWith {
       """

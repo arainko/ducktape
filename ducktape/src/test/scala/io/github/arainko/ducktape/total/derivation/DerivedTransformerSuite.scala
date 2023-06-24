@@ -260,6 +260,96 @@ class DerivedTransformerSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
+  test("derivation succeeds when going from a sum of cases with the same name as the target sum (enum)") {
+
+    enum Sum1 {
+      case Leaf1(int: Int, str: String)
+      case Leaf2(int1: Int, str2: String, list: List[Int])
+      case Leaf3(int3: Int, str3: String, opt: Option[Int], nested: Nested1)
+      case Singleton
+    }
+
+    enum Sum2 {
+      case Leaf1(int: Int | Double, str: CharSequence)
+      case Leaf2(int1: Int | Long, str2: CharSequence, list: Vector[Int | String])
+      case Leaf3(int3: Int, str3: String, opt: Option[Int], nested: Nested2)
+      case Singleton
+    }
+
+    case class Nested1(int: Int)
+    case class Nested2(int: Int)
+
+    val expectedMappings =
+      Map(
+        Sum1.Leaf1(1, "str") -> Sum2.Leaf1(1, "str"),
+        Sum1.Leaf2(2, "str2", List(1, 2, 3)) -> Sum2.Leaf2(2, "str2", Vector(1, 2, 3)),
+        Sum1.Leaf3(3, "str3", None, Nested1(1)) -> Sum2.Leaf3(3, "str3", None, Nested2(1)),
+        Sum1.Singleton -> Sum2.Singleton
+      )
+
+    expectedMappings.foreach((sum1, expected) => assertEquals(sum1.to[Sum2], expected))
+  }
+
+  test("derivation succeeds when going from a sum of cases with the same name as the target sum (sealed trait)") {
+    sealed trait Sum1
+
+    object Sum1 {
+      case class Leaf1(int: Int, str: String) extends Sum1
+      case class Leaf2(int1: Int, str2: String, list: List[Int]) extends Sum1
+      case class Leaf3(int3: Int, str3: String, opt: Option[Int]) extends Sum1
+      case object Singleton extends Sum1
+    }
+
+    sealed trait Sum2
+
+    object Sum2 {
+      case class Leaf1(int: Int, str: String) extends Sum2
+      case class Leaf2(int1: Int, str2: String, list: Vector[Int | String]) extends Sum2
+      case class Leaf3(int3: Int, str3: String, opt: Option[Int]) extends Sum2
+      case object Singleton extends Sum2
+    }
+
+    val expectedMappings =
+      Map(
+        Sum1.Leaf1(1, "str") -> Sum2.Leaf1(1, "str"),
+        Sum1.Leaf2(2, "str2", List(1, 2, 3)) -> Sum2.Leaf2(2, "str2", Vector(1, 2, 3)),
+        Sum1.Leaf3(3, "str3", Some(1)) -> Sum2.Leaf3(3, "str3", Some(1)),
+        Sum1.Singleton -> Sum2.Singleton
+      )
+
+    expectedMappings.foreach((sum1, expected) => assertEquals(sum1.to[Sum2], expected))
+  }
+
+  test("derivation succeeds betweens sums with type parameters") {
+    enum Sum1[A] {
+      case Leaf1(int: Int, a: A)
+    }
+
+    enum Sum2[A] {
+      case Leaf1(int: Int, a: Option[A])
+    }
+
+    val leaf1 = Sum1.Leaf1(1, "asd")
+    val expected = Sum2.Leaf1(1, Some("asd"))
+
+    assertEquals(leaf1.to[Sum2[String]], expected)
+  }
+
+  test("derivation fails when a Transformer doesn't exist for a child with the same name") {
+    enum Sum1 {
+      case Leaf1(int: Int, str: String)
+    }
+
+    enum Sum2 {
+      case Leaf1(str1: String)
+    }
+
+    assertFailsToCompileWith("summon[Transformer[Sum1, Sum2]]") {
+      """Neither an instance of Transformer[Sum1.Leaf1, Sum2.Leaf1] was found nor are 'Leaf1' 'Leaf1' 
+singletons with the same name"""
+    }
+  }
+
   test("derivation fails when going from a sum with more cases to a sum with less cases") {
     assertFailsToCompileWith("MoreCases.Case3.to[LessCases]")("No child named 'Case4' found in LessCases")
   }

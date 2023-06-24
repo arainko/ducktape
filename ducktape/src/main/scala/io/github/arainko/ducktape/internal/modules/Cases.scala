@@ -11,7 +11,7 @@ private[ducktape] sealed trait Cases {
   val byName: Map[String, Case] = value.map(c => c.name -> c).toMap
 }
 
-object Cases {
+private[ducktape] object Cases {
   def source(using sourceCases: Cases.Source): Cases.Source = sourceCases
   def dest(using destCases: Cases.Dest): Cases.Dest = destCases
 
@@ -25,12 +25,11 @@ object Cases {
     def apply(cases: List[Case]): CasesSubtype
 
     final def fromMirror[A: Type](mirror: Expr[Mirror.SumOf[A]])(using Quotes): CasesSubtype = {
-      val materializedMirror = MaterializedMirror.createOrAbort(mirror)
+      val materializedMirror = MaterializedMirror.create(mirror)
 
       val cases = materializedMirror.mirroredElemLabels
         .zip(materializedMirror.mirroredElemTypes)
-        .zipWithIndex
-        .map { case name -> tpe -> ordinal => Case(name, tpe.asType, ordinal) }
+        .map(Case.apply)
 
       apply(cases)
     }

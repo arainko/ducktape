@@ -19,7 +19,7 @@ private[ducktape] object CoproductTransformations {
     given Cases.Source = Cases.Source.fromMirror(Source)
     given Cases.Dest = Cases.Dest.fromMirror(Dest)
 
-    val ifBranches = singletonIfBranches[Source, Dest](sourceValue, Cases.source.value)
+    val ifBranches = coproductBranches[Source, Dest](sourceValue, Cases.source.value)
     ifStatement(ifBranches).asExprOf[Dest]
   }
 
@@ -42,7 +42,7 @@ private[ducktape] object CoproductTransformations {
     val (nonConfiguredCases, configuredCases) =
       Cases.source.value.partition(c => !materializedConfig.contains(c.tpe.fullName))
 
-    val nonConfiguredIfBranches = singletonIfBranches[Source, Dest](sourceValue, nonConfiguredCases)
+    val nonConfiguredIfBranches = coproductBranches[Source, Dest](sourceValue, nonConfiguredCases)
 
     val configuredIfBranches =
       configuredCases
@@ -50,33 +50,26 @@ private[ducktape] object CoproductTransformations {
         .toMap
         .map {
           case (fullName, source) =>
-            ConfiguredCase(materializedConfig(fullName), source)
-        }
-        .map {
-          case ConfiguredCase(config, source) =>
-            config match {
+            materializedConfig(fullName) match {
               case Coproduct.Computed(tpe, function) =>
-                val cond = source.tpe match {
-                  case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
+                val value = tpe match {
+                  case '[tpe] =>
+                    '{
+                      val casted = $sourceValue.asInstanceOf[tpe]
+                      $function(casted)
+                    }
                 }
-                val castedSource = tpe match {
-                  case '[tpe] => '{ $sourceValue.asInstanceOf[tpe] }
-                }
-                val value = '{ $function($castedSource) }
-                cond.asTerm -> value.asTerm
+                IfBranch(IsInstanceOf(sourceValue, source.tpe), value)
 
               case Coproduct.Const(tpe, value) =>
-                val cond = source.tpe match {
-                  case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
-                }
-                cond.asTerm -> value.asTerm
+                IfBranch(IsInstanceOf(sourceValue, source.tpe), value)
             }
         }
 
     ifStatement(nonConfiguredIfBranches ++ configuredIfBranches).asExprOf[Dest]
   }
 
-  private def singletonIfBranches[Source: Type, Dest: Type](
+  private def coproductBranches[Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     sourceCases: List[Case]
   )(using Quotes, Cases.Dest) = {
@@ -87,26 +80,44 @@ private[ducktape] object CoproductTransformations {
         .get(source.name)
         .getOrElse(Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
     }.map { (source, dest) =>
-      val cond = source.tpe match {
-        case '[tpe] => '{ $sourceValue.isInstanceOf[tpe] }
-      }
+      val cond = IsInstanceOf(sourceValue, source.tpe)
 
-      cond.asTerm ->
-        dest.materializeSingleton
-          .getOrElse(Failure.emit(Failure.CannotMaterializeSingleton(dest.tpe)))
+      (source.tpe -> dest.tpe) match {
+        case '[src] -> '[dest] =>
+          val value =
+            source.transformerTo(dest).map {
+              case '{ $t: Transformer[src, dest] } =>
+                '{
+                  val castedSource = $sourceValue.asInstanceOf[src]
+                  ${ LiftTransformation.liftTransformation(t, 'castedSource) }
+                }
+            } match {
+              case Right(value) => value
+              case Left(explanation) =>
+                dest.materializeSingleton
+                  .getOrElse(Failure.emit(Failure.CannotTransformCoproductCase(source.tpe, dest.tpe, explanation)))
+            }
+
+          IfBranch(cond, value)
+      }
     }
   }
 
-  private def ifStatement(using Quotes)(branches: List[(quotes.reflect.Term, quotes.reflect.Term)]): quotes.reflect.Term = {
+  private def ifStatement(using Quotes)(branches: List[IfBranch]): quotes.reflect.Term = {
     import quotes.reflect.*
 
     branches match {
-      case (p1, a1) :: xs =>
-        If(p1, a1, ifStatement(xs))
+      case IfBranch(cond, value) :: xs =>
+        If(cond.asTerm, value.asTerm, ifStatement(xs))
       case Nil =>
         '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }.asTerm
     }
   }
 
-  private case class ConfiguredCase(config: Coproduct, subcase: Case)
+  private def IsInstanceOf(value: Expr[Any], tpe: Type[?])(using Quotes) =
+    tpe match {
+      case '[tpe] => '{ $value.isInstanceOf[tpe] }
+    }
+
+  private case class IfBranch(cond: Expr[Boolean], value: Expr[Any])
 }

@@ -5,7 +5,10 @@ import io.github.arainko.ducktape.fallible.FallibleTransformer
 
 import scala.quoted.*
 
-private[ducktape] final class Field(val name: String, val tpe: Type[?], val default: Option[Expr[Any]]) {
+private[ducktape] final class Field(val name: String, val tpe: Type[?], defaultValue: => Option[Expr[Any]]) {
+
+  lazy val default: Option[Expr[Any]] = defaultValue
+
   def transformerTo(that: Field)(using Quotes): Expr[Transformer[?, ?]] = {
     import quotes.reflect.*
 
