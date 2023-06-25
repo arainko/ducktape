@@ -8,25 +8,31 @@ import io.github.arainko.ducktape.Structure.Singleton
 import io.github.arainko.ducktape.Structure.Ordinary
 import io.github.arainko.ducktape.Structure.Lazy
 
-sealed trait Structure {
+sealed trait Structure  {
   def tpe: Type[?]
   def name: String
+
+  final def typeRepr(using Quotes): quotes.reflect.TypeRepr =
+    quotes.reflect.TypeRepr.of(using tpe)
+
   final def force: Structure =
     this match {
-      case Lazy(struct) => struct().force
-      case other        => other
+      case lzy: Lazy => lzy.struct.force
+      case other     => other
     }
 }
 
 object Structure {
+  def unapply(struct: Structure): (Type[?], String) = struct.tpe -> struct.name
+
   case class Product(tpe: Type[?], name: String, fields: Map[String, Structure]) extends Structure
   case class Coproduct(tpe: Type[?], name: String, children: Vector[Structure]) extends Structure
   case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
   case class Ordinary(tpe: Type[?], name: String) extends Structure
-  case class Lazy(struct: () => Structure) extends Structure {
-    private lazy val lazyStruct = struct()
-    lazy val tpe = lazyStruct.tpe
-    lazy val name = lazyStruct.name
+  case class Lazy(private val deferredStruct: () => Structure) extends Structure {
+    lazy val struct = deferredStruct()
+    lazy val tpe = struct.tpe
+    lazy val name = struct.name
   }
 
   inline def print[A] = ${ cos[A] }
