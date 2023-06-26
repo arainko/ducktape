@@ -26,7 +26,7 @@ object Structure {
   def unapply(struct: Structure): (Type[?], String) = struct.tpe -> struct.name
 
   case class Product(tpe: Type[?], name: String, fields: Map[String, Structure]) extends Structure
-  case class Coproduct(tpe: Type[?], name: String, children: Vector[Structure]) extends Structure
+  case class Coproduct(tpe: Type[?], name: String, children: Map[String, Structure]) extends Structure
   case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
   case class Ordinary(tpe: Type[?], name: String) extends Structure
   case class Lazy(private val deferredStruct: () => Structure) extends Structure {
@@ -82,12 +82,15 @@ object Structure {
                 type label <: String
                 $m: Mirror.Sum {
                   type MirroredLabel = `label`
+                  type MirroredElemLabels = labels
                   type MirroredElemTypes = types
                 }
               } =>
+            val names = constStringTuple(TypeRepr.of[labels])
             val structures =
               tupleTypeElements(TypeRepr.of[types]).map(tpe => tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) })
-            Structure.Coproduct(summon[Type[A]], constantString[label], structures.toVector)
+            
+            Structure.Coproduct(summon[Type[A]], constantString[label], names.zip(structures).toMap)
 
         }
     }
