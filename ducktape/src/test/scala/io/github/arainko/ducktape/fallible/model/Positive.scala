@@ -9,6 +9,8 @@ type FailFastFailure[+A] = Either[String, A]
 case class Positive(value: Int)
 
 object Positive {
+  given Ordering[Positive] = Ordering.by(_.value)
+
   given accTransformer: FallibleTransformer[AccumulatingFailure, Int, Positive] =
     int => if (int > 0) Right(Positive(int)) else Left(s"$int" :: Nil)
 
