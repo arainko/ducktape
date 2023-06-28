@@ -6,6 +6,7 @@ import io.github.arainko.ducktape.internal.macros.*
 import io.github.arainko.ducktape.model.*
 import munit.FunSuite
 
+import scala.collection.immutable.{ SortedMap, TreeMap }
 import scala.compiletime.testing.*
 
 object DerivedTransformerSuite {
@@ -348,6 +349,17 @@ class DerivedTransformerSuite extends DucktapeSuite {
       """Neither an instance of Transformer[Sum1.Leaf1, Sum2.Leaf1] was found nor are 'Leaf1' 'Leaf1' 
 singletons with the same name"""
     }
+  }
+
+  test("transformations between maps of different kind work") {
+    case class Test1(map: SortedMap[Int, Int])
+    case class Test2(map: TreeMap[Option[Int], Option[Int]])
+
+    val test1 = Test1(SortedMap(1 -> 1, 2 -> 2))
+    val expected = Test2(TreeMap(Some(1) -> Some(1), Some(2) -> Some(2)))
+
+    val actual = test1.to[Test2]
+    assertEquals(actual, expected)
   }
 
   test("derivation fails when going from a sum with more cases to a sum with less cases") {

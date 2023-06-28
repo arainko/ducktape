@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.fallible
 
 import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.fallible.Mode.{ Accumulating, FailFast }
 import io.github.arainko.ducktape.internal.macros.DerivedTransformers
 
 import scala.collection.Factory
@@ -47,6 +48,32 @@ object FallibleTransformer extends LowPriorityAccumulatingInstances {
   ): FallibleTransformer[F, SourceColl[Source], DestColl[Dest]] =
     new {
       def transform(value: SourceColl[Source]): F[DestColl[Dest]] = F.traverseCollection(value)
+    }
+
+  given betweenMaps[F[+x], SourceKey, SourceValue, DestKey, DestValue, SourceMap[k, v] <: Map[k, v], DestMap[k, v] <: Map[k, v]](
+    using
+    keyTransformer: FallibleTransformer[F, SourceKey, DestKey],
+    valueTransformer: FallibleTransformer[F, SourceValue, DestValue],
+    factory: Factory[(DestKey, DestValue), DestMap[DestKey, DestValue]],
+    F: Mode[F]
+  ): FallibleTransformer[F, SourceMap[SourceKey, SourceValue], DestMap[DestKey, DestValue]] =
+    new {
+      def transform(value: SourceMap[SourceKey, SourceValue]): F[DestMap[DestKey, DestValue]] = {
+        given FallibleTransformer[F, (SourceKey, SourceValue), (DestKey, DestValue)] =
+          new {
+            def transform(value: (SourceKey, SourceValue)): F[(DestKey, DestValue)] = {
+              val transformedKey = keyTransformer.transform(value._1)
+              F match {
+                case acc: Accumulating[F] =>
+                  val transformedValue = valueTransformer.transform(value._2)
+                  acc.product(transformedKey, transformedValue)
+                case ff: FailFast[F] =>
+                  ff.flatMap(transformedKey, key => ff.map(valueTransformer.transform(value._2), value => key -> value))
+              }
+            }
+          }
+        F.map(F.traverseCollection[(SourceKey, SourceValue), (DestKey, DestValue), Iterable, Iterable](value), _.to(factory))
+      }
     }
 }
 

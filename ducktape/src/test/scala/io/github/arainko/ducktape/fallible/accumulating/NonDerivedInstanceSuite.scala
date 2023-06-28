@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.fallible.Mode.Accumulating
 import io.github.arainko.ducktape.fallible.model.*
 import io.github.arainko.ducktape.{ DucktapeSuite, Transformer }
 
+import scala.collection.immutable.{ SortedMap, TreeMap }
 class NonDerivedInstanceSuite extends DucktapeSuite {
 
   private given Accumulating[[A] =>> Either[List[Predef.String], A]] =
@@ -19,7 +20,7 @@ class NonDerivedInstanceSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
-  test("Transformer.Fallible.betweenCollections fails when only sone of the transformations  succeed") {
+  test("Transformer.Fallible.betweenCollections fails when only some of the transformations succeed") {
     val actual =
       Transformer.Fallible
         .betweenCollections[AccumulatingFailure, Int, Positive, List, Vector]
@@ -29,7 +30,17 @@ class NonDerivedInstanceSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
-  test("Transformer.Fallible.betweenCollections accumulates errors in the order they occur") {
+  test("Transformer.Fallible.betweenMaps works") {
+    val actual =
+      Transformer.Fallible
+        .betweenMaps[AccumulatingFailure, Int, Int, Positive, Positive, SortedMap, TreeMap]
+        .transform(SortedMap(1 -> 1, 2 -> 2, 3 -> 3))
+
+    val expected = TreeMap(Positive(1) -> Positive(1), Positive(2) -> Positive(2), Positive(3) -> Positive(3))
+    assertEquals(actual, Right(expected))
+  }
+
+  test("Transformer.Fallible.betweenMaps accumulates errors in the order they occur") {
     val actual =
       Transformer.Fallible
         .betweenCollections[AccumulatingFailure, Int, Positive, List, Vector]
@@ -45,6 +56,26 @@ class NonDerivedInstanceSuite extends DucktapeSuite {
       .transform(List.fill(1000000)(-1))
 
     assert(actual.isLeft)
+    assertEquals(actual.left.map(_.size), Left(1000000))
+  }
+
+  test("Transformer.Fallible.betweenMaps accumulates errors from both keys and values") {
+    val actual =
+      Transformer.Fallible
+        .betweenMaps[AccumulatingFailure, Int, Int, Positive, Positive, SortedMap, Map]
+        .transform(SortedMap(-1 -> -1, -2 -> -2, -3 -> -3))
+
+    val expected = Left(List("-3", "-3", "-2", "-2", "-1", "-1"))
+    assertEquals(actual, expected)
+  }
+
+  test("Transformer.Fallible.betweenMaps doesn't blow up the stack") {
+    val actual =
+      Transformer.Fallible
+        .betweenMaps[AccumulatingFailure, Int, Int, Positive, Positive, SortedMap, Map]
+        .transform(SortedMap.from((-1000000 to 0).map(int => int -> int)))
+
+    assertEquals(actual.left.map(_.size), Left(2000002))
   }
 
   test("Transformer.Fallible.betweenOptions returns None when input is None") {

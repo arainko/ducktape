@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.modules.TransformerLambda.*
 import io.github.arainko.ducktape.internal.modules.*
 
-import scala.collection.Factory
+import scala.collection.{ Factory, MapFactory }
 import scala.quoted.*
 
 //TODO: if this is moved to `modules` the compiler crashes, investigate further?
@@ -62,6 +62,30 @@ private[ducktape] object LiftTransformation {
           case '{ $f: Factory[`dest`, destColl] } =>
             '{ $field.map(src => ${ liftTransformation(transformer, 'src) }).to($f) }.asExprOf[B]
         }
+
+      case '{
+            Transformer.betweenMaps[
+              sourceKey,
+              sourceValue,
+              destKey,
+              destValue,
+              Map,
+              Map
+            ](using $keyTransformer, $valueTransformer, $factory)
+          } =>
+        val sourceMap = appliedTo.asExprOf[Map[sourceKey, sourceValue]]
+        factory match {
+          case '{
+                type destMap <: Map[`destKey`, `destValue`]
+                $f: Factory[(`destKey`, `destValue`), `destMap`]
+              } =>
+            '{
+              $sourceMap.map { (key, value) =>
+                ${ liftTransformation(keyTransformer, 'key) } -> ${ liftTransformation(valueTransformer, 'value) }
+              }.to($f)
+            }.asExprOf[B]
+        }
+
     }
 
   /**

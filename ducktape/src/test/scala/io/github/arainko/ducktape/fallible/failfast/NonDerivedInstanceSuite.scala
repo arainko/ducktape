@@ -3,6 +3,8 @@ package io.github.arainko.ducktape.fallible.failfast
 import io.github.arainko.ducktape.fallible.model.*
 import io.github.arainko.ducktape.{ DucktapeSuite, Transformer }
 
+import scala.collection.immutable.SortedMap
+
 abstract class NonDerivedInstanceSuite[F[+x]](
   isFailed: [A] => F[A] => Boolean,
   deriveError: Int => F[Positive],
@@ -46,6 +48,25 @@ abstract class NonDerivedInstanceSuite[F[+x]](
     val actual = Transformer.Fallible
       .betweenCollections[F, Int, Positive, List, Vector]
       .transform(List.fill(1000000)(1).appended(-1))
+
+    assert(isFailed(actual))
+  }
+
+  test("Transformer.Fallible.betweenMaps transforms keys first") {
+    val actual =
+      Transformer.Fallible
+        .betweenMaps[F, Int, Int, Positive, Positive, SortedMap, Map]
+        .transform(SortedMap(-1 -> -1, -2 -> -2, -3 -> -3))
+
+    val expected = F.map(deriveError(-3), a => Map(a -> a))
+    assertEquals(actual, expected)
+  }
+
+  test("Transformer.Fallible.betweenMaps doesn't blow up the stack") {
+    val actual =
+      Transformer.Fallible
+        .betweenMaps[F, Int, Int, Positive, Positive, SortedMap, Map]
+        .transform(SortedMap.from((-1000000 to 0).map(int => int -> int)))
 
     assert(isFailed(actual))
   }

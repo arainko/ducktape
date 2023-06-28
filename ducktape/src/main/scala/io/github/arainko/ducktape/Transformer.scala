@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.builder.*
 import io.github.arainko.ducktape.internal.macros.*
 
 import scala.annotation.implicitNotFound
-import scala.collection.Factory
+import scala.collection.{ BuildFrom, Factory, MapFactory }
 import scala.deriving.Mirror
 
 @FunctionalInterface
@@ -39,6 +39,13 @@ object Transformer extends LowPriorityTransformerInstances {
     transformer: Transformer[Source, Dest],
     factory: Factory[Dest, DestCollection[Dest]]
   ): Transformer[SourceCollection[Source], DestCollection[Dest]] = from => from.map(transformer.transform).to(factory)
+
+  given betweenMaps[SourceKey, SourceValue, DestKey, DestValue, SourceMap[k, v] <: Map[k, v], DestMap[k, v] <: Map[k, v]](using
+    keyTransformer: Transformer[SourceKey, DestKey],
+    valueTransformer: Transformer[SourceValue, DestValue],
+    factory: Factory[(DestKey, DestValue), DestMap[DestKey, DestValue]]
+  ): Transformer[SourceMap[SourceKey, SourceValue], DestMap[DestKey, DestValue]] =
+    from => from.map((key, value) => keyTransformer.transform(key) -> valueTransformer.transform(value)).to(factory)
 
   given betweenEithers[Source1, Source2, Dest1, Dest2](using
     Transformer[Source1, Source2],
