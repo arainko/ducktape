@@ -2,7 +2,7 @@ package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 
-extension (tpe: Type[?]) {
+extension (tpe: Type[? <: AnyKind]) {
   private[ducktape] def fullName(using Quotes): String = {
     import quotes.reflect.*
 

@@ -4,58 +4,13 @@ import scala.quoted.*
 import io.github.arainko.ducktape.internal.modules.*
 import scala.collection.IterableFactory
 import scala.collection.Factory
+import io.github.arainko.ducktape.internal.modules.*
 
-enum Plan {
-  case Upcast(tpe: Type[?])
-  case FieldAccess(name: String, tpe: Type[?])
-  case ProductTransformation(fieldPlans: Map[String, Plan])
-  case CoproductTransformation(casePlans: Map[String, Plan])
-  case BetweenOptionsTransformation(plan: Plan)
-  case WrapInOptionTransformation(dest: Plan)
-  case BetweenCollectionsTransformation(source: Plan, dest: Plan)
-  case SingletonTransformation(tpe: Type[?], expr: Expr[Any])
-  case TransformerTransformation(source: Type[?], dest: Type[?], transformation: Expr[Any])
-}
 
 object StructTransform {
   import Structure.*
 
   inline def transform[Source, Dest](value: Source): Dest = ${ createTransformation[Source, Dest]('value) }
-
-  def createPlan[Source: Type, Dest: Type](using Quotes): Plan = {
-    val src = Structure.of[Source]
-    val dest = Structure.of[Dest]
-    recursePlan[Source, Dest](src, dest)
-  }
-
-  private def recursePlan[A: Type, B: Type](source: Structure, dest: Structure)(using Quotes): Plan =
-    (source.force -> dest.force) match {
-      case (source, dest) if source.typeRepr <:< dest.typeRepr => 
-        Plan.Upcast(dest.tpe)
-
-      case Structure('[Option[srcTpe]], srcName) -> Structure('[Option[destTpe]], destName) => 
-        Plan.BetweenOptionsTransformation(createPlan[srcTpe, destTpe])
-
-      case source -> Structure('[Option[destTpe]], destName) => 
-        Plan.WrapInOptionTransformation(createPlan[A, destTpe])
-
-      case Structure('[Iterable[srcTpe]], srcName) -> Structure('[Iterable[destTpe]], destName) =>
-        val factory = Expr.summon[Factory[destTpe, B]].get
-        val srcVal = value.asExprOf[Iterable[srcTpe]]
-        '{ $srcVal.map(src => ${ createTransformation[srcTpe, destTpe]('src) }).to($factory) }
-
-      case (source: Product, dest: Product) => 
-        transformProduct[A, B](value, source, dest)
-
-      case (source: Coproduct, dest: Coproduct) => 
-        transformCoproducts[A, B](value, source, dest)
-        
-      case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name => 
-        dest.value.asExprOf[B]
-
-      case (source: Ordinary, dest: Ordinary) => ???
-      case other => ???
-    }
 
   def createTransformation[Source: Type, Dest: Type](source: Expr[Source])(using Quotes) = {
     val src = Structure.of[Source]
@@ -65,6 +20,7 @@ object StructTransform {
 
   private def recurse[A: Type, B: Type](source: Structure, dest: Structure, value: Expr[A])(using Quotes): Expr[B] = {
     import quotes.reflect.*
+
     (source.force -> dest.force) match {
       case (source, dest) if source.typeRepr <:< dest.typeRepr => 
         value.asExprOf[B]
@@ -89,6 +45,14 @@ object StructTransform {
         
       case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name => 
         dest.value.asExprOf[B]
+
+      case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr => 
+        value.accessFieldByName(source.paramFieldName).asExprOf[B]
+
+      case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr => 
+        Constructor(dest.tpe.repr)
+          .appliedToArgs(value.asTerm :: Nil)
+          .asExprOf[B]
 
       case (source: Ordinary, dest: Ordinary) => ???
       case other => ???
