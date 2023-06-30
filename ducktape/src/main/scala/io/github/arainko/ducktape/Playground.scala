@@ -3,18 +3,19 @@ package io.github.arainko.ducktape
 final case class Value(int: Int) extends AnyVal
 final case class ValueGen[A](int: A) extends AnyVal
 
-@main def main = {
-  enum Sum1 {
-    case Leaf1(int: Int)
-    case Leaf2(str: Int)
-    case Single
-  }
+enum Sum1 {
+  case Leaf1(int: Int)
+  case Leaf2(str: Int)
+  case Single
+}
 
-  enum Sum2 {
-    case Leaf1(int: Int)
-    case Leaf2(str: Int)
-    case Single
-  }
+enum Sum2 {
+  case Leaf1(int: Int)
+  case Leaf2(str: Int)
+  case Single
+}
+
+@main def main = {
 
   final case class HKT[F[_]](value: F[Int])
 
@@ -27,11 +28,11 @@ final case class ValueGen[A](int: A) extends AnyVal
 
   val p = Person1(1, "asd", Nested1(1) :: Nil)
 
-  // Planner.print[Sum1, Sum2]
+  Planner.print[Sum1, Sum2]
   
   // Planner.print[Person1, Person2]
 
-  Transformer.Debug.showCode {
-    Interpreter.transformPlanned[Person1, Person2](p)
-  }
+  // Transformer.Debug.showCode {
+    Interpreter.transformPlanned[Sum1, Sum2](Sum1.Single)
+  // }
 }

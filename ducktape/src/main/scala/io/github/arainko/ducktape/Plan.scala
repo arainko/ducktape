@@ -10,20 +10,29 @@ enum Plan {
   def destTpe: Type[?]
 
   final def traverse(paths: List[String | Type[?]])(using Quotes): Option[Plan] = {
-    def recurse(current: Option[Plan], paths: List[String | Type[?]])(using Quotes) =
+    def recurse(current: Option[Plan], paths: List[String | Type[?]])(using Quotes): Option[Option[Plan]] =
       current.flatMap { plan =>
         paths match {
           case (head: String) :: next =>
-            PartialFunction.condOpt(plan) {
+            (PartialFunction.condOpt(plan) {
               case BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
-                fieldPlans.get(head)
-            }
+                recurse(fieldPlans.get(head), next)
+            }).flatten
           case (head: Type[?]) :: next =>
-            PartialFunction.condOpt(plan) {
+            (PartialFunction.condOpt(plan) {
               case BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
-                val reprs = casePlans.find((_, plan) => head.repr <:< plan.destTpe.repr)
-                reprs.map(_._2)
-            }
+                println(s"head: ${head.repr.show}")
+                val reprs = casePlans.find { (_, plan) => 
+                  println(s"curr src: ${plan.sourceTpe.repr.show}")
+                  println(s"curr dest: ${plan.destTpe.repr.show}")
+                  println()
+
+                  head.repr =:= plan.sourceTpe.repr
+                }
+
+                
+                recurse(reprs.map(_._2), next)
+            }).flatten
           case Nil => Some(Some(plan))
         }
       }

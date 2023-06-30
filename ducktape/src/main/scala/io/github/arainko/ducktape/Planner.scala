@@ -18,7 +18,7 @@ object Planner {
     val src = Structure.of[Source]
     val dest = Structure.of[Dest]
     val plan = recurse(src, dest)
-    println(plan.traverse("opt" :: "int" :: Nil))
+    println(plan.traverse(Type.of[Sum1.Leaf1] :: "int" :: Nil))
     plan
   }
 

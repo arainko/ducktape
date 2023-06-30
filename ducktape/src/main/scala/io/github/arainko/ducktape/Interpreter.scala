@@ -30,7 +30,14 @@ object Interpreter {
         Constructor(destTpe.repr).appliedToArgs(args.toList).asExpr
 
       case Plan.BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
-        ???
+        val branches = casePlans.map((_, plan) =>
+          (plan.sourceTpe -> plan.destTpe) match {
+            case '[src] -> '[dest] =>
+              val sourceValue = '{ $value.asInstanceOf[src] }
+              IfBranch(IsInstanceOf(value, sourceTpe), recurse(plan, sourceValue))
+          }
+        ).toList
+        ifStatement(branches).asExpr
 
       case Plan.BetweenOptions(sourceTpe, destTpe, plan) =>
         (sourceTpe -> destTpe) match {
@@ -41,18 +48,20 @@ object Interpreter {
         }
 
       case Plan.BetweenNonOptionOption(sourceTpe, destTpe, plan) =>
-        (sourceTpe -> destTpe) match { case '[src] -> '[dest] =>
-          val sourceValue = value.asExprOf[src]
-          def transformation(value: Expr[src])(using Quotes): Expr[dest] = recurse(plan, value).asExprOf[dest]
-          '{ Some(${ transformation(sourceValue) }) }
+        (sourceTpe -> destTpe) match {
+          case '[src] -> '[dest] =>
+            val sourceValue = value.asExprOf[src]
+            def transformation(value: Expr[src])(using Quotes): Expr[dest] = recurse(plan, value).asExprOf[dest]
+            '{ Some(${ transformation(sourceValue) }) }
         }
 
       case Plan.BetweenCollections(destCollectionTpe, sourceTpe, destTpe, plan) =>
-        (destCollectionTpe, sourceTpe, destTpe) match { case ('[destCollTpe], '[srcElem], '[destElem]) =>
-          val sourceValue = value.asExprOf[Iterable[srcElem]]
-          val factory = Expr.summon[Factory[destElem, destCollTpe]].get
-          def transformation(value: Expr[srcElem])(using Quotes): Expr[destElem] = recurse(plan, value).asExprOf[destElem]
-          '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
+        (destCollectionTpe, sourceTpe, destTpe) match {
+          case ('[destCollTpe], '[srcElem], '[destElem]) =>
+            val sourceValue = value.asExprOf[Iterable[srcElem]]
+            val factory = Expr.summon[Factory[destElem, destCollTpe]].get
+            def transformation(value: Expr[srcElem])(using Quotes): Expr[destElem] = recurse(plan, value).asExprOf[destElem]
+            '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
         }
 
       case Plan.BetweenSingletons(sourceTpe, destTpe, expr) =>
@@ -60,7 +69,7 @@ object Interpreter {
 
       case Plan.UserDefined(source, dest, transformer) =>
         transformer match {
-          case '{ $t: UserDefinedTransformer[src, dest] } => 
+          case '{ $t: UserDefinedTransformer[src, dest] } =>
             val sourceValue = value.asExprOf[src]
             '{ $t.transform($sourceValue) }
         }
