@@ -18,18 +18,20 @@ final case class ValueGen[A](int: A) extends AnyVal
 
   final case class HKT[F[_]](value: F[Int])
 
-  final case class Person1(int: Int, str: String, nested: List[Nested1])
-  final case class Person2(int: Int, str: String, nested: Vector[Nested2])
+  final case class Person1(int: Int, str: String, opt: List[Nested1])
+  final case class Person2(int: Int, str: String, opt: Vector[Nested2])
   final case class Nested1(int: Int)
   final case class Nested2(int: Int | String)
 
+  given UserDefinedTransformer[Int, String] = _.toString()
+
   val p = Person1(1, "asd", Nested1(1) :: Nil)
 
-  Planner.print[Sum1, Sum2]
+  // Planner.print[Sum1, Sum2]
   
-  Planner.print[Person1, Person2]
+  // Planner.print[Person1, Person2]
 
   Transformer.Debug.showCode {
-    StructTransform.transform[HKT[List], HKT[Vector]](HKT(Nil))
+    Interpreter.transformPlanned[Person1, Person2](p)
   }
 }

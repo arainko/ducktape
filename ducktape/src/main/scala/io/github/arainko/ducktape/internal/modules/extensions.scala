@@ -13,6 +13,10 @@ extension (tpe: Type[? <: AnyKind]) {
     quotes.reflect.TypeRepr.of(using tpe)
 }
 
+extension (companion: Type.type) {
+  def apply[A](using tpe: Type[A]): tpe.type = tpe
+}
+
 extension (expr: Expr[Any]) {
   private[ducktape] def accessFieldByName(name: String)(using Quotes): quotes.reflect.Select = {
     import quotes.reflect.*
