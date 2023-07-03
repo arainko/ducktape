@@ -1,26 +1,57 @@
 package io.github.arainko.ducktape
 
+import io.github.arainko.ducktape.Plan.UserDefined
 import io.github.arainko.ducktape.internal.modules.*
-import scala.quoted.*
+
 import scala.annotation.nowarn
 import scala.collection.Factory
+import scala.collection.mutable.{ Builder, ListBuffer }
+import scala.quoted.*
 
 object Interpreter {
 
   inline def transformPlanned[A, B](value: A) = ${ createTransformation[A, B]('value) }
 
-  def createTransformation[A: Type, B: Type](value: Expr[A])(using Quotes): Expr[B] = {
-    import quotes.reflect.*
-    val plan = Planner.createPlan[A, B]
-    recurse(plan, value).asExprOf[B]
+  private def unsafeRefinePlan[A <: Plan.Error](plan: Plan[A]): Either[List[Plan.Error], Plan[Nothing]] = {
+    def recurse(errors: Builder[Plan.Error, List[Plan.Error]], curr: Plan[A]): Unit =
+      curr match {
+        case plan: Plan.Upcast => ()
+        case Plan.BetweenProducts(_, _, fieldPlans) =>
+          fieldPlans.values.foreach(plan => recurse(errors, plan))
+        case Plan.BetweenCoproducts(_, _, casePlans) =>
+          casePlans.values.foreach(plan => recurse(errors, plan))
+        case Plan.BetweenOptions(_, _, plan)         => recurse(errors, plan)
+        case Plan.BetweenNonOptionOption(_, _, plan) => recurse(errors, plan)
+        case Plan.BetweenCollections(_, _, _, plan)  => recurse(errors, plan)
+        case plan: Plan.BetweenSingletons            => ()
+        case plan: UserDefined                       => ()
+        case error: Plan.Error                       => errors += error
+      }
+    val builder = List.newBuilder[Plan.Error]
+    recurse(builder, plan)
+    val errors = builder.result()
+    // if no errors were accumulated that means there are no Plan.Error nodes which means we operate on a Plan[Nothing]
+    Either.cond(errors.isEmpty, plan.asInstanceOf[Plan[Nothing]], errors)
   }
 
-  private def recurse(plan: Plan, value: Expr[Any])(using Quotes): Expr[Any] = {
+  def createTransformation[A: Type, B: Type](value: Expr[A])(using Quotes): Expr[B] = {
+    import quotes.reflect.*
+
+    val plan = Planner.createPlan[A, B]
+    unsafeRefinePlan(plan) match {
+      case Left(errors) =>
+        val rendered = errors.map(err => s"${err.message} @ ${err.context.render}").mkString("\n")
+        report.errorAndAbort(rendered)
+      case Right(totalPlan) =>
+        recurse(totalPlan, value).asExprOf[B]
+    }
+  }
+
+  private def recurse(plan: Plan[Nothing], value: Expr[Any])(using Quotes): Expr[Any] = {
     import quotes.reflect.*
 
     plan match {
-      case Plan.Upcast(_, _) =>
-        value
+      case Plan.Upcast(_, _) => value
 
       case Plan.BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
         val args = fieldPlans.map { (fieldName, plan) =>
@@ -30,13 +61,15 @@ object Interpreter {
         Constructor(destTpe.repr).appliedToArgs(args.toList).asExpr
 
       case Plan.BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
-        val branches = casePlans.map((_, plan) =>
-          (plan.sourceTpe -> plan.destTpe) match {
-            case '[src] -> '[dest] =>
-              val sourceValue = '{ $value.asInstanceOf[src] }
-              IfBranch(IsInstanceOf(value, sourceTpe), recurse(plan, sourceValue))
-          }
-        ).toList
+        val branches = casePlans
+          .map((_, plan) =>
+            (plan.sourceTpe -> plan.destTpe) match {
+              case '[src] -> '[dest] =>
+                val sourceValue = '{ $value.asInstanceOf[src] }
+                IfBranch(IsInstanceOf(value, sourceTpe), recurse(plan, sourceValue))
+            }
+          )
+          .toList
         ifStatement(branches).asExpr
 
       case Plan.BetweenOptions(sourceTpe, destTpe, plan) =>
@@ -64,8 +97,7 @@ object Interpreter {
             '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
         }
 
-      case Plan.BetweenSingletons(sourceTpe, destTpe, expr) =>
-        expr
+      case Plan.BetweenSingletons(sourceTpe, destTpe, expr) => expr
 
       case Plan.UserDefined(source, dest, transformer) =>
         transformer match {

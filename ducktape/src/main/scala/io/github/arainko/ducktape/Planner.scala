@@ -14,15 +14,17 @@ object Planner {
     '{}
   }
 
-  def createPlan[Source: Type, Dest: Type](using Quotes): Plan = {
+  def createPlan[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] = recurseAndCreatePlan[Source, Dest](Plan.Context(Vector.empty))
+
+  private def recurseAndCreatePlan[Source: Type, Dest: Type](context: Plan.Context)(using Quotes): Plan[Plan.Error] = {
     val src = Structure.of[Source]
     val dest = Structure.of[Dest]
-    val plan = recurse(src, dest)
-    println(plan.traverse(Type.of[Sum1.Leaf1] :: "int" :: Nil))
+    val plan = recurse(src, dest, context)
+    // quotes.reflect.report.info(plan.traverse(Type.of[Sum1.Leaf1] :: "int" :: Nil).toString)
     plan
   }
 
-  private def recurse(source: Structure, dest: Structure)(using Quotes): Plan =
+  private def recurse(source: Structure, dest: Structure, context: Plan.Context)(using Quotes): Plan[Plan.Error] =
     (source.force -> dest.force) match {
       case UserDefinedTransformation(transformer) =>
         Plan.UserDefined(source.tpe, dest.tpe, transformer)
@@ -31,32 +33,42 @@ object Planner {
         Plan.Upcast(source.tpe, dest.tpe)
 
       case Structure('[Option[srcTpe]], srcName) -> Structure('[Option[destTpe]], destName) =>
-        Plan.BetweenOptions(Type[srcTpe], Type[destTpe], createPlan[srcTpe, destTpe])
+        Plan.BetweenOptions(Type[srcTpe], Type[destTpe], recurseAndCreatePlan[srcTpe, destTpe](context))
 
       case Structure('[a], _) -> Structure('[Option[destTpe]], destName) =>
-        Plan.BetweenNonOptionOption(Type[a], Type[destTpe], createPlan[a, destTpe])
+        Plan.BetweenNonOptionOption(Type[a], Type[destTpe], recurseAndCreatePlan[a, destTpe](context))
 
       case Structure(source @ '[Iterable[srcTpe]], srcName) -> Structure(dest @ '[Iterable[destTpe]], destName) =>
-        Plan.BetweenCollections(dest, Type[srcTpe], Type[destTpe], createPlan[srcTpe, destTpe])
+        Plan.BetweenCollections(dest, Type[srcTpe], Type[destTpe], recurseAndCreatePlan[srcTpe, destTpe](context))
 
       case (source: Product, dest: Product) =>
         val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-          val sourceFieldStruct = source.fields(destField)
-          destField -> recurse(sourceFieldStruct, destFieldStruct)
+          val plan = 
+            source.fields
+              .get(destField)
+              .map(recurse(_, destFieldStruct, context.add(destField)))
+              .getOrElse(Plan.Error(source.tpe, dest.tpe, context.add(destField), s"No field named '$destField' found in ${source.tpe.repr.show}"))
+          destField -> plan
         }
         Plan.BetweenProducts(source.tpe, dest.tpe, fieldPlans)
 
       case (source: Coproduct, dest: Coproduct) =>
         val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
-          val destCaseStruct = dest.children(sourceName)
-          sourceName -> recurse(sourceCaseStruct, destCaseStruct)
+          val plan = 
+            dest
+              .children
+              .get(sourceName)
+              .map(recurse(sourceCaseStruct, _, context.add(sourceCaseStruct.tpe)))
+              .getOrElse(Plan.Error(source.tpe, dest.tpe, context.add(sourceCaseStruct.tpe), s"No child named '$sourceName' found in ${dest.tpe.repr.show}"))
+          sourceName -> plan
         }
         Plan.BetweenCoproducts(source.tpe, dest.tpe, casePlans)
 
       case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
         Plan.BetweenSingletons(source.tpe, dest.tpe, dest.value)
 
-      case other => quotes.reflect.report.errorAndAbort(s"Couldn't construct a plan with structures: $other")
+      case (source, dest) => 
+        Plan.Error(source.tpe, dest.tpe, context, s"Couldn't build a transformation plan between ${source.tpe.repr.show} and ${dest.tpe.repr.show}")
     }
 
   object UserDefinedTransformation {

@@ -7,6 +7,6 @@ enum Dupsko {
 }
 
 
-object Test {
-  Structure.print[Dupsko]
-}
+// object Test {
+//   Structure.print[Dupsko]
+// }
