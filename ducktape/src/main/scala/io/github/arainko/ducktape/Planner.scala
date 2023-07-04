@@ -14,14 +14,18 @@ object Planner {
     '{}
   }
 
-  def createPlan[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] = recurseAndCreatePlan[Source, Dest](Plan.Context(Vector.empty))
+  def createPlan[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] = recurseAndCreatePlan[Source, Dest](Plan.Context(Type[Source], Type[Dest], Vector.empty))
 
   private def recurseAndCreatePlan[Source: Type, Dest: Type](context: Plan.Context)(using Quotes): Plan[Plan.Error] = {
     val src = Structure.of[Source]
     val dest = Structure.of[Dest]
     val plan = recurse(src, dest, context)
-    // quotes.reflect.report.info(plan.traverse(Type.of[Sum1.Leaf1] :: "int" :: Nil).toString)
+    val updated = plan.updateAt(Type.of[Sum1.Leaf2] :: "duspko" :: Nil)(plan => Plan.BetweenSingletons(Type.of[Int], Type.of[Int], '{ 123 }))
+    println(updated.get.show)
+    println()
+    println(plan.show)
     plan
+    // plan
   }
 
   private def recurse(source: Structure, dest: Structure, context: Plan.Context)(using Quotes): Plan[Plan.Error] =

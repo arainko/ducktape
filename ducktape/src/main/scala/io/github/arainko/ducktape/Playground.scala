@@ -37,6 +37,7 @@ enum Sum2 {
   // Planner.print[Person1, Person2]
 
   // Transformer.Debug.showCode {
-    Interpreter.transformPlanned[Person1, Person2](p)
+    Interpreter.transformPlanned[Sum1, Sum2](Sum1.Single)
+
   // }
 }
