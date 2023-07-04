@@ -25,6 +25,8 @@ object Interpreter {
         case Plan.BetweenCollections(_, _, _, plan)  => recurse(errors, plan)
         case plan: Plan.BetweenSingletons            => ()
         case plan: UserDefined                       => ()
+        case plan: Plan.BetweenWrappedUnwrapped      => ()
+        case plan: Plan.BetweenUnwrappedWrapped      => ()
         case error: Plan.Error                       => errors += error
       }
     val builder = List.newBuilder[Plan.Error]
@@ -99,6 +101,12 @@ object Interpreter {
 
       case Plan.BetweenSingletons(sourceTpe, destTpe, expr) => expr
 
+      case Plan.BetweenWrappedUnwrapped(sourceTpe, destTpe, fieldName) =>
+        value.accessFieldByName(fieldName).asExpr
+
+      case Plan.BetweenUnwrappedWrapped(sourceTpe, destTpe) =>
+        Constructor(destTpe.repr).appliedTo(value.asTerm).asExpr
+        
       case Plan.UserDefined(source, dest, transformer) =>
         transformer match {
           case '{ $t: UserDefinedTransformer[src, dest] } =>

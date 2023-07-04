@@ -23,7 +23,7 @@ enum Sum2 {
   final case class HKT[F[_]](value: F[Int])
 
   final case class Person1(int: Int, str: String, opt: List[Nested1])
-  final case class Person2(int: Int, xtra: Int, xtra2: Int, str: String, opt: Vector[Nested2])
+  final case class Person2(int: Value, xtra: Int, xtra2: Int, str: String, opt: Vector[Nested2])
   final case class Nested1(int: Int)
   final case class Nested2(int: Int | String, nestedXtra: Int)
 
@@ -37,7 +37,7 @@ enum Sum2 {
   // Planner.print[Person1, Person2]
 
   // Transformer.Debug.showCode {
-    Interpreter.transformPlanned[Sum1, Sum2](Sum1.Single)
+    Interpreter.transformPlanned[Person1, Person2](p)
 
   // }
 }

@@ -21,7 +21,7 @@ object Planner {
     val dest = Structure.of[Dest]
     val plan = recurse(src, dest, context)
     val updated = plan.updateAt(Type.of[Sum1.Leaf2] :: "duspko" :: Nil)(plan => Plan.BetweenSingletons(Type.of[Int], Type.of[Int], '{ 123 }))
-    println(updated.get.show)
+    // println(updated.get.show)
     println()
     println(plan.show)
     plan
@@ -70,6 +70,12 @@ object Planner {
 
       case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
         Plan.BetweenSingletons(source.tpe, dest.tpe, dest.value)
+
+      case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr => 
+        Plan.BetweenWrappedUnwrapped(source.tpe, dest.tpe, source.paramFieldName)
+
+      case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr => 
+        Plan.BetweenUnwrappedWrapped(source.tpe, dest.tpe)
 
       case (source, dest) => 
         Plan.Error(source.tpe, dest.tpe, context, s"Couldn't build a transformation plan between ${source.tpe.repr.show} and ${dest.tpe.repr.show}")
