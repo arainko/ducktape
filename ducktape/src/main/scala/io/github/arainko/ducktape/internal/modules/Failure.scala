@@ -154,6 +154,22 @@ private[ducktape] object Failure {
         """.stripMargin
   }
 
+  final case class CannotTransformCoproductCaseFallible(
+    wrapperTpe: Type[?],
+    source: Type[?],
+    dest: Type[?],
+    implicitSearchExplanation: String
+  ) extends Failure {
+    override final def render(using Quotes): String =
+      s"""
+         |Neither an instance of Transformer.Fallible[${wrapperTpe.show}, ${source.fullName}, ${dest.fullName}] was found
+         |nor are '${source.show}' '${dest.show}' singletons with the same name.
+         |
+         |Compiler supplied explanation for the failed Transformer derivation (may or may not be helpful):
+         |$implicitSearchExplanation
+        """.stripMargin
+  }
+
   final case class FieldSourceMatchesNoneOfDestFields(config: Expr[Any], fieldSourceTpe: Type[?], destTpe: Type[?])
       extends Failure {
 
