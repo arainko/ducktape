@@ -2,6 +2,7 @@ package io.github.arainko.ducktape
 
 import scala.quoted.*
 import io.github.arainko.ducktape.internal.modules.*
+import io.github.arainko.ducktape.Plan.Context
 
 object Planner {
   import Structure.*
@@ -10,17 +11,19 @@ object Planner {
 
   def printMacro[A: Type, B: Type](using Quotes): Expr[Unit] = {
     val plan = createPlan[A, B]
-    quotes.reflect.report.info(plan.toString())
+    quotes.reflect.report.info(plan.show)
     '{}
   }
 
-  def createPlan[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] = recurseAndCreatePlan[Source, Dest](Plan.Context(Type[Source], Type[Dest], Vector.empty))
+  def createPlan[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] =
+    recurseAndCreatePlan[Source, Dest](Plan.Context(Type[Source], Type[Dest], Vector.empty))
 
   private def recurseAndCreatePlan[Source: Type, Dest: Type](context: Plan.Context)(using Quotes): Plan[Plan.Error] = {
     val src = Structure.of[Source]
     val dest = Structure.of[Dest]
     val plan = recurse(src, dest, context)
-    val updated = plan.updateAt(Type.of[Sum1.Leaf2] :: "duspko" :: Nil)(plan => Plan.BetweenSingletons(Type.of[Int], Type.of[Int], '{ 123 }))
+    val updated =
+      plan.updateAt(Type.of[Sum1.Leaf2] :: "duspko" :: Nil)(plan => Plan.BetweenSingletons(Type.of[Int], Type.of[Int], '{ 123 }))
     // println(updated.get.show)
     println()
     println(plan.show)
@@ -47,23 +50,36 @@ object Planner {
 
       case (source: Product, dest: Product) =>
         val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-          val plan = 
+          val plan =
             source.fields
               .get(destField)
               .map(recurse(_, destFieldStruct, context.add(destField)))
-              .getOrElse(Plan.Error(source.tpe, dest.tpe, context.add(destField), s"No field named '$destField' found in ${source.tpe.repr.show}"))
+              .getOrElse(
+                Plan.Error(
+                  source.tpe,
+                  dest.tpe,
+                  context.add(destField),
+                  s"No field named '$destField' found in ${source.tpe.repr.show}"
+                )
+              )
           destField -> plan
         }
         Plan.BetweenProducts(source.tpe, dest.tpe, fieldPlans)
 
       case (source: Coproduct, dest: Coproduct) =>
         val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
-          val plan = 
-            dest
-              .children
+          val plan =
+            dest.children
               .get(sourceName)
               .map(recurse(sourceCaseStruct, _, context.add(sourceCaseStruct.tpe)))
-              .getOrElse(Plan.Error(source.tpe, dest.tpe, context.add(sourceCaseStruct.tpe), s"No child named '$sourceName' found in ${dest.tpe.repr.show}"))
+              .getOrElse(
+                Plan.Error(
+                  source.tpe,
+                  dest.tpe,
+                  context.add(sourceCaseStruct.tpe),
+                  s"No child named '$sourceName' found in ${dest.tpe.repr.show}"
+                )
+              )
           sourceName -> plan
         }
         Plan.BetweenCoproducts(source.tpe, dest.tpe, casePlans)
@@ -71,14 +87,19 @@ object Planner {
       case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
         Plan.BetweenSingletons(source.tpe, dest.tpe, dest.value)
 
-      case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr => 
+      case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
         Plan.BetweenWrappedUnwrapped(source.tpe, dest.tpe, source.paramFieldName)
 
-      case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr => 
+      case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr =>
         Plan.BetweenUnwrappedWrapped(source.tpe, dest.tpe)
 
-      case (source, dest) => 
-        Plan.Error(source.tpe, dest.tpe, context, s"Couldn't build a transformation plan between ${source.tpe.repr.show} and ${dest.tpe.repr.show}")
+      case (source, dest) =>
+        Plan.Error(
+          source.tpe,
+          dest.tpe,
+          context,
+          s"Couldn't build a transformation plan between ${source.tpe.repr.show} and ${dest.tpe.repr.show}"
+        )
     }
 
   object UserDefinedTransformation {

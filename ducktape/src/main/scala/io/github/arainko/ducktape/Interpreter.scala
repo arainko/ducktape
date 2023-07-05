@@ -106,7 +106,7 @@ object Interpreter {
 
       case Plan.BetweenUnwrappedWrapped(sourceTpe, destTpe) =>
         Constructor(destTpe.repr).appliedTo(value.asTerm).asExpr
-        
+
       case Plan.UserDefined(source, dest, transformer) =>
         transformer match {
           case '{ $t: UserDefinedTransformer[src, dest] } =>

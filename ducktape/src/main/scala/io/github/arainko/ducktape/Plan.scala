@@ -37,9 +37,9 @@ enum Plan[+E <: PlanError] {
         s"UserDefined(${sourceTpe.show}, ${destTpe.show}, Transformer[...])"
       case PlanError(sourceTpe, destTpe, context, message) =>
         s"Error(${sourceTpe.show}, ${destTpe.show}, ${context.render}, ${message})"
-      case BetweenUnwrappedWrapped(sourceTpe, destTpe) => 
+      case BetweenUnwrappedWrapped(sourceTpe, destTpe) =>
         s"BetweenUnwrappedWrapped(${sourceTpe.show}, ${destTpe.show})"
-      case BetweenWrappedUnwrapped(sourceTpe, destTpe, fieldName) =>  
+      case BetweenWrappedUnwrapped(sourceTpe, destTpe, fieldName) =>
         s"BetweenWrappedUnwrapped(${sourceTpe.show}, ${destTpe.show}, $fieldName)"
     }
   }
@@ -78,15 +78,15 @@ enum Plan[+E <: PlanError] {
   }
 
   case Upcast(sourceTpe: Type[?], destTpe: Type[?]) extends Plan[Nothing]
+  case UserDefined(sourceTpe: Type[?], destTpe: Type[?], transformer: Expr[UserDefinedTransformer[?, ?]]) extends Plan[Nothing]
+  case BetweenUnwrappedWrapped(sourceTpe: Type[?], destTpe: Type[?]) extends Plan[Nothing]
+  case BetweenWrappedUnwrapped(sourceTpe: Type[?], destTpe: Type[?], fieldName: String) extends Plan[Nothing]
+  case BetweenSingletons(sourceTpe: Type[?], destTpe: Type[?], expr: Expr[Any]) extends Plan[Nothing]
   case BetweenProducts(sourceTpe: Type[?], destTpe: Type[?], fieldPlans: Map[String, Plan[E]]) extends Plan[E]
   case BetweenCoproducts(sourceTpe: Type[?], destTpe: Type[?], casePlans: Map[String, Plan[E]]) extends Plan[E]
   case BetweenOptions(sourceTpe: Type[?], destTpe: Type[?], plan: Plan[E]) extends Plan[E]
   case BetweenNonOptionOption(sourceTpe: Type[?], destTpe: Type[?], plan: Plan[E]) extends Plan[E]
   case BetweenCollections(destCollectionTpe: Type[?], sourceTpe: Type[?], destTpe: Type[?], plan: Plan[E]) extends Plan[E]
-  case BetweenSingletons(sourceTpe: Type[?], destTpe: Type[?], expr: Expr[Any]) extends Plan[Nothing]
-  case UserDefined(sourceTpe: Type[?], destTpe: Type[?], transformer: Expr[UserDefinedTransformer[?, ?]]) extends Plan[Nothing]
-  case BetweenUnwrappedWrapped(sourceTpe: Type[?], destTpe: Type[?]) extends Plan[Nothing]
-  case BetweenWrappedUnwrapped(sourceTpe: Type[?], destTpe: Type[?], fieldName: String) extends Plan[Nothing]
   // TODO: Use a well typed error definition here and not a String
   case Error(sourceTpe: Type[?], destTpe: Type[?], context: Plan.Context, message: String) extends Plan[Plan.Error]
 }
