@@ -77,6 +77,26 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
     assert(transformer.transform(From.Product(None)) == Left(List("Missing required field")))
   }
 
+  test("Use total transformers when possible") {
+    type Field = Int
+
+    given Transformer[Field, Field] = n => n + 5
+
+    sealed trait From
+    object From {
+      case class Product(field: Field) extends From
+    }
+
+    sealed trait To
+    object To {
+      case class Product(field: Field) extends To
+    }
+
+    val transformer = FallibleTransformer.betweenCoproductsAccumulating[ErrorsOrResult, From, To]
+
+    assert(transformer.transform(From.Product(5)) == Right(To.Product(10)))
+  }
+
   test("Accumulate problems") {
     sealed trait From
     object From {

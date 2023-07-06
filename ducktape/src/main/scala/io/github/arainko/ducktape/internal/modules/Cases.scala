@@ -4,7 +4,7 @@ import scala.deriving.Mirror
 import scala.quoted.*
 
 private[ducktape] sealed trait Cases {
-  export byName.get
+  export byName.{ get, getOrElse }
 
   val value: List[Case]
 

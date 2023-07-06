@@ -1,5 +1,6 @@
 package io.github.arainko.ducktape.internal.macros
 
+import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.fallible.{ FallibleTransformer, Mode }
 import io.github.arainko.ducktape.function.FunctionArguments
 import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.*
@@ -19,66 +20,60 @@ private[ducktape] object FallibleCoproductTransformations {
     given Cases.Source = Cases.Source.fromMirror(Source)
     given Cases.Dest = Cases.Dest.fromMirror(Dest)
 
-    val ifBranches = coproductBranches[F, Source, Dest](sourceValue, Cases.source.value, F)
-    ifStatement(ifBranches).asExprOf[F[Dest]]
+    val ifNoMatch = '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }
+
+    ExhaustiveCoproductMatching(cases = Cases.source, sourceValue = sourceValue, ifNoMatch = ifNoMatch) {
+      coproductBranch(sourceValue, _, F)
+    }
   }
 
-  private def coproductBranches[F[+x]: Type, Source: Type, Dest: Type](
+  private def coproductBranch[F[+x]: Type, Source: Type, Dest: Type](
     sourceValue: Expr[Source],
-    sourceCases: List[Case],
+    source: Case,
     F: Expr[Mode[F]]
-  )(using Quotes, Cases.Dest) = {
+  )(using Quotes, Cases.Dest): Expr[F[Dest]] = {
     import quotes.reflect.*
 
-    sourceCases.map { source =>
-      source -> Cases.dest
-        .get(source.name)
-        .getOrElse(Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
-    }.map { (source, dest) =>
-      val cond = IsInstanceOf(sourceValue, source.tpe)
+    val dest = Cases.dest.getOrElse(source.name, Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
 
-      (source.tpe -> dest.tpe) match {
-        case '[src] -> '[dest] =>
-          val value =
-            source.fallibleTransformerTo[F](dest).map {
-              case '{ $transformer: FallibleTransformer[F, src, dest] } =>
-                '{
-                  val castedSource = $sourceValue.asInstanceOf[src]
-                  val t = $transformer
-                  t.transform(castedSource)
-                }.asExprOf[F[Dest]]
-            } match {
-              case Right(value) => value
-              case Left(explanation) =>
-                dest.materializeSingleton.map { singleton =>
-                  '{ $F.pure[dest]($singleton.asInstanceOf[dest]) }
-                }
-                  .getOrElse(
-                    Failure.emit(
-                      Failure.CannotTransformCoproductCaseFallible(summon[Type[F]], source.tpe, dest.tpe, explanation)
-                    )
-                  )
-            }
-          IfBranch(cond, value)
+    def tryTotalTransformation: Either[String, Expr[F[Dest]]] =
+      source.transformerTo(dest).map {
+        case '{ $total: Transformer[src, dest] } =>
+          '{
+            val castedSource = $sourceValue.asInstanceOf[src]
+            val transformed = ${ LiftTransformation.liftTransformation(total, 'castedSource) }
+            $F.pure(transformed)
+          }.asExprOf[F[Dest]]
       }
+
+    def tryFallibleTransformation: Either[String, Expr[F[Dest]]] =
+      source.fallibleTransformerTo[F](dest).map {
+        case '{ FallibleTransformer.fallibleFromTotal[F, src, dest](using $total, $support) } =>
+          '{
+            val castedSource = $sourceValue.asInstanceOf[src]
+            val transformed = ${ LiftTransformation.liftTransformation(total, 'castedSource) }
+            $F.pure(transformed)
+          }.asExprOf[F[Dest]]
+
+        case '{ $transformer: FallibleTransformer[F, src, dest] } =>
+          val castedSource: Expr[src] = '{ $sourceValue.asInstanceOf[src] }
+          '{ $transformer.transform($castedSource) }.asExprOf[F[Dest]]
+      }
+
+    def trySingletonTransformation: Option[Expr[F[Dest]]] =
+      dest.materializeSingleton.map { singleton =>
+        '{ $F.pure[Dest]($singleton.asInstanceOf[Dest]) }
+      }
+
+    tryTotalTransformation
+      .orElse(tryFallibleTransformation) match {
+      case Right(expr)       => expr
+      case Left(explanation) =>
+        // note: explanation is information from the FallibleTransformation implicit search.
+        trySingletonTransformation
+          .getOrElse(
+            Failure.emit(Failure.CannotTransformCoproductCaseFallible(summon[Type[F]], source.tpe, dest.tpe, explanation))
+          )
     }
   }
-
-  private def ifStatement(using Quotes)(branches: List[IfBranch]): quotes.reflect.Term = {
-    import quotes.reflect.*
-
-    branches match {
-      case IfBranch(cond, value) :: xs =>
-        If(cond.asTerm, value.asTerm, ifStatement(xs))
-      case Nil =>
-        '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }.asTerm
-    }
-  }
-
-  private def IsInstanceOf(value: Expr[Any], tpe: Type[?])(using Quotes) =
-    tpe match {
-      case '[tpe] => '{ $value.isInstanceOf[tpe] }
-    }
-
-  private case class IfBranch(cond: Expr[Boolean], value: Expr[Any])
 }

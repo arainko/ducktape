@@ -19,8 +19,15 @@ private[ducktape] object CoproductTransformations {
     given Cases.Source = Cases.Source.fromMirror(Source)
     given Cases.Dest = Cases.Dest.fromMirror(Dest)
 
-    val ifBranches = coproductBranches[Source, Dest](sourceValue, Cases.source.value)
-    ifStatement(ifBranches).asExprOf[Dest]
+    val ifNoMatch = '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }
+
+    ExhaustiveCoproductMatching(
+      Cases.source,
+      sourceValue,
+      ifNoMatch
+    ) { c =>
+      coproductBranch(c, sourceValue)
+    }
   }
 
   def transformConfigured[Source: Type, Dest: Type](
@@ -39,85 +46,58 @@ private[ducktape] object CoproductTransformations {
         .map(c => c.tpe.fullName -> c)
         .toMap
 
-    val (nonConfiguredCases, configuredCases) =
-      Cases.source.value.partition(c => !materializedConfig.contains(c.tpe.fullName))
+    val ifNoMatch = '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }
 
-    val nonConfiguredIfBranches = coproductBranches[Source, Dest](sourceValue, nonConfiguredCases)
-
-    val configuredIfBranches =
-      configuredCases
-        .map(c => c.tpe.fullName -> c)
-        .toMap
-        .map {
-          case (fullName, source) =>
-            materializedConfig(fullName) match {
-              case Coproduct.Computed(tpe, function) =>
-                val value = tpe match {
-                  case '[tpe] =>
-                    '{
-                      val casted = $sourceValue.asInstanceOf[tpe]
-                      $function(casted)
-                    }
-                }
-                IfBranch(IsInstanceOf(sourceValue, source.tpe), value)
-
-              case Coproduct.Const(tpe, value) =>
-                IfBranch(IsInstanceOf(sourceValue, source.tpe), value)
-            }
-        }
-
-    ifStatement(nonConfiguredIfBranches ++ configuredIfBranches).asExprOf[Dest]
-  }
-
-  private def coproductBranches[Source: Type, Dest: Type](
-    sourceValue: Expr[Source],
-    sourceCases: List[Case]
-  )(using Quotes, Cases.Dest) = {
-    import quotes.reflect.*
-
-    sourceCases.map { source =>
-      source -> Cases.dest
-        .get(source.name)
-        .getOrElse(Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
-    }.map { (source, dest) =>
-      val cond = IsInstanceOf(sourceValue, source.tpe)
-
-      (source.tpe -> dest.tpe) match {
-        case '[src] -> '[dest] =>
-          val value =
-            source.transformerTo(dest).map {
-              case '{ $t: Transformer[src, dest] } =>
-                '{
-                  val castedSource = $sourceValue.asInstanceOf[src]
-                  ${ LiftTransformation.liftTransformation(t, 'castedSource) }
-                }
-            } match {
-              case Right(value) => value
-              case Left(explanation) =>
-                dest.materializeSingleton
-                  .getOrElse(Failure.emit(Failure.CannotTransformCoproductCase(source.tpe, dest.tpe, explanation)))
-            }
-
-          IfBranch(cond, value)
+    ExhaustiveCoproductMatching(
+      Cases.source,
+      sourceValue,
+      ifNoMatch
+    ) { c =>
+      materializedConfig.get(c.tpe.fullName) match {
+        case Some(Coproduct.Computed(tpe, function)) =>
+          tpe match {
+            case '[tpe] =>
+              '{
+                val casted = $sourceValue.asInstanceOf[tpe]
+                $function(casted)
+              }.asExprOf[Dest]
+          }
+        case Some(Coproduct.Const(tpe, value)) => value.asExprOf[Dest]
+        case None                              => coproductBranch[Source, Dest](c, sourceValue)
       }
     }
   }
 
-  private def ifStatement(using Quotes)(branches: List[IfBranch]): quotes.reflect.Term = {
+  private def coproductBranch[Source: Type, Dest: Type](
+    source: Case,
+    sourceValue: Expr[Source]
+  )(using Quotes, Cases.Dest): Expr[Dest] = {
     import quotes.reflect.*
 
-    branches match {
-      case IfBranch(cond, value) :: xs =>
-        If(cond.asTerm, value.asTerm, ifStatement(xs))
-      case Nil =>
-        '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }.asTerm
+    val dest = Cases.dest.getOrElse(source.name, Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
+
+    def tryTransformation: Either[String, Expr[Dest]] =
+      source.transformerTo(dest).map {
+        case '{ $t: Transformer[src, dest] } =>
+          '{
+            val castedSource = $sourceValue.asInstanceOf[src]
+            ${ LiftTransformation.liftTransformation(t, 'castedSource) }
+          }.asExprOf[Dest]
+      }
+
+    def trySingletonTransformation: Option[Expr[Dest]] =
+      dest.materializeSingleton.map { singleton =>
+        '{ $singleton.asInstanceOf[Dest] }
+      }
+
+    tryTransformation match {
+      case Right(expr)       => expr
+      case Left(explanation) =>
+        // note: explanation is information from the Transformation implicit search.
+        trySingletonTransformation
+          .getOrElse(
+            Failure.emit(Failure.CannotTransformCoproductCase(source.tpe, dest.tpe, explanation))
+          )
     }
   }
-
-  private def IsInstanceOf(value: Expr[Any], tpe: Type[?])(using Quotes) =
-    tpe match {
-      case '[tpe] => '{ $value.isInstanceOf[tpe] }
-    }
-
-  private case class IfBranch(cond: Expr[Boolean], value: Expr[Any])
 }
