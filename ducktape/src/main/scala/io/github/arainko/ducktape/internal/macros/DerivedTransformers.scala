@@ -54,19 +54,19 @@ private[ducktape] object DerivedTransformers {
   )(using Quotes): Expr[FallibleTransformer[F, Source, Dest]] =
     '{ source => ${ FailFastProductTransformations.transform[F, Source, Dest](Source, Dest, F, 'source) } }
 
-  inline def failFastCoproduct[F[+x], Source, Dest](using
-    F: Mode.FailFast[F],
+  inline def fallibleCoproduct[F[+x], Source, Dest](using
+    F: Mode[F],
     Source: Mirror.SumOf[Source],
     Dest: Mirror.SumOf[Dest]
   ): FallibleTransformer[F, Source, Dest] =
-    ${ deriveFailFastCoproductTransformerMacro[F, Source, Dest]('F, 'Source, 'Dest) }
+    ${ deriveFallibleCoproductTransformerMacro[F, Source, Dest]('F, 'Source, 'Dest) }
 
-  def deriveFailFastCoproductTransformerMacro[F[+x]: Type, Source: Type, Dest: Type](
-    F: Expr[Mode.FailFast[F]],
+  def deriveFallibleCoproductTransformerMacro[F[+x]: Type, Source: Type, Dest: Type](
+    F: Expr[Mode[F]],
     Source: Expr[Mirror.SumOf[Source]],
     Dest: Expr[Mirror.SumOf[Dest]]
   )(using Quotes): Expr[FallibleTransformer[F, Source, Dest]] =
-    '{ source => ${ FailFastCoproductTransformations.transform[F, Source, Dest](Source, Dest, F, 'source) } }
+    '{ source => ${ FallibleCoproductTransformations.transform[F, Source, Dest](Source, Dest, F, 'source) } }
 
   inline def accumulatingProduct[F[+x], Source, Dest](using
     F: Mode.Accumulating[F],
@@ -80,18 +80,4 @@ private[ducktape] object DerivedTransformers {
     Dest: Expr[Mirror.ProductOf[Dest]]
   )(using Quotes): Expr[FallibleTransformer[F, Source, Dest]] =
     '{ source => ${ AccumulatingProductTransformations.transform[F, Source, Dest](Source, Dest, F, 'source) } }
-
-  inline def accumulatingCoproduct[F[+x], Source, Dest](using
-    F: Mode.Accumulating[F],
-    Source: Mirror.SumOf[Source],
-    Dest: Mirror.SumOf[Dest]
-  ): FallibleTransformer[F, Source, Dest] =
-    ${ deriveAccumulatingCoproductTransformerMacro[F, Source, Dest]('F, 'Source, 'Dest) }
-
-  def deriveAccumulatingCoproductTransformerMacro[F[+x]: Type, Source: Type, Dest: Type](
-    F: Expr[Mode.Accumulating[F]],
-    Source: Expr[Mirror.SumOf[Source]],
-    Dest: Expr[Mirror.SumOf[Dest]]
-  )(using Quotes): Expr[FallibleTransformer[F, Source, Dest]] =
-    '{ source => ${ AccumulatingCoproductTransformations.transform[F, Source, Dest](Source, Dest, F, 'source) } }
 }

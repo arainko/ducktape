@@ -9,12 +9,12 @@ import io.github.arainko.ducktape.internal.modules.{ Field, * }
 import scala.deriving.*
 import scala.quoted.*
 
-private[ducktape] object FailFastCoproductTransformations {
+private[ducktape] object FallibleCoproductTransformations {
 
   def transform[F[+x]: Type, Source: Type, Dest: Type](
     Source: Expr[Mirror.SumOf[Source]],
     Dest: Expr[Mirror.SumOf[Dest]],
-    F: Expr[Mode.FailFast[F]],
+    F: Expr[Mode[F]],
     sourceValue: Expr[Source]
   )(using Quotes): Expr[F[Dest]] = {
     given Cases.Source = Cases.Source.fromMirror(Source)
@@ -27,7 +27,7 @@ private[ducktape] object FailFastCoproductTransformations {
   private def coproductBranches[F[+x]: Type, Source: Type, Dest: Type](
     sourceValue: Expr[Source],
     sourceCases: List[Case],
-    F: Expr[Mode.FailFast[F]]
+    F: Expr[Mode[F]]
   )(using Quotes, Cases.Dest) = {
     import quotes.reflect.*
 
