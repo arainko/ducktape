@@ -54,6 +54,20 @@ private[ducktape] object DerivedTransformers {
   )(using Quotes): Expr[FallibleTransformer[F, Source, Dest]] =
     '{ source => ${ FailFastProductTransformations.transform[F, Source, Dest](Source, Dest, F, 'source) } }
 
+  inline def failFastCoproduct[F[+x], Source, Dest](using
+    F: Mode.FailFast[F],
+    Source: Mirror.SumOf[Source],
+    Dest: Mirror.SumOf[Dest]
+  ): FallibleTransformer[F, Source, Dest] =
+    ${ deriveFailFastCoproductTransformerMacro[F, Source, Dest]('F, 'Source, 'Dest) }
+
+  def deriveFailFastCoproductTransformerMacro[F[+x]: Type, Source: Type, Dest: Type](
+    F: Expr[Mode.FailFast[F]],
+    Source: Expr[Mirror.SumOf[Source]],
+    Dest: Expr[Mirror.SumOf[Dest]]
+  )(using Quotes): Expr[FallibleTransformer[F, Source, Dest]] =
+    '{ source => ${ FailFastCoproductTransformations.transform[F, Source, Dest](Source, Dest, F, 'source) } }
+
   inline def accumulatingProduct[F[+x], Source, Dest](using
     F: Mode.Accumulating[F],
     Source: Mirror.ProductOf[Source],
