@@ -1,10 +1,9 @@
 package io.github.arainko.ducktape.internal.macros
 
-import io.github.arainko.ducktape.fallible.Mode
-import io.github.arainko.ducktape.fallible.FallibleTransformer
+import io.github.arainko.ducktape.fallible.{ FallibleTransformer, Mode }
 import io.github.arainko.ducktape.function.FunctionArguments
 import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.*
-import io.github.arainko.ducktape.internal.modules.{ Field, * }
+import io.github.arainko.ducktape.internal.modules.*
 
 import scala.deriving.*
 import scala.quoted.*
