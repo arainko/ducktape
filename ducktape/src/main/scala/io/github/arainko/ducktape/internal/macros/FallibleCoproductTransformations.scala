@@ -36,16 +36,6 @@ private[ducktape] object FallibleCoproductTransformations {
 
     val dest = Cases.dest.getOrElse(source.name, Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
 
-    def tryTotalTransformation: Either[String, Expr[F[Dest]]] =
-      source.transformerTo(dest).map {
-        case '{ $total: Transformer[src, dest] } =>
-          '{
-            val castedSource = $sourceValue.asInstanceOf[src]
-            val transformed = ${ LiftTransformation.liftTransformation(total, 'castedSource) }
-            $F.pure(transformed)
-          }.asExprOf[F[Dest]]
-      }
-
     def tryFallibleTransformation: Either[String, Expr[F[Dest]]] =
       source.fallibleTransformerTo[F](dest).map {
         case '{ FallibleTransformer.fallibleFromTotal[F, src, dest](using $total, $support) } =>
@@ -65,8 +55,7 @@ private[ducktape] object FallibleCoproductTransformations {
         '{ $F.pure[Dest]($singleton.asInstanceOf[Dest]) }
       }
 
-    tryTotalTransformation
-      .orElse(tryFallibleTransformation) match {
+    tryFallibleTransformation match {
       case Right(expr)       => expr
       case Left(explanation) =>
         // note: explanation is information from the FallibleTransformation implicit search.
