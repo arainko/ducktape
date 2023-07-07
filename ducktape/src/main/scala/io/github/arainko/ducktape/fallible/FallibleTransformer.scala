@@ -24,6 +24,18 @@ object FallibleTransformer extends LowPriorityAccumulatingInstances {
     F: Mode.FailFast[F]
   ): FallibleTransformer[F, Source, Dest] = DerivedTransformers.failFastProduct[F, Source, Dest]
 
+  inline given betweenCoproductsAccumulating[F[+x], Source, Dest](using
+    Source: Mirror.SumOf[Source],
+    Dest: Mirror.SumOf[Dest],
+    F: Mode.Accumulating[F]
+  ): FallibleTransformer[F, Source, Dest] = DerivedTransformers.fallibleCoproduct[F, Source, Dest]
+
+  inline given betweenCoproductsFailFast[F[+x], Source, Dest](using
+    Source: Mirror.SumOf[Source],
+    Dest: Mirror.SumOf[Dest],
+    F: Mode.FailFast[F]
+  ): FallibleTransformer[F, Source, Dest] = DerivedTransformers.fallibleCoproduct[F, Source, Dest]
+
   given betweenOptions[F[+x], Source, Dest](using
     transformer: FallibleTransformer[F, Source, Dest],
     F: Mode[F]
