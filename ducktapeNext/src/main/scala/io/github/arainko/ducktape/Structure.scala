@@ -13,9 +13,6 @@ sealed trait Structure {
   def tpe: Type[?]
   def name: String
 
-  final def typeRepr(using Quotes): quotes.reflect.TypeRepr =
-    quotes.reflect.TypeRepr.of(using tpe)
-
   final def force: Structure =
     this match {
       case lzy: Lazy => lzy.struct.force

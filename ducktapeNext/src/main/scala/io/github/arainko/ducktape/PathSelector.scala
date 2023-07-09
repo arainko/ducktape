@@ -5,17 +5,15 @@ import io.github.arainko.ducktape.internal.macros.DebugMacros
 import scala.collection.mutable.ListBuffer
 import scala.annotation.tailrec
 
-object PathMatcher {
+object PathSelector {
   // inline def run[A](inline expr: Selector ?=> A => Any) = ${ readPath('expr) }
 
-  def readPath[A: Type](expr: Expr[Selector ?=> A => Any])(using Quotes): List[String | Type[?]] = {
+  def read[A: Type](expr: Expr[Selector ?=> A => Any])(using Quotes): Path = {
     import quotes.reflect.{ Selector as _, * }
 
     @tailrec
-    def recurse(using Quotes)(acc: List[String | Type[?]], term: quotes.reflect.Term): List[String | Type[?]] = {
+    def recurse(using Quotes)(acc: Path, term: quotes.reflect.Term): Path = {
       import quotes.reflect.*
-
-      given Printer[TypeRepr] = Printer.TypeReprShortCode
 
       term match {
         case Inlined(_, _, tree) =>
@@ -25,13 +23,13 @@ object PathMatcher {
         case Block(_, tree) =>
           recurse(acc, tree)
         case Select(tree, name) =>
-          recurse(name :: acc, tree)
+          recurse(acc / Path.Segment.Field(name), tree)
         case TypeApply(Apply(TypeApply(Select(Ident(_), "at"), _), tree :: Nil), tpe :: Nil) =>
-          recurse(tpe.tpe.asType :: acc, tree)
+          recurse(acc / Path.Segment.Case(tpe.tpe.asType), tree)
         case Ident(_) => acc
         case other    => report.errorAndAbort(other.show(using Printer.TreeShortCode))
       }
     }
-    recurse(Nil, expr.asTerm)
+    recurse(Path.empty, expr.asTerm)
   }
 }

@@ -45,28 +45,27 @@ enum Plan[+E <: PlanError] {
   }
 
   final def updateAt[EE >: E <: Plan.Error](
-    paths: List[String | Type[?]]
+    path: Path
   )(update: Plan[EE] => Plan[EE])(using Quotes): Option[Plan[EE]] = {
     // TODO: Clean this up, make it tailrec
-    def recurse(current: Option[Plan[E]], paths: List[String | Type[?]])(using Quotes): Option[Plan[EE]] =
+    def recurse(current: Option[Plan[E]], segments: List[Path.Segment])(using Quotes): Option[Plan[EE]] =
       current.flatMap { plan =>
-        paths match {
-          case (fieldName: String) :: next =>
+        segments match {
+          case  Path.Segment.Field(fieldName) :: tail =>
             val result = PartialFunction.condOpt(plan) {
               case plan @ BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
-                recurse(fieldPlans.get(fieldName), next)
+                recurse(fieldPlans.get(fieldName), tail)
                   .map(fieldPlan => plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan)))
             }
             result.flatten
-
-          case (tpe: Type[?]) :: next =>
+          case Path.Segment.Case(tpe) :: tail =>
             val result = PartialFunction.condOpt(plan) {
               case plan @ BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
                 for {
                   (name, ogCasePlan) <- casePlans.collectFirst {
                     case (name, plan) if tpe.repr =:= plan.sourceTpe.repr => name -> plan
                   }
-                  casePlan <- recurse(Some(ogCasePlan), next)
+                  casePlan <- recurse(Some(ogCasePlan), tail)
                 } yield plan.copy(casePlans = casePlans.updated(name, casePlan))
             }
             result.flatten
@@ -74,7 +73,7 @@ enum Plan[+E <: PlanError] {
         }
       }
 
-    recurse(Some(this), paths)
+    recurse(Some(this), path.toList)
   }
 
   case Upcast(sourceTpe: Type[?], destTpe: Type[?]) extends Plan[Nothing]
@@ -94,17 +93,12 @@ enum Plan[+E <: PlanError] {
 object Plan {
   def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.sourceTpe, plan.destTpe)
 
-  final case class Context(sourceTpe: Type[?], destTpe: Type[?], path: Vector[String | Type[?]]) {
+  final case class Context(rootSourceTpe: Type[?], rootDestTpe: Type[?], path: Path) {
+    def add(segment: Path.Segment): Context = copy(path = path / segment)
+    def render(using Quotes): String = path.render
+  }
 
-    def add(segment: String | Type[?]): Context = copy(path = path :+ segment)
-
-    def render(using Quotes): String = {
-      import quotes.reflect.*
-      given Printer[TypeRepr] = Printer.TypeReprShortCode
-      path.map {
-        case fieldName: String => fieldName
-        case caseType: Type[?] => s"at[${caseType.repr.show}]"
-      }.mkString("_.", ".", "")
-    }
+  object Context {
+    def empty(rootSourceTpe: Type[?], rootDestTpe: Type[?]): Context = Context(rootSourceTpe, rootDestTpe, Path.empty)
   }
 }

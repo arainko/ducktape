@@ -21,9 +21,7 @@ enum Sum2 {
   case Single
 }
 
-trait Selector {
-  extension [A](self: A) def at[B <: A]: B
-}
+
 
 @main def main = {
 
@@ -46,7 +44,7 @@ trait Selector {
   //   )
 
 
-  PathMatcher.run[Sum1](_.at[Sum1].at[Sum1.Single.type])
+  // PathMatcher.run[Sum1](_.at[Sum1].at[Sum1.Single.type])
 
   // DebugMacros.code {
   //   costam[Sum1](
@@ -58,13 +56,26 @@ trait Selector {
   final case class HKT[F[_]](value: F[Int])
 
   final case class Person1(int: Int, str: String, opt: List[Nested1])
-  final case class Person2(int: Value, xtra: Int, xtra2: Int, str: String, opt: Vector[Nested2])
+  final case class Person2(int: Value, str: String, opt: Vector[Nested2])
   final case class Nested1(int: Int)
-  final case class Nested2(int: Int | String, nestedXtra: Int)
+  final case class Nested2(int: Int | String)
+
+  final case class Gen[A](int: Int, value: A)
 
   given UserDefinedTransformer[Int, String] = _.toString()
 
   val p = Person1(1, "asd", Nested1(1) :: Nil)
+
+  given transformer[A, B](using UserDefinedTransformer[A, B]): Transformer[Gen[A], Gen[B]] =
+    src => Interpreter.transformPlanned[Gen[A], Gen[B]](src)
+
+  Planner.print[Person1, Person2]
+
+  DebugMacros.code(summon[Transformer[Person1, Person2]])
+
+  DebugMacros.code(transformer[Person1, Person2])
+
+  // Interpreter.transformPlanned[Person1, Person2](???)
 
   // Planner.print[Person1, Person2]
 

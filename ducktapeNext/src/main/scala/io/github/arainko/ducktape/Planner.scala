@@ -16,15 +16,12 @@ object Planner {
   }
 
   def createPlan[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] =
-    recurseAndCreatePlan[Source, Dest](Plan.Context(Type[Source], Type[Dest], Vector.empty))
+    recurseAndCreatePlan[Source, Dest](Plan.Context.empty(Type[Source], Type[Dest]))
 
   private def recurseAndCreatePlan[Source: Type, Dest: Type](context: Plan.Context)(using Quotes): Plan[Plan.Error] = {
     val src = Structure.of[Source]
     val dest = Structure.of[Dest]
     val plan = recurse(src, dest, context)
-    val updated =
-      plan.updateAt(Type.of[Sum1.Leaf2] :: "duspko" :: Nil)(plan => Plan.BetweenSingletons(Type.of[Int], Type.of[Int], '{ 123 }))
-    // println(updated.get.show)
     println()
     println(plan.show)
     plan
@@ -36,7 +33,7 @@ object Planner {
       case UserDefinedTransformation(transformer) =>
         Plan.UserDefined(source.tpe, dest.tpe, transformer)
 
-      case (source, dest) if source.typeRepr <:< dest.typeRepr =>
+      case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
         Plan.Upcast(source.tpe, dest.tpe)
 
       case Structure('[Option[srcTpe]], srcName) -> Structure('[Option[destTpe]], destName) =>
@@ -50,15 +47,16 @@ object Planner {
 
       case (source: Product, dest: Product) =>
         val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
+          val updatedContext = context.add(Path.Segment.Field(destField))
           val plan =
             source.fields
               .get(destField)
-              .map(recurse(_, destFieldStruct, context.add(destField)))
+              .map(recurse(_, destFieldStruct, updatedContext))
               .getOrElse(
                 Plan.Error(
                   source.tpe,
                   dest.tpe,
-                  context.add(destField),
+                  updatedContext,
                   s"No field named '$destField' found in ${source.tpe.repr.show}"
                 )
               )
@@ -68,15 +66,16 @@ object Planner {
 
       case (source: Coproduct, dest: Coproduct) =>
         val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
+          val updatedContext = context.add(Path.Segment.Case(sourceCaseStruct.tpe))
           val plan =
             dest.children
               .get(sourceName)
-              .map(recurse(sourceCaseStruct, _, context.add(sourceCaseStruct.tpe)))
+              .map(recurse(sourceCaseStruct, _, updatedContext))
               .getOrElse(
                 Plan.Error(
                   source.tpe,
                   dest.tpe,
-                  context.add(sourceCaseStruct.tpe),
+                  updatedContext,
                   s"No child named '$sourceName' found in ${dest.tpe.repr.show}"
                 )
               )

@@ -47,6 +47,14 @@ lazy val ducktape =
     )
     .jvmSettings(tlMimaPreviousVersions ++= Set("0.1.0", "0.1.1", "0.1.2", "0.1.3", "0.1.4", "0.1.5"))
 
+lazy val ducktapeNext =
+  project
+    .in(file("ducktapeNext"))
+    .settings(
+      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings", "-deprecation"),
+    )
+    .dependsOn(ducktape.jvm)
+
 lazy val docs =
   project
     .in(file("documentation"))
