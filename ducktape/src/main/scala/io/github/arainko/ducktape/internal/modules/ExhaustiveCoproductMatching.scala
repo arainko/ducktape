@@ -1,6 +1,4 @@
-package io.github.arainko.ducktape.internal.macros
-
-import io.github.arainko.ducktape.internal.modules.{ Case, Cases }
+package io.github.arainko.ducktape.internal.modules
 
 import scala.quoted.*
 

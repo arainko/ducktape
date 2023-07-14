@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.builder.*
 import io.github.arainko.ducktape.internal.macros.*
 
 import scala.annotation.implicitNotFound
-import scala.collection.{ BuildFrom, Factory, MapFactory }
+import scala.collection.Factory
 import scala.deriving.Mirror
 
 @FunctionalInterface

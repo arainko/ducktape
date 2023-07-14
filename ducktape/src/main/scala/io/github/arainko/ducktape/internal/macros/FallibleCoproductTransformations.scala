@@ -2,12 +2,16 @@ package io.github.arainko.ducktape.internal.macros
 
 import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.fallible.{ FallibleTransformer, Mode }
-import io.github.arainko.ducktape.function.FunctionArguments
-import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.*
 import io.github.arainko.ducktape.internal.modules.*
 
 import scala.deriving.*
 import scala.quoted.*
+import io.github.arainko.ducktape.BuilderConfig
+import io.github.arainko.ducktape.FallibleBuilderConfig
+import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.FallibleCoproduct
+import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.FallibleCoproduct.Computed
+import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.FallibleCoproduct.Const
+import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.FallibleCoproduct.Total
 
 private[ducktape] object FallibleCoproductTransformations {
 
@@ -22,8 +26,46 @@ private[ducktape] object FallibleCoproductTransformations {
 
     val ifNoMatch = '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }
 
-    ExhaustiveCoproductMatching(cases = Cases.source, sourceValue = sourceValue, ifNoMatch = ifNoMatch) {
-      coproductBranch(sourceValue, _, F)
+    ExhaustiveCoproductMatching(cases = Cases.source, sourceValue = sourceValue, ifNoMatch = ifNoMatch) { subtypeCase =>
+      coproductBranch(sourceValue, subtypeCase, F)
+    }
+  }
+
+  def transformConfigured[F[+x]: Type, Source: Type, Dest: Type](
+    Source: Expr[Mirror.SumOf[Source]],
+    Dest: Expr[Mirror.SumOf[Dest]],
+    F: Expr[Mode[F]],
+    config: Expr[Seq[BuilderConfig[Source, Dest] | FallibleBuilderConfig[F, Source, Dest]]],
+    sourceValue: Expr[Source]
+  )(using Quotes): Expr[F[Dest]] = {
+    import quotes.reflect.*
+
+    given Cases.Source = Cases.Source.fromMirror(Source)
+    given Cases.Dest = Cases.Dest.fromMirror(Dest)
+
+    val materializedConfig =
+      MaterializedConfiguration.FallibleCoproduct
+        .fromFallibleCaseConfig(config)
+        .map(c => c.tpe.fullName -> c)
+        .toMap
+
+    val ifNoMatch = '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }
+
+    ExhaustiveCoproductMatching(cases = Cases.source, sourceValue = sourceValue, ifNoMatch = ifNoMatch) { subtypeCase =>
+      materializedConfig.get(subtypeCase.tpe.fullName) match {
+        case Some(FallibleCoproduct.Total(value)) => ???
+        case Some(FallibleCoproduct.Const(tpe, value)) => 
+          value.asExprOf[F[Dest]]
+        case Some(FallibleCoproduct.Computed(tpe, function)) => 
+          tpe match {
+            case '[tpe] =>
+              '{
+                val casted = $sourceValue.asInstanceOf[tpe]
+                $function(casted)
+              }.asExprOf[F[Dest]]
+            }
+        case None => coproductBranch(sourceValue, subtypeCase, F)
+      }
     }
   }
 

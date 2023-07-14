@@ -6,6 +6,7 @@ import io.github.arainko.ducktape.internal.modules.*
 
 import scala.deriving.*
 import scala.quoted.*
+import io.github.arainko.ducktape.internal.modules.ExhaustiveCoproductMatching
 
 // Ideally should live in `modules` but due to problems with ProductTransformations and LiftTransformation
 // is kept here for consistency

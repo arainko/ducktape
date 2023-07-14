@@ -1,7 +1,7 @@
 package io.github.arainko.ducktape.internal.modules
 
 import io.github.arainko.ducktape.Transformer
-import io.github.arainko.ducktape.fallible.{ FallibleTransformer, Mode }
+import io.github.arainko.ducktape.fallible.{ FallibleTransformer}
 
 import scala.quoted.*
 
