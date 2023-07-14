@@ -55,25 +55,38 @@ enum Sum2 {
 
   final case class HKT[F[_]](value: F[Int])
 
-  final case class Person1(int: Int, str: String, opt: List[Nested1])
-  final case class Person2(int: Value, str: String, opt: Vector[Nested2])
+  final case class Person1(int: Int, str: String, opt: Nested1)
+  final case class Person2(int: Value, str: String, opt: Nested2)
   final case class Nested1(int: Int)
-  final case class Nested2(int: Int | String)
+  final case class Nested2(int: Int | String, additional: Int)
 
   final case class Gen[A](int: Int, value: A)
 
   given UserDefinedTransformer[Int, String] = _.toString()
 
-  val p = Person1(1, "asd", Nested1(1) :: Nil)
+  val p = Person1(1, "asd", Nested1(1))
 
-  given transformer[A, B](using UserDefinedTransformer[A, B]): Transformer[Gen[A], Gen[B]] =
+  given transformer[A, B](using Transformer2[A, B]): Transformer2[Gen[A], Gen[B]] =
     src => Interpreter.transformPlanned[Gen[A], Gen[B]](src)
 
-  Planner.print[Person1, Person2]
+  // Planner.print[Person1, Person2]
 
-  DebugMacros.code(summon[Transformer[Person1, Person2]])
+  // DebugMacros.code(summon[Transformer2[Gen[Person1], Gen[Person2]]])
 
-  DebugMacros.code(transformer[Person1, Person2])
+  val builder = AppliedBuilder[Person1, Person2](p)
+
+  builder.transform(Field2.const(_.opt, Nil))
+
+  DebugMacros.code {
+    Interpreter
+    .transformPlanned[Person1, Person2](
+      p,
+      Field2.const(_.opt.additional, 2)
+      )
+  }
+
+
+  // DebugMacros.code(transformer[Person1, Person2])
 
   // Interpreter.transformPlanned[Person1, Person2](???)
 
@@ -85,4 +98,8 @@ enum Sum2 {
   // Interpreter.transformPlanned[Person1, Person2](p)
 
   // }
+}
+
+final class AppliedBuilder[A, B](value: A) {
+  inline def transform(inline config: Config[A, B]*): B = ???
 }

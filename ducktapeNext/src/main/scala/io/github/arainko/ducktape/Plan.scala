@@ -35,6 +35,10 @@ enum Plan[+E <: PlanError] {
         s"BetweenSingletons(${sourceTpe.show}, ${destTpe.show}, Expr(...))"
       case UserDefined(sourceTpe, destTpe, transformer) =>
         s"UserDefined(${sourceTpe.show}, ${destTpe.show}, Transformer[...])"
+      case Derived(sourceTpe, destTpe, transformer) =>
+        s"Derived(${sourceTpe.show}, ${destTpe.show}, Transformer[...])"
+      case Configured(sourceTpe, destTpe, config) =>
+        s"Configured(${sourceTpe.show}, ${destTpe.show}, $config)"
       case PlanError(sourceTpe, destTpe, context, message) =>
         s"Error(${sourceTpe.show}, ${destTpe.show}, ${context.render}, ${message})"
       case BetweenUnwrappedWrapped(sourceTpe, destTpe) =>
@@ -44,14 +48,14 @@ enum Plan[+E <: PlanError] {
     }
   }
 
-  final def updateAt[EE >: E <: Plan.Error](
+  final def replaceAt[EE >: E <: Plan.Error](
     path: Path
-  )(update: Plan[EE] => Plan[EE])(using Quotes): Option[Plan[EE]] = {
+  )(update: Plan[EE])(using Quotes): Option[Plan[EE]] = {
     // TODO: Clean this up, make it tailrec
     def recurse(current: Option[Plan[E]], segments: List[Path.Segment])(using Quotes): Option[Plan[EE]] =
       current.flatMap { plan =>
         segments match {
-          case  Path.Segment.Field(fieldName) :: tail =>
+          case Path.Segment.Field(fieldName) :: tail =>
             val result = PartialFunction.condOpt(plan) {
               case plan @ BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
                 recurse(fieldPlans.get(fieldName), tail)
@@ -69,7 +73,7 @@ enum Plan[+E <: PlanError] {
                 } yield plan.copy(casePlans = casePlans.updated(name, casePlan))
             }
             result.flatten
-          case Nil => Some(update(plan))
+          case Nil => Some(update)
         }
       }
 
@@ -78,6 +82,8 @@ enum Plan[+E <: PlanError] {
 
   case Upcast(sourceTpe: Type[?], destTpe: Type[?]) extends Plan[Nothing]
   case UserDefined(sourceTpe: Type[?], destTpe: Type[?], transformer: Expr[UserDefinedTransformer[?, ?]]) extends Plan[Nothing]
+  case Derived(sourceTpe: Type[?], destTpe: Type[?], transformer: Expr[Transformer2[?, ?]]) extends Plan[Nothing]
+  case Configured(sourceTpe: Type[?], destTpe: Type[?], config: Plan.Configuration) extends Plan[Nothing]
   case BetweenUnwrappedWrapped(sourceTpe: Type[?], destTpe: Type[?]) extends Plan[Nothing]
   case BetweenWrappedUnwrapped(sourceTpe: Type[?], destTpe: Type[?], fieldName: String) extends Plan[Nothing]
   case BetweenSingletons(sourceTpe: Type[?], destTpe: Type[?], expr: Expr[Any]) extends Plan[Nothing]
@@ -94,11 +100,27 @@ object Plan {
   def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.sourceTpe, plan.destTpe)
 
   final case class Context(rootSourceTpe: Type[?], rootDestTpe: Type[?], path: Path) {
-    def add(segment: Path.Segment): Context = copy(path = path / segment)
+    def add(segment: Path.Segment): Context = copy(path = path.appended(segment))
     def render(using Quotes): String = path.render
   }
 
   object Context {
     def empty(rootSourceTpe: Type[?], rootDestTpe: Type[?]): Context = Context(rootSourceTpe, rootDestTpe, Path.empty)
+  }
+
+  enum Configuration {
+    case Const(value: Expr[Any])
+  }
+
+  def parseConfig[A: Type, B: Type](configs: Expr[Seq[Config[A, B]]])(using Quotes) = {
+    import quotes.reflect.*
+
+    val woooh = Varargs.unapply(configs).get
+    woooh
+      .map(_.asTerm)
+      .map {
+        case Apply(TypeApply(Select(Ident("Field2"), "const"), a :: b :: fieldTpe :: Nil), PathSelector(path) :: value :: Nil) =>
+          path -> Plan.Configured(Type.of[Int], Type.of[Int], Plan.Configuration.Const(value.asExpr))
+      }
   }
 }

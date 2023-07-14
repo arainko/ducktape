@@ -14,7 +14,9 @@ object Path {
   }
 
   extension (self: Path) {
-    infix def / (segment: Path.Segment): Path = self.appended(segment)
+    def appended(segment: Path.Segment): Path = self.appended(segment)
+
+    def prepended(segment: Path.Segment): Path = self.prepended(segment)
 
     def toVector: Vector[Path.Segment] = self.toVector
 

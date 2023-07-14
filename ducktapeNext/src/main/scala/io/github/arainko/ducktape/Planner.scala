@@ -92,6 +92,9 @@ object Planner {
       case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr =>
         Plan.BetweenUnwrappedWrapped(source.tpe, dest.tpe)
 
+      case DerivedTransformation(transformer) => 
+        Plan.Derived(source.tpe, dest.tpe, transformer)
+
       case (source, dest) =>
         Plan.Error(
           source.tpe,
@@ -107,6 +110,16 @@ object Planner {
 
       (src.tpe -> dest.tpe) match {
         case '[src] -> '[dest] => Expr.summon[UserDefinedTransformer[src, dest]]
+      }
+    }
+  }
+
+  object DerivedTransformation {
+    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[Transformer2[?, ?]]] = {
+      val (src, dest) = structs
+
+      (src.tpe -> dest.tpe) match {
+        case '[src] -> '[dest] => Expr.summon[Transformer2[src, dest]]
       }
     }
   }

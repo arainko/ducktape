@@ -1,46 +1,61 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.Plan.UserDefined
 import io.github.arainko.ducktape.internal.modules.*
 
 import scala.annotation.nowarn
 import scala.collection.Factory
 import scala.collection.mutable.{ Builder, ListBuffer }
 import scala.quoted.*
+import io.github.arainko.ducktape.Plan.Configuration
+import scala.annotation.tailrec
 
 object Interpreter {
 
-  inline def transformPlanned[A, B](value: A) = ${ createTransformation[A, B]('value) }
+  inline def transformPlanned[A, B](value: A, inline configs: Config[A, B]*) = ${ createTransformation[A, B]('value, 'configs) }
 
   private def unsafeRefinePlan[A <: Plan.Error](plan: Plan[A]): Either[List[Plan.Error], Plan[Nothing]] = {
-    def recurse(errors: Builder[Plan.Error, List[Plan.Error]], curr: Plan[A]): Unit =
-      curr match {
-        case plan: Plan.Upcast => ()
-        case Plan.BetweenProducts(_, _, fieldPlans) =>
-          fieldPlans.values.foreach(plan => recurse(errors, plan))
-        case Plan.BetweenCoproducts(_, _, casePlans) =>
-          casePlans.values.foreach(plan => recurse(errors, plan))
-        case Plan.BetweenOptions(_, _, plan)         => recurse(errors, plan)
-        case Plan.BetweenNonOptionOption(_, _, plan) => recurse(errors, plan)
-        case Plan.BetweenCollections(_, _, _, plan)  => recurse(errors, plan)
-        case plan: Plan.BetweenSingletons            => ()
-        case plan: UserDefined                       => ()
-        case plan: Plan.BetweenWrappedUnwrapped      => ()
-        case plan: Plan.BetweenUnwrappedWrapped      => ()
-        case error: Plan.Error                       => errors += error
-      }
-    val builder = List.newBuilder[Plan.Error]
-    recurse(builder, plan)
-    val errors = builder.result()
+
+    @tailrec
+    def recurse(stack: List[Plan[A]], errors: List[Plan.Error]): List[Plan.Error] =
+      stack match {
+        case head :: next =>
+          head match {
+            case plan: Plan.Upcast => recurse(next, errors)
+            case Plan.BetweenProducts(_, _, fieldPlans) =>
+              recurse(fieldPlans.values.toList ::: next, errors)
+            case Plan.BetweenCoproducts(_, _, casePlans) =>
+              recurse(casePlans.values.toList ::: next, errors)
+            case Plan.BetweenOptions(_, _, plan)         => recurse(plan :: next, errors)
+            case Plan.BetweenNonOptionOption(_, _, plan) => recurse(plan :: next, errors)
+            case Plan.BetweenCollections(_, _, _, plan)  => recurse(plan :: next, errors)
+            case plan: Plan.BetweenSingletons            => recurse(next, errors)
+            case plan: Plan.UserDefined                  => recurse(next, errors)
+            case plan: Plan.Derived                      => recurse(next, errors)
+            case plan: Plan.Configured                   => recurse(next, errors)
+            case plan: Plan.BetweenWrappedUnwrapped      => recurse(next, errors)
+            case plan: Plan.BetweenUnwrappedWrapped      => recurse(next, errors)
+            case error: Plan.Error                       => recurse(next, error :: errors)
+          }
+        case Nil => errors
+        }
+    val errors = recurse(plan :: Nil, Nil)
     // if no errors were accumulated that means there are no Plan.Error nodes which means we operate on a Plan[Nothing]
     Either.cond(errors.isEmpty, plan.asInstanceOf[Plan[Nothing]], errors)
   }
 
-  def createTransformation[A: Type, B: Type](value: Expr[A])(using Quotes): Expr[B] = {
+  def createTransformation[A: Type, B: Type](value: Expr[A], configs: Expr[Seq[Config[A, B]]])(using Quotes): Expr[B] = {
     import quotes.reflect.*
 
     val plan = Planner.createPlan[A, B]
-    unsafeRefinePlan(plan) match {
+    val config = Plan.parseConfig(configs)
+    val reconfiguredPlan = config.foldLeft(plan) {
+      case (plan, (path, config)) =>
+        plan.replaceAt(path)(config).getOrElse(plan)
+    }
+    println(plan.show)
+    println(config)
+    println(reconfiguredPlan.show)
+    unsafeRefinePlan(reconfiguredPlan) match {
       case Left(errors) =>
         val rendered = errors.map(err => s"${err.message} @ ${err.context.render}").mkString("\n")
         report.errorAndAbort(rendered)
@@ -55,10 +70,18 @@ object Interpreter {
     plan match {
       case Plan.Upcast(_, _) => value
 
+      case Plan.Configured(_, _, config) =>
+        config match {
+          case Configuration.Const(value) => value
+        }
+
       case Plan.BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
-        val args = fieldPlans.map { (fieldName, plan) =>
-          val fieldValue = value.accessFieldByName(fieldName).asExpr
-          NamedArg(fieldName, recurse(plan, fieldValue).asTerm)
+        val args = fieldPlans.map {
+          case (fieldName, p: Plan.Configured) =>
+            NamedArg(fieldName, recurse(p, value).asTerm)
+          case (fieldName, plan) =>
+            val fieldValue = value.accessFieldByName(fieldName).asExpr
+            NamedArg(fieldName, recurse(plan, fieldValue).asTerm)
         }
         Constructor(destTpe.repr).appliedToArgs(args.toList).asExpr
 
@@ -110,6 +133,13 @@ object Interpreter {
       case Plan.UserDefined(source, dest, transformer) =>
         transformer match {
           case '{ $t: UserDefinedTransformer[src, dest] } =>
+            val sourceValue = value.asExprOf[src]
+            '{ $t.transform($sourceValue) }
+        }
+
+      case Plan.Derived(source, dest, transformer) =>
+        transformer match {
+          case '{ $t: Transformer2[src, dest] } =>
             val sourceValue = value.asExprOf[src]
             '{ $t.transform($sourceValue) }
         }
