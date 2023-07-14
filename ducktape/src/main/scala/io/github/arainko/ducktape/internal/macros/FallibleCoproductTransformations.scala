@@ -36,7 +36,8 @@ private[ducktape] object FallibleCoproductTransformations {
 
     val dest = Cases.dest.getOrElse(source.name, Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
 
-    def tryFallibleTransformation: Either[String, Expr[F[Dest]]] =
+    // that weird error where when you don't name the Quotes param it does not compile here...
+    def tryFallibleTransformation(using q: Quotes) = 
       source.fallibleTransformerTo[F](dest).map {
         case '{ FallibleTransformer.fallibleFromTotal[F, src, dest](using $total, $support) } =>
           '{
@@ -50,7 +51,7 @@ private[ducktape] object FallibleCoproductTransformations {
           '{ $transformer.transform($castedSource) }.asExprOf[F[Dest]]
       }
 
-    def trySingletonTransformation: Option[Expr[F[Dest]]] =
+    def trySingletonTransformation(using Quotes) =
       dest.materializeSingleton.map { singleton =>
         '{ $F.pure[Dest]($singleton.asInstanceOf[Dest]) }
       }

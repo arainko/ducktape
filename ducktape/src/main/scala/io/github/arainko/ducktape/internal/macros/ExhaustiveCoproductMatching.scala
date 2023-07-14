@@ -24,9 +24,9 @@ private[ducktape] object ExhaustiveCoproductMatching {
    *    ifNoMatch
    */
 
-  def apply[Src: Type, Dest: Type](cases: Cases, sourceValue: Expr[Src], ifNoMatch: Expr[Dest])(f: Case => Expr[Dest])(using
-    Quotes
-  ): Expr[Dest] =
+  def apply[Src: Type, Dest: Type](cases: Cases, sourceValue: Expr[Src], ifNoMatch: Expr[Dest])(
+    f: Case => Expr[Dest]
+  )(using Quotes): Expr[Dest] =
     ifStatement(
       cases.value.map { c =>
         val cond = IsInstanceOf(sourceValue, c.tpe)
@@ -36,7 +36,7 @@ private[ducktape] object ExhaustiveCoproductMatching {
       ifNoMatch
     ).asExprOf[Dest]
 
-  private def ifStatement(using Quotes)(branches: List[IfBranch], ifNoMatch: Expr[_]): quotes.reflect.Term = {
+  private def ifStatement(using Quotes)(branches: List[IfBranch], ifNoMatch: Expr[?]): quotes.reflect.Term = {
     import quotes.reflect.*
 
     branches
