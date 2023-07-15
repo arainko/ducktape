@@ -27,9 +27,10 @@ object Warning {
     private def message(using Quotes) = s"${configType.name.capitalize} '$name' is configured multiple times"
 
     private def name(using Quotes) = config match {
-      case prod: MaterializedConfiguration.Product                   => prod.destFieldName
-      case coprod: MaterializedConfiguration.Coproduct               => coprod.tpe.fullName
-      case fallibeProd: MaterializedConfiguration.FallibleProduct[?] => fallibeProd.destFieldName
+      case prod: MaterializedConfiguration.Product                        => prod.destFieldName
+      case coprod: MaterializedConfiguration.Coproduct                    => coprod.tpe.fullName
+      case fallibeProd: MaterializedConfiguration.FallibleProduct[?]      => fallibeProd.destFieldName
+      case fallibleCoprod: MaterializedConfiguration.FallibleCoproduct[?] => fallibleCoprod.tpe.fullName
     }
   }
 }

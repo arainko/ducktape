@@ -85,5 +85,39 @@ private[ducktape] object Transformations {
           .errorAndAbort("Configured transformations are supported for Product -> Product and Coproduct -> Coproduct.")
       )
 
+  inline def transformConfiguredFallible[F[+x], Source, Dest](
+    source: Source,
+    inline configs: FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]*
+  )(using F: Transformer.Mode[F], Source: Mirror.Of[Source], Dest: Mirror.Of[Dest]) =
+    ${ transformConfiguredFallibleMacro('source, 'configs, 'F, 'Source, 'Dest) }
+
+  private def transformConfiguredFallibleMacro[F[+x]: Type, Source: Type, Dest: Type](
+    sourceValue: Expr[Source],
+    configs: Expr[Seq[FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]]],
+    F: Expr[Transformer.Mode[F]],
+    Source: Expr[Mirror.Of[Source]],
+    Dest: Expr[Mirror.Of[Dest]]
+  )(using Quotes): Expr[F[Dest]] =
+    (F, Source, Dest) match {
+      case (
+            '{ $mode: Transformer.Mode.Accumulating[F] },
+            '{ $source: Mirror.ProductOf[Source] },
+            '{ $dest: Mirror.ProductOf[Dest] }
+          ) =>
+        AccumulatingProductTransformations.transformConfigured(source, dest, mode, configs, sourceValue)
+      case (
+            '{ $mode: Transformer.Mode.FailFast[F] },
+            '{ $source: Mirror.ProductOf[Source] },
+            '{ $dest: Mirror.ProductOf[Dest] }
+          ) =>
+        FailFastProductTransformations.transformConfigured(source, dest, mode, configs, sourceValue)
+      case ('{ $mode: Transformer.Mode[F] }, '{ $source: Mirror.SumOf[Source] }, '{ $dest: Mirror.SumOf[Dest] }) =>
+        FallibleCoproductTransformations.transformConfigured(source, dest, mode, configs, sourceValue)
+      case _ =>
+        quotes.reflect.report.errorAndAbort("""ducktape was not able to determine the exact mode of fallible transformations.
+          |Make sure you have an instance of either Transformer.Mode.Accumulating[F] or Transformer.Mode.FailFast[F] (and not its supertype Transformer.Mode[F]) in implicit scope.
+          |""".stripMargin)
+    }
+
   private def mirrorOf[A: Type](using Quotes) = Expr.summon[Mirror.Of[A]]
 }

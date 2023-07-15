@@ -11,7 +11,7 @@ ThisBuild / startYear := Some(2023)
 ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
 ThisBuild / tlSonatypeUseLegacyHost := false
-ThisBuild / scalaVersion := "3.2.2"
+ThisBuild / scalaVersion := "3.3.0"
 
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
 ThisBuild / semanticdbEnabled := true
@@ -42,7 +42,7 @@ lazy val ducktape =
     .enablePlugins(TypelevelMimaPlugin)
     .in(file("ducktape"))
     .settings(
-      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings", "-deprecation"),
+      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings", "-deprecation", "-Wunused:all"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0-M7" % Test
     )
     .jvmSettings(tlMimaPreviousVersions ++= Set("0.1.0", "0.1.1", "0.1.2", "0.1.3", "0.1.4", "0.1.5"))

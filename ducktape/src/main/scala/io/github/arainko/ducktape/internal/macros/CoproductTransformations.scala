@@ -76,7 +76,7 @@ private[ducktape] object CoproductTransformations {
 
     val dest = Cases.dest.getOrElse(source.name, Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
 
-    def tryTransformation: Either[String, Expr[Dest]] =
+    def tryTransformation(using q: Quotes) =
       source.transformerTo(dest).map {
         case '{ $t: Transformer[src, dest] } =>
           '{
@@ -85,7 +85,7 @@ private[ducktape] object CoproductTransformations {
           }.asExprOf[Dest]
       }
 
-    def trySingletonTransformation: Option[Expr[Dest]] =
+    def trySingletonTransformation(using Quotes) =
       dest.materializeSingleton.map { singleton =>
         '{ $singleton.asInstanceOf[Dest] }
       }

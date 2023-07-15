@@ -218,7 +218,9 @@ private[ducktape] object MaterializedConfiguration {
     )(using Quotes, Cases.Source, Cases.Dest): List[Coproduct] =
       parseConfig(Failure.ConfigType.Case, config)(_.map(materializeSingleCoproductConfig), _.tpe.fullName)
 
-    private def materializeSingleCoproductConfig[Source, Dest](config: Expr[BuilderConfig[Source, Dest]])(using Quotes) =
+    private[MaterializedConfiguration] def materializeSingleCoproductConfig[Source, Dest](
+      config: Expr[BuilderConfig[Source, Dest]]
+    )(using Quotes) =
       config match {
         case '{ CaseConfig.computed[sourceSubtype].apply[source, dest]($function)(using $ev1, $ev2, $ev3) } =>
           Coproduct.Computed(summon[Type[sourceSubtype]], function.asInstanceOf[Expr[Any => Any]])(Pos.fromExpr(config))
@@ -227,6 +229,38 @@ private[ducktape] object MaterializedConfiguration {
           Coproduct.Const(summon[Type[sourceSubtype]], value)(Pos.fromExpr(config))
 
         case other => Failure.emit(Failure.UnsupportedConfig(other, Failure.ConfigType.Case))
+      }
+  }
+
+  sealed trait FallibleCoproduct[F[+x]] extends MaterializedConfiguration {
+    val tpe: Type[?]
+  }
+
+  object FallibleCoproduct {
+
+    final case class Computed[F[+x]](tpe: Type[?], function: Expr[Any => F[Any]])(val pos: Pos) extends FallibleCoproduct[F]
+
+    final case class Const[F[+x]](tpe: Type[?], value: Expr[F[Any]])(val pos: Pos) extends FallibleCoproduct[F]
+
+    final case class Total[F[+x]](value: Coproduct) extends FallibleCoproduct[F] {
+      export value.{ pos, tpe }
+    }
+
+    def fromFallibleCaseConfig[F[+x]: Type, Source: Type, Dest: Type](
+      configs: Expr[Seq[BuilderConfig[Source, Dest] | FallibleBuilderConfig[F, Source, Dest]]]
+    )(using Quotes): List[FallibleCoproduct[F]] =
+      parseConfig(Failure.ConfigType.Case, configs)(_.map(materializeSingleFallibleCoproductConfig), _.tpe.fullName)
+
+    private def materializeSingleFallibleCoproductConfig[F[+x]: Type, Source: Type, Dest: Type](
+      config: Expr[BuilderConfig[Source, Dest] | FallibleBuilderConfig[F, Source, Dest]]
+    )(using Quotes): FallibleCoproduct[F] =
+      config match {
+        case '{ CaseConfig.fallibleConst[sourceSubtype].apply[F, source, dest]($const)(using $ev1, $ev2, $ev3) } =>
+          FallibleCoproduct.Const(Type.of[sourceSubtype], const)(Pos.fromExpr(config))
+        case '{ CaseConfig.fallibleComputed[sourceSubtype].apply[F, source, dest]($function)(using $ev1, $ev2, $ev3) } =>
+          FallibleCoproduct.Computed(Type.of[sourceSubtype], function.asInstanceOf[Expr[Any => F[Any]]])(Pos.fromExpr(config))
+        case '{ $config: BuilderConfig[Source, Dest] } =>
+          FallibleCoproduct.Total(Coproduct.materializeSingleCoproductConfig(config))
       }
   }
 

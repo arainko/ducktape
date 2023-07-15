@@ -7,6 +7,7 @@ import scala.deriving.Mirror
 import scala.util.NotGiven
 
 opaque type BuilderConfig[Source, Dest] = Unit
+
 opaque type FallibleBuilderConfig[F[+x], Source, Dest] = Unit
 
 object Field {
@@ -85,6 +86,22 @@ object Case {
   @compileTimeOnly("'Case.const' needs to be erased from the AST with a macro.")
   def const[SourceSubtype]: Case.Const[SourceSubtype] = throw NotQuotedException("Case.const")
 
+  opaque type Const[SourceSubtype] = Unit
+
+  object Const {
+    extension [SourceSubtype](inst: Const[SourceSubtype]) {
+
+      @compileTimeOnly("'Case.const' needs to be erased from the AST with a macro.")
+      def apply[Source, Dest](const: Dest)(using
+        @implicitNotFound("Case.computed is only supported for coproducts but ${Source} is not a coproduct.")
+        ev1: Mirror.SumOf[Source],
+        ev2: SourceSubtype <:< Source,
+        @implicitNotFound("Case.const is only supported for subtypes of ${Source}.")
+        ev3: NotGiven[SourceSubtype =:= Source]
+      ): BuilderConfig[Source, Dest] = throw NotQuotedException("Case.const")
+    }
+  }
+
   @compileTimeOnly("'Case.computed' needs to be erased from the AST with a macro.")
   def computed[SourceSubtype]: Case.Computed[SourceSubtype] = throw NotQuotedException("Case.computed")
 
@@ -104,19 +121,41 @@ object Case {
     }
   }
 
-  opaque type Const[SourceSubtype] = Unit
+  @compileTimeOnly("'Case.fallibleConst' needs to be erased from the AST with a macro.")
+  def fallibleConst[SourceSubtype]: Case.FallibleConst[SourceSubtype] = throw NotQuotedException("Case.fallibleComputed")
 
-  object Const {
-    extension [SourceSubtype](inst: Const[SourceSubtype]) {
+  opaque type FallibleConst[SourceSubtype] = Unit
 
-      @compileTimeOnly("'Case.const' needs to be erased from the AST with a macro.")
-      def apply[Source, Dest](const: Dest)(using
-        @implicitNotFound("Case.computed is only supported for coproducts but ${Source} is not a coproduct.")
+  object FallibleConst {
+    extension [SourceSubtype](inst: FallibleConst[SourceSubtype]) {
+
+      @compileTimeOnly("'Case.fallibleConst' needs to be erased from the AST with a macro.")
+      def apply[F[+x], Source, Dest](const: F[Dest])(using
+        @implicitNotFound("Case.fallibleConst is only supported for coproducts but ${Source} is not a coproduct.")
         ev1: Mirror.SumOf[Source],
         ev2: SourceSubtype <:< Source,
-        @implicitNotFound("Case.instance is only supported for subtypes of ${Source}.")
+        @implicitNotFound("Case.fallibleConst is only supported for subtypes of ${Source}.")
         ev3: NotGiven[SourceSubtype =:= Source]
-      ): BuilderConfig[Source, Dest] = throw NotQuotedException("Case.const")
+      ): FallibleBuilderConfig[F, Source, Dest] = throw NotQuotedException("Case.computed")
+    }
+  }
+
+  @compileTimeOnly("'Case.fallibleConst' needs to be erased from the AST with a macro.")
+  def fallibleComputed[SourceSubtype]: Case.FallibleComputed[SourceSubtype] = throw NotQuotedException("Case.fallibleComputed")
+
+  opaque type FallibleComputed[SourceSubtype] = Unit
+
+  object FallibleComputed {
+    extension [SourceSubtype](inst: FallibleComputed[SourceSubtype]) {
+
+      @compileTimeOnly("'Case.fallibleComputed' needs to be erased from the AST with a macro.")
+      def apply[F[+x], Source, Dest](const: SourceSubtype => F[Dest])(using
+        @implicitNotFound("Case.fallibleComputed is only supported for coproducts but ${Source} is not a coproduct.")
+        ev1: Mirror.SumOf[Source],
+        ev2: SourceSubtype <:< Source,
+        @implicitNotFound("Case.fallibleComputed is only supported for subtypes of ${Source}.")
+        ev3: NotGiven[SourceSubtype =:= Source]
+      ): FallibleBuilderConfig[F, Source, Dest] = throw NotQuotedException("Case.computed")
     }
   }
 }

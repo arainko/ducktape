@@ -4,17 +4,23 @@ import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.modules.TransformerLambda.*
 import io.github.arainko.ducktape.internal.modules.*
 
-import scala.collection.{ Factory, MapFactory }
+import scala.collection.Factory
 import scala.quoted.*
 
 //TODO: if this is moved to `modules` the compiler crashes, investigate further?
 private[ducktape] object LiftTransformation {
 
-  def liftTransformation[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A])(using Quotes): Expr[B] =
+  def liftTransformation[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A])(using Quotes): Expr[B] = {
+    import quotes.reflect.*
+
     liftIdentityTransformation(transformer, appliedTo)
       .orElse(liftBasicTransformation(transformer, appliedTo))
       .orElse(liftDerivedTransformation(transformer, appliedTo))
       .getOrElse('{ $transformer.transform($appliedTo) })
+      .asTerm
+      .changeOwner(Symbol.spliceOwner)
+      .asExprOf[B]
+  }
 
   /**
    * Rewrites `Transformer.Identity[A, B].transform(valueOfA)` to just `valueOfA` since we know that Identity transformers

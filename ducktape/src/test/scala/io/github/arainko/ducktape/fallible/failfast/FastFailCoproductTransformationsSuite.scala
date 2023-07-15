@@ -1,9 +1,7 @@
-package io.github.arainko.ducktape.internal.macros
+package io.github.arainko.ducktape.fallible.failfast
 
+import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.fallible.FallibleTransformer
-import io.github.arainko.ducktape.{ DucktapeSuite, Transformer }
-
-import scala.deriving.Mirror
 
 class FastFailCoproductTransformationsSuite extends DucktapeSuite {
   type ErrorsOrResult = [X] =>> Either[String, X]
@@ -129,5 +127,81 @@ class FastFailCoproductTransformationsSuite extends DucktapeSuite {
     }(
       "Neither an instance of Transformer.Fallible[ErrorsOrResult, From.Product, To.Product] was found\nnor are 'Product' 'Product' singletons with the same name"
     )
+  }
+
+  test("Fallible config options can fill in missing cases") {
+    sealed trait From
+    object From {
+      case class Product(field1: Option[Int], field2: Option[String]) extends From
+      case object Extra extends From
+    }
+
+    sealed trait To
+    object To {
+      case class Product(field1: Int, field2: String) extends To
+    }
+
+    val from: From = From.Extra
+
+    val actualConst =
+      from
+        .into[To]
+        .fallible
+        .transform(
+          Case.fallibleConst[From.Extra.type](Left("ahh well"))
+        )
+
+    def mappingComputed(from: From.Extra.type): Either[String, To] = Left("ahh well")
+
+    val actualComputed =
+      from
+        .into[To]
+        .fallible
+        .transform(
+          Case.fallibleComputed[From.Extra.type](mappingComputed)
+        )
+
+    val expected = Left("ahh well")
+
+    assertEquals(actualConst, expected)
+    assertEquals(actualComputed, expected)
+  }
+
+  test("Total config options can fill in missing cases") {
+    sealed trait From
+    object From {
+      case class Product(field1: Option[Int], field2: Option[String]) extends From
+      case object Extra extends From
+    }
+
+    sealed trait To
+    object To {
+      case class Product(field1: Int, field2: String) extends To
+    }
+
+    val from: From = From.Extra
+
+    val actualConst =
+      from
+        .into[To]
+        .fallible
+        .transform(
+          Case.const[From.Extra.type](To.Product(1, "asd"))
+        )
+
+    def mappingComputed(from: From.Extra.type): To = To.Product(1, "asd")
+
+    val actualComputed =
+      from
+        .into[To]
+        .fallible
+        .transform(
+          Case.computed[From.Extra.type](mappingComputed)
+        )
+
+    val expected = Right(To.Product(1, "asd"))
+
+    assertEquals(actualConst, expected)
+    assertEquals(actualComputed, expected)
   }
 }
