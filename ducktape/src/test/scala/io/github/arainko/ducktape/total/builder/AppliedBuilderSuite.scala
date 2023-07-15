@@ -222,14 +222,6 @@ class AppliedBuilderSuite extends DucktapeSuite {
       case Singleton2
     }
 
-    val transformer =
-      Transformer
-        .define[Sum1, Sum2]
-        .build(
-          Case.computed[Sum1.Leaf2](leaf2 => Sum2.Leaf1(leaf2.int1, leaf2.str2)),
-          Case.const[Sum1.Singleton.type](Sum2.Singleton2)
-        )
-
     val expectedMappings =
       Map(
         Sum1.Leaf1(1, "str") -> Sum2.Leaf1(1, "str"),

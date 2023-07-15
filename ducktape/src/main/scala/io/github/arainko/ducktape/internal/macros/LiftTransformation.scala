@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.modules.TransformerLambda.*
 import io.github.arainko.ducktape.internal.modules.*
 
-import scala.collection.{ Factory }
+import scala.collection.Factory
 import scala.quoted.*
 
 //TODO: if this is moved to `modules` the compiler crashes, investigate further?

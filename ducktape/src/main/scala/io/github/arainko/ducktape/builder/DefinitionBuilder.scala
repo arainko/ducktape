@@ -20,19 +20,12 @@ object DefinitionBuilder {
     inline def build(
       inline config: FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]*
     )(using
-      Source: Mirror.ProductOf[Source],
-      Dest: Mirror.ProductOf[Dest]
+      Source: Mirror.Of[Source],
+      Dest: Mirror.Of[Dest]
     ): Transformer.Fallible[F, Source, Dest] =
       new {
         def transform(value: Source): F[Dest] =
-          inline F match {
-            case given Mode.Accumulating[F] =>
-              Transformations.transformAccumulatingConfigured[F, Source, Dest](value, config*)
-            case given Mode.FailFast[F] =>
-              Transformations.transformFailFastConfigured[F, Source, Dest](value, config*)
-            case other =>
-              Errors.cannotDetermineTransformationMode
-          }
+          Transformations.transformConfiguredFallible[F, Source, Dest](value, config*)
       }
   }
 }

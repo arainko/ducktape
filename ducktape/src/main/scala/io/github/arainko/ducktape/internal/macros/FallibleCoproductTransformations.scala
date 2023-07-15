@@ -1,17 +1,13 @@
 package io.github.arainko.ducktape.internal.macros
 
-import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.fallible.{ FallibleTransformer, Mode }
+import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.FallibleCoproduct.{ Computed, Const, Total }
+import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.{ Coproduct, FallibleCoproduct }
 import io.github.arainko.ducktape.internal.modules.*
+import io.github.arainko.ducktape.{ BuilderConfig, FallibleBuilderConfig, Transformer }
 
 import scala.deriving.*
 import scala.quoted.*
-import io.github.arainko.ducktape.BuilderConfig
-import io.github.arainko.ducktape.FallibleBuilderConfig
-import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.FallibleCoproduct
-import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.FallibleCoproduct.Computed
-import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.FallibleCoproduct.Const
-import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.FallibleCoproduct.Total
 
 private[ducktape] object FallibleCoproductTransformations {
 
@@ -53,18 +49,30 @@ private[ducktape] object FallibleCoproductTransformations {
 
     ExhaustiveCoproductMatching(cases = Cases.source, sourceValue = sourceValue, ifNoMatch = ifNoMatch) { subtypeCase =>
       materializedConfig.get(subtypeCase.tpe.fullName) match {
-        case Some(FallibleCoproduct.Total(value)) => ???
-        case Some(FallibleCoproduct.Const(tpe, value)) => 
+        case Some(FallibleCoproduct.Const(tpe, value)) =>
           value.asExprOf[F[Dest]]
-        case Some(FallibleCoproduct.Computed(tpe, function)) => 
+        case Some(FallibleCoproduct.Computed(tpe, function)) =>
           tpe match {
             case '[tpe] =>
               '{
                 val casted = $sourceValue.asInstanceOf[tpe]
                 $function(casted)
               }.asExprOf[F[Dest]]
-            }
-        case None => coproductBranch(sourceValue, subtypeCase, F)
+          }
+        case Some(FallibleCoproduct.Total(Coproduct.Const(tpe, value))) =>
+          val castedValue = value.asExprOf[Dest]
+          '{ $F.pure($castedValue) }
+        case Some(FallibleCoproduct.Total(Coproduct.Computed(tpe, function))) =>
+          tpe match {
+            case '[tpe] =>
+              val castedFunction = function.asExprOf[tpe => Dest]
+              '{
+                val casted = $sourceValue.asInstanceOf[tpe]
+                $F.pure($castedFunction(casted))
+              }.asExprOf[F[Dest]]
+          }
+        case None =>
+          coproductBranch(sourceValue, subtypeCase, F)
       }
     }
   }
@@ -79,7 +87,7 @@ private[ducktape] object FallibleCoproductTransformations {
     val dest = Cases.dest.getOrElse(source.name, Failure.emit(Failure.NoChildMapping(source.name, summon[Type[Dest]])))
 
     // that weird error where when you don't name the Quotes param it does not compile here...
-    def tryFallibleTransformation(using q: Quotes) = 
+    def tryFallibleTransformation(using q: Quotes) =
       source.fallibleTransformerTo[F](dest).map {
         case '{ FallibleTransformer.fallibleFromTotal[F, src, dest](using $total, $support) } =>
           '{

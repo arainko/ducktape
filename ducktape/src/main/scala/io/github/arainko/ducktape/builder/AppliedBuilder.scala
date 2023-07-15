@@ -21,14 +21,7 @@ object AppliedBuilder {
 
     inline def transform(
       inline config: FallibleBuilderConfig[F, Source, Dest] | BuilderConfig[Source, Dest]*
-    )(using Mirror.ProductOf[Source], Mirror.ProductOf[Dest]): F[Dest] =
-      inline F match {
-        case given Mode.Accumulating[F] =>
-          Transformations.transformAccumulatingConfigured[F, Source, Dest](source, config*)
-        case given Mode.FailFast[F] =>
-          Transformations.transformFailFastConfigured[F, Source, Dest](source, config*)
-        case other =>
-          Errors.cannotDetermineTransformationMode
-      }
+    )(using Source: Mirror.Of[Source], Dest: Mirror.Of[Dest]): F[Dest] =
+      Transformations.transformConfiguredFallible[F, Source, Dest](source, config*)
   }
 }
