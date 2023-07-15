@@ -8,10 +8,10 @@ If this project interests you, please drop a 🌟 - these things are worthless b
 
 ### Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.9"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.1.10"
 
 // or if you're using Scala.js or Scala Native
-libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.1.9"
+libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.1.10"
 ```
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
@@ -355,13 +355,13 @@ val definedViaTransformer =
   Transformer
     .defineVia[TestClass](method)
     .build(Arg.const(_.additionalArg, List("const")))
-// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$16768/0x0000000103e06040@132ae379
+// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$49797/0x0000000105feec40@706c2b38
 
 val definedTransformer =
   Transformer
     .define[TestClass, TestClassWithAdditionalList]   
     .build(Field.const(_.additionalArg, List("const")))
-// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$16769/0x0000000103e06440@164c09ad
+// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$49798/0x0000000105ff8040@73dc7770
 
 val transformedVia = definedViaTransformer.transform(testClass)
 // transformedVia: TestClassWithAdditionalList = TestClassWithAdditionalList(
@@ -834,7 +834,7 @@ val customAccumulating =
     .build(
       Field.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
     )
-// customAccumulating: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$45@48b750b3
+// customAccumulating: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$45@205c3a67
 ```
 
 ```scala
@@ -848,7 +848,7 @@ val customFailFast =
     .build(
       Field.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
     )
-// customFailFast: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$47@64e5eba5
+// customFailFast: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$47@1c281ddb
 ```
 
 And for the ones that are not keen on writing out method arguments:
@@ -863,7 +863,7 @@ val customAccumulatingVia =
     .build(
       Arg.fallibleConst(_.name, ValidatedPerson.Name.makeAccumulating("IAmAlwaysValidNow!"))
     )
-// customAccumulatingVia: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$49@1689562c
+// customAccumulatingVia: FallibleTransformer[[A >: Nothing <: Any] => Either[List[String], A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$49@6d5a8b06
 ```
 
 ```scala
@@ -877,7 +877,7 @@ val customFailFastVia =
     .build(
       Arg.fallibleComputed(_.age, uvp => ValidatedPerson.Age.make(uvp.age + 30))
     )
-// customFailFastVia: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$51@1ac7a2bc
+// customFailFastVia: FallibleTransformer[[A >: Nothing <: Any] => Either[String, A], UnvalidatedPerson, ValidatedPerson] = repl.MdocSession$MdocApp10$$anon$51@44682ccf
 ```
 
 
@@ -1002,9 +1002,9 @@ expands to:
     ]
 
     ({
-      val int$proxy2: Wrapped[Int] = new Wrapped[Int](person.int)
-      val str$proxy2: Option[Wrapped[String]] = person.str.map[Wrapped[String]]((src: String) => new Wrapped[String](src))
-      val inside$proxy2: Inside2 = {
+      val int: Wrapped[Int] = new Wrapped[Int](person.int)
+      val str: Option[Wrapped[String]] = person.str.map[Wrapped[String]]((src: String) => new Wrapped[String](src))
+      val inside: Inside2 = {
         val LowPriorityTransformerInstances_this: Transformer.type = Transformer
         new Inside2(
           int = person.inside.int,
@@ -1015,10 +1015,10 @@ expands to:
           }
         )
       }
-      val collectionOfNumbers$proxy2: List[Wrapped[Float]] = person.collectionOfNumbers
+      val collectionOfNumbers: List[Wrapped[Float]] = person.collectionOfNumbers
         .map[Wrapped[Float]]((`src₂`: Float) => new Wrapped[Float](`src₂`))
         .to[List[Wrapped[Float]] & Iterable[Wrapped[Float]]](iterableFactory[Wrapped[Float]])
-      Person2.apply(int$proxy2, str$proxy2, inside$proxy2, collectionOfNumbers$proxy2)
+      Person2.apply(int, str, inside, collectionOfNumbers)
     }: Return): Return
   }
 ```
