@@ -11,7 +11,11 @@ enum Plan[+E <: PlanError] {
   import Plan.*
 
   def sourceTpe: Type[?]
+
   def destTpe: Type[?]
+
+  final def conformsTo(that: Plan[?])(using Quotes): Boolean =
+    sourceTpe.repr <:< that.sourceTpe.repr && destTpe.repr <:< that.destTpe.repr
 
   final def show(using Quotes): String = {
     import quotes.reflect.*
@@ -48,42 +52,74 @@ enum Plan[+E <: PlanError] {
     }
   }
 
-  final def replaceAt[EE >: E <: Plan.Error](
-    path: Path
-  )(update: Plan[EE])(using Quotes): Option[Plan[EE]] = {
-    // TODO: Clean this up, make it tailrec
-    def recurse(current: Option[Plan[E]], segments: List[Path.Segment])(using Quotes): Option[Plan[EE]] =
-      current.flatMap { plan =>
-        segments match {
-          case Path.Segment.Field(fieldName) :: tail =>
-            val result = PartialFunction.condOpt(plan) {
-              case plan @ BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
-                recurse(fieldPlans.get(fieldName), tail)
-                  .map(fieldPlan => plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan)))
-            }
-            result.flatten
-          case Path.Segment.Case(tpe) :: tail =>
-            val result = PartialFunction.condOpt(plan) {
-              case plan @ BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
-                for {
-                  (name, ogCasePlan) <- casePlans.collectFirst {
-                    case (name, plan) if tpe.repr =:= plan.sourceTpe.repr => name -> plan
-                  }
-                  casePlan <- recurse(Some(ogCasePlan), tail)
-                } yield plan.copy(casePlans = casePlans.updated(name, casePlan))
-            }
-            result.flatten
-          case Nil => Some(update)
-        }
-      }
+  final def replaceAt(
+    path: Path,
+    target: Configuration.Target
+  )(update: Plan[Plan.Error])(using Quotes): Plan[Plan.Error] = {
+    def recurse(current: Plan[E], segments: List[Path.Segment], context: Plan.Context)(using Quotes): Plan[Plan.Error] = {
+      segments match {
+        case (segment @ Path.Segment.Field(fieldName)) :: tail =>
+          val updatedContext = context.add(segment)
 
-    recurse(Some(this), path.toList)
+          current match {
+            case plan @ BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
+              val fieldPlan =
+                fieldPlans
+                  .get(fieldName)
+                  .map(fieldPlan => recurse(fieldPlan, tail, updatedContext))
+                  .getOrElse(Plan.Error(sourceTpe, destTpe, updatedContext, s"'$fieldName' is not a valid field accessor"))
+
+              plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
+            case plan =>
+              Plan.Error(
+                plan.sourceTpe,
+                plan.destTpe,
+                updatedContext,
+                s"A field accessor can only be used to configure product transformations"
+              )
+          }
+
+        case (segment @ Path.Segment.Case(tpe)) :: tail =>
+          val updatedContext = context.add(segment)
+
+          current match {
+            case plan @ BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
+              val targetTpe = (plan: Plan[E]) => if (target.isSource) plan.sourceTpe.repr else plan.destTpe.repr
+
+              casePlans
+                .find((name, plan) => tpe.repr =:= targetTpe(plan))
+                .map((name, casePlan) => plan.copy(casePlans = casePlans.updated(name, recurse(casePlan, tail, updatedContext))))
+                .getOrElse(Plan.Error(sourceTpe, destTpe, updatedContext, s"'at[${tpe.repr.show}]' is not a valid case accessor"))
+            case plan =>
+              Plan.Error(
+                plan.sourceTpe,
+                plan.destTpe,
+                updatedContext,
+                s"A case accessor can only be used to configure coproduct transformations"
+              )
+          }
+        case Nil =>
+          update
+        // case Nil =>
+        //   Plan.Error(
+        //     current.sourceTpe,
+        //     current.destTpe,
+        //     context,
+        //     s"""A replacement plan doesn't conform to the plan it's supposed to replace.
+        //     |Updated plan: ${update.show}
+        //     |Current plan: ${current.show}
+        //     """.stripMargin
+        //   )
+      }
+    }
+
+    recurse(this, path.toList, Context.empty(this.sourceTpe, this.destTpe))
   }
 
   case Upcast(sourceTpe: Type[?], destTpe: Type[?]) extends Plan[Nothing]
   case UserDefined(sourceTpe: Type[?], destTpe: Type[?], transformer: Expr[UserDefinedTransformer[?, ?]]) extends Plan[Nothing]
   case Derived(sourceTpe: Type[?], destTpe: Type[?], transformer: Expr[Transformer2[?, ?]]) extends Plan[Nothing]
-  case Configured(sourceTpe: Type[?], destTpe: Type[?], config: Plan.Configuration) extends Plan[Nothing]
+  case Configured(sourceTpe: Type[?], destTpe: Type[?], config: Configuration) extends Plan[Nothing]
   case BetweenUnwrappedWrapped(sourceTpe: Type[?], destTpe: Type[?]) extends Plan[Nothing]
   case BetweenWrappedUnwrapped(sourceTpe: Type[?], destTpe: Type[?], fieldName: String) extends Plan[Nothing]
   case BetweenSingletons(sourceTpe: Type[?], destTpe: Type[?], expr: Expr[Any]) extends Plan[Nothing]
@@ -106,21 +142,5 @@ object Plan {
 
   object Context {
     def empty(rootSourceTpe: Type[?], rootDestTpe: Type[?]): Context = Context(rootSourceTpe, rootDestTpe, Path.empty)
-  }
-
-  enum Configuration {
-    case Const(value: Expr[Any])
-  }
-
-  def parseConfig[A: Type, B: Type](configs: Expr[Seq[Config[A, B]]])(using Quotes) = {
-    import quotes.reflect.*
-
-    val woooh = Varargs.unapply(configs).get
-    woooh
-      .map(_.asTerm)
-      .map {
-        case Apply(TypeApply(Select(Ident("Field2"), "const"), a :: b :: fieldTpe :: Nil), PathSelector(path) :: value :: Nil) =>
-          path -> Plan.Configured(Type.of[Int], Type.of[Int], Plan.Configuration.Const(value.asExpr))
-      }
   }
 }

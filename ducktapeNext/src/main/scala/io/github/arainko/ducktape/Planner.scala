@@ -7,14 +7,6 @@ import io.github.arainko.ducktape.Plan.Context
 object Planner {
   import Structure.*
 
-  inline def print[A, B] = ${ printMacro[A, B] }
-
-  def printMacro[A: Type, B: Type](using Quotes): Expr[Unit] = {
-    val plan = createPlan[A, B]
-    quotes.reflect.report.info(plan.show)
-    '{}
-  }
-
   def createPlan[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] =
     recurseAndCreatePlan[Source, Dest](Plan.Context.empty(Type[Source], Type[Dest]))
 
@@ -54,8 +46,8 @@ object Planner {
               .map(recurse(_, destFieldStruct, updatedContext))
               .getOrElse(
                 Plan.Error(
-                  source.tpe,
-                  dest.tpe,
+                  Type.of[Any],
+                  destFieldStruct.tpe,
                   updatedContext,
                   s"No field named '$destField' found in ${source.tpe.repr.show}"
                 )
@@ -73,8 +65,8 @@ object Planner {
               .map(recurse(sourceCaseStruct, _, updatedContext))
               .getOrElse(
                 Plan.Error(
-                  source.tpe,
-                  dest.tpe,
+                  sourceCaseStruct.tpe,
+                  Type.of[Any],
                   updatedContext,
                   s"No child named '$sourceName' found in ${dest.tpe.repr.show}"
                 )
@@ -122,5 +114,13 @@ object Planner {
         case '[src] -> '[dest] => Expr.summon[Transformer2[src, dest]]
       }
     }
+  }
+
+  inline def print[A, B] = ${ printMacro[A, B] }
+
+  def printMacro[A: Type, B: Type](using Quotes): Expr[Unit] = {
+    val plan = createPlan[A, B]
+    quotes.reflect.report.info(plan.show)
+    '{}
   }
 }

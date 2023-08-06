@@ -4,14 +4,34 @@ import io.github.arainko.ducktape.internal.modules.*
 
 import scala.annotation.nowarn
 import scala.collection.Factory
-import scala.collection.mutable.{ Builder, ListBuffer }
 import scala.quoted.*
-import io.github.arainko.ducktape.Plan.Configuration
 import scala.annotation.tailrec
 
 object Interpreter {
 
   inline def transformPlanned[A, B](value: A, inline configs: Config[A, B]*) = ${ createTransformation[A, B]('value, 'configs) }
+
+  def createTransformation[A: Type, B: Type](value: Expr[A], configs: Expr[Seq[Config[A, B]]])(using Quotes): Expr[B] = {
+    import quotes.reflect.*
+
+    val plan = Planner.createPlan[A, B]
+    val config = Configuration.parse(configs)
+    val reconfiguredPlan = config.foldLeft(plan) {
+      case (plan, Configuration.At(path, target, config)) =>
+        plan.replaceAt(path, target)(config)
+    }
+    println(s"OG PLAN: ${plan.show}")
+    println(s"CONFIG: $config")
+    println(s"CONF PLAN: ${reconfiguredPlan.show}")
+    println()
+    unsafeRefinePlan(reconfiguredPlan) match {
+      case Left(errors) =>
+        val rendered = errors.map(err => s"${err.message} @ ${err.context.render}").mkString("\n")
+        report.errorAndAbort(rendered)
+      case Right(totalPlan) =>
+        recurse(totalPlan, value).asExprOf[B]
+    }
+  }
 
   private def unsafeRefinePlan[A <: Plan.Error](plan: Plan[A]): Either[List[Plan.Error], Plan[Nothing]] = {
 
@@ -43,27 +63,6 @@ object Interpreter {
     Either.cond(errors.isEmpty, plan.asInstanceOf[Plan[Nothing]], errors)
   }
 
-  def createTransformation[A: Type, B: Type](value: Expr[A], configs: Expr[Seq[Config[A, B]]])(using Quotes): Expr[B] = {
-    import quotes.reflect.*
-
-    val plan = Planner.createPlan[A, B]
-    val config = Plan.parseConfig(configs)
-    val reconfiguredPlan = config.foldLeft(plan) {
-      case (plan, (path, config)) =>
-        plan.replaceAt(path)(config).getOrElse(plan)
-    }
-    println(plan.show)
-    println(config)
-    println(reconfiguredPlan.show)
-    unsafeRefinePlan(reconfiguredPlan) match {
-      case Left(errors) =>
-        val rendered = errors.map(err => s"${err.message} @ ${err.context.render}").mkString("\n")
-        report.errorAndAbort(rendered)
-      case Right(totalPlan) =>
-        recurse(totalPlan, value).asExprOf[B]
-    }
-  }
-
   private def recurse(plan: Plan[Nothing], value: Expr[Any])(using Quotes): Expr[Any] = {
     import quotes.reflect.*
 
@@ -87,13 +86,13 @@ object Interpreter {
 
       case Plan.BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
         val branches = casePlans
-          .map((_, plan) =>
+          .map { (_, plan) =>
             (plan.sourceTpe -> plan.destTpe) match {
               case '[src] -> '[dest] =>
                 val sourceValue = '{ $value.asInstanceOf[src] }
                 IfBranch(IsInstanceOf(value, sourceTpe), recurse(plan, sourceValue))
             }
-          )
+          }
           .toList
         ifStatement(branches).asExpr
 
@@ -117,7 +116,7 @@ object Interpreter {
         (destCollectionTpe, sourceTpe, destTpe) match {
           case ('[destCollTpe], '[srcElem], '[destElem]) =>
             val sourceValue = value.asExprOf[Iterable[srcElem]]
-            val factory = Expr.summon[Factory[destElem, destCollTpe]].get
+            val factory = Expr.summon[Factory[destElem, destCollTpe]].get //TODO: Make it nicer
             def transformation(value: Expr[srcElem])(using Quotes): Expr[destElem] = recurse(plan, value).asExprOf[destElem]
             '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
         }

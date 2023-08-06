@@ -29,61 +29,65 @@ enum Sum2 {
 
   val sel: Selector = ???
 
-  // Inlined(
-  //   None,
-  //   Nil,
-  //   TypeApply(
-  //     Apply(TypeApply(Select(Ident("sel"), "at"), List(TypeIdent("Sum1"))), List(Select(Ident("Sum1"), "Single"))),
-  //     List(TypeSelect(Ident("Sum1"), "Leaf1"))
-  //   )
-  // )
-
-  // val evidence$1 =
-  //   DebugMacros.structure(
-  //     sel.at[Sum1](Sum1.Single)[Sum1.Leaf1]
-  //   )
-
-
-  // PathMatcher.run[Sum1](_.at[Sum1].at[Sum1.Single.type])
-
-  // DebugMacros.code {
-  //   costam[Sum1](
-  //     _.at[Sum1.Leaf1].int.at[Int].toByte.toByte.toByte.at[Byte]
-  //       // _.at[Sum1.Leaf2].str,
-  //   )
-  // }
-
   final case class HKT[F[_]](value: F[Int])
 
   final case class Person1(int: Int, str: String, opt: Nested1)
   final case class Person2(int: Value, str: String, opt: Nested2)
   final case class Nested1(int: Int)
-  final case class Nested2(int: Int | String, additional: Int)
+  final case class Nested2(int: Int | String, additional: Int) {
+    val costam = "asd"
+  }
 
   final case class Gen[A](int: Int, value: A)
 
-  given UserDefinedTransformer[Int, String] = _.toString()
+  // given UserDefinedTransformer[Int, String] = _.toString()
 
   val p = Person1(1, "asd", Nested1(1))
 
-  given transformer[A, B](using Transformer2[A, B]): Transformer2[Gen[A], Gen[B]] =
-    src => Interpreter.transformPlanned[Gen[A], Gen[B]](src)
+  // given transformer[A, B](using Transformer2[A, B]): Transformer2[Gen[A], Gen[B]] =
+  //   src => Interpreter.transformPlanned[Gen[A], Gen[B]](src)
+
+
+  enum Test1 {
+    case Cos(int: Nested1)
+    case Empty
+  }
+
+  enum Test2 {
+    case Cos(int: Nested2)
+  }
+
+  // No field named 'additional' found in Nested1 @ _.at[Cos].int.additional
+
+  DebugMacros.code {
+    Interpreter.transformPlanned[Test1, Test2](
+      Test1.Cos(Nested1(1)),
+      Field2.const(_.at[Test2.Cos].int.additional, 123),
+      Case2.const(_.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1)))
+      // Field2.const(_.at[Test2.Cos].int, "asd")
+    )
+  }
+
+  val cos = Case2.const[Test1, Test2, Test1.Empty.type, Test2.Cos](_.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1)))
+  // }
+
 
   // Planner.print[Person1, Person2]
 
   // DebugMacros.code(summon[Transformer2[Gen[Person1], Gen[Person2]]])
 
-  val builder = AppliedBuilder[Person1, Person2](p)
+  // val builder = AppliedBuilder[Person1, Person2](p)
 
-  builder.transform(Field2.const(_.opt, Nil))
+  // builder.transform(Field2.const(_.opt, Nil))
 
-  DebugMacros.code {
-    Interpreter
-    .transformPlanned[Person1, Person2](
-      p,
-      Field2.const(_.opt.additional, 2)
-      )
-  }
+  // DebugMacros.code {
+  //   Interpreter
+  //   .transformPlanned[Person1, Person2](
+  //     p,
+  //     Field2.const(_.opt.additional, 2)
+  //   )
+
+  // }
 
 
   // DebugMacros.code(transformer[Person1, Person2])
