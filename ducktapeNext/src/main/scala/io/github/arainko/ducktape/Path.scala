@@ -9,8 +9,26 @@ object Path {
   val empty: Path = Vector.empty
 
   enum Segment {
-    case Field(name: String)
+    def tpe: Type[?]
+
+    case Field(tpe: Type[?], name: String)
     case Case(tpe: Type[?])
+  }
+
+  opaque type NonEmpty <: Path = Path
+
+  object NonEmpty {
+    def fromPath(path: Path): Option[Path.NonEmpty] = Option.when(path.nonEmpty)(path)
+
+    extension (self: Path.NonEmpty) {
+      def last = self.toVector.last
+
+      def head = self.toVector.head
+
+      def appended(segment: Path.Segment): Path.NonEmpty = Path.appended(self)(segment)
+
+      def prepended(segment: Path.Segment): Path.NonEmpty = Path.prepended(self)(segment)
+    }
   }
 
   extension (self: Path) {
@@ -27,7 +45,7 @@ object Path {
       given Printer[TypeRepr] = Printer.TypeReprShortCode
 
       self.map {
-        case Segment.Field(name) => name
+        case Segment.Field(_, name) => name
         case Segment.Case(tpe) => s"at[${tpe.repr.show}]"
       }.mkString("_.", ".", "")
     }

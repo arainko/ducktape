@@ -8,7 +8,7 @@ import scala.annotation.tailrec
 object PathSelector {
   // inline def run[A](inline expr: Selector ?=> A => Any) = ${ readPath('expr) }
 
-  def unapply(using Quotes)(expr: quotes.reflect.Term): Some[Path] = {
+  def unapply(using Quotes)(expr: quotes.reflect.Term): Option[Path.NonEmpty] = {
     import quotes.reflect.{ Selector as _, * }
 
     @tailrec
@@ -23,14 +23,15 @@ object PathSelector {
         case Block(_, tree) =>
           recurse(acc, tree)
         case Select(tree, name) =>
-          recurse(acc.prepended(Path.Segment.Field(name)), tree)
+          recurse(acc.prepended(Path.Segment.Field(tree.tpe.asType, name)), tree)
         case TypeApply(Apply(TypeApply(Select(Ident(_), "at"), _), tree :: Nil), tpe :: Nil) =>
           recurse(acc.prepended(Path.Segment.Case(tpe.tpe.asType)), tree)
         case Ident(_) => acc
         case other    => report.errorAndAbort(other.show(using Printer.TreeShortCode))
       }
     }
-    Some(recurse(Path.empty, expr))
+
+    Path.NonEmpty.fromPath(recurse(Path.empty, expr))
   }
 
 }

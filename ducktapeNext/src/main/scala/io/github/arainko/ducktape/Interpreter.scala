@@ -90,7 +90,7 @@ object Interpreter {
             (plan.sourceTpe -> plan.destTpe) match {
               case '[src] -> '[dest] =>
                 val sourceValue = '{ $value.asInstanceOf[src] }
-                IfBranch(IsInstanceOf(value, sourceTpe), recurse(plan, sourceValue))
+                IfBranch(IsInstanceOf(value, plan.sourceTpe), recurse(plan, sourceValue))
             }
           }
           .toList

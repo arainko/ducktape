@@ -39,7 +39,7 @@ object Planner {
 
       case (source: Product, dest: Product) =>
         val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-          val updatedContext = context.add(Path.Segment.Field(destField))
+          val updatedContext = context.add(Path.Segment.Field(destFieldStruct.tpe, destField))
           val plan =
             source.fields
               .get(destField)
@@ -66,7 +66,7 @@ object Planner {
               .getOrElse(
                 Plan.Error(
                   sourceCaseStruct.tpe,
-                  Type.of[Any],
+                  Type.of[Nothing],
                   updatedContext,
                   s"No child named '$sourceName' found in ${dest.tpe.repr.show}"
                 )

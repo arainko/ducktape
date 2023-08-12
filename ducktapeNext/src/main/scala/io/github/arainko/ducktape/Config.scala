@@ -17,7 +17,6 @@ object Configuration {
       }
 
     final def isDest: Boolean = !isSource
-
   }
 
   final case class At(path: Path, target: Target, config: Plan.Configured)
@@ -43,19 +42,11 @@ object Configuration {
               TypeApply(Select(Ident("Case2"), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
-
-          given Printer[Tree] = Printer.TreeStructure
-
-          
-
-          println(a.show)
-          println(b.show)
-          println(sourceTpe.show)
-          println(constTpe.show)
           Configuration.At(
             path,
             Target.Source,
-            Plan.Configured(sourceTpe.tpe.asType, constTpe.tpe.asType, Configuration.Const(value.asExpr))
+            // path.last.tpe here because 'sourceTpe' is always widened (i.e it doesn't work when configuring enum cases)
+            Plan.Configured(path.last.tpe, constTpe.tpe.asType, Configuration.Const(value.asExpr))
           )
       }
   }

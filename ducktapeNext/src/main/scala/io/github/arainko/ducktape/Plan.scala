@@ -15,7 +15,7 @@ enum Plan[+E <: PlanError] {
   def destTpe: Type[?]
 
   final def conformsTo(that: Plan[?])(using Quotes): Boolean =
-    sourceTpe.repr <:< that.sourceTpe.repr && destTpe.repr <:< that.destTpe.repr
+    that.sourceTpe.repr <:< sourceTpe.repr && destTpe.repr <:< that.destTpe.repr
 
   final def show(using Quotes): String = {
     import quotes.reflect.*
@@ -58,7 +58,7 @@ enum Plan[+E <: PlanError] {
   )(update: Plan[Plan.Error])(using Quotes): Plan[Plan.Error] = {
     def recurse(current: Plan[E], segments: List[Path.Segment], context: Plan.Context)(using Quotes): Plan[Plan.Error] = {
       segments match {
-        case (segment @ Path.Segment.Field(fieldName)) :: tail =>
+        case (segment @ Path.Segment.Field(_, fieldName)) :: tail =>
           val updatedContext = context.add(segment)
 
           current match {
@@ -98,18 +98,19 @@ enum Plan[+E <: PlanError] {
                 s"A case accessor can only be used to configure coproduct transformations"
               )
           }
-        case Nil =>
+        case Nil if current.conformsTo(update) =>
           update
-        // case Nil =>
-        //   Plan.Error(
-        //     current.sourceTpe,
-        //     current.destTpe,
-        //     context,
-        //     s"""A replacement plan doesn't conform to the plan it's supposed to replace.
-        //     |Updated plan: ${update.show}
-        //     |Current plan: ${current.show}
-        //     """.stripMargin
-        //   )
+
+        case Nil =>
+          Plan.Error(
+            current.sourceTpe,
+            current.destTpe,
+            context,
+            s"""A replacement plan doesn't conform to the plan it's supposed to replace.
+            |Updated plan: ${update.show}
+            |Current plan: ${current.show}
+            """.stripMargin
+          )
       }
     }
 
