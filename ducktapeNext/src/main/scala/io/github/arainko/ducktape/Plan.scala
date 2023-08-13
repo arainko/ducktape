@@ -103,14 +103,21 @@ enum Plan[+E <: PlanError] {
           update
 
         case Nil =>
+          // that.sourceTpe.repr <:< sourceTpe.repr && destTpe.repr <:< that.destTpe.repr
+
+          val sourceError = Option.unless(update.sourceTpe.repr <:< current.sourceTpe.repr) { 
+            s"${update.sourceTpe.repr.show} <:< ${current.sourceTpe.repr.show} doesn't hold"
+          }
+
+          val destError = Option.unless(current.destTpe.repr <:< update.destTpe.repr) {
+            s"${current.destTpe.repr.show} <:< ${update.destTpe.repr.show} doesn't hold"
+          }
+
           Plan.Error(
             current.sourceTpe,
             current.destTpe,
             context,
-            s"""A replacement plan doesn't conform to the plan it's supposed to replace.
-            |Updated plan: ${update.show}
-            |Current plan: ${current.show}
-            """.stripMargin
+            s"""A replacement plan doesn't conform to the plan it's supposed to replace: ${List(sourceError, destError).flatten.mkString(", ")}""".stripMargin
           )
       }
     }

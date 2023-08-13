@@ -69,6 +69,7 @@ final case class ProdTest2(test: Test2)
       Interpreter.transformPlanned[ProdTest1, ProdTest2](
         ProdTest1(Test1.Empty),
         Field2.const(_.test.at[Test2.Cos].int.additional, 123),
+        Field2.const(_.test.at[Test2.Cos].int.int, 123),
         // Case2.const(_.at[Test1.Cos].int.int, 1),
         Case2.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1)))
         // Field2.const(_.at[Test2.Cos].int, "asd")
