@@ -59,21 +59,20 @@ object Planner {
       case (source: Coproduct, dest: Coproduct) =>
         val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
           val updatedContext = context.add(Path.Segment.Case(sourceCaseStruct.tpe))
-          val plan =
-            dest.children
-              .get(sourceName)
-              .map(recurse(sourceCaseStruct, _, updatedContext))
-              .getOrElse(
-                Plan.Error(
-                  sourceCaseStruct.tpe,
-                  Type.of[Nothing],
-                  updatedContext,
-                  s"No child named '$sourceName' found in ${dest.tpe.repr.show}"
-                )
+
+          dest.children
+            .get(sourceName)
+            .map(recurse(sourceCaseStruct, _, updatedContext))
+            .getOrElse(
+              Plan.Error(
+                sourceCaseStruct.tpe,
+                Type.of[Nothing],
+                updatedContext,
+                s"No child named '$sourceName' found in ${dest.tpe.repr.show}"
               )
-          sourceName -> plan
+            )
         }
-        Plan.BetweenCoproducts(source.tpe, dest.tpe, casePlans)
+        Plan.BetweenCoproducts(source.tpe, dest.tpe, casePlans.toVector)
 
       case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
         Plan.BetweenSingletons(source.tpe, dest.tpe, dest.value)
@@ -84,7 +83,7 @@ object Planner {
       case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr =>
         Plan.BetweenUnwrappedWrapped(source.tpe, dest.tpe)
 
-      case DerivedTransformation(transformer) => 
+      case DerivedTransformation(transformer) =>
         Plan.Derived(source.tpe, dest.tpe, transformer)
 
       case (source, dest) =>

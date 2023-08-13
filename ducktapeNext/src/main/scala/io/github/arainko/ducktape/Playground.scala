@@ -47,6 +47,9 @@ final case class Nested2(int: Int | String, additional: Int) {
 
 final case class Gen[A](int: Int, value: A)
 
+final case class ProdTest1(test: Test1)
+final case class ProdTest2(test: Test2)
+
 @main def main = {
 
   // def costam[A](selectors: (Selector ?=> A => Any)*) = ???
@@ -62,16 +65,15 @@ final case class Gen[A](int: Int, value: A)
 
   // No field named 'additional' found in Nested1 @ _.at[Cos].int.additional
 
-  DebugMacros.code {
-    println {
-      Interpreter.transformPlanned[Test1, Test2](
-        Test1.Empty,
-        Field2.const(_.at[Test2.Cos].int.additional, 123),
-        Case2.const(_.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1)))
+  // DebugMacros.code {
+      Interpreter.transformPlanned[ProdTest1, ProdTest2](
+        ProdTest1(Test1.Empty),
+        Field2.const(_.test.at[Test2.Cos].int.additional, 123),
+        // Case2.const(_.at[Test1.Cos].int.int, 1),
+        Case2.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1)))
         // Field2.const(_.at[Test2.Cos].int, "asd")
       )
-    }
-  }
+  // }
 
   // val cos: Config[Test1, Test2] =
   //   DebugMacros.code {

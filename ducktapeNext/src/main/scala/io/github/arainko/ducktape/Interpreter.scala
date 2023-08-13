@@ -21,7 +21,9 @@ object Interpreter {
         plan.replaceAt(path, target)(config)
     }
     println(s"OG PLAN: ${plan.show}")
+    println()
     println(s"CONFIG: $config")
+    println()
     println(s"CONF PLAN: ${reconfiguredPlan.show}")
     println()
     unsafeRefinePlan(reconfiguredPlan) match {
@@ -44,7 +46,7 @@ object Interpreter {
             case Plan.BetweenProducts(_, _, fieldPlans) =>
               recurse(fieldPlans.values.toList ::: next, errors)
             case Plan.BetweenCoproducts(_, _, casePlans) =>
-              recurse(casePlans.values.toList ::: next, errors)
+              recurse(casePlans.toList ::: next, errors)
             case Plan.BetweenOptions(_, _, plan)         => recurse(plan :: next, errors)
             case Plan.BetweenNonOptionOption(_, _, plan) => recurse(plan :: next, errors)
             case Plan.BetweenCollections(_, _, _, plan)  => recurse(plan :: next, errors)
@@ -86,7 +88,7 @@ object Interpreter {
 
       case Plan.BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
         val branches = casePlans
-          .map { (_, plan) =>
+          .map { plan =>
             (plan.sourceTpe -> plan.destTpe) match {
               case '[src] -> '[dest] =>
                 val sourceValue = '{ $value.asInstanceOf[src] }

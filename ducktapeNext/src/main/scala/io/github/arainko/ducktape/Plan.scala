@@ -28,7 +28,7 @@ enum Plan[+E <: PlanError] {
       case BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
         s"BetweenProducts(${sourceTpe.show}, ${destTpe.show}, ${fieldPlans.map((name, plan) => name -> plan.show)})"
       case BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
-        s"BetweenCoproducts(${sourceTpe.show}, ${destTpe.show}, ${casePlans.map((name, plan) => name -> plan.show)})"
+        s"BetweenCoproducts(${sourceTpe.show}, ${destTpe.show}, ${casePlans.map(_.show)})"
       case BetweenOptions(sourceTpe, destTpe, plan) =>
         s"BetweenOptions(${sourceTpe.show}, ${destTpe.show}, ${plan.show})"
       case BetweenNonOptionOption(sourceTpe, destTpe, plan) =>
@@ -84,11 +84,12 @@ enum Plan[+E <: PlanError] {
 
           current match {
             case plan @ BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
-              val targetTpe = (plan: Plan[E]) => if (target.isSource) plan.sourceTpe.repr else plan.destTpe.repr
+              def targetTpe(plan: Plan[E]) = if (target.isSource) plan.sourceTpe.repr else plan.destTpe.repr
 
               casePlans
-                .find((name, plan) => tpe.repr =:= targetTpe(plan))
-                .map((name, casePlan) => plan.copy(casePlans = casePlans.updated(name, recurse(casePlan, tail, updatedContext))))
+                .zipWithIndex
+                .find((plan, idx) => tpe.repr =:= targetTpe(plan))
+                .map((casePlan, idx) => plan.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail, updatedContext))))
                 .getOrElse(Plan.Error(sourceTpe, destTpe, updatedContext, s"'at[${tpe.repr.show}]' is not a valid case accessor"))
             case plan =>
               Plan.Error(
@@ -125,7 +126,7 @@ enum Plan[+E <: PlanError] {
   case BetweenWrappedUnwrapped(sourceTpe: Type[?], destTpe: Type[?], fieldName: String) extends Plan[Nothing]
   case BetweenSingletons(sourceTpe: Type[?], destTpe: Type[?], expr: Expr[Any]) extends Plan[Nothing]
   case BetweenProducts(sourceTpe: Type[?], destTpe: Type[?], fieldPlans: Map[String, Plan[E]]) extends Plan[E]
-  case BetweenCoproducts(sourceTpe: Type[?], destTpe: Type[?], casePlans: Map[String, Plan[E]]) extends Plan[E]
+  case BetweenCoproducts(sourceTpe: Type[?], destTpe: Type[?], casePlans: Vector[Plan[E]]) extends Plan[E]
   case BetweenOptions(sourceTpe: Type[?], destTpe: Type[?], plan: Plan[E]) extends Plan[E]
   case BetweenNonOptionOption(sourceTpe: Type[?], destTpe: Type[?], plan: Plan[E]) extends Plan[E]
   case BetweenCollections(destCollectionTpe: Type[?], sourceTpe: Type[?], destTpe: Type[?], plan: Plan[E]) extends Plan[E]
