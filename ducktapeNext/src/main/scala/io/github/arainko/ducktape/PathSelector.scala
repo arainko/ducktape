@@ -22,8 +22,8 @@ object PathSelector {
           recurse(acc, tree)
         case Block(_, tree) =>
           recurse(acc, tree)
-        case Select(tree, name) =>
-          recurse(acc.prepended(Path.Segment.Field(tree.tpe.asType, name)), tree)
+        case select @ Select(tree, name) =>
+          recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, name)), tree)
         case TypeApply(Apply(TypeApply(Select(Ident(_), "at"), _), tree :: Nil), tpe :: Nil) =>
           recurse(acc.prepended(Path.Segment.Case(tpe.tpe.asType)), tree)
         case Ident(_) => acc

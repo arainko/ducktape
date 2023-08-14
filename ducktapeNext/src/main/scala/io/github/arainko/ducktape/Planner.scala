@@ -46,7 +46,7 @@ object Planner {
               .map(recurse(_, destFieldStruct, updatedContext))
               .getOrElse(
                 Plan.Error(
-                  Type.of[Any],
+                  Type.of[Nothing],
                   destFieldStruct.tpe,
                   updatedContext,
                   s"No field named '$destField' found in ${source.tpe.repr.show}"
@@ -66,7 +66,7 @@ object Planner {
             .getOrElse(
               Plan.Error(
                 sourceCaseStruct.tpe,
-                Type.of[Nothing],
+                Type.of[Any],
                 updatedContext,
                 s"No child named '$sourceName' found in ${dest.tpe.repr.show}"
               )

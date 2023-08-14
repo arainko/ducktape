@@ -36,7 +36,7 @@ object Configuration {
           Configuration.At(
             path,
             Target.Dest,
-            Plan.Configured(Type.of[Any], constTpe.tpe.asType, Configuration.Const(value.asExpr))
+            Plan.Configured(Type.of[Nothing], constTpe.tpe.asType, Configuration.Const(value.asExpr))
           )
         case Apply(
               TypeApply(Select(Ident("Case2"), "const"), a :: b :: sourceTpe :: constTpe :: Nil),

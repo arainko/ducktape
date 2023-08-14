@@ -42,7 +42,7 @@ object Path {
 
     def render(using Quotes): String = {
       import quotes.reflect.*
-      given Printer[TypeRepr] = Printer.TypeReprShortCode
+      given Printer[TypeRepr] = Printer.TypeReprCode
 
       self.map {
         case Segment.Field(_, name) => name

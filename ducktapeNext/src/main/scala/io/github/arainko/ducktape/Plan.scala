@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.internal.modules.*
 import scala.collection.IterableFactory
 import scala.collection.Factory
 import Plan.Error as PlanError //TODO: Why is this needed? I cannot refer to Plan.Error in bound of the Plan enum, lol
+import io.github.arainko.ducktape.Path.Segment
 type PlanError = Plan.Error
 
 enum Plan[+E <: PlanError] {
@@ -13,9 +14,6 @@ enum Plan[+E <: PlanError] {
   def sourceTpe: Type[?]
 
   def destTpe: Type[?]
-
-  final def conformsTo(that: Plan[?])(using Quotes): Boolean =
-    that.sourceTpe.repr <:< sourceTpe.repr && destTpe.repr <:< that.destTpe.repr
 
   final def show(using Quotes): String = {
     import quotes.reflect.*
@@ -56,7 +54,49 @@ enum Plan[+E <: PlanError] {
     path: Path,
     target: Configuration.Target
   )(update: Plan[Plan.Error])(using Quotes): Plan[Plan.Error] = {
-    def recurse(current: Plan[E], segments: List[Path.Segment], context: Plan.Context)(using Quotes): Plan[Plan.Error] = {
+    extension (currentPlan: Plan[?]) def conformsTo(updatedPlan: Plan[?])(using Quotes) = {
+        import quotes.reflect.*
+
+        // val noise = defn
+        // // uncomment when you once again hit an issue with this to see what's happening
+        // println(s"updated.destTpe: ${updatedPlan.destTpe.repr.show}")
+        // println(s"current.destTpe: ${currentPlan.destTpe.repr.show}")
+        // println(s"current derivesFrom updated: ${currentPlan.destTpe.repr.derivesFrom(updatedPlan.destTpe.repr.typeSymbol)}")
+        // println(s"updated derivesFrom current: ${updatedPlan.destTpe.repr.derivesFrom(currentPlan.destTpe.repr.typeSymbol)}")
+        // println(s"updated <:< current: ${updatedPlan.destTpe.repr <:< currentPlan.destTpe.repr}")
+        // println(s"current <:< updated: ${currentPlan.destTpe.repr <:< updatedPlan.destTpe.repr}")
+        // println(s"updated baseType current: ${updatedPlan.destTpe.repr.baseType(currentPlan.destTpe.repr.typeSymbol)}")
+        // println(s"current baseType updated: ${currentPlan.destTpe.repr.baseType(updatedPlan.destTpe.repr.typeSymbol)}")
+        // println(s"current.baseClasses: ${currentPlan.destTpe.repr.baseClasses}")
+        // println(s"updated.baseClasses: ${updatedPlan.destTpe.repr.baseClasses}")
+        // println(s"updated.classSymbol: ${updatedPlan.destTpe.repr.classSymbol}")
+        // println(s"current.classSymbol: ${currentPlan.destTpe.repr.classSymbol}")
+        // println(
+        //   s"intersection: ${currentPlan.destTpe.repr.baseClasses.toSet.intersect(updatedPlan.destTpe.repr.baseClasses.toSet).filter(_.flags.is(Flags.Sealed)).map(_.typeRef)}"
+        // )
+        // println(s"updated.filtered: ${updatedPlan.destTpe.repr.baseClasses.filter(_.flags.is(Flags.Sealed))}")
+        // println(s"current.filtered: ${currentPlan.destTpe.repr.baseClasses.filter(_.flags.is(Flags.Sealed))}")
+
+        // println(s"updated baseType current: ${updatedPlan.destTpe.repr.baseType(currentPlan.destTpe.repr.typeSymbol)}")
+        // println(s"current baseType updated: ${currentPlan.destTpe.repr.baseType(updatedPlan.destTpe.repr.typeSymbol)}")
+
+        // val lubs = currentPlan.destTpe.repr.baseClasses.toSet
+        //   .intersect(updatedPlan.destTpe.repr.baseClasses.toSet)
+        //   .filter(_.flags.is(Flags.Sealed))
+        //   .map(_.typeRef)
+
+        updatedPlan.sourceTpe.repr <:< currentPlan.sourceTpe.repr &&
+        (updatedPlan.destTpe.repr <:< currentPlan.destTpe.repr || currentPlan.destTpe.repr.derivesFrom(
+          updatedPlan.destTpe.repr.typeSymbol
+        ))
+      }
+
+    def recurse(
+      current: Plan[E],
+      segments: List[Path.Segment],
+      sourceContext: Plan.Context,
+      destContext: Plan.Context
+    )(using Quotes): Plan[Plan.Error] = {
       segments match {
         case (segment @ Path.Segment.Field(_, fieldName)) :: tail =>
           val updatedContext = context.add(segment)
@@ -86,8 +126,7 @@ enum Plan[+E <: PlanError] {
             case plan @ BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
               def targetTpe(plan: Plan[E]) = if (target.isSource) plan.sourceTpe.repr else plan.destTpe.repr
 
-              casePlans
-                .zipWithIndex
+              casePlans.zipWithIndex
                 .find((plan, idx) => tpe.repr =:= targetTpe(plan))
                 .map((casePlan, idx) => plan.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail, updatedContext))))
                 .getOrElse(Plan.Error(sourceTpe, destTpe, updatedContext, s"'at[${tpe.repr.show}]' is not a valid case accessor"))
@@ -100,29 +139,23 @@ enum Plan[+E <: PlanError] {
               )
           }
         case Nil if current.conformsTo(update) =>
+          println(context.render)
+
           update
 
         case Nil =>
-          // that.sourceTpe.repr <:< sourceTpe.repr && destTpe.repr <:< that.destTpe.repr
-
-          val sourceError = Option.unless(update.sourceTpe.repr <:< current.sourceTpe.repr) { 
-            s"${update.sourceTpe.repr.show} <:< ${current.sourceTpe.repr.show} doesn't hold"
-          }
-
-          val destError = Option.unless(current.destTpe.repr <:< update.destTpe.repr) {
-            s"${current.destTpe.repr.show} <:< ${update.destTpe.repr.show} doesn't hold"
-          }
+          println(context.render)
 
           Plan.Error(
             current.sourceTpe,
             current.destTpe,
             context,
-            s"""A replacement plan doesn't conform to the plan it's supposed to replace: ${List(sourceError, destError).flatten.mkString(", ")}""".stripMargin
+            s"A replacement plan doesn't conform to the plan it's supposed to replace"
           )
       }
     }
 
-    recurse(this, path.toList, Context.empty(this.sourceTpe, this.destTpe))
+    recurse(this, path.toList, Context.empty(this.sourceTpe))
   }
 
   case Upcast(sourceTpe: Type[?], destTpe: Type[?]) extends Plan[Nothing]
@@ -142,14 +175,27 @@ enum Plan[+E <: PlanError] {
 }
 
 object Plan {
+
   def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.sourceTpe, plan.destTpe)
 
-  final case class Context(rootSourceTpe: Type[?], rootDestTpe: Type[?], path: Path) {
+  final case class Context(root: Type[?], path: Path) {
     def add(segment: Path.Segment): Context = copy(path = path.appended(segment))
+
+    // def currentDestTpe(using Quotes): Type[?] = {
+    //   import quotes.reflect.*
+
+    //   path.toVector.reverse.collectFirst { case Segment.Field(tpe, name) => tpe }
+    //     .getOrElse(rootDestTpe)
+    //     .repr
+    //     .widen
+    //     .asType
+    // }
+
     def render(using Quotes): String = path.render
+  // }
   }
 
   object Context {
-    def empty(rootSourceTpe: Type[?], rootDestTpe: Type[?]): Context = Context(rootSourceTpe, rootDestTpe, Path.empty)
+    def empty(root: Type[?]): Context = Context(root, Path.empty)
   }
 }
