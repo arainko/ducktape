@@ -19,9 +19,9 @@ object Configuration {
     final def isDest: Boolean = !isSource
   }
 
-  final case class At(path: Path, target: Target, config: Plan.Configured)
+  final case class At(path: Path, target: Target, config: Configuration)
 
-  def parse[A: Type, B: Type](configs: Expr[Seq[Config[A, B]]])(using Quotes) = {
+  def parse[A: Type, B: Type](configs: Expr[Seq[Config[A, B]]])(using Quotes) =  {
     import quotes.reflect.*
 
     Varargs
@@ -36,7 +36,7 @@ object Configuration {
           Configuration.At(
             path,
             Target.Dest,
-            Plan.Configured(Type.of[Nothing], constTpe.tpe.asType, Configuration.Const(value.asExpr))
+            Configuration.Const(value.asExpr)
           )
         case Apply(
               TypeApply(Select(Ident("Case2"), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
@@ -46,7 +46,7 @@ object Configuration {
             path,
             Target.Source,
             // path.last.tpe here because 'sourceTpe' is always widened (i.e it doesn't work when configuring enum cases)
-            Plan.Configured(path.last.tpe, constTpe.tpe.asType, Configuration.Const(value.asExpr))
+            Configuration.Const(value.asExpr)
           )
       }
   }

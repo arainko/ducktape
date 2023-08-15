@@ -16,10 +16,7 @@ object Interpreter {
 
     val plan = Planner.createPlan[A, B]
     val config = Configuration.parse(configs)
-    val reconfiguredPlan = config.foldLeft(plan) {
-      case (plan, Configuration.At(path, target, config)) =>
-        plan.replaceAt(path, target)(config)
-    }
+    val reconfiguredPlan = config.foldLeft(plan) { (plan, config) => plan.configure(config) }
     println(s"OG PLAN: ${plan.show}")
     println()
     println(s"CONFIG: $config")
@@ -28,7 +25,7 @@ object Interpreter {
     println()
     unsafeRefinePlan(reconfiguredPlan) match {
       case Left(errors) =>
-        val rendered = errors.map(err => s"${err.message} @ ${err.context.render}").mkString("\n")
+        val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
         report.errorAndAbort(rendered)
       case Right(totalPlan) =>
         recurse(totalPlan, value).asExprOf[B]
@@ -43,23 +40,23 @@ object Interpreter {
         case head :: next =>
           head match {
             case plan: Plan.Upcast => recurse(next, errors)
-            case Plan.BetweenProducts(_, _, fieldPlans) =>
+            case Plan.BetweenProducts(_, _, _, _, fieldPlans) =>
               recurse(fieldPlans.values.toList ::: next, errors)
-            case Plan.BetweenCoproducts(_, _, casePlans) =>
+            case Plan.BetweenCoproducts(_, _, _, _, casePlans) =>
               recurse(casePlans.toList ::: next, errors)
-            case Plan.BetweenOptions(_, _, plan)         => recurse(plan :: next, errors)
-            case Plan.BetweenNonOptionOption(_, _, plan) => recurse(plan :: next, errors)
-            case Plan.BetweenCollections(_, _, _, plan)  => recurse(plan :: next, errors)
-            case plan: Plan.BetweenSingletons            => recurse(next, errors)
-            case plan: Plan.UserDefined                  => recurse(next, errors)
-            case plan: Plan.Derived                      => recurse(next, errors)
-            case plan: Plan.Configured                   => recurse(next, errors)
-            case plan: Plan.BetweenWrappedUnwrapped      => recurse(next, errors)
-            case plan: Plan.BetweenUnwrappedWrapped      => recurse(next, errors)
-            case error: Plan.Error                       => recurse(next, error :: errors)
+            case Plan.BetweenOptions(_, _, _, _, plan)         => recurse(plan :: next, errors)
+            case Plan.BetweenNonOptionOption(_, _, _, _, plan) => recurse(plan :: next, errors)
+            case Plan.BetweenCollections(_, _, _, _, _, plan)  => recurse(plan :: next, errors)
+            case plan: Plan.BetweenSingletons                  => recurse(next, errors)
+            case plan: Plan.UserDefined                        => recurse(next, errors)
+            case plan: Plan.Derived                            => recurse(next, errors)
+            case plan: Plan.Configured                         => recurse(next, errors)
+            case plan: Plan.BetweenWrappedUnwrapped            => recurse(next, errors)
+            case plan: Plan.BetweenUnwrappedWrapped            => recurse(next, errors)
+            case error: Plan.Error                             => recurse(next, error :: errors)
           }
         case Nil => errors
-        }
+      }
     val errors = recurse(plan :: Nil, Nil)
     // if no errors were accumulated that means there are no Plan.Error nodes which means we operate on a Plan[Nothing]
     Either.cond(errors.isEmpty, plan.asInstanceOf[Plan[Nothing]], errors)
@@ -69,14 +66,14 @@ object Interpreter {
     import quotes.reflect.*
 
     plan match {
-      case Plan.Upcast(_, _) => value
+      case Plan.Upcast(_, _, _, _) => value
 
-      case Plan.Configured(_, _, config) =>
+      case Plan.Configured(_, _, _, _, config) =>
         config match {
           case Configuration.Const(value) => value
         }
 
-      case Plan.BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
+      case Plan.BetweenProducts(sourceTpe, destTpe, _, _, fieldPlans) =>
         val args = fieldPlans.map {
           case (fieldName, p: Plan.Configured) =>
             NamedArg(fieldName, recurse(p, value).asTerm)
@@ -86,19 +83,17 @@ object Interpreter {
         }
         Constructor(destTpe.repr).appliedToArgs(args.toList).asExpr
 
-      case Plan.BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
-        val branches = casePlans
-          .map { plan =>
-            (plan.sourceTpe -> plan.destTpe) match {
-              case '[src] -> '[dest] =>
-                val sourceValue = '{ $value.asInstanceOf[src] }
-                IfBranch(IsInstanceOf(value, plan.sourceTpe), recurse(plan, sourceValue))
-            }
+      case Plan.BetweenCoproducts(sourceTpe, destTpe, _, _, casePlans) =>
+        val branches = casePlans.map { plan =>
+          (plan.sourceTpe -> plan.destTpe) match {
+            case '[src] -> '[dest] =>
+              val sourceValue = '{ $value.asInstanceOf[src] }
+              IfBranch(IsInstanceOf(value, plan.sourceTpe), recurse(plan, sourceValue))
           }
-          .toList
+        }.toList
         ifStatement(branches).asExpr
 
-      case Plan.BetweenOptions(sourceTpe, destTpe, plan) =>
+      case Plan.BetweenOptions(sourceTpe, destTpe, _, _, plan) =>
         (sourceTpe -> destTpe) match {
           case '[src] -> '[dest] =>
             val optionValue = value.asExprOf[Option[src]]
@@ -106,7 +101,7 @@ object Interpreter {
             '{ $optionValue.map(src => ${ transformation('src) }) }
         }
 
-      case Plan.BetweenNonOptionOption(sourceTpe, destTpe, plan) =>
+      case Plan.BetweenNonOptionOption(sourceTpe, destTpe, _, _, plan) =>
         (sourceTpe -> destTpe) match {
           case '[src] -> '[dest] =>
             val sourceValue = value.asExprOf[src]
@@ -114,31 +109,31 @@ object Interpreter {
             '{ Some(${ transformation(sourceValue) }) }
         }
 
-      case Plan.BetweenCollections(destCollectionTpe, sourceTpe, destTpe, plan) =>
+      case Plan.BetweenCollections(destCollectionTpe, sourceTpe, destTpe, _, _, plan) =>
         (destCollectionTpe, sourceTpe, destTpe) match {
           case ('[destCollTpe], '[srcElem], '[destElem]) =>
             val sourceValue = value.asExprOf[Iterable[srcElem]]
-            val factory = Expr.summon[Factory[destElem, destCollTpe]].get //TODO: Make it nicer
+            val factory = Expr.summon[Factory[destElem, destCollTpe]].get // TODO: Make it nicer
             def transformation(value: Expr[srcElem])(using Quotes): Expr[destElem] = recurse(plan, value).asExprOf[destElem]
             '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
         }
 
-      case Plan.BetweenSingletons(sourceTpe, destTpe, expr) => expr
+      case Plan.BetweenSingletons(sourceTpe, destTpe, _, _, expr) => expr
 
-      case Plan.BetweenWrappedUnwrapped(sourceTpe, destTpe, fieldName) =>
+      case Plan.BetweenWrappedUnwrapped(sourceTpe, destTpe, _, _, fieldName) =>
         value.accessFieldByName(fieldName).asExpr
 
-      case Plan.BetweenUnwrappedWrapped(sourceTpe, destTpe) =>
+      case Plan.BetweenUnwrappedWrapped(sourceTpe, destTpe, _, _) =>
         Constructor(destTpe.repr).appliedTo(value.asTerm).asExpr
 
-      case Plan.UserDefined(source, dest, transformer) =>
+      case Plan.UserDefined(source, dest, _, _, transformer) =>
         transformer match {
           case '{ $t: UserDefinedTransformer[src, dest] } =>
             val sourceValue = value.asExprOf[src]
             '{ $t.transform($sourceValue) }
         }
 
-      case Plan.Derived(source, dest, transformer) =>
+      case Plan.Derived(source, dest, _, _, transformer) =>
         transformer match {
           case '{ $t: Transformer2[src, dest] } =>
             val sourceValue = value.asExprOf[src]

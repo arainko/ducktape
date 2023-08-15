@@ -55,7 +55,7 @@ final case class Nested2(int: Int | String, additional: Int) {
 final case class Gen[A](int: Int, value: A)
 
 final case class ProdTest1(test: Test1)
-final case class ProdTest2(test: Test2, add: Int)
+final case class ProdTest2(test: Test2)
 
 @main def main = {
 
@@ -70,12 +70,12 @@ final case class ProdTest2(test: Test2, add: Int)
    */
   DebugMacros.code {
     Interpreter.transformPlanned[ProdTest1, ProdTest2](
-      ProdTest1(Test1.Empty),
+      ProdTest1(Test1.Cos(Nested1(1))),
       Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
-      // Field2.const(_.test.at[Test2.Cos].int.int, 123), // overriden field
-      Field2.const(_.add, 1), // missing field
+      Field2.const(_.test.at[Test2.Cos].int.int, 123), // overriden field
+      // Field2.const(_.add, 1), // missing field
       Case2.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))), // missing case
-      // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
+      Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
     )
   }
 
@@ -83,12 +83,12 @@ final case class ProdTest2(test: Test2, add: Int)
 
   summon[Mirror.Of[Test3]]
 
-  // DebugMacros.code {
-  // Interpreter.transformPlanned[Test1, Test3](
-  //   Test1.Cos(Nested1(1)),
-  //   Case2.const(_.at[Test1.Empty.type], Test3.Empty1.Impl)
-  // )
-  // }
+  DebugMacros.code {
+  Interpreter.transformPlanned[Test1, Test3](
+    Test1.Cos(Nested1(1)),
+    Case2.const(_.at[Test1.Empty.type], Test3.Empty1.Impl)
+  )
+  }
 
 }
 

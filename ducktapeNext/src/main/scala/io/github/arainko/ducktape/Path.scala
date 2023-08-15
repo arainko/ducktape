@@ -44,10 +44,12 @@ object Path {
       import quotes.reflect.*
       given Printer[TypeRepr] = Printer.TypeReprCode
 
-      self.map {
-        case Segment.Field(_, name) => name
-        case Segment.Case(tpe) => s"at[${tpe.repr.show}]"
-      }.mkString("_.", ".", "")
+      if (self.isEmpty) "_"
+      else
+        self.map {
+          case Segment.Field(_, name) => name
+          case Segment.Case(tpe)      => s"at[${tpe.repr.show}]"
+        }.mkString("_.", ".", "")
     }
   }
 }
