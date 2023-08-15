@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.internal.modules.*
+import io.github.arainko.ducktape.internal.*
 
 import scala.annotation.nowarn
 import scala.collection.Factory
@@ -19,7 +20,7 @@ object Interpreter {
     val reconfiguredPlan = config.foldLeft(plan) { (plan, config) => plan.configure(config) }
     println(s"OG PLAN: ${plan.show}")
     println()
-    println(s"CONFIG: $config")
+    println(s"CONFIG: ${Debug.show(config)}")
     println()
     println(s"CONF PLAN: ${reconfiguredPlan.show}")
     println()

@@ -1,13 +1,14 @@
 package io.github.arainko.ducktape
 
 import scala.quoted.*
+import io.github.arainko.ducktape.internal.Debug
 
-enum Configuration {
+enum Configuration derives Debug {
   case Const(value: Expr[Any])
 }
 
 object Configuration {
-  enum Target {
+  enum Target derives Debug {
     case Source, Dest
 
     final def isSource: Boolean =
@@ -19,7 +20,7 @@ object Configuration {
     final def isDest: Boolean = !isSource
   }
 
-  final case class At(path: Path, target: Target, config: Configuration)
+  final case class At(path: Path, target: Target, config: Configuration) derives Debug
 
   def parse[A: Type, B: Type](configs: Expr[Seq[Config[A, B]]])(using Quotes) =  {
     import quotes.reflect.*

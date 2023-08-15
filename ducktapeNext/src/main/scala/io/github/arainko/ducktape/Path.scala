@@ -2,11 +2,16 @@ package io.github.arainko.ducktape
 
 import scala.quoted.*
 import io.github.arainko.ducktape.internal.modules.*
+import io.github.arainko.ducktape.internal.*
 
 opaque type Path = Vector[Path.Segment]
 
 object Path {
   val empty: Path = Vector.empty
+
+  given debug: Debug[Path] with {
+    extension (self: Path) def show(using Quotes): String = self.render
+  }
 
   enum Segment {
     def tpe: Type[?]
@@ -18,6 +23,8 @@ object Path {
   opaque type NonEmpty <: Path = Path
 
   object NonEmpty {
+    given debug: Debug[Path.NonEmpty] = Path.debug
+
     def fromPath(path: Path): Option[Path.NonEmpty] = Option.when(path.nonEmpty)(path)
 
     extension (self: Path.NonEmpty) {

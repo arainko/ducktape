@@ -34,14 +34,6 @@ object Structure {
     lazy val name = struct.name
   }
 
-  inline def print[A] = ${ cos[A] }
-
-  def cos[A: Type](using Quotes) = {
-    import quotes.reflect.*
-    report.info(of[A].toString())
-    '{}
-  }
-
   def of[A: Type](using Quotes): Structure = {
     import quotes.reflect.*
     given Printer[TypeRepr] = Printer.TypeReprShortCode
