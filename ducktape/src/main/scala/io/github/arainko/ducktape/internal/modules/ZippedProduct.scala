@@ -113,8 +113,8 @@ object ZippedProduct {
         case ('[Tuple2[first, second]], Field.Wrapped(firstField, _) :: Field.Wrapped(secondField, _) :: Nil) =>
           val firstTpe = TypeRepr.of[second]
           val secondTpe = TypeRepr.of[first]
-          val firstBind = Symbol.newBind(Symbol.spliceOwner, firstField.name, Flags.Local, firstTpe)
-          val secondBind = Symbol.newBind(Symbol.spliceOwner, secondField.name, Flags.Local, secondTpe)
+          val firstBind = Symbol.newBind(Symbol.spliceOwner, firstField.name, Flags.Case, firstTpe)
+          val secondBind = Symbol.newBind(Symbol.spliceOwner, secondField.name, Flags.Case, secondTpe)
           val fields =
             List(Field.Unwrapped(secondField, Ref(secondBind).asExpr), Field.Unwrapped(firstField, Ref(firstBind).asExpr))
           val extractor =
@@ -123,14 +123,14 @@ object ZippedProduct {
 
         case ('[tpe], Field.Wrapped(field, _) :: Nil) =>
           val tpe = TypeRepr.of(using field.tpe)
-          val bind = Symbol.newBind(Symbol.spliceOwner, field.name, Flags.Local, tpe)
+          val bind = Symbol.newBind(Symbol.spliceOwner, field.name, Flags.Case, tpe)
           Bind(bind, Wildcard()) -> (Field.Unwrapped(field, Ref(bind).asExpr) :: Nil)
 
         case ('[Tuple2[rest, current]], Field.Wrapped(field, _) :: tail) =>
           val restTpe = TypeRepr.of[rest]
           val currentTpe = TypeRepr.of[current]
           val pairExtractor = Tuple2Extractor(restTpe, currentTpe)
-          val bind = Symbol.newBind(Symbol.spliceOwner, field.name, Flags.Local, currentTpe)
+          val bind = Symbol.newBind(Symbol.spliceOwner, field.name, Flags.Case, currentTpe)
           val (pattern, unzippedFields) = recurse(summon[Type[rest]], tail)
           val extractor = Unapply(pairExtractor, Nil, pattern :: Bind(bind, Wildcard()) :: Nil)
           val fields = Field.Unwrapped(field, Ref(bind).asExpr) :: unzippedFields
