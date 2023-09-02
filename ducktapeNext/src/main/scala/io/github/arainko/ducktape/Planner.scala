@@ -19,9 +19,12 @@ object Planner {
     recurse(src, dest, sourceContext, destContext)
   }
 
-  private def recurse(source: Structure, dest: Structure, sourceContext: Plan.Context, destContext: Plan.Context)(using
-    Quotes
-  ): Plan[Plan.Error] =
+  private def recurse(
+    source: Structure,
+    dest: Structure,
+    sourceContext: Plan.Context,
+    destContext: Plan.Context
+  )(using Quotes): Plan[Plan.Error] =
     (source.force -> dest.force) match {
       case UserDefinedTransformation(transformer) =>
         Plan.UserDefined(source.tpe, dest.tpe, sourceContext, destContext, transformer)

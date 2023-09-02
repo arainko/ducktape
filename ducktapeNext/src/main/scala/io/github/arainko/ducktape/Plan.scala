@@ -7,6 +7,7 @@ import scala.collection.IterableFactory
 import scala.collection.Factory
 import Plan.Error as PlanError //TODO: Why is this needed? I cannot refer to Plan.Error in bound of the Plan enum, lol
 import io.github.arainko.ducktape.Path.Segment
+import scala.collection.immutable.ListMap
 type PlanError = Plan.Error
 
 enum Plan[+E <: PlanError] {
@@ -127,6 +128,15 @@ enum Plan[+E <: PlanError] {
     destContext: Plan.Context,
     config: Configuration
   ) extends Plan[Nothing]
+
+  case Via(
+    sourceTpe: Type[?],
+    destTpe: Type[?],
+    sourceContext: Plan.Context,
+    destContext: Plan.Context,
+    argPlans: ListMap[String, Plan[E]],
+    function: Expr[Any]
+  ) extends Plan[E]
 
   case BetweenUnwrappedWrapped(
     sourceTpe: Type[?],

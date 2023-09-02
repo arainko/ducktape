@@ -24,7 +24,7 @@ object Interpreter {
     println()
     println(s"CONF PLAN: ${reconfiguredPlan.show}")
     println()
-    unsafeRefinePlan(reconfiguredPlan) match {
+    refinePlan(reconfiguredPlan) match {
       case Left(errors) =>
         val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
         report.errorAndAbort(rendered)
@@ -33,7 +33,7 @@ object Interpreter {
     }
   }
 
-  private def unsafeRefinePlan[A <: Plan.Error](plan: Plan[A]): Either[List[Plan.Error], Plan[Nothing]] = {
+  private def refinePlan[A <: Plan.Error](plan: Plan[A]): Either[List[Plan.Error], Plan[Nothing]] = {
 
     @tailrec
     def recurse(stack: List[Plan[A]], errors: List[Plan.Error]): List[Plan.Error] =
@@ -45,6 +45,9 @@ object Interpreter {
               recurse(fieldPlans.values.toList ::: next, errors)
             case Plan.BetweenCoproducts(_, _, _, _, casePlans) =>
               recurse(casePlans.toList ::: next, errors)
+            case Plan.Via(_, _, _, _, argPlans, _) =>
+              ???
+            // recurse(argPlans)
             case Plan.BetweenOptions(_, _, _, _, plan)         => recurse(plan :: next, errors)
             case Plan.BetweenNonOptionOption(_, _, _, _, plan) => recurse(plan :: next, errors)
             case Plan.BetweenCollections(_, _, _, _, _, plan)  => recurse(plan :: next, errors)
@@ -94,6 +97,15 @@ object Interpreter {
         }.toList
         ifStatement(branches).asExpr
 
+      case Plan.Via(sourceTpe, destTpe, _, _, argPlans, function) =>
+        val args = argPlans.map {
+          case (fieldName, p: Plan.Configured) =>
+            recurse(p, value).asTerm
+          case (fieldName, plan) =>
+            val fieldValue = value.accessFieldByName(fieldName).asExpr
+            recurse(plan, fieldValue).asTerm
+        }
+        function.asTerm.appliedToArgs(args.toList).asExpr
       case Plan.BetweenOptions(sourceTpe, destTpe, _, _, plan) =>
         (sourceTpe -> destTpe) match {
           case '[src] -> '[dest] =>

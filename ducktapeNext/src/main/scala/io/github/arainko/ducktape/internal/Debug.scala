@@ -5,6 +5,7 @@ import scala.compiletime.*
 import io.github.arainko.ducktape.internal.modules.*
 import scala.deriving.Mirror
 import io.github.arainko.ducktape.Transformer2
+import scala.collection.immutable.ListMap
 
 private[ducktape] trait Debug[A] {
   extension (self: A) def show(using Quotes): String 
@@ -34,6 +35,18 @@ private[ducktape] object Debug {
       value
         .map((key, value) => s"${debugKey.show(key)} -> ${debugValue.show(value)}")
         .mkString("Map(", ", ", ")")
+  }
+
+  given listMap[K, V](using debugKey: Debug[K], debugValue: Debug[V]): Debug[ListMap[K, V]] with {
+    extension (value: ListMap[K, V]) def show(using Quotes): String =
+      value
+        .map((key, value) => s"${debugKey.show(key)} -> ${debugValue.show(value)}")
+        .mkString("ListMap(", ", ", ")")
+  }
+
+  given defered[A]: Debug[() => A] with {
+    extension (value: () => A) def show(using Quotes): String = 
+      s"Lazy(...)"
   }
 
   given expr[A]: Debug[Expr[A]] with {
