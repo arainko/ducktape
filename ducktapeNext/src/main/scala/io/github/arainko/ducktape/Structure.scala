@@ -38,7 +38,7 @@ object Structure {
     lazy val name = struct.name
   }
 
-  def fromFunction(function: Expr[Any])(using Quotes) = {
+  def fromFunction(function: Expr[Any])(using Quotes): Option[Structure.Function] = {
     import quotes.reflect.*
 
     FunctionLambda
@@ -65,6 +65,7 @@ object Structure {
             val paramTpe = valueClassRepr.memberType(param)
             Structure.ValueClass(summon[Type[A]], valueClassRepr.show, paramTpe.asType, param.name)
           case other =>
+            
             Structure.Ordinary(summon[Type[A]], TypeRepr.of[A].show)
         }
       case Some(value) =>

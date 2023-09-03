@@ -129,7 +129,7 @@ enum Plan[+E <: PlanError] {
     config: Configuration
   ) extends Plan[Nothing]
 
-  case Via(
+  case BetweenProductFunction(
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Plan.Context,

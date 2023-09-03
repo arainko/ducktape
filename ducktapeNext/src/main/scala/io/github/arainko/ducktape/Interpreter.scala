@@ -10,12 +10,27 @@ import scala.annotation.tailrec
 
 object Interpreter {
 
-  inline def transformPlanned[A, B](value: A, inline configs: Config[A, B]*) = ${ createTransformation[A, B]('value, 'configs) }
+  transparent inline def betweenTypeAndFunction[A](value: A, inline function: Any) = ${ createTransformationBetweenTypeAndFunction('value, 'function) }
 
-  def createTransformation[A: Type, B: Type](value: Expr[A], configs: Expr[Seq[Config[A, B]]])(using Quotes): Expr[B] = {
+  def createTransformationBetweenTypeAndFunction[A: Type](value: Expr[A], function: Expr[Any])(using Quotes) = {
     import quotes.reflect.*
 
-    val plan = Planner.createPlan[A, B]
+    val plan = Planner.betweenTypeAndFunction[A](function)
+    refinePlan(plan) match {
+      case Left(errors) => 
+        val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
+        report.errorAndAbort(rendered)
+      case Right(totalPlan) =>
+        recurse(totalPlan, value)
+    }
+  }
+
+  inline def betweenTypes[A, B](value: A, inline configs: Config[A, B]*) = ${ createTransformationBetweenTypes[A, B]('value, 'configs) }
+
+  def createTransformationBetweenTypes[A: Type, B: Type](value: Expr[A], configs: Expr[Seq[Config[A, B]]])(using Quotes): Expr[B] = {
+    import quotes.reflect.*
+
+    val plan = Planner.betweenTypes[A, B]
     val config = Configuration.parse(configs)
     val reconfiguredPlan = config.foldLeft(plan) { (plan, config) => plan.configure(config) }
     println(s"OG PLAN: ${plan.show}")
@@ -45,9 +60,8 @@ object Interpreter {
               recurse(fieldPlans.values.toList ::: next, errors)
             case Plan.BetweenCoproducts(_, _, _, _, casePlans) =>
               recurse(casePlans.toList ::: next, errors)
-            case Plan.Via(_, _, _, _, argPlans, _) =>
-              ???
-            // recurse(argPlans)
+            case Plan.BetweenProductFunction(_, _, _, _, argPlans, _) =>
+              recurse(argPlans.values.toList ::: next, errors)
             case Plan.BetweenOptions(_, _, _, _, plan)         => recurse(plan :: next, errors)
             case Plan.BetweenNonOptionOption(_, _, _, _, plan) => recurse(plan :: next, errors)
             case Plan.BetweenCollections(_, _, _, _, _, plan)  => recurse(plan :: next, errors)
@@ -97,7 +111,7 @@ object Interpreter {
         }.toList
         ifStatement(branches).asExpr
 
-      case Plan.Via(sourceTpe, destTpe, _, _, argPlans, function) =>
+      case Plan.BetweenProductFunction(sourceTpe, destTpe, _, _, argPlans, function) =>
         val args = argPlans.map {
           case (fieldName, p: Plan.Configured) =>
             recurse(p, value).asTerm
@@ -105,7 +119,8 @@ object Interpreter {
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             recurse(plan, fieldValue).asTerm
         }
-        function.asTerm.appliedToArgs(args.toList).asExpr
+        Expr.betaReduce(Select.unique(function.asTerm, "apply").appliedToArgs(args.toList).asExpr)
+
       case Plan.BetweenOptions(sourceTpe, destTpe, _, _, plan) =>
         (sourceTpe -> destTpe) match {
           case '[src] -> '[dest] =>

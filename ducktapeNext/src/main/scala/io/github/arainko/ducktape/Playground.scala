@@ -69,7 +69,7 @@ final case class ProdTest2(test: Test2)
     - fill in a missing Source Case
    */
   DebugMacros.code {
-    Interpreter.transformPlanned[ProdTest1, ProdTest2](
+    Interpreter.betweenTypes[ProdTest1, ProdTest2](
       ProdTest1(Test1.Cos(Nested1(1))),
       Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
       Field2.const(_.test.at[Test2.Cos].int.int, 123), // overriden field
@@ -79,12 +79,20 @@ final case class ProdTest2(test: Test2)
     )
   }
 
+
+
+  def costam(int: Int, str: String) = ???
+
+  DebugMacros.code {
+    Interpreter.betweenTypeAndFunction[Person1](p, costam)
+  }
+
   val lub = if (1 == 2) Test3.Empty else Test3.Empty1.Impl
 
   summon[Mirror.Of[Test3]]
 
   DebugMacros.code {
-  Interpreter.transformPlanned[Test1, Test3](
+  Interpreter.betweenTypes[Test1, Test3](
     Test1.Cos(Nested1(1)),
     Case2.const(_.at[Test1.Empty.type], Test3.Empty1.Impl)
   )

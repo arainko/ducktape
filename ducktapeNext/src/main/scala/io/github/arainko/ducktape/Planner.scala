@@ -2,13 +2,31 @@ package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.Plan.Context
 import io.github.arainko.ducktape.internal.modules.*
+import io.github.arainko.ducktape.internal.Debug
 
 import scala.quoted.*
 
 object Planner {
   import Structure.*
 
-  def createPlan[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] =
+  def betweenTypeAndFunction[Source: Type](function: Expr[Any])(using Quotes): Plan[Plan.Error] =
+    Structure
+      .fromFunction(function)
+      .map { destStruct =>
+        val sourceStruct = Structure.of[Source]
+        recurse(sourceStruct, destStruct, Plan.Context.empty(Type.of[Source]), Plan.Context.empty(destStruct.tpe))
+      }
+      .getOrElse(
+        Plan.Error(
+          Type.of[Source],
+          Type.of[Any],
+          Plan.Context.empty(Type.of[Source]),
+          Plan.Context.empty(Type.of[Any]),
+          "Couldn't create a transformation plan from a function"
+        )
+      )
+
+  def betweenTypes[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] =
     recurseAndCreatePlan[Source, Dest](Plan.Context.empty(Type.of[Source]), Plan.Context.empty(Type.of[Dest]))
 
   private def recurseAndCreatePlan[Source: Type, Dest: Type](sourceContext: Plan.Context, destContext: Plan.Context)(using
@@ -24,8 +42,33 @@ object Planner {
     dest: Structure,
     sourceContext: Plan.Context,
     destContext: Plan.Context
-  )(using Quotes): Plan[Plan.Error] =
+  )(using Quotes): Plan[Plan.Error] = {
+    import quotes.reflect.*
+
     (source.force -> dest.force) match {
+      case (source: Product, dest: Function) =>
+        val argPlans = dest.args.map { (destField, destFieldStruct) =>
+          val updatedDestContext = destContext.add(Path.Segment.Field(destFieldStruct.tpe, destField))
+          val plan =
+            source.fields
+              .get(destField)
+              .map { sourceStruct =>
+                val updatedSourceContext = sourceContext.add(Path.Segment.Field(sourceStruct.tpe, destField))
+                recurse(sourceStruct, destFieldStruct, updatedSourceContext, updatedDestContext)
+              }
+              .getOrElse(
+                Plan.Error(
+                  Type.of[Nothing],
+                  destFieldStruct.tpe,
+                  sourceContext, // TODO: Revise
+                  updatedDestContext, // TODO: Revise
+                  s"No field named '$destField' found in ${source.tpe.repr.show}"
+                )
+              )
+          destField -> plan
+        }
+        Plan.BetweenProductFunction(source.tpe, dest.tpe, sourceContext, destContext, argPlans, dest.function)
+
       case UserDefinedTransformation(transformer) =>
         Plan.UserDefined(source.tpe, dest.tpe, sourceContext, destContext, transformer)
 
@@ -126,6 +169,7 @@ object Planner {
           s"Couldn't build a transformation plan between ${source.tpe.repr.show} and ${dest.tpe.repr.show}"
         )
     }
+  }
 
   object UserDefinedTransformation {
     def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[UserDefinedTransformer[?, ?]]] = {
@@ -150,7 +194,7 @@ object Planner {
   inline def print[A, B] = ${ printMacro[A, B] }
 
   def printMacro[A: Type, B: Type](using Quotes): Expr[Unit] = {
-    val plan = createPlan[A, B]
+    val plan = betweenTypes[A, B]
     quotes.reflect.report.info(plan.show)
     '{}
   }
