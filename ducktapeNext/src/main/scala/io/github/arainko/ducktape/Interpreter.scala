@@ -15,8 +15,7 @@ object Interpreter {
   def createTransformationBetweenTypeAndFunction[A: Type](value: Expr[A], function: Expr[Any])(using Quotes) = {
     import quotes.reflect.*
 
-    val plan = Planner.betweenTypeAndFunction[A](function)
-    refinePlan(plan) match {
+    Planner.betweenTypeAndFunction[A](function).refine match {
       case Left(errors) => 
         val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
         report.errorAndAbort(rendered)
@@ -39,45 +38,13 @@ object Interpreter {
     println()
     println(s"CONF PLAN: ${reconfiguredPlan.show}")
     println()
-    refinePlan(reconfiguredPlan) match {
+    reconfiguredPlan.refine match {
       case Left(errors) =>
         val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
         report.errorAndAbort(rendered)
       case Right(totalPlan) =>
         recurse(totalPlan, value).asExprOf[B]
     }
-  }
-
-  private def refinePlan[A <: Plan.Error](plan: Plan[A]): Either[List[Plan.Error], Plan[Nothing]] = {
-
-    @tailrec
-    def recurse(stack: List[Plan[A]], errors: List[Plan.Error]): List[Plan.Error] =
-      stack match {
-        case head :: next =>
-          head match {
-            case plan: Plan.Upcast => recurse(next, errors)
-            case Plan.BetweenProducts(_, _, _, _, fieldPlans) =>
-              recurse(fieldPlans.values.toList ::: next, errors)
-            case Plan.BetweenCoproducts(_, _, _, _, casePlans) =>
-              recurse(casePlans.toList ::: next, errors)
-            case Plan.BetweenProductFunction(_, _, _, _, argPlans, _) =>
-              recurse(argPlans.values.toList ::: next, errors)
-            case Plan.BetweenOptions(_, _, _, _, plan)         => recurse(plan :: next, errors)
-            case Plan.BetweenNonOptionOption(_, _, _, _, plan) => recurse(plan :: next, errors)
-            case Plan.BetweenCollections(_, _, _, _, _, plan)  => recurse(plan :: next, errors)
-            case plan: Plan.BetweenSingletons                  => recurse(next, errors)
-            case plan: Plan.UserDefined                        => recurse(next, errors)
-            case plan: Plan.Derived                            => recurse(next, errors)
-            case plan: Plan.Configured                         => recurse(next, errors)
-            case plan: Plan.BetweenWrappedUnwrapped            => recurse(next, errors)
-            case plan: Plan.BetweenUnwrappedWrapped            => recurse(next, errors)
-            case error: Plan.Error                             => recurse(next, error :: errors)
-          }
-        case Nil => errors
-      }
-    val errors = recurse(plan :: Nil, Nil)
-    // if no errors were accumulated that means there are no Plan.Error nodes which means we operate on a Plan[Nothing]
-    Either.cond(errors.isEmpty, plan.asInstanceOf[Plan[Nothing]], errors)
   }
 
   private def recurse(plan: Plan[Nothing], value: Expr[Any])(using Quotes): Expr[Any] = {

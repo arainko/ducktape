@@ -47,27 +47,7 @@ object Planner {
 
     (source.force -> dest.force) match {
       case (source: Product, dest: Function) =>
-        val argPlans = dest.args.map { (destField, destFieldStruct) =>
-          val updatedDestContext = destContext.add(Path.Segment.Field(destFieldStruct.tpe, destField))
-          val plan =
-            source.fields
-              .get(destField)
-              .map { sourceStruct =>
-                val updatedSourceContext = sourceContext.add(Path.Segment.Field(sourceStruct.tpe, destField))
-                recurse(sourceStruct, destFieldStruct, updatedSourceContext, updatedDestContext)
-              }
-              .getOrElse(
-                Plan.Error(
-                  Type.of[Nothing],
-                  destFieldStruct.tpe,
-                  sourceContext, // TODO: Revise
-                  updatedDestContext, // TODO: Revise
-                  s"No field named '$destField' found in ${source.tpe.repr.show}"
-                )
-              )
-          destField -> plan
-        }
-        Plan.BetweenProductFunction(source.tpe, dest.tpe, sourceContext, destContext, argPlans, dest.function)
+        planProductFunctionTransformation(source, dest, sourceContext, destContext)
 
       case UserDefinedTransformation(transformer) =>
         Plan.UserDefined(source.tpe, dest.tpe, sourceContext, destContext, transformer)
@@ -104,49 +84,10 @@ object Planner {
         )
 
       case (source: Product, dest: Product) =>
-        val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-          val updatedDestContext = destContext.add(Path.Segment.Field(destFieldStruct.tpe, destField))
-          val plan =
-            source.fields
-              .get(destField)
-              .map { sourceStruct =>
-                val updatedSourceContext = sourceContext.add(Path.Segment.Field(sourceStruct.tpe, destField))
-                recurse(sourceStruct, destFieldStruct, updatedSourceContext, updatedDestContext)
-              }
-              .getOrElse(
-                Plan.Error(
-                  Type.of[Nothing],
-                  destFieldStruct.tpe,
-                  sourceContext, // TODO: Revise
-                  updatedDestContext, // TODO: Revise
-                  s"No field named '$destField' found in ${source.tpe.repr.show}"
-                )
-              )
-          destField -> plan
-        }
-        Plan.BetweenProducts(source.tpe, dest.tpe, sourceContext, destContext, fieldPlans)
+        planProductTransformation(source, dest, sourceContext, destContext)
 
       case (source: Coproduct, dest: Coproduct) =>
-        val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
-          val updatedSourceContext = sourceContext.add(Path.Segment.Case(sourceCaseStruct.tpe))
-
-          dest.children
-            .get(sourceName)
-            .map { destCaseStruct =>
-              val updatedDestContext = destContext.add(Path.Segment.Case(destCaseStruct.tpe))
-              recurse(sourceCaseStruct, destCaseStruct, updatedSourceContext, updatedDestContext)
-            }
-            .getOrElse(
-              Plan.Error(
-                sourceCaseStruct.tpe,
-                Type.of[Any],
-                updatedSourceContext, // TODO: Revise
-                destContext, // TODO: Revise
-                s"No child named '$sourceName' found in ${dest.tpe.repr.show}"
-              )
-            )
-        }
-        Plan.BetweenCoproducts(source.tpe, dest.tpe, sourceContext, destContext, casePlans.toVector)
+        planCoproductTransformation(source, dest, sourceContext, destContext)
 
       case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
         Plan.BetweenSingletons(source.tpe, dest.tpe, sourceContext, destContext, dest.value)
@@ -171,6 +112,92 @@ object Planner {
     }
   }
 
+  private def planProductTransformation(
+    source: Structure.Product,
+    dest: Structure.Product,
+    sourceContext: Plan.Context,
+    destContext: Plan.Context
+  )(using Quotes) = {
+    val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
+      val updatedDestContext = destContext.add(Path.Segment.Field(destFieldStruct.tpe, destField))
+      val plan =
+        source.fields
+          .get(destField)
+          .map { sourceStruct =>
+            val updatedSourceContext = sourceContext.add(Path.Segment.Field(sourceStruct.tpe, destField))
+            recurse(sourceStruct, destFieldStruct, updatedSourceContext, updatedDestContext)
+          }
+          .getOrElse(
+            Plan.Error(
+              Type.of[Nothing],
+              destFieldStruct.tpe,
+              sourceContext, // TODO: Revise
+              updatedDestContext, // TODO: Revise
+              s"No field named '$destField' found in ${source.tpe.repr.show}"
+            )
+          )
+      destField -> plan
+    }
+    Plan.BetweenProducts(source.tpe, dest.tpe, sourceContext, destContext, fieldPlans)
+  }
+
+  private def planProductFunctionTransformation(
+    source: Structure.Product,
+    dest: Structure.Function,
+    sourceContext: Plan.Context,
+    destContext: Plan.Context
+  )(using Quotes) = {
+    val argPlans = dest.args.map { (destField, destFieldStruct) =>
+      val updatedDestContext = destContext.add(Path.Segment.Field(destFieldStruct.tpe, destField))
+      val plan =
+        source.fields
+          .get(destField)
+          .map { sourceStruct =>
+            val updatedSourceContext = sourceContext.add(Path.Segment.Field(sourceStruct.tpe, destField))
+            recurse(sourceStruct, destFieldStruct, updatedSourceContext, updatedDestContext)
+          }
+          .getOrElse(
+            Plan.Error(
+              Type.of[Nothing],
+              destFieldStruct.tpe,
+              sourceContext, // TODO: Revise
+              updatedDestContext, // TODO: Revise
+              s"No field named '$destField' found in ${source.tpe.repr.show}"
+            )
+          )
+      destField -> plan
+    }
+    Plan.BetweenProductFunction(source.tpe, dest.tpe, sourceContext, destContext, argPlans, dest.function)
+  }
+
+  private def planCoproductTransformation(
+    source: Structure.Coproduct,
+    dest: Structure.Coproduct,
+    sourceContext: Plan.Context,
+    destContext: Plan.Context
+  )(using Quotes) = {
+    val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
+      val updatedSourceContext = sourceContext.add(Path.Segment.Case(sourceCaseStruct.tpe))
+
+      dest.children
+        .get(sourceName)
+        .map { destCaseStruct =>
+          val updatedDestContext = destContext.add(Path.Segment.Case(destCaseStruct.tpe))
+          recurse(sourceCaseStruct, destCaseStruct, updatedSourceContext, updatedDestContext)
+        }
+        .getOrElse(
+          Plan.Error(
+            sourceCaseStruct.tpe,
+            Type.of[Any],
+            updatedSourceContext, // TODO: Revise
+            destContext, // TODO: Revise
+            s"No child named '$sourceName' found in ${dest.tpe.repr.show}"
+          )
+        )
+    }
+    Plan.BetweenCoproducts(source.tpe, dest.tpe, sourceContext, destContext, casePlans.toVector)
+  }
+
   object UserDefinedTransformation {
     def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[UserDefinedTransformer[?, ?]]] = {
       val (src, dest) = structs
@@ -189,13 +216,5 @@ object Planner {
         case '[src] -> '[dest] => Expr.summon[Transformer2[src, dest]]
       }
     }
-  }
-
-  inline def print[A, B] = ${ printMacro[A, B] }
-
-  def printMacro[A: Type, B: Type](using Quotes): Expr[Unit] = {
-    val plan = betweenTypes[A, B]
-    quotes.reflect.report.info(plan.show)
-    '{}
   }
 }
