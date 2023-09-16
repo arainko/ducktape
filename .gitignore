@@ -8,3 +8,4 @@
 .vscode
 metals.sbt
 target/
+ast.*

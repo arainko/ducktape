@@ -28,7 +28,7 @@ object Structure {
 
   case class Product(tpe: Type[?], name: String, fields: Map[String, Structure]) extends Structure
   case class Coproduct(tpe: Type[?], name: String, children: Map[String, Structure]) extends Structure
-  case class Function(tpe: Type[?], name: String, args: ListMap[String, Structure], function: Expr[Any]) extends Structure
+  case class Function(tpe: Type[?], name: String, args: ListMap[String, Structure], function: io.github.arainko.ducktape.Function) extends Structure
   case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
   case class Ordinary(tpe: Type[?], name: String) extends Structure
   case class ValueClass(tpe: Type[?], name: String, paramTpe: Type[?], paramFieldName: String) extends Structure
@@ -38,18 +38,17 @@ object Structure {
     lazy val name = struct.name
   }
 
+  //TODO: Make this take in a Function as an arg instead of matching on the expr here
   def fromFunction(function: Expr[Any])(using Quotes): Option[Structure.Function] = {
     import quotes.reflect.*
 
-    FunctionLambda
-      .unapply(function.asTerm)
-      .map { (vals, term) =>
-        val tpe = term.tpe
-
+    io.github.arainko.ducktape.Function.fromExpr(function)
+      .map { func =>
         val args =
-          vals.map(valDef => valDef.name -> (valDef.tpt.tpe.asType match { case '[argTpe] => Lazy(() => Structure.of[argTpe]) })).to(ListMap)
+          func.args.map((name, tpe) => name -> (tpe match { case '[argTpe] => Lazy(() => Structure.of[argTpe]) }))
+          // vals.map(valDef => valDef.name -> (valDef.tpt.tpe.asType match { case '[argTpe] => Lazy(() => Structure.of[argTpe]) })).to(ListMap)
 
-        Structure.Function(tpe.asType, tpe.show, args, function)
+        Structure.Function(func.returnTpe, func.returnTpe.repr.show, args, func)
       }
   }
 
@@ -137,17 +136,5 @@ object Structure {
   private def constStringTuple(using Quotes)(tp: quotes.reflect.TypeRepr): List[String] = {
     import quotes.reflect.*
     tupleTypeElements(tp).map { case ConstantType(StringConstant(l)) => l }
-  }
-
-  private object FunctionLambda {
-    def unapply(using Quotes)(arg: quotes.reflect.Term): Option[(List[quotes.reflect.ValDef], quotes.reflect.Term)] = {
-      import quotes.reflect.*
-
-      arg match {
-        case Lambda(vals, term)    => Some(vals -> term)
-        case Inlined(_, _, nested) => FunctionLambda.unapply(nested)
-        case _                     => None
-      }
-    }
   }
 }

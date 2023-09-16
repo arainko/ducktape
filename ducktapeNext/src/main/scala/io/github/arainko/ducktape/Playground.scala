@@ -69,22 +69,29 @@ final case class ProdTest2(test: Test2)
     - fill in a missing Source Case
    */
   DebugMacros.code {
-    PlanInterpreter.betweenTypes[ProdTest1, ProdTest2](
+    PlanInterpreter.transformBetween[ProdTest1, ProdTest2](
       ProdTest1(Test1.Cos(Nested1(1))),
       Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
       Field2.const(_.test.at[Test2.Cos].int.int, 123), // overriden field
       // Field2.const(_.add, 1), // missing field
       Case2.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))), // missing case
-      Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
+      // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
     )
   }
 
 
 
-  def costam(int: Int, str: String) = ???
+  def costam(int: Int, str: String): Int = ???
+
+  val aaa =
+    Transformer.Debug.showCode {
+    AppliedViaBuilder.create(p, costam)
+    }
+
+  aaa.transform(Arg2.const(_.int, "aasd"))
 
   DebugMacros.code {
-    PlanInterpreter.betweenTypeAndFunction[Person1](p, costam)
+    PlanInterpreter.transformVia[Person1, Nothing, Nothing](p, costam)
   }
 
   val lub = if (1 == 2) Test3.Empty else Test3.Empty1.Impl
@@ -92,14 +99,10 @@ final case class ProdTest2(test: Test2)
   summon[Mirror.Of[Test3]]
 
   DebugMacros.code {
-  PlanInterpreter.betweenTypes[Test1, Test3](
+  PlanInterpreter.transformBetween[Test1, Test3](
     Test1.Cos(Nested1(1)),
     Case2.const(_.at[Test1.Empty.type], Test3.Empty1.Impl)
   )
   }
 
-}
-
-final class AppliedBuilder[A, B](value: A) {
-  inline def transform(inline config: Field2[A, B] | Case2[A, B]*): B = ???
 }

@@ -1,7 +1,5 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.function.FunctionArguments
-
 opaque type Field2[A, B] = Unit
 
 object Field2 {
@@ -14,11 +12,11 @@ object Case2 {
   def const[A, B, SourceTpe, FieldTpe](selector: Selector ?=> A => SourceTpe, value: FieldTpe): Case2[A, B] = ???
 }
 
-opaque type Arg[A, B, Args <: FunctionArguments] = Unit
+opaque type Arg2[A, B, Args <: FunctionArguments] = Unit
 
-object Arg {
+object Arg2 {
   def const[A, B, Args <: FunctionArguments, DestArgTpe, ConstTpe](
     selector: Selector ?=> Args => DestArgTpe,
     value: ConstTpe
-  ): Arg[A, B, Args] = ???
+  ): Arg2[A, B, Args] = ???
 }

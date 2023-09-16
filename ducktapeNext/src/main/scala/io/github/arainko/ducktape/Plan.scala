@@ -63,7 +63,7 @@ enum Plan[+E <: PlanError] {
     sourceContext: Plan.Context,
     destContext: Plan.Context,
     argPlans: ListMap[String, Plan[E]],
-    function: Expr[Any]
+    function: Function
   ) extends Plan[E]
 
   case BetweenUnwrappedWrapped(

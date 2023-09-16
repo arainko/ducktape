@@ -11,17 +11,21 @@ import scala.annotation.tailrec
 
 object PlanInterpreter {
 
-  transparent inline def betweenTypeAndFunction[A](
+  transparent inline def transformVia[A, B, Args <: FunctionArguments](
     value: A,
     inline function: Any,
-    // inline configs: Arg[]
-  ) = ${ createTransformationBetweenTypeAndFunction('value, 'function) }
+    inline configs: Arg2[A, B, Args] | CaseConfig[A, B]*
+  ) = ${ createTransformationVia('value, 'function, 'configs) }
 
-  def createTransformationBetweenTypeAndFunction[A: Type](value: Expr[A], function: Expr[Any])(using Quotes) = {
+  def createTransformationVia[A: Type, B: Type, Args <: FunctionArguments: Type](
+    value: Expr[A],
+    function: Expr[Any],
+    configs: Expr[Seq[Arg2[A, B, Args] | CaseConfig[A, B]]]
+  )(using Quotes) = {
     import quotes.reflect.*
 
     Planner.betweenTypeAndFunction[A](function).refine match {
-      case Left(errors) => 
+      case Left(errors) =>
         val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
         report.errorAndAbort(rendered)
       case Right(totalPlan) =>
@@ -29,12 +33,12 @@ object PlanInterpreter {
     }
   }
 
-  inline def betweenTypes[A, B](
+  inline def transformBetween[A, B](
     value: A,
     inline configs: FieldConfig[A, B] | CaseConfig[A, B]*
-  ) = ${ createTransformationBetweenTypes[A, B]('value, 'configs) }
+  ) = ${ createTransformationBetween[A, B]('value, 'configs) }
 
-  def createTransformationBetweenTypes[A: Type, B: Type](
+  def createTransformationBetween[A: Type, B: Type](
     value: Expr[A],
     configs: Expr[Seq[FieldConfig[A, B] | CaseConfig[A, B]]]
   )(using Quotes): Expr[B] = {
@@ -97,7 +101,7 @@ object PlanInterpreter {
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             recurse(plan, fieldValue).asTerm
         }
-        Expr.betaReduce(Select.unique(function.asTerm, "apply").appliedToArgs(args.toList).asExpr)
+        function.appliedTo(args.toList)
 
       case Plan.BetweenOptions(sourceTpe, destTpe, _, _, plan) =>
         (sourceTpe -> destTpe) match {
