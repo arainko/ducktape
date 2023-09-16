@@ -22,7 +22,7 @@ object Configuration {
 
   final case class At(path: Path, target: Target, config: Configuration) derives Debug
 
-  def parse[A: Type, B: Type](configs: Expr[Seq[Config[A, B]]])(using Quotes) =  {
+  def parse[A: Type, B: Type](configs: Expr[Seq[Field2[A, B] | Case2[A, B]]])(using Quotes) =  {
     import quotes.reflect.*
 
     Varargs
@@ -46,7 +46,6 @@ object Configuration {
           Configuration.At(
             path,
             Target.Source,
-            // path.last.tpe here because 'sourceTpe' is always widened (i.e it doesn't work when configuring enum cases)
             Configuration.Const(value.asExpr)
           )
       }

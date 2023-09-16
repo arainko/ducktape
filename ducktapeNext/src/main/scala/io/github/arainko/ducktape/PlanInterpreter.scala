@@ -2,15 +2,20 @@ package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.internal.*
+import io.github.arainko.ducktape.{ Case2 as CaseConfig, Field2 as FieldConfig }
 
 import scala.annotation.nowarn
 import scala.collection.Factory
 import scala.quoted.*
 import scala.annotation.tailrec
 
-object Interpreter {
+object PlanInterpreter {
 
-  transparent inline def betweenTypeAndFunction[A](value: A, inline function: Any) = ${ createTransformationBetweenTypeAndFunction('value, 'function) }
+  transparent inline def betweenTypeAndFunction[A](
+    value: A,
+    inline function: Any,
+    // inline configs: Arg[]
+  ) = ${ createTransformationBetweenTypeAndFunction('value, 'function) }
 
   def createTransformationBetweenTypeAndFunction[A: Type](value: Expr[A], function: Expr[Any])(using Quotes) = {
     import quotes.reflect.*
@@ -24,9 +29,15 @@ object Interpreter {
     }
   }
 
-  inline def betweenTypes[A, B](value: A, inline configs: Config[A, B]*) = ${ createTransformationBetweenTypes[A, B]('value, 'configs) }
+  inline def betweenTypes[A, B](
+    value: A,
+    inline configs: FieldConfig[A, B] | CaseConfig[A, B]*
+  ) = ${ createTransformationBetweenTypes[A, B]('value, 'configs) }
 
-  def createTransformationBetweenTypes[A: Type, B: Type](value: Expr[A], configs: Expr[Seq[Config[A, B]]])(using Quotes): Expr[B] = {
+  def createTransformationBetweenTypes[A: Type, B: Type](
+    value: Expr[A],
+    configs: Expr[Seq[FieldConfig[A, B] | CaseConfig[A, B]]]
+  )(using Quotes): Expr[B] = {
     import quotes.reflect.*
 
     val plan = Planner.betweenTypes[A, B]
