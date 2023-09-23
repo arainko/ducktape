@@ -9,22 +9,12 @@ import scala.quoted.*
 object Planner {
   import Structure.*
 
-  def betweenTypeAndFunction[Source: Type](function: Expr[Any])(using Quotes): Plan[Plan.Error] =
-    Structure
-      .fromFunction(function)
-      .map { destStruct =>
-        val sourceStruct = Structure.of[Source]
-        recurse(sourceStruct, destStruct, Plan.Context.empty(Type.of[Source]), Plan.Context.empty(destStruct.tpe))
-      }
-      .getOrElse(
-        Plan.Error(
-          Type.of[Source],
-          Type.of[Any],
-          Plan.Context.empty(Type.of[Source]),
-          Plan.Context.empty(Type.of[Any]),
-          "Couldn't create a transformation plan from a function"
-        )
-      )
+  def betweenTypeAndFunction[Source: Type](function: io.github.arainko.ducktape.Function)(using Quotes): Plan[Plan.Error] = {
+
+    val sourceStruct = Structure.of[Source]
+    val destStruct = Structure.fromFunction(function)
+    recurse(sourceStruct, destStruct, Plan.Context.empty(Type.of[Source]), Plan.Context.empty(destStruct.tpe))
+  }
 
   def betweenTypes[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] =
     recurseAndCreatePlan[Source, Dest](Plan.Context.empty(Type.of[Source]), Plan.Context.empty(Type.of[Dest]))

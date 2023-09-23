@@ -6,8 +6,6 @@ import scala.collection.mutable.ListBuffer
 import scala.annotation.tailrec
 
 object PathSelector {
-  // inline def run[A](inline expr: Selector ?=> A => Any) = ${ readPath('expr) }
-
   def unapply(using Quotes)(expr: quotes.reflect.Term): Option[Path.NonEmpty] = {
     import quotes.reflect.{ Selector as _, * }
 
@@ -26,6 +24,9 @@ object PathSelector {
           recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, name)), tree)
         case TypeApply(Apply(TypeApply(Select(Ident(_), "at"), _), tree :: Nil), tpe :: Nil) =>
           recurse(acc.prepended(Path.Segment.Case(tpe.tpe.asType)), tree)
+        // Function arg selection can only happen as the first selection (aka the last one to be parsed) so this not being recursive is fine (?)
+        case TypeApply(Select(Apply(Select(Ident(_), "selectDynamic"), Literal(StringConstant(argName)) :: Nil), "$asInstanceOf$"), argTpe :: Nil) =>
+          acc.prepended(Path.Segment.Field(argTpe.tpe.asType, argName))
         case Ident(_) => acc
         case other    => report.errorAndAbort(other.show(using Printer.TreeShortCode))
       }

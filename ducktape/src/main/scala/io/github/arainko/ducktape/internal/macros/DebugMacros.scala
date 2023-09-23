@@ -12,7 +12,7 @@ private[ducktape] object DebugMacros {
 
     val struct = Printer.TreeStructure.show(value.asTerm)
     report.info(struct)
-    value
+    value.asTerm.changeOwner(Symbol.spliceOwner).asExprOf[A]
   }
 
   inline def code[A](inline value: A): A = ${ codeMacro('value) }

@@ -28,7 +28,8 @@ object Structure {
 
   case class Product(tpe: Type[?], name: String, fields: Map[String, Structure]) extends Structure
   case class Coproduct(tpe: Type[?], name: String, children: Map[String, Structure]) extends Structure
-  case class Function(tpe: Type[?], name: String, args: ListMap[String, Structure], function: io.github.arainko.ducktape.Function) extends Structure
+  case class Function(tpe: Type[?], name: String, args: ListMap[String, Structure],function: io.github.arainko.ducktape.Function)
+      extends Structure
   case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
   case class Ordinary(tpe: Type[?], name: String) extends Structure
   case class ValueClass(tpe: Type[?], name: String, paramTpe: Type[?], paramFieldName: String) extends Structure
@@ -38,18 +39,14 @@ object Structure {
     lazy val name = struct.name
   }
 
-  //TODO: Make this take in a Function as an arg instead of matching on the expr here
-  def fromFunction(function: Expr[Any])(using Quotes): Option[Structure.Function] = {
+  // TODO: Make this take in a Function as an arg instead of matching on the expr here
+  def fromFunction(function: io.github.arainko.ducktape.Function)(using Quotes): Structure.Function = {
     import quotes.reflect.*
 
-    io.github.arainko.ducktape.Function.fromExpr(function)
-      .map { func =>
-        val args =
-          func.args.map((name, tpe) => name -> (tpe match { case '[argTpe] => Lazy(() => Structure.of[argTpe]) }))
-          // vals.map(valDef => valDef.name -> (valDef.tpt.tpe.asType match { case '[argTpe] => Lazy(() => Structure.of[argTpe]) })).to(ListMap)
+    val args =
+      function.args.map((name, tpe) => name -> (tpe match { case '[argTpe] => Lazy(() => Structure.of[argTpe]) }))
 
-        Structure.Function(func.returnTpe, func.returnTpe.repr.show, args, func)
-      }
+    Structure.Function(function.returnTpe, function.returnTpe.repr.show, args, function)
   }
 
   def of[A: Type](using Quotes): Structure = {
@@ -64,7 +61,6 @@ object Structure {
             val paramTpe = valueClassRepr.memberType(param)
             Structure.ValueClass(summon[Type[A]], valueClassRepr.show, paramTpe.asType, param.name)
           case other =>
-            
             Structure.Ordinary(summon[Type[A]], TypeRepr.of[A].show)
         }
       case Some(value) =>

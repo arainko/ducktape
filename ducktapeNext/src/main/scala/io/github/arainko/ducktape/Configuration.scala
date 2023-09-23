@@ -22,7 +22,17 @@ object Configuration {
 
   final case class At(path: Path, target: Target, config: Configuration) derives Debug
 
-  def parse[A: Type, B: Type](configs: Expr[Seq[Field2[A, B] | Case2[A, B]]])(using Quotes) =  {
+  inline def run[A, B, Args <: FunctionArguments](inline configs: Arg2[A, B, Args]*) = ${ parse2('configs) }
+
+  def parse2[A: Type, B: Type, Args <: FunctionArguments](
+    configs: Expr[Seq[Arg2[A, B, Args]]]
+  )(using Quotes): Expr[Unit] = {
+    import quotes.reflect.*
+    report.info(Debug.show(parse(configs)))
+    '{}
+  }
+
+  def parse[A: Type, B: Type, Args <: FunctionArguments](configs: Expr[Seq[Field2[A, B] | Case2[A, B] | Arg2[A, B, Args]]])(using Quotes) = {
     import quotes.reflect.*
 
     Varargs
@@ -46,6 +56,15 @@ object Configuration {
           Configuration.At(
             path,
             Target.Source,
+            Configuration.Const(value.asExpr)
+          )
+        case Apply(
+              TypeApply(Select(Ident("Arg2"), "const"), a :: b :: args :: destFieldTpe :: constTpe :: Nil),
+              PathSelector(path) :: value :: Nil
+            ) =>
+          Configuration.At(
+            path,
+            Target.Dest,
             Configuration.Const(value.asExpr)
           )
       }

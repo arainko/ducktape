@@ -83,7 +83,7 @@ final case class ProdTest2(test: Test2)
 
   def costam(int: Int, str: String): Int = ???
 
-  val aaa =
+  val aaa: AppliedViaBuilder[Person1, Int, FunctionArguments{val int: Int; val str: String}] =
     Transformer.Debug.showCode {
     AppliedViaBuilder.create(p, costam)
     }
@@ -104,5 +104,12 @@ final case class ProdTest2(test: Test2)
     Case2.const(_.at[Test1.Empty.type], Test3.Empty1.Impl)
   )
   }
+
+  DebugMacros.structure {
+    Arg2.const[Person1, Int, FunctionArguments{ val int: Int; val str: String }, Long, Int](_.int.toLong, 1)
+  }
+
+  Configuration.run(Arg2.const[Person1, Int, FunctionArguments{ val int: Int; val str: String }, Int, Int](_.int.at[Int].toLong.toInt, 1))
+
 
 }

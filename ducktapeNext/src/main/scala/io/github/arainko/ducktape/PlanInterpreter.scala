@@ -24,7 +24,21 @@ object PlanInterpreter {
   )(using Quotes) = {
     import quotes.reflect.*
 
-    Planner.betweenTypeAndFunction[A](function).refine match {
+    val plan =
+      Function
+        .fromExpr(function)
+        .map(Planner.betweenTypeAndFunction[A])
+        .getOrElse(
+          Plan.Error(
+            Type.of[A],
+            Type.of[Any],
+            Plan.Context.empty(Type.of[A]),
+            Plan.Context.empty(Type.of[Any]),
+            "Couldn't create a transformation plan from a function"
+          )
+        )
+
+    plan.refine match {
       case Left(errors) =>
         val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
         report.errorAndAbort(rendered)

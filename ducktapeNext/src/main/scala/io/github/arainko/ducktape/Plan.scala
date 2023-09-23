@@ -195,13 +195,23 @@ object Plan {
                   )
 
               plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
+            case plan @ BetweenProductFunction(sourceTpe, destTpe, sourceContext, destContext, argPlans, function) =>
+              val argPlan =
+                argPlans
+                  .get(fieldName)
+                  .map(argPlan => recurse(argPlan, tail))
+                  .getOrElse(
+                    Plan.Error(sourceTpe, destTpe, sourceContext, destContext, s"'$fieldName' is not a valid arg accessor")
+                  )
+
+              plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
             case plan =>
               Plan.Error(
                 plan.sourceTpe,
                 plan.destTpe,
                 plan.sourceContext,
                 plan.destContext,
-                s"A field accessor can only be used to configure product transformations"
+                s"A field accessor can only be used to configure product or function transformations"
               )
           }
 
