@@ -9,6 +9,7 @@ import Plan.Error as PlanError //TODO: Why is this needed? I cannot refer to Pla
 import io.github.arainko.ducktape.Path.Segment
 import scala.collection.immutable.ListMap
 import scala.annotation.tailrec
+import io.github.arainko.ducktape.Configuration.At
 type PlanError = Plan.Error
 
 enum Plan[+E <: PlanError] {
@@ -174,6 +175,8 @@ object Plan {
         update match {
           case Configuration.At(path, target, Configuration.Const(value)) =>
             value.asTerm.tpe <:< currentPlan.destContext.currentTpe.repr
+          case Configuration.At(path, target, Configuration.Computed(destTpe, function)) => 
+            destTpe.repr <:< currentPlan.destContext.currentTpe.repr
         }
       }
     }

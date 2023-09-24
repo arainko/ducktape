@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.internal.Debug
 
 enum Configuration derives Debug {
   case Const(value: Expr[Any])
+  case Computed(destTpe: Type[?], function: Expr[Any => Any])
 }
 
 object Configuration {
@@ -32,7 +33,9 @@ object Configuration {
     '{}
   }
 
-  def parse[A: Type, B: Type, Args <: FunctionArguments](configs: Expr[Seq[Field2[A, B] | Case2[A, B] | Arg2[A, B, Args]]])(using Quotes) = {
+  def parse[A: Type, B: Type, Args <: FunctionArguments](
+    configs: Expr[Seq[Field2[A, B] | Case2[A, B] | Arg2[A, B, Args]]]
+  )(using Quotes) = {
     import quotes.reflect.*
 
     Varargs
@@ -49,6 +52,23 @@ object Configuration {
             Target.Dest,
             Configuration.Const(value.asExpr)
           )
+
+        case Apply(
+              TypeApply(Select(Ident("Field2"), "computed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
+              PathSelector(path) :: function :: Nil
+            ) =>
+          Configuration.At(
+            path,
+            Target.Dest,
+            Configuration.Computed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]])
+          )
+
+        case Apply(
+              TypeApply(Select(Ident("Field2"), "allMatching"), a :: b :: destFieldTpe :: productTpe :: Nil),
+              PathSelector(path) :: function :: Nil
+            ) =>
+          ???
+
         case Apply(
               TypeApply(Select(Ident("Case2"), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
@@ -58,6 +78,7 @@ object Configuration {
             Target.Source,
             Configuration.Const(value.asExpr)
           )
+
         case Apply(
               TypeApply(Select(Ident("Arg2"), "const"), a :: b :: args :: destFieldTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
@@ -69,4 +90,5 @@ object Configuration {
           )
       }
   }
+
 }

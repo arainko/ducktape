@@ -71,7 +71,8 @@ final case class ProdTest2(test: Test2)
   DebugMacros.code {
     PlanInterpreter.transformBetween[ProdTest1, ProdTest2](
       ProdTest1(Test1.Cos(Nested1(1))),
-      Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
+      // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
+      Field2.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
       Field2.const(_.test.at[Test2.Cos].int.int, 123), // overriden field
       // Field2.const(_.add, 1), // missing field
       Case2.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))), // missing case

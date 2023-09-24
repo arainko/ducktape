@@ -43,7 +43,7 @@ object PlanInterpreter {
         val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
         report.errorAndAbort(rendered)
       case Right(totalPlan) =>
-        recurse(totalPlan, value)
+        recurse(totalPlan, value)(using value)
     }
   }
 
@@ -61,22 +61,22 @@ object PlanInterpreter {
     val plan = Planner.betweenTypes[A, B]
     val config = Configuration.parse(configs)
     val reconfiguredPlan = config.foldLeft(plan) { (plan, config) => plan.configure(config) }
-    println(s"OG PLAN: ${plan.show}")
-    println()
-    println(s"CONFIG: ${Debug.show(config)}")
-    println()
-    println(s"CONF PLAN: ${reconfiguredPlan.show}")
-    println()
+    // println(s"OG PLAN: ${plan.show}")
+    // println()
+    // println(s"CONFIG: ${Debug.show(config)}")
+    // println()
+    // println(s"CONF PLAN: ${reconfiguredPlan.show}")
+    // println()
     reconfiguredPlan.refine match {
       case Left(errors) =>
         val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
         report.errorAndAbort(rendered)
       case Right(totalPlan) =>
-        recurse(totalPlan, value).asExprOf[B]
+        recurse(totalPlan, value)(using value).asExprOf[B]
     }
   }
 
-  private def recurse(plan: Plan[Nothing], value: Expr[Any])(using Quotes): Expr[Any] = {
+  private def recurse[A: Type](plan: Plan[Nothing], value: Expr[Any])(using toplevelValue: Expr[A])(using Quotes): Expr[Any] = {
     import quotes.reflect.*
 
     plan match {
@@ -84,7 +84,10 @@ object PlanInterpreter {
 
       case Plan.Configured(_, _, _, _, config) =>
         config match {
-          case Configuration.Const(value) => value
+          case Configuration.Const(value) => 
+            value
+          case Configuration.Computed(_, function) => 
+            '{ $function.apply($toplevelValue) }
         }
 
       case Plan.BetweenProducts(sourceTpe, destTpe, _, _, fieldPlans) =>
