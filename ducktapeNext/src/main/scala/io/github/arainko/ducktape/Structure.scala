@@ -11,6 +11,7 @@ import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.internal.Debug
 import scala.collection.immutable.ListMap
 import io.github.arainko.ducktape.function.FunctionMirror
+import scala.reflect.TypeTest
 
 sealed trait Structure derives Debug {
   def tpe: Type[?]
@@ -21,6 +22,12 @@ sealed trait Structure derives Debug {
       case lzy: Lazy => lzy.struct.force
       case other     => other
     }
+
+  final def as[A <: Structure](using tt: TypeTest[Structure, A]): Option[A] =
+    this.force match {
+      case a: A => Some(a)
+      case _    => None
+    }
 }
 
 object Structure {
@@ -28,7 +35,7 @@ object Structure {
 
   case class Product(tpe: Type[?], name: String, fields: Map[String, Structure]) extends Structure
   case class Coproduct(tpe: Type[?], name: String, children: Map[String, Structure]) extends Structure
-  case class Function(tpe: Type[?], name: String, args: ListMap[String, Structure],function: io.github.arainko.ducktape.Function)
+  case class Function(tpe: Type[?], name: String, args: ListMap[String, Structure], function: io.github.arainko.ducktape.Function)
       extends Structure
   case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
   case class Ordinary(tpe: Type[?], name: String) extends Structure
@@ -39,7 +46,6 @@ object Structure {
     lazy val name = struct.name
   }
 
-  // TODO: Make this take in a Function as an arg instead of matching on the expr here
   def fromFunction(function: io.github.arainko.ducktape.Function)(using Quotes): Structure.Function = {
     import quotes.reflect.*
 
@@ -48,6 +54,11 @@ object Structure {
 
     Structure.Function(function.returnTpe, function.returnTpe.repr.show, args, function)
   }
+
+  def fromTypeRepr(using Quotes)(repr: quotes.reflect.TypeRepr): Structure =
+    repr.asType match {
+      case '[tpe] => Structure.of[tpe]
+    }
 
   def of[A: Type](using Quotes): Structure = {
     import quotes.reflect.*

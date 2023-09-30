@@ -52,6 +52,8 @@ final case class Nested2(int: Int | String, additional: Int) {
   val costam = "asd"
 }
 
+final case class Nested3(int: Int | String, additional: Int)
+
 final case class Gen[A](int: Int, value: A)
 
 final case class ProdTest1(test: Test1)
@@ -79,6 +81,13 @@ final case class ProdTest2(test: Test2)
       // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
     )
   }
+
+  case class PersonCostam(p: PersonFields)
+  case class PersonFields(int: Int, str: String)
+
+  PlanInterpreter.transformBetween[Person1, Nested1](
+    p, Field2.allMatching(_.int, p)
+  )
 
 
 

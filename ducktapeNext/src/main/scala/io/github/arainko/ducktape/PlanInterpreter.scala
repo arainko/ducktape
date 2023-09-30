@@ -88,6 +88,8 @@ object PlanInterpreter {
             value
           case Configuration.Computed(_, function) => 
             '{ $function.apply($toplevelValue) }
+          case Configuration.FieldReplacement(source, name, tpe) => 
+            source.accessFieldByName(name).asExpr
         }
 
       case Plan.BetweenProducts(sourceTpe, destTpe, _, _, fieldPlans) =>

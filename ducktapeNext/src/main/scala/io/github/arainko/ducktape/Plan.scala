@@ -169,14 +169,16 @@ object Plan {
 
   private def configure[E <: Plan.Error](plan: Plan[E], config: Configuration.At)(using Quotes): Plan[Plan.Error] = {
     extension (currentPlan: Plan[?]) {
-      def conformsTo(update: Configuration.At)(using Quotes) = {
+      def conformsTo(update: Configuration.At.Successful)(using Quotes) = {
         import quotes.reflect.*
 
         update match {
-          case Configuration.At(path, target, Configuration.Const(value)) =>
+          case Configuration.At.Successful(path, target, Configuration.Const(value)) =>
             value.asTerm.tpe <:< currentPlan.destContext.currentTpe.repr
-          case Configuration.At(path, target, Configuration.Computed(destTpe, function)) => 
+          case Configuration.At.Successful(path, target, Configuration.Computed(destTpe, function)) =>
             destTpe.repr <:< currentPlan.destContext.currentTpe.repr
+          case Configuration.At.Successful(path, target, Configuration.FieldReplacement(source, name, tpe)) =>
+            tpe.repr <:< currentPlan.destContext.currentTpe.repr
         }
       }
     }
@@ -239,17 +241,30 @@ object Plan {
                 s"A case accessor can only be used to configure coproduct transformations"
               )
           }
-        case Nil if current.conformsTo(config) =>
-          Plan.Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config.config)
 
         case Nil =>
-          Plan.Error(
-            current.sourceTpe,
-            current.destTpe,
-            current.sourceContext,
-            current.destContext,
-            s"A replacement plan doesn't conform to the plan it's supposed to replace"
-          )
+          config match {
+            case cfg @ Configuration.At.Successful(_, _, config) if current.conformsTo(cfg) =>
+              Plan.Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config)
+
+            case Configuration.At.Successful(path, target, config) =>
+              Plan.Error(
+                current.sourceTpe,
+                current.destTpe,
+                current.sourceContext,
+                current.destContext,
+                s"A replacement plan doesn't conform to the plan it's supposed to replace"
+              )
+
+            case Configuration.At.Failed(path, target, message) =>
+              Plan.Error(
+                current.sourceTpe,
+                current.destTpe,
+                current.sourceContext,
+                current.destContext,
+                message
+              )
+          }
       }
     }
 
