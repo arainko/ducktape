@@ -6,7 +6,7 @@ import scala.collection.mutable.ListBuffer
 import scala.annotation.tailrec
 
 object PathSelector {
-  def unapply(using Quotes)(expr: quotes.reflect.Term): Option[Path.NonEmpty] = {
+  def unapply(using Quotes)(expr: quotes.reflect.Term): Some[Path] = {
     import quotes.reflect.{ Selector as _, * }
 
     @tailrec
@@ -32,7 +32,7 @@ object PathSelector {
       }
     }
 
-    Path.NonEmpty.fromPath(recurse(Path.empty, expr))
+    Some(recurse(Path.empty, expr))
   }
 
 }

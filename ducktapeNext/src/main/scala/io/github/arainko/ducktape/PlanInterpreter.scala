@@ -84,7 +84,7 @@ object PlanInterpreter {
 
       case Plan.Configured(_, _, _, _, config) =>
         config match {
-          case Configuration.Const(value) => 
+          case Configuration.Const(value, _) => 
             value
           case Configuration.Computed(_, function) => 
             '{ $function.apply($toplevelValue) }

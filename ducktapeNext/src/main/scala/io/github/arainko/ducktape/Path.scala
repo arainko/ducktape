@@ -20,24 +20,6 @@ object Path {
     case Case(tpe: Type[?])
   }
 
-  opaque type NonEmpty <: Path = Path
-
-  object NonEmpty {
-    given debug: Debug[Path.NonEmpty] = Path.debug
-
-    def fromPath(path: Path): Option[Path.NonEmpty] = Option.when(path.nonEmpty)(path)
-
-    extension (self: Path.NonEmpty) {
-      def last = self.toVector.last
-
-      def head = self.toVector.head
-
-      def appended(segment: Path.Segment): Path.NonEmpty = Path.appended(self)(segment)
-
-      def prepended(segment: Path.Segment): Path.NonEmpty = Path.prepended(self)(segment)
-    }
-  }
-
   extension (self: Path) {
     def appended(segment: Path.Segment): Path = self.appended(segment)
 

@@ -3,6 +3,7 @@ package io.github.arainko.ducktape
 import io.github.arainko.ducktape.internal.macros.DebugMacros
 import scala.annotation.nowarn
 import scala.deriving.Mirror
+import io.github.arainko.ducktape.Transformer.Debug
 
 final case class Value(int: Int) extends AnyVal
 final case class ValueGen[A](int: A) extends AnyVal
@@ -70,56 +71,64 @@ final case class ProdTest2(test: Test2)
     - override a Case for which a transformation exists
     - fill in a missing Source Case
    */
-  DebugMacros.code {
-    PlanInterpreter.transformBetween[ProdTest1, ProdTest2](
-      ProdTest1(Test1.Cos(Nested1(1))),
-      // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
-      Field2.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
-      Field2.const(_.test.at[Test2.Cos].int.int, 123), // overriden field
-      // Field2.const(_.add, 1), // missing field
-      Case2.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))), // missing case
-      // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
-    )
-  }
+  // DebugMacros.code {
+  //   PlanInterpreter.transformBetween[ProdTest1, ProdTest2](
+  //     ProdTest1(Test1.Cos(Nested1(1))),
+  //     // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
+  //     Field2.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
+  //     Field2.const(_.test.at[Test2.Cos].int.int, 123), // overriden field
+  //     // Field2.const(_.add, 1), // missing field
+  //     Case2.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))), // missing case
+  //     // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
+  //   )
+  // }
+
+  case class PersonCostamCostam(p: PersonCostam)
+  case class PersonCostamCostam2(p: PersonCostam2)
 
   case class PersonCostam(p: PersonFields)
+  case class PersonCostam2(p: PersonFields2)
   case class PersonFields(int: Int, str: String)
+  case class PersonFields2(int: Int, str: String, extra: Int)
 
-  PlanInterpreter.transformBetween[Person1, Nested1](
-    p, Field2.allMatching(_.int, p)
+  val fields: PersonFields2 = ???
+  Debug.showCode {
+  PlanInterpreter.transformBetween[PersonCostamCostam, PersonCostamCostam2](
+    ???, Field2.allMatching(a => a.p.p, fields)
   )
+  }
 
 
 
   def costam(int: Int, str: String): Int = ???
 
-  val aaa: AppliedViaBuilder[Person1, Int, FunctionArguments{val int: Int; val str: String}] =
-    Transformer.Debug.showCode {
-    AppliedViaBuilder.create(p, costam)
-    }
+  // val aaa: AppliedViaBuilder[Person1, Int, FunctionArguments{val int: Int; val str: String}] =
+  //   Transformer.Debug.showCode {
+  //   AppliedViaBuilder.create(p, costam)
+  //   }
 
-  aaa.transform(Arg2.const(_.int, "aasd"))
+  // aaa.transform(Arg2.const(_.int, "aasd"))
 
-  DebugMacros.code {
-    PlanInterpreter.transformVia[Person1, Nothing, Nothing](p, costam)
-  }
+  // DebugMacros.code {
+  //   PlanInterpreter.transformVia[Person1, Nothing, Nothing](p, costam)
+  // }
 
   val lub = if (1 == 2) Test3.Empty else Test3.Empty1.Impl
 
   summon[Mirror.Of[Test3]]
 
-  DebugMacros.code {
-  PlanInterpreter.transformBetween[Test1, Test3](
-    Test1.Cos(Nested1(1)),
-    Case2.const(_.at[Test1.Empty.type], Test3.Empty1.Impl)
-  )
-  }
+  // DebugMacros.code {
+  // PlanInterpreter.transformBetween[Test1, Test3](
+  //   Test1.Cos(Nested1(1)),
+  //   Case2.const(_.at[Test1.Empty.type], Test3.Empty1.Impl)
+  // )
+  // }
 
-  DebugMacros.structure {
-    Arg2.const[Person1, Int, FunctionArguments{ val int: Int; val str: String }, Long, Int](_.int.toLong, 1)
-  }
+  // DebugMacros.structure {
+  //   Arg2.const[Person1, Int, FunctionArguments{ val int: Int; val str: String }, Long, Int](_.int.toLong, 1)
+  // }
 
-  Configuration.run(Arg2.const[Person1, Int, FunctionArguments{ val int: Int; val str: String }, Int, Int](_.int.at[Int].toLong.toInt, 1))
+  // Configuration.run(Arg2.const[Person1, Int, FunctionArguments{ val int: Int; val str: String }, Int, Int](_.int.at[Int].toLong.toInt, 1))
 
 
 }

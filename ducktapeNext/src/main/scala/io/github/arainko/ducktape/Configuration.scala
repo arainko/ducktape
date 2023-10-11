@@ -5,8 +5,10 @@ import io.github.arainko.ducktape.internal.Debug
 import io.github.arainko.ducktape.internal.modules.*
 
 enum Configuration derives Debug {
-  case Const(value: Expr[Any])
-  case Computed(destTpe: Type[?], function: Expr[Any => Any])
+  def tpe: Type[?]
+
+  case Const(value: Expr[Any], tpe: Type[?])
+  case Computed(tpe: Type[?], function: Expr[Any => Any])
   case FieldReplacement(source: Expr[Any], name: String, tpe: Type[?])
 }
 
@@ -59,7 +61,7 @@ object Configuration {
           Configuration.At.Successful(
             path,
             Target.Dest,
-            Configuration.Const(value.asExpr)
+            Configuration.Const(value.asExpr, value.tpe.asType)
           ) :: Nil
 
         case Apply(
@@ -83,11 +85,14 @@ object Configuration {
               .map { (destStruct, fieldSourceStruct) =>
                 destStruct.fields.collect {
                   case (fieldName @ fieldSourceStruct.fields(source), dest) if source.tpe.repr <:< dest.tpe.repr =>
-                    Configuration.At.Successful(
-                      path,
+                    println(s"marched $fieldName")
+                    val c = Configuration.At.Successful(
+                      path.appended(Path.Segment.Field(source.tpe, fieldName)),
                       Target.Dest,
                       Configuration.FieldReplacement(sourceExpr, fieldName, source.tpe)
                     )
+                    println(Debug.show(c))
+                    c
                 }
                 .toList
               }
@@ -105,7 +110,7 @@ object Configuration {
           Configuration.At.Successful(
             path,
             Target.Source,
-            Configuration.Const(value.asExpr)
+            Configuration.Const(value.asExpr, value.tpe.asType)
           ) :: Nil
 
         case Apply(
@@ -115,7 +120,7 @@ object Configuration {
           Configuration.At.Successful(
             path,
             Target.Dest,
-            Configuration.Const(value.asExpr)
+            Configuration.Const(value.asExpr, value.tpe.asType)
           ) :: Nil
 
         case oopsie => report.errorAndAbort(oopsie.show(using Printer.TreeStructure))

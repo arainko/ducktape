@@ -170,16 +170,7 @@ object Plan {
   private def configure[E <: Plan.Error](plan: Plan[E], config: Configuration.At)(using Quotes): Plan[Plan.Error] = {
     extension (currentPlan: Plan[?]) {
       def conformsTo(update: Configuration.At.Successful)(using Quotes) = {
-        import quotes.reflect.*
-
-        update match {
-          case Configuration.At.Successful(path, target, Configuration.Const(value)) =>
-            value.asTerm.tpe <:< currentPlan.destContext.currentTpe.repr
-          case Configuration.At.Successful(path, target, Configuration.Computed(destTpe, function)) =>
-            destTpe.repr <:< currentPlan.destContext.currentTpe.repr
-          case Configuration.At.Successful(path, target, Configuration.FieldReplacement(source, name, tpe)) =>
-            tpe.repr <:< currentPlan.destContext.currentTpe.repr
-        }
+        update.config.tpe.repr <:< currentPlan.destContext.currentTpe.repr
       }
     }
 
@@ -210,13 +201,13 @@ object Plan {
                   )
 
               plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
-            case plan =>
+            case plan => //TODO: Somehow keep around information if plan is as Plan.Error so that the error message is nicer
               Plan.Error(
                 plan.sourceTpe,
                 plan.destTpe,
                 plan.sourceContext,
                 plan.destContext,
-                s"A field accessor can only be used to configure product or function transformations"
+                s"A field accessor '$fieldName' can only be used to configure product or function transformations"
               )
           }
 
@@ -253,7 +244,7 @@ object Plan {
                 current.destTpe,
                 current.sourceContext,
                 current.destContext,
-                s"A replacement plan doesn't conform to the plan it's supposed to replace"
+                s"A replacement plan doesn't conform to the plan it's supposed to replace. ${config.tpe.repr.show} <:< ${current.destContext.currentTpe.repr.show}"
               )
 
             case Configuration.At.Failed(path, target, message) =>
