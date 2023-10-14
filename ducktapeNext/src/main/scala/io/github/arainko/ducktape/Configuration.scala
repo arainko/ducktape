@@ -78,30 +78,7 @@ object Configuration {
               TypeApply(Select(Ident("Field2"), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
               PathSelector(path) :: fieldSource :: Nil
             ) =>
-          val sourceExpr = fieldSource.asExpr
-          val result = 
-            Structure.fromTypeRepr(destFieldTpe.tpe).as[Structure.Product]
-              .zip(Structure.fromTypeRepr(fieldSourceTpe.tpe).as[Structure.Product])
-              .map { (destStruct, fieldSourceStruct) =>
-                destStruct.fields.collect {
-                  case (fieldName @ fieldSourceStruct.fields(source), dest) if source.tpe.repr <:< dest.tpe.repr =>
-                    println(s"marched $fieldName")
-                    val c = Configuration.At.Successful(
-                      path.appended(Path.Segment.Field(source.tpe, fieldName)),
-                      Target.Dest,
-                      Configuration.FieldReplacement(sourceExpr, fieldName, source.tpe)
-                    )
-                    println(Debug.show(c))
-                    c
-                }
-                .toList
-              }
-              .getOrElse(Configuration.At.Failed(path, Target.Dest, "Field.allMatching only works when targeting and supplying a product") :: Nil)
-
-        result match {
-          case Nil => Configuration.At.Failed(path, Target.Dest, "No matching fields found") :: Nil // TODO: Better error message
-          case configs => configs
-        }
+          parseAllMatching(fieldSource.asExpr, path, destFieldTpe.tpe, fieldSourceTpe.tpe)
 
         case Apply(
               TypeApply(Select(Ident("Case2"), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
@@ -123,9 +100,47 @@ object Configuration {
             Configuration.Const(value.asExpr, value.tpe.asType)
           ) :: Nil
 
-        case oopsie => report.errorAndAbort(oopsie.show(using Printer.TreeStructure))
+        case oopsie => report.errorAndAbort(oopsie.show(using Printer.TreeStructure), oopsie.pos)
       }
       .toList
+  }
+
+  private def parseAllMatching(using Quotes)(
+    sourceExpr: Expr[Any],
+    path: Path,
+    destFieldTpe: quotes.reflect.TypeRepr,
+    fieldSourceTpe: quotes.reflect.TypeRepr
+  ) = {
+    val result =
+      Structure
+        .fromTypeRepr(destFieldTpe)
+        .as[Structure.Product | Structure.Function]
+        .zip(Structure.fromTypeRepr(fieldSourceTpe).as[Structure.Product])
+        .map { (destStruct, fieldSourceStruct) =>
+          val fields = destStruct match {
+            case p: Structure.Product  => p.fields
+            case f: Structure.Function => f.args
+          }
+
+          fields.collect {
+            case (fieldName @ fieldSourceStruct.fields(source), dest) if source.tpe.repr <:< dest.tpe.repr =>
+              Configuration.At.Successful(
+                path.appended(Path.Segment.Field(source.tpe, fieldName)),
+                Target.Dest,
+                Configuration.FieldReplacement(sourceExpr, fieldName, source.tpe)
+              )
+          }.toList
+        }
+        .getOrElse(
+          Configuration.At
+            .Failed(path, Target.Dest, "Field.allMatching only works when targeting a product or a function and supplying a product") :: Nil
+        )
+
+    result match {
+      case Nil =>
+        Configuration.At.Failed(path, Target.Dest, "No matching fields found") :: Nil // TODO: Better error message
+      case configs => configs
+    }
   }
 
 }

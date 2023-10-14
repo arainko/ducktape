@@ -51,9 +51,11 @@ lazy val ducktapeNext =
   project
     .in(file("ducktapeNext"))
     .settings(
-      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings", "-deprecation"),
+      scalacOptions ++= List("-Xcheck-macros", "-Xfatal-warnings", "-deprecation"),
     )
-    .dependsOn(ducktape.jvm)
+    .dependsOn(ducktape.jvm, tooling)
+
+lazy val tooling = project.in(file("tooling"))
 
 lazy val docs =
   project

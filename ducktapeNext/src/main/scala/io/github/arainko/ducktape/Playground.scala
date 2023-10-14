@@ -4,6 +4,8 @@ import io.github.arainko.ducktape.internal.macros.DebugMacros
 import scala.annotation.nowarn
 import scala.deriving.Mirror
 import io.github.arainko.ducktape.Transformer.Debug
+import scala.reflect.TypeTest
+import scala.reflect.ClassTag
 
 final case class Value(int: Int) extends AnyVal
 final case class ValueGen[A](int: A) extends AnyVal
@@ -64,6 +66,12 @@ final case class ProdTest2(test: Test2)
 
   val p = Person1(1, "asd", Nested1(1))
 
+  val test: Any = Nil
+
+  val cos = summon[TypeTest[Any, Int | String]]
+
+  println(cos.unapply(test))
+
   /*
   Use cases that I need to support:
     - override a field for which a transformation exists
@@ -97,7 +105,6 @@ final case class ProdTest2(test: Test2)
     ???, Field2.allMatching(a => a.p.p, fields)
   )
   }
-
 
 
   def costam(int: Int, str: String): Int = ???
