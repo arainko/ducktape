@@ -1,10 +1,11 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
-import io.github.arainko.ducktape.internal.macros.DebugMacros
 import io.github.arainko.ducktape.internal.Logger
-import scala.collection.mutable.ListBuffer
+import io.github.arainko.ducktape.internal.macros.DebugMacros
+
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
+import scala.quoted.*
 
 object PathSelector {
   def unapply(using Quotes)(expr: quotes.reflect.Term): Some[Path] = {
@@ -37,10 +38,10 @@ object PathSelector {
             ) =>
           Logger.debug(s"Matched 'selectDynamic' (matching a function arg selector) with name = $argName")
           acc.prepended(Path.Segment.Field(argTpe.tpe.asType, argName))
-        case Ident(_) => 
+        case Ident(_) =>
           Logger.debug(s"Matched 'Ident', returning...")
           acc
-        case other    =>
+        case other =>
           Logger.debug(s"Matched an unexpected term")
           report.errorAndAbort(other.show(using Printer.TreeShortCode))
       }

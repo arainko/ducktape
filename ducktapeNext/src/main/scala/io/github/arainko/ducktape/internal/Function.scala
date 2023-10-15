@@ -1,9 +1,11 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
 import scala.collection.immutable.ListMap
 import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.internal.Debug
+import io.github.arainko.ducktape.*
+
 
 final case class Function(args: ListMap[String, Type[?]], returnTpe: Type[?], expr: Expr[Any]) derives Debug {
 

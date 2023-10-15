@@ -1,8 +1,10 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
+import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.Debug
 import io.github.arainko.ducktape.internal.modules.*
+
+import scala.quoted.*
 
 enum Configuration derives Debug {
   def tpe: Type[?]
@@ -31,16 +33,6 @@ object Configuration {
 
     case Successful(path: Path, target: Target, config: Configuration)
     case Failed(path: Path, target: Target, message: String)
-  }
-
-  inline def run[A, B, Args <: FunctionArguments](inline configs: Arg2[A, B, Args]*) = ${ parse2('configs) }
-
-  def parse2[A: Type, B: Type, Args <: FunctionArguments](
-    configs: Expr[Seq[Arg2[A, B, Args]]]
-  )(using Quotes): Expr[Unit] = {
-    import quotes.reflect.*
-    report.info(Debug.show(parse(configs)))
-    '{}
   }
 
   def parse[A: Type, B: Type, Args <: FunctionArguments](
@@ -133,7 +125,11 @@ object Configuration {
         }
         .getOrElse(
           Configuration.At
-            .Failed(path, Target.Dest, "Field.allMatching only works when targeting a product or a function and supplying a product") :: Nil
+            .Failed(
+              path,
+              Target.Dest,
+              "Field.allMatching only works when targeting a product or a function and supplying a product"
+            ) :: Nil
         )
 
     result match {

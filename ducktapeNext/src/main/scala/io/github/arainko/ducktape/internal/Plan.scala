@@ -1,15 +1,14 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
+import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.internal.*
 import io.github.arainko.ducktape.internal.modules.*
-import io.github.arainko.ducktape.internal.Debug
-import scala.collection.IterableFactory
-import scala.collection.Factory
-import Plan.Error as PlanError //TODO: Why is this needed? I cannot refer to Plan.Error in bound of the Plan enum, lol
-import io.github.arainko.ducktape.Path.Segment
-import scala.collection.immutable.ListMap
+
 import scala.annotation.tailrec
-import io.github.arainko.ducktape.Configuration.At
+import scala.collection.immutable.ListMap
+import scala.collection.{ Factory, IterableFactory }
+import scala.quoted.*
+
 type PlanError = Plan.Error
 
 enum Plan[+E <: PlanError] {
@@ -39,7 +38,7 @@ enum Plan[+E <: PlanError] {
     destTpe: Type[?],
     sourceContext: Plan.Context,
     destContext: Plan.Context,
-    transformer: Expr[UserDefinedTransformer[?, ?]]
+    transformer: Expr[Transformer2[?, ?]]
   ) extends Plan[Nothing]
 
   case Derived(
@@ -47,7 +46,7 @@ enum Plan[+E <: PlanError] {
     destTpe: Type[?],
     sourceContext: Plan.Context,
     destContext: Plan.Context,
-    transformer: Expr[Transformer2[?, ?]]
+    transformer: Expr[Transformer2.Derived[?, ?]]
   ) extends Plan[Nothing]
 
   case Configured(
@@ -153,7 +152,7 @@ object Plan {
     def currentTpe(using Quotes): Type[?] = {
       import quotes.reflect.*
 
-      path.toVector.reverse.collectFirst { case Segment.Field(tpe, name) => tpe }
+      path.toVector.reverse.collectFirst { case Path.Segment.Field(tpe, name) => tpe }
         .getOrElse(root)
         .repr
         .widen
@@ -201,7 +200,7 @@ object Plan {
                   )
 
               plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
-            case plan => //TODO: Somehow keep around information if plan is as Plan.Error so that the error message is nicer
+            case plan => // TODO: Somehow keep around information if plan is as Plan.Error so that the error message is nicer
               Plan.Error(
                 plan.sourceTpe,
                 plan.destTpe,

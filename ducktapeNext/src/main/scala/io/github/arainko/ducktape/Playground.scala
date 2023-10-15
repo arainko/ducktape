@@ -103,7 +103,7 @@ final case class ProdTest2(test: Test2)
 
   val fields: PersonFields2 = ???
   // Debug.showCode {
-  PlanInterpreter.transformBetween[PersonCostamCostam, PersonCostamCostam2](
+  internal.PlanInterpreter.transformBetween[PersonCostamCostam, PersonCostamCostam2](
     ???, Field2.allMatching(a => a.p.p, fields)
   )
   // }

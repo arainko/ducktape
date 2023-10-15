@@ -17,8 +17,15 @@ private[ducktape] object Debug {
     extension (value: String) def show(using Quotes): String = s""""${value}""""
   }
 
-  given tpe: Debug[Type[?]] with {
+  given wildcardTpe: Debug[Type[?]] with {
     extension (value: Type[?]) def show(using Quotes): String = {
+      import quotes.reflect.*
+      s"Type.of[${Printer.TypeReprShortCode.show(TypeRepr.of(using value))}]"
+    }
+  }
+
+  given tpe[A]: Debug[Type[A]] with {
+    extension (value: Type[A]) def show(using Quotes): String  = {
       import quotes.reflect.*
       s"Type.of[${Printer.TypeReprShortCode.show(TypeRepr.of(using value))}]"
     }
@@ -50,7 +57,7 @@ private[ducktape] object Debug {
   given expr[A]: Debug[Expr[A]] with {
     extension (value: Expr[A]) def show(using Quotes): String = {
       import quotes.reflect.*
-      s"Expr[${tpe.show(value.asTerm.tpe.asType)}]"
+      s"Expr[${wildcardTpe.show(value.asTerm.tpe.asType)}]"
     }
   }
 
@@ -79,6 +86,7 @@ private[ducktape] object Debug {
 
   private inline def coproduct[A](using A: Mirror.SumOf[A]): Debug[A] = new {
     private val instances = deriveForAll[A.MirroredElemTypes].toVector
+
     extension (self: A) def show(using Quotes): String = {
       val ordinal = A.ordinal(self)
       instances(ordinal).show(self)

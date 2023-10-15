@@ -1,13 +1,13 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.internal.modules.*
+import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.*
-import io.github.arainko.ducktape.{ Case2 as CaseConfig, Field2 as FieldConfig }
+import io.github.arainko.ducktape.internal.modules.*
+import io.github.arainko.ducktape.{ Case2 => CaseConfig, Field2 => FieldConfig }
 
-import scala.annotation.nowarn
+import scala.annotation.{ nowarn, tailrec }
 import scala.collection.Factory
 import scala.quoted.*
-import scala.annotation.tailrec
 
 object PlanInterpreter {
 
@@ -58,8 +58,6 @@ object PlanInterpreter {
   )(using Quotes): Expr[B] = {
     import quotes.reflect.*
 
-    // Logger.info("Creating transformation")
-
     val plan = Planner.betweenTypes[A, B]
     val config = Configuration.parse(configs)
     val reconfiguredPlan = config.foldLeft(plan) { (plan, config) => plan.configure(config) }
@@ -83,11 +81,11 @@ object PlanInterpreter {
 
       case Plan.Configured(_, _, _, _, config) =>
         config match {
-          case Configuration.Const(value, _) => 
+          case Configuration.Const(value, _) =>
             value
-          case Configuration.Computed(_, function) => 
+          case Configuration.Computed(_, function) =>
             '{ $function.apply($toplevelValue) }
-          case Configuration.FieldReplacement(source, name, tpe) => 
+          case Configuration.FieldReplacement(source, name, tpe) =>
             source.accessFieldByName(name).asExpr
         }
 
@@ -156,7 +154,7 @@ object PlanInterpreter {
 
       case Plan.UserDefined(source, dest, _, _, transformer) =>
         transformer match {
-          case '{ $t: UserDefinedTransformer[src, dest] } =>
+          case '{ $t: Transformer2[src, dest] } =>
             val sourceValue = value.asExprOf[src]
             '{ $t.transform($sourceValue) }
         }

@@ -3,9 +3,9 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.{ Debug, Metainformation }
 
+import scala.Ordering.Implicits.*
 import scala.compiletime.*
 import scala.quoted.*
-import scala.Ordering.Implicits.*
 
 private[ducktape] object Logger {
 
@@ -57,7 +57,7 @@ private[ducktape] object Logger {
   )(using Metainformation, Debug[A], Quotes): Unit =
     info(s"$msg: ${Debug.show(value)}")
 
-  inline def loggedDebug[A](using Level, Output, Metainformation,  Quotes)(
+  inline def loggedDebug[A](using Level, Output, Metainformation, Quotes)(
     inline msg: String
   )(value: A)(using Debug[A]) = {
     debug(msg, value)

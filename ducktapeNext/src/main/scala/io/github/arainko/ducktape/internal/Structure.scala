@@ -1,12 +1,9 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
 import scala.annotation.tailrec
 import scala.deriving.Mirror
-import io.github.arainko.ducktape.Structure.Coproduct
-import io.github.arainko.ducktape.Structure.Singleton
-import io.github.arainko.ducktape.Structure.Ordinary
-import io.github.arainko.ducktape.Structure.Lazy
+import io.github.arainko.ducktape.internal.Structure.*
 import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.internal.*
 import scala.collection.immutable.ListMap
@@ -31,7 +28,7 @@ object Structure {
 
   case class Product(tpe: Type[?], name: String, fields: Map[String, Structure]) extends Structure
   case class Coproduct(tpe: Type[?], name: String, children: Map[String, Structure]) extends Structure
-  case class Function(tpe: Type[?], name: String, args: ListMap[String, Structure], function: io.github.arainko.ducktape.Function)
+  case class Function(tpe: Type[?], name: String, args: ListMap[String, Structure], function: io.github.arainko.ducktape.internal.Function)
       extends Structure
   case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
   case class Ordinary(tpe: Type[?], name: String) extends Structure
@@ -42,7 +39,7 @@ object Structure {
     lazy val name = struct.name
   }
 
-  def fromFunction(function: io.github.arainko.ducktape.Function)(using Quotes): Structure.Function = {
+  def fromFunction(function: io.github.arainko.ducktape.internal.Function)(using Quotes): Structure.Function = {
     import quotes.reflect.*
 
     val args =

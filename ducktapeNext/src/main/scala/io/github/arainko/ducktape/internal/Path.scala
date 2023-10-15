@@ -1,9 +1,9 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.internal
+
+import io.github.arainko.ducktape.internal.*
+import io.github.arainko.ducktape.internal.modules.*
 
 import scala.quoted.*
-import io.github.arainko.ducktape.internal.modules.*
-import io.github.arainko.ducktape.internal.*
-import io.github.arainko.ducktape.internal.Debug
 
 opaque type Path = Vector[Path.Segment]
 

@@ -10,6 +10,6 @@ object AppliedViaBuilder {
 
   transparent inline def create[A](source: A, inline function: Any): Any = {
     val inst = instance(source, function)
-    Function.fillInTypes(function, inst)
+    internal.Function.fillInTypes(function, inst)
   }
 }

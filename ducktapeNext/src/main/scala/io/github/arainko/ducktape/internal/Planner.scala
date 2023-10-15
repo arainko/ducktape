@@ -1,15 +1,14 @@
-package io.github.arainko.ducktape
+package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.Plan.Context
+import io.github.arainko.ducktape.internal.*
 import io.github.arainko.ducktape.internal.modules.*
-import io.github.arainko.ducktape.internal.{Debug, Logger}
 
 import scala.quoted.*
-
+import io.github.arainko.ducktape.Transformer2
 object Planner {
   import Structure.*
 
-  def betweenTypeAndFunction[Source: Type](function: io.github.arainko.ducktape.Function)(using Quotes): Plan[Plan.Error] = {
+  def betweenTypeAndFunction[Source: Type](function: io.github.arainko.ducktape.internal.Function)(using Quotes): Plan[Plan.Error] = {
 
     val sourceStruct = Structure.of[Source]
     val destStruct = Structure.fromFunction(function)
@@ -190,11 +189,11 @@ object Planner {
   }
 
   object UserDefinedTransformation {
-    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[UserDefinedTransformer[?, ?]]] = {
+    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[Transformer2[?, ?]]] = {
       val (src, dest) = structs
 
       (src.tpe -> dest.tpe) match {
-        case '[src] -> '[dest] => Expr.summon[UserDefinedTransformer[src, dest]]
+        case '[src] -> '[dest] => Expr.summon[Transformer2[src, dest]]
       }
     }
   }
