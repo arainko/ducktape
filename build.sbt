@@ -11,7 +11,7 @@ ThisBuild / startYear := Some(2023)
 ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
 ThisBuild / tlSonatypeUseLegacyHost := false
-ThisBuild / scalaVersion := "3.3.0"
+ThisBuild / scalaVersion := "3.3.1"
 
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
 ThisBuild / semanticdbEnabled := true
