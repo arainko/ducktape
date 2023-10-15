@@ -2,7 +2,7 @@ package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.Plan.Context
 import io.github.arainko.ducktape.internal.modules.*
-import io.github.arainko.ducktape.internal.Debug
+import io.github.arainko.ducktape.internal.{Debug, Logger}
 
 import scala.quoted.*
 
@@ -35,71 +35,72 @@ object Planner {
   )(using Quotes): Plan[Plan.Error] = {
     import quotes.reflect.*
 
-    (source.force -> dest.force) match {
-      case (source: Product, dest: Function) =>
-        planProductFunctionTransformation(source, dest, sourceContext, destContext)
+    Logger.loggedInfo("Plan"):
+      (source.force -> dest.force) match {
+        case (source: Product, dest: Function) =>
+          planProductFunctionTransformation(source, dest, sourceContext, destContext)
 
-      case UserDefinedTransformation(transformer) =>
-        Plan.UserDefined(source.tpe, dest.tpe, sourceContext, destContext, transformer)
+        case UserDefinedTransformation(transformer) =>
+          Plan.UserDefined(source.tpe, dest.tpe, sourceContext, destContext, transformer)
 
-      case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
-        Plan.Upcast(source.tpe, dest.tpe, sourceContext, destContext)
+        case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
+          Plan.Upcast(source.tpe, dest.tpe, sourceContext, destContext)
 
-      case Structure('[Option[srcTpe]], srcName) -> Structure('[Option[destTpe]], destName) =>
-        Plan.BetweenOptions(
-          Type[srcTpe],
-          Type[destTpe],
-          sourceContext,
-          destContext,
-          recurseAndCreatePlan[srcTpe, destTpe](sourceContext, destContext)
-        )
+        case Structure('[Option[srcTpe]], srcName) -> Structure('[Option[destTpe]], destName) =>
+          Plan.BetweenOptions(
+            Type[srcTpe],
+            Type[destTpe],
+            sourceContext,
+            destContext,
+            recurseAndCreatePlan[srcTpe, destTpe](sourceContext, destContext)
+          )
 
-      case Structure('[a], _) -> Structure('[Option[destTpe]], destName) =>
-        Plan.BetweenNonOptionOption(
-          Type[a],
-          Type[destTpe],
-          sourceContext,
-          destContext,
-          recurseAndCreatePlan[a, destTpe](sourceContext, destContext)
-        )
+        case Structure('[a], _) -> Structure('[Option[destTpe]], destName) =>
+          Plan.BetweenNonOptionOption(
+            Type[a],
+            Type[destTpe],
+            sourceContext,
+            destContext,
+            recurseAndCreatePlan[a, destTpe](sourceContext, destContext)
+          )
 
-      case Structure(source @ '[Iterable[srcTpe]], srcName) -> Structure(dest @ '[Iterable[destTpe]], destName) =>
-        Plan.BetweenCollections(
-          dest,
-          Type[srcTpe],
-          Type[destTpe],
-          sourceContext,
-          destContext,
-          recurseAndCreatePlan[srcTpe, destTpe](sourceContext, destContext)
-        )
+        case Structure(source @ '[Iterable[srcTpe]], srcName) -> Structure(dest @ '[Iterable[destTpe]], destName) =>
+          Plan.BetweenCollections(
+            dest,
+            Type[srcTpe],
+            Type[destTpe],
+            sourceContext,
+            destContext,
+            recurseAndCreatePlan[srcTpe, destTpe](sourceContext, destContext)
+          )
 
-      case (source: Product, dest: Product) =>
-        planProductTransformation(source, dest, sourceContext, destContext)
+        case (source: Product, dest: Product) =>
+          planProductTransformation(source, dest, sourceContext, destContext)
 
-      case (source: Coproduct, dest: Coproduct) =>
-        planCoproductTransformation(source, dest, sourceContext, destContext)
+        case (source: Coproduct, dest: Coproduct) =>
+          planCoproductTransformation(source, dest, sourceContext, destContext)
 
-      case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
-        Plan.BetweenSingletons(source.tpe, dest.tpe, sourceContext, destContext, dest.value)
+        case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
+          Plan.BetweenSingletons(source.tpe, dest.tpe, sourceContext, destContext, dest.value)
 
-      case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
-        Plan.BetweenWrappedUnwrapped(source.tpe, dest.tpe, sourceContext, destContext, source.paramFieldName)
+        case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
+          Plan.BetweenWrappedUnwrapped(source.tpe, dest.tpe, sourceContext, destContext, source.paramFieldName)
 
-      case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr =>
-        Plan.BetweenUnwrappedWrapped(source.tpe, dest.tpe, sourceContext, destContext)
+        case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr =>
+          Plan.BetweenUnwrappedWrapped(source.tpe, dest.tpe, sourceContext, destContext)
 
-      case DerivedTransformation(transformer) =>
-        Plan.Derived(source.tpe, dest.tpe, sourceContext, destContext, transformer)
+        case DerivedTransformation(transformer) =>
+          Plan.Derived(source.tpe, dest.tpe, sourceContext, destContext, transformer)
 
-      case (source, dest) =>
-        Plan.Error(
-          source.tpe,
-          dest.tpe,
-          sourceContext,
-          destContext,
-          s"Couldn't build a transformation plan between ${source.tpe.repr.show} and ${dest.tpe.repr.show}"
-        )
-    }
+        case (source, dest) =>
+          Plan.Error(
+            source.tpe,
+            dest.tpe,
+            sourceContext,
+            destContext,
+            s"Couldn't build a transformation plan between ${source.tpe.repr.show} and ${dest.tpe.repr.show}"
+          )
+      } 
   }
 
   private def planProductTransformation(

@@ -9,3 +9,4 @@
 metals.sbt
 target/
 ast.*
+sbt-launch.jar

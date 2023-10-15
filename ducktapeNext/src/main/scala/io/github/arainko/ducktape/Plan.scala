@@ -145,7 +145,7 @@ object Plan {
 
   def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.sourceTpe, plan.destTpe)
 
-  given debug: Debug[Plan[?]] = Debug.derived
+  given debug[E <: Plan.Error]: Debug[Plan[E]] = Debug.derived
 
   final case class Context(root: Type[?], path: Path) derives Debug {
     def add(segment: Path.Segment): Context = copy(path = path.appended(segment))

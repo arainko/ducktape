@@ -58,15 +58,14 @@ object PlanInterpreter {
   )(using Quotes): Expr[B] = {
     import quotes.reflect.*
 
+    // Logger.info("Creating transformation")
+
     val plan = Planner.betweenTypes[A, B]
     val config = Configuration.parse(configs)
     val reconfiguredPlan = config.foldLeft(plan) { (plan, config) => plan.configure(config) }
-    // println(s"OG PLAN: ${plan.show}")
-    // println()
-    // println(s"CONFIG: ${Debug.show(config)}")
-    // println()
-    // println(s"CONF PLAN: ${reconfiguredPlan.show}")
-    // println()
+    Logger.debug("Original plan", plan)
+    Logger.debug("Config", config)
+    Logger.debug("Reconfigured plan", reconfiguredPlan)
     reconfiguredPlan.refine match {
       case Left(errors) =>
         val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")

@@ -1,12 +1,12 @@
-package io.github.arainko.tooling
+package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
 
-private[arainko] opaque type FullName <: String = String
+private[ducktape] opaque type Metainformation <: String = String
 
-private[arainko] object FullName {
+private[ducktape] object Metainformation {
 
-  inline given derived(using DummyImplicit): FullName = ${ ownerMacro }
+  inline given derived(using DummyImplicit): Metainformation = ${ ownerMacro }
 
   private def ownerMacro(using Quotes) = {
     import quotes.reflect.*
@@ -15,7 +15,7 @@ private[arainko] object FullName {
 
     val sourceFile = s"${pos.sourceFile.name}:${pos.startLine + 1}"
 
-    val rendered =
+    val closestOwner =
       List
         .unfold(Symbol.spliceOwner)(sym => Option.when(!sym.isNoSymbol)(sym -> sym.maybeOwner))
         .collect {
@@ -25,6 +25,6 @@ private[arainko] object FullName {
         .mkString(".")
         .replace("$", "")
 
-    '{ ${ Expr(s"$rendered @ $sourceFile") }: FullName }
+    '{ ${ Expr(s"$closestOwner @ $sourceFile") }: Metainformation }
   }
 }

@@ -1,11 +1,13 @@
 package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.internal.macros.DebugMacros
+import io.github.arainko.ducktape.internal.Debug
 import scala.annotation.nowarn
 import scala.deriving.Mirror
 import io.github.arainko.ducktape.Transformer.Debug
 import scala.reflect.TypeTest
 import scala.reflect.ClassTag
+import scala.quoted.Quotes
 
 final case class Value(int: Int) extends AnyVal
 final case class ValueGen[A](int: A) extends AnyVal
@@ -100,11 +102,11 @@ final case class ProdTest2(test: Test2)
   case class PersonFields2(int: Int, str: String, extra: Int)
 
   val fields: PersonFields2 = ???
-  Debug.showCode {
+  // Debug.showCode {
   PlanInterpreter.transformBetween[PersonCostamCostam, PersonCostamCostam2](
     ???, Field2.allMatching(a => a.p.p, fields)
   )
-  }
+  // }
 
 
   def costam(int: Int, str: String): Int = ???

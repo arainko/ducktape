@@ -2,9 +2,7 @@ package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
 import scala.compiletime.*
-import io.github.arainko.ducktape.internal.modules.*
 import scala.deriving.Mirror
-import io.github.arainko.ducktape.Transformer2
 import scala.collection.immutable.ListMap
 
 private[ducktape] trait Debug[A] {
@@ -22,7 +20,7 @@ private[ducktape] object Debug {
   given tpe: Debug[Type[?]] with {
     extension (value: Type[?]) def show(using Quotes): String = {
       import quotes.reflect.*
-      s"Type.of[${Printer.TypeReprShortCode.show(value.repr)}]"
+      s"Type.of[${Printer.TypeReprShortCode.show(TypeRepr.of(using value))}]"
     }
   }
 
@@ -44,9 +42,9 @@ private[ducktape] object Debug {
         .mkString("ListMap(", ", ", ")")
   }
 
-  given defered[A]: Debug[() => A] with {
+  given deferred[A]: Debug[() => A] with {
     extension (value: () => A) def show(using Quotes): String = 
-      s"Lazy(...)"
+      s"Deferred(...)"
   }
 
   given expr[A]: Debug[Expr[A]] with {
@@ -56,8 +54,7 @@ private[ducktape] object Debug {
     }
   }
 
-
-  inline def derived[A](using A: Mirror.Of[A]) =
+  inline def derived[A](using A: Mirror.Of[A]): Debug[A] =
     inline A match {
       case given Mirror.ProductOf[A] => product
       case given Mirror.SumOf[A] => coproduct
@@ -80,9 +77,9 @@ private[ducktape] object Debug {
       }
     }
 
-  private  inline def coproduct[A](using A: Mirror.SumOf[A]): Debug[A] = new {
+  private inline def coproduct[A](using A: Mirror.SumOf[A]): Debug[A] = new {
+    private val instances = deriveForAll[A.MirroredElemTypes].toVector
     extension (self: A) def show(using Quotes): String = {
-      val instances = deriveForAll[A.MirroredElemTypes].toVector
       val ordinal = A.ordinal(self)
       instances(ordinal).show(self)
     }
