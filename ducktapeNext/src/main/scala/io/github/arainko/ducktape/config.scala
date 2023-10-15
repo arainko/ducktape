@@ -1,30 +1,35 @@
 package io.github.arainko.ducktape
 
-opaque type Field2[A, B] = Unit
+import scala.annotation.compileTimeOnly
 
-object Field2 {
-  def const[A, B, DestFieldTpe, ConstTpe](selector: Selector ?=> B => DestFieldTpe, value: ConstTpe): Field2[A, B] = ???
+opaque type Field[A, B] = Unit
 
+object Field {
+  @compileTimeOnly("Field.const is only useable as a field configuration for transformations")
+  def const[A, B, DestFieldTpe, ConstTpe](selector: Selector ?=> B => DestFieldTpe, value: ConstTpe): Field[A, B] = ???
+
+  @compileTimeOnly("Field.computed is only useable as a field configuration for transformations")
   def computed[A, B, DestFieldTpe, ComputedTpe](
     selector: Selector ?=> B => DestFieldTpe,
     function: A => ComputedTpe
-  ): Field2[A, B] = ???
+  ): Field[A, B] = ???
 
-  def allMatching[A, B, DestFieldTpe, ProductTpe](selector: Selector ?=> B => DestFieldTpe, product: ProductTpe): Field2[A, B] =
+  @compileTimeOnly("Field.renamed is only useable as a field configuration for transformations")
+  def renamed[A, B, DestFieldTpe, SourceFieldTpe](
+    destSelector: Selector ?=> B => DestFieldTpe,
+    sourceSelector: A => SourceFieldTpe
+  ): Field[A, B] = ???
+
+  @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
+  def allMatching[A, B, DestFieldTpe, ProductTpe](selector: Selector ?=> B => DestFieldTpe, product: ProductTpe): Field[A, B] =
     ???
 }
 
-opaque type Case2[A, B] = Unit
+opaque type Case[A, B] = Unit
 
-object Case2 {
-  def const[A, B, SourceTpe, FieldTpe](selector: Selector ?=> A => SourceTpe, value: FieldTpe): Case2[A, B] = ???
+object Case {
+  @compileTimeOnly("Case.const is only useable as a case configuration for transformations")
+  def const[A, B, SourceTpe, FieldTpe](selector: Selector ?=> A => SourceTpe, value: FieldTpe): Case[A, B] = ???
 }
 
-opaque type Arg2[A, B, Args <: FunctionArguments] = Unit
-
-object Arg2 {
-  def const[A, B, Args <: FunctionArguments, DestArgTpe, ConstTpe](
-    selector: Selector ?=> Args => DestArgTpe,
-    value: ConstTpe
-  ): Arg2[A, B, Args] = ???
-}
+inline def Arg: Field.type = Field

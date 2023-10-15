@@ -10,6 +10,10 @@ object Transformer {
 
   // inline given derived[Source, Dest]: Transformer2[Source, Dest] = ${ derivedTransformer[Source, Dest] }
 
+  def define[Source, Dest] = ???
+
+  def defineVia[Source] = ???
+
   trait Derived[Source, Dest] {
     def transform(value: Source): Dest
   }

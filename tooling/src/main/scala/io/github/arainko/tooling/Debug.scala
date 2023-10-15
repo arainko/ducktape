@@ -49,6 +49,23 @@ private[ducktape] object Debug {
         .mkString("ListMap(", ", ", ")")
   }
 
+  given option[A](using debug: Debug[A]): Debug[Option[A]] with {
+    extension (self: Option[A]) def show(using Quotes): String = 
+      self match {
+        case None => "None"
+        case Some(value) => s"Some(${value.show})"
+      }
+  }
+
+  given term(using q: Quotes): Debug[q.reflect.Term] = new {
+    extension (self: q.reflect.Term) def show(using Quotes): String = {
+      import q.reflect.*
+      s"""
+      |  Structure: ${Printer.TreeStructure.show(self)}
+      |  Code: ${Printer.TreeShortCode.show(self)}""".stripMargin
+    }
+  }
+
   given deferred[A]: Debug[() => A] with {
     extension (value: () => A) def show(using Quotes): String = 
       s"Deferred(...)"

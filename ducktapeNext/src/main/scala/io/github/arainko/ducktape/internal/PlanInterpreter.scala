@@ -2,7 +2,7 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.*
-import io.github.arainko.ducktape.{ Case2 => CaseConfig, Field2 => FieldConfig }
+import io.github.arainko.ducktape.{ Case => CaseConfig, Field => FieldConfig }
 
 import scala.annotation.{ nowarn, tailrec }
 import scala.collection.Factory
@@ -10,16 +10,16 @@ import scala.quoted.*
 
 object PlanInterpreter {
 
-  transparent inline def transformVia[A, B, Args <: FunctionArguments](
+  transparent inline def transformVia[A, Args <: FunctionArguments](
     value: A,
     inline function: Any,
-    inline configs: Arg2[A, B, Args] | CaseConfig[A, B]*
-  ) = ${ createTransformationVia('value, 'function, 'configs) }
+    inline configs: Field[A, Args] | CaseConfig[A, Args]*
+  ): Any = ${ createTransformationVia('value, 'function, 'configs) }
 
-  def createTransformationVia[A: Type, B: Type, Args <: FunctionArguments: Type](
+  def createTransformationVia[A: Type, Args <: FunctionArguments: Type](
     value: Expr[A],
     function: Expr[Any],
-    configs: Expr[Seq[Arg2[A, B, Args] | CaseConfig[A, B]]]
+    configs: Expr[Seq[Field[A, Args] | CaseConfig[A, Args]]]
   )(using Quotes) = {
     import quotes.reflect.*
 

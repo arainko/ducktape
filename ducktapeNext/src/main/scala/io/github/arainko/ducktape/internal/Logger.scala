@@ -11,7 +11,7 @@ private[ducktape] object Logger {
   // Logger Config
   private transparent inline def level = Level.Debug
   private val output = Output.StdOut
-  private def filter(msg: String, meta: Metainformation) = true
+  private def filter(msg: String, meta: Metainformation) = meta.contains("Function")
 
   enum Level {
     case Off, Debug, Info

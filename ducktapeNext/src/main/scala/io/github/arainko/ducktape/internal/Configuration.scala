@@ -34,8 +34,8 @@ object Configuration {
     case Failed(path: Path, target: Target, message: String)
   }
 
-  def parse[A: Type, B: Type, Args <: FunctionArguments](
-    configs: Expr[Seq[Field2[A, B] | Case2[A, B] | Arg2[A, B, Args]]]
+  def parse[A: Type, B: Type](
+    configs: Expr[Seq[Field[A, B] | Case[A, B]]]
   )(using Quotes) = {
     import quotes.reflect.*
 
@@ -46,7 +46,7 @@ object Configuration {
       .map(_.asTerm)
       .flatMap {
         case Apply(
-              TypeApply(Select(Ident("Field2"), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
+              TypeApply(Select(Ident("Field"), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
           Configuration.At.Successful(
@@ -56,7 +56,7 @@ object Configuration {
           ) :: Nil
 
         case Apply(
-              TypeApply(Select(Ident("Field2"), "computed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
+              TypeApply(Select(Ident("Field"), "computed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
               PathSelector(path) :: function :: Nil
             ) =>
           Configuration.At.Successful(
@@ -66,13 +66,13 @@ object Configuration {
           ) :: Nil
 
         case Apply(
-              TypeApply(Select(Ident("Field2"), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
+              TypeApply(Select(Ident("Field"), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
               PathSelector(path) :: fieldSource :: Nil
             ) =>
           parseAllMatching(fieldSource.asExpr, path, destFieldTpe.tpe, fieldSourceTpe.tpe)
 
         case Apply(
-              TypeApply(Select(Ident("Case2"), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
+              TypeApply(Select(Ident("Case"), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
           Configuration.At.Successful(
@@ -81,15 +81,15 @@ object Configuration {
             Configuration.Const(value.asExpr, value.tpe.asType)
           ) :: Nil
 
-        case Apply(
-              TypeApply(Select(Ident("Arg2"), "const"), a :: b :: args :: destFieldTpe :: constTpe :: Nil),
-              PathSelector(path) :: value :: Nil
-            ) =>
-          Configuration.At.Successful(
-            path,
-            Target.Dest,
-            Configuration.Const(value.asExpr, value.tpe.asType)
-          ) :: Nil
+        // case Apply(
+        //       TypeApply(Select(Ident("Arg"), "const"), a :: b :: args :: destFieldTpe :: constTpe :: Nil),
+        //       PathSelector(path) :: value :: Nil
+        //     ) =>
+        //   Configuration.At.Successful(
+        //     path,
+        //     Target.Dest,
+        //     Configuration.Const(value.asExpr, value.tpe.asType)
+        //   ) :: Nil
 
         case oopsie => report.errorAndAbort(oopsie.show(using Printer.TreeStructure), oopsie.pos)
       }
