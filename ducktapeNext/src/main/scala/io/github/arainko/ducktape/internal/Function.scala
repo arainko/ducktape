@@ -1,11 +1,10 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
-import scala.collection.immutable.ListMap
-import io.github.arainko.ducktape.internal.modules.*
-import io.github.arainko.ducktape.internal.Debug
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.internal.Debug
 
+import scala.collection.immutable.ListMap
+import scala.quoted.*
 
 final case class Function(args: ListMap[String, Type[?]], returnTpe: Type[?], expr: Expr[Any]) derives Debug {
 
@@ -14,7 +13,7 @@ final case class Function(args: ListMap[String, Type[?]], returnTpe: Type[?], ex
     Expr.betaReduce(Select.unique(expr.asTerm, "apply").appliedToArgs(terms).asExpr)
   }
 
-  //TODO: This should probably not live here
+  // TODO: This should probably not live here
   def fillInExprTypes[TypeFn[dest, args <: FunctionArguments]: Type](initial: Expr[TypeFn[Nothing, Nothing]])(using Quotes) = {
     import quotes.reflect.*
 
@@ -42,7 +41,7 @@ object Function {
     }
   }
 
-  //TODO: This should probably not live here
+  // TODO: This should probably not live here
   transparent inline def fillInTypes[TypeFn[dest, args <: FunctionArguments]](
     inline function: Any,
     initial: TypeFn[Nothing, Nothing]

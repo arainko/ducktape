@@ -5,7 +5,7 @@ final class AppliedViaBuilder[A, B, Args <: FunctionArguments] private (value: A
 }
 
 object AppliedViaBuilder {
-  private def instance[A](source: A,function: Any): AppliedViaBuilder[A, Nothing, Nothing] =
+  private def instance[A](source: A, function: Any): AppliedViaBuilder[A, Nothing, Nothing] =
     AppliedViaBuilder[A, Nothing, Nothing](source, function)
 
   transparent inline def create[A](source: A, inline function: Any): Any = {

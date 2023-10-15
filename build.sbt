@@ -13,7 +13,6 @@ ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
 ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / scalaVersion := "3.3.1"
 
-ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
 ThisBuild / semanticdbEnabled := true
 ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
 
@@ -53,7 +52,7 @@ lazy val ducktapeNext =
     .settings(
       scalacOptions ++= List("-Xcheck-macros", "-Xfatal-warnings", "-deprecation"),
     )
-    .dependsOn(ducktape.jvm, tooling)
+    .dependsOn(tooling)
 
 lazy val tooling = project.in(file("tooling"))
 

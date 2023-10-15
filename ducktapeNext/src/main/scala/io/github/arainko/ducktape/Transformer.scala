@@ -2,9 +2,9 @@ package io.github.arainko.ducktape
 
 import scala.quoted.*
 
-trait Transformer2[Source, Dest] extends Transformer2.Derived[Source, Dest]
+trait Transformer[Source, Dest] extends Transformer.Derived[Source, Dest]
 
-object Transformer2 {
+object Transformer {
   // def derivedTransformer[A: Type, B: Type](using Quotes): Expr[Transformer2[A, B]] =
   //   '{ src => ${ Interpreter.createTransformation[A, B]('src) }  }
 

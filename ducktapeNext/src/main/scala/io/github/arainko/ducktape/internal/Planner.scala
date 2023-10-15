@@ -1,14 +1,16 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.*
-import io.github.arainko.ducktape.internal.modules.*
 
 import scala.quoted.*
-import io.github.arainko.ducktape.Transformer2
+
 object Planner {
   import Structure.*
 
-  def betweenTypeAndFunction[Source: Type](function: io.github.arainko.ducktape.internal.Function)(using Quotes): Plan[Plan.Error] = {
+  def betweenTypeAndFunction[Source: Type](
+    function: io.github.arainko.ducktape.internal.Function
+  )(using Quotes): Plan[Plan.Error] = {
 
     val sourceStruct = Structure.of[Source]
     val destStruct = Structure.fromFunction(function)
@@ -47,8 +49,8 @@ object Planner {
 
         case Structure('[Option[srcTpe]], srcName) -> Structure('[Option[destTpe]], destName) =>
           Plan.BetweenOptions(
-            Type[srcTpe],
-            Type[destTpe],
+            Type.of[srcTpe],
+            Type.of[destTpe],
             sourceContext,
             destContext,
             recurseAndCreatePlan[srcTpe, destTpe](sourceContext, destContext)
@@ -56,8 +58,8 @@ object Planner {
 
         case Structure('[a], _) -> Structure('[Option[destTpe]], destName) =>
           Plan.BetweenNonOptionOption(
-            Type[a],
-            Type[destTpe],
+            Type.of[a],
+            Type.of[destTpe],
             sourceContext,
             destContext,
             recurseAndCreatePlan[a, destTpe](sourceContext, destContext)
@@ -66,8 +68,8 @@ object Planner {
         case Structure(source @ '[Iterable[srcTpe]], srcName) -> Structure(dest @ '[Iterable[destTpe]], destName) =>
           Plan.BetweenCollections(
             dest,
-            Type[srcTpe],
-            Type[destTpe],
+            Type.of[srcTpe],
+            Type.of[destTpe],
             sourceContext,
             destContext,
             recurseAndCreatePlan[srcTpe, destTpe](sourceContext, destContext)
@@ -99,7 +101,7 @@ object Planner {
             destContext,
             s"Couldn't build a transformation plan between ${source.tpe.repr.show} and ${dest.tpe.repr.show}"
           )
-      } 
+      }
   }
 
   private def planProductTransformation(
@@ -189,21 +191,21 @@ object Planner {
   }
 
   object UserDefinedTransformation {
-    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[Transformer2[?, ?]]] = {
+    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[Transformer[?, ?]]] = {
       val (src, dest) = structs
 
       (src.tpe -> dest.tpe) match {
-        case '[src] -> '[dest] => Expr.summon[Transformer2[src, dest]]
+        case '[src] -> '[dest] => Expr.summon[Transformer[src, dest]]
       }
     }
   }
 
   object DerivedTransformation {
-    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[Transformer2[?, ?]]] = {
+    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[Transformer[?, ?]]] = {
       val (src, dest) = structs
 
       (src.tpe -> dest.tpe) match {
-        case '[src] -> '[dest] => Expr.summon[Transformer2[src, dest]]
+        case '[src] -> '[dest] => Expr.summon[Transformer[src, dest]]
       }
     }
   }

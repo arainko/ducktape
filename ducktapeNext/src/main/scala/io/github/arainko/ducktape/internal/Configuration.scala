@@ -2,7 +2,6 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.Debug
-import io.github.arainko.ducktape.internal.modules.*
 
 import scala.quoted.*
 

@@ -2,7 +2,6 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.*
-import io.github.arainko.ducktape.internal.modules.*
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ListMap
@@ -38,7 +37,7 @@ enum Plan[+E <: PlanError] {
     destTpe: Type[?],
     sourceContext: Plan.Context,
     destContext: Plan.Context,
-    transformer: Expr[Transformer2[?, ?]]
+    transformer: Expr[Transformer[?, ?]]
   ) extends Plan[Nothing]
 
   case Derived(
@@ -46,7 +45,7 @@ enum Plan[+E <: PlanError] {
     destTpe: Type[?],
     sourceContext: Plan.Context,
     destContext: Plan.Context,
-    transformer: Expr[Transformer2.Derived[?, ?]]
+    transformer: Expr[Transformer.Derived[?, ?]]
   ) extends Plan[Nothing]
 
   case Configured(

@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.{ Debug, Metainformation }
 
 import scala.Ordering.Implicits.*
@@ -10,7 +9,7 @@ import scala.quoted.*
 private[ducktape] object Logger {
 
   // Logger Config
-  private transparent inline def level = Level.Off
+  private transparent inline def level = Level.Debug
   private val output = Output.StdOut
   private def filter(msg: String, meta: Metainformation) = true
 

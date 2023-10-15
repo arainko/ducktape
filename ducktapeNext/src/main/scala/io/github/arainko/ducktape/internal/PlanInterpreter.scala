@@ -2,7 +2,6 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.*
-import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.{ Case2 => CaseConfig, Field2 => FieldConfig }
 
 import scala.annotation.{ nowarn, tailrec }
@@ -154,14 +153,14 @@ object PlanInterpreter {
 
       case Plan.UserDefined(source, dest, _, _, transformer) =>
         transformer match {
-          case '{ $t: Transformer2[src, dest] } =>
+          case '{ $t: Transformer[src, dest] } =>
             val sourceValue = value.asExprOf[src]
             '{ $t.transform($sourceValue) }
         }
 
       case Plan.Derived(source, dest, _, _, transformer) =>
         transformer match {
-          case '{ $t: Transformer2[src, dest] } =>
+          case '{ $t: Transformer.Derived[src, dest] } =>
             val sourceValue = value.asExprOf[src]
             '{ $t.transform($sourceValue) }
         }

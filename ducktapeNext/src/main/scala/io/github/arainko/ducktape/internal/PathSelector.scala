@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.internal.Logger
-import io.github.arainko.ducktape.internal.macros.DebugMacros
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer

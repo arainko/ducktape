@@ -1,13 +1,12 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
-import scala.annotation.tailrec
-import scala.deriving.Mirror
 import io.github.arainko.ducktape.internal.Structure.*
-import io.github.arainko.ducktape.internal.modules.*
 import io.github.arainko.ducktape.internal.*
+
+import scala.annotation.tailrec
 import scala.collection.immutable.ListMap
-import io.github.arainko.ducktape.function.FunctionMirror
+import scala.deriving.Mirror
+import scala.quoted.*
 import scala.reflect.TypeTest
 
 sealed trait Structure derives Debug {
@@ -28,8 +27,12 @@ object Structure {
 
   case class Product(tpe: Type[?], name: String, fields: Map[String, Structure]) extends Structure
   case class Coproduct(tpe: Type[?], name: String, children: Map[String, Structure]) extends Structure
-  case class Function(tpe: Type[?], name: String, args: ListMap[String, Structure], function: io.github.arainko.ducktape.internal.Function)
-      extends Structure
+  case class Function(
+    tpe: Type[?],
+    name: String,
+    args: ListMap[String, Structure],
+    function: io.github.arainko.ducktape.internal.Function
+  ) extends Structure
   case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
   case class Ordinary(tpe: Type[?], name: String) extends Structure
   case class ValueClass(tpe: Type[?], name: String, paramTpe: Type[?], paramFieldName: String) extends Structure
@@ -95,7 +98,9 @@ object Structure {
                   }
                 } =>
               val structures =
-                tupleTypeElements(TypeRepr.of[types]).map(tpe => tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) })
+                tupleTypeElements(TypeRepr.of[types]).map(tpe =>
+                  tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
+                )
               val names = constStringTuple(TypeRepr.of[labels])
               Structure.Product(summon[Type[A]], constantString[label], names.zip(structures).toMap)
             case '{
@@ -108,7 +113,9 @@ object Structure {
                 } =>
               val names = constStringTuple(TypeRepr.of[labels])
               val structures =
-                tupleTypeElements(TypeRepr.of[types]).map(tpe => tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) })
+                tupleTypeElements(TypeRepr.of[types]).map(tpe =>
+                  tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
+                )
 
               Structure.Coproduct(summon[Type[A]], constantString[label], names.zip(structures).toMap)
 
