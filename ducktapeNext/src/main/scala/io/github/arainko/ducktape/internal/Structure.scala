@@ -63,13 +63,13 @@ object Structure {
     Logger.loggedInfo("Structure"):
       Expr.summon[Mirror.Of[A]] match {
         case None =>
-          summon[Type[A]].repr match {
+          Type.of[A].repr match {
             case valueClassRepr if valueClassRepr <:< TypeRepr.of[AnyVal] && valueClassRepr.typeSymbol.flags.is(Flags.Case) =>
               val param = valueClassRepr.typeSymbol.caseFields.head
               val paramTpe = valueClassRepr.memberType(param)
-              Structure.ValueClass(summon[Type[A]], valueClassRepr.show, paramTpe.asType, param.name)
+              Structure.ValueClass(Type.of[A], valueClassRepr.show, paramTpe.asType, param.name)
             case other =>
-              Structure.Ordinary(summon[Type[A]], TypeRepr.of[A].show)
+              Structure.Ordinary(Type.of[A], TypeRepr.of[A].show)
           }
         case Some(value) =>
           value match {
@@ -80,7 +80,7 @@ object Structure {
                   }
                 } =>
               val value = materializeSingleton[A]
-              Structure.Singleton(summon[Type[A]], constantString[label], value.asExpr)
+              Structure.Singleton(Type.of[A], constantString[label], value.asExpr)
             case '{
                   type label <: String
                   $m: Mirror.SingletonProxy {
@@ -88,7 +88,7 @@ object Structure {
                   }
                 } =>
               val value = materializeSingleton[A]
-              Structure.Singleton(summon[Type[A]], constantString[label], value.asExpr)
+              Structure.Singleton(Type.of[A], constantString[label], value.asExpr)
             case '{
                   type label <: String
                   $m: Mirror.Product {
@@ -102,7 +102,7 @@ object Structure {
                   tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
                 )
               val names = constStringTuple(TypeRepr.of[labels])
-              Structure.Product(summon[Type[A]], constantString[label], names.zip(structures).toMap)
+              Structure.Product(Type.of[A], constantString[label], names.zip(structures).toMap)
             case '{
                   type label <: String
                   $m: Mirror.Sum {
@@ -117,7 +117,7 @@ object Structure {
                   tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
                 )
 
-              Structure.Coproduct(summon[Type[A]], constantString[label], names.zip(structures).toMap)
+              Structure.Coproduct(Type.of[A], constantString[label], names.zip(structures).toMap)
 
           }
       }

@@ -1,10 +1,10 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.PlanInterpreter
+import io.github.arainko.ducktape.internal.Transformations
 
 final class AppliedViaBuilder[Source, Func, Args <: FunctionArguments] private (value: Source, function: Func) {
   transparent inline def transform(inline config: Field[Source, Args] | Case[Source, Args]*): Any = 
-    PlanInterpreter.transformVia[Source, Func, Args](value, function, config*)
+    Transformations.via[Source, Func, Args](value, function, config*)
 }
 
 object AppliedViaBuilder {

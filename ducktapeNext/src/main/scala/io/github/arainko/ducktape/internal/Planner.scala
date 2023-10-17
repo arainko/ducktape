@@ -20,9 +20,10 @@ object Planner {
   def betweenTypes[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] =
     recurseAndCreatePlan[Source, Dest](Plan.Context.empty(Type.of[Source]), Plan.Context.empty(Type.of[Dest]))
 
-  private def recurseAndCreatePlan[Source: Type, Dest: Type](sourceContext: Plan.Context, destContext: Plan.Context)(using
-    Quotes
-  ): Plan[Plan.Error] = {
+  private def recurseAndCreatePlan[Source: Type, Dest: Type](
+    sourceContext: Plan.Context,
+    destContext: Plan.Context
+  )(using Quotes): Plan[Plan.Error] = {
     val src = Structure.of[Source]
     val dest = Structure.of[Dest]
     recurse(src, dest, sourceContext, destContext)

@@ -10,77 +10,8 @@ import scala.quoted.*
 
 object PlanInterpreter {
 
-  transparent inline def transformVia[A, Func, Args <: FunctionArguments](
-    value: A,
-    inline function: Func,
-    inline configs: Field[A, Args] | CaseConfig[A, Args]*
-  ): Any = ${ createTransformationVia('value, 'function, 'configs) }
-
-  def createTransformationVia[A: Type, Func: Type, Args <: FunctionArguments: Type](
-    value: Expr[A],
-    function: Expr[Func],
-    configs: Expr[Seq[Field[A, Args] | CaseConfig[A, Args]]]
-  )(using Quotes) = {
-    import quotes.reflect.*
-
-    val plan =
-      Function
-        .fromFunctionArguments[Args, Func](function)
-        .orElse(Function.fromExpr(function))
-        .map(Planner.betweenTypeAndFunction[A])
-        .getOrElse(
-          Plan.Error(
-            Type.of[A],
-            Type.of[Any],
-            Plan.Context.empty(Type.of[A]),
-            Plan.Context.empty(Type.of[Any]),
-            "Couldn't create a transformation plan from a function"
-          )
-        )
-
-    val config = Configuration.parse(configs)
-    val reconfiguredPlan = config.foldLeft(plan) { (plan, config) => plan.configure(config) }
-
-    Logger.debug("Original plan", plan)
-    Logger.debug("Config", config)
-    Logger.debug("Reconfigured plan", reconfiguredPlan)
-
-    reconfiguredPlan.refine match {
-      case Left(errors) =>
-        val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
-        report.errorAndAbort(rendered)
-      case Right(totalPlan) =>
-        recurse(totalPlan, value)(using value)
-    }
-  }
-
-  inline def transformBetween[A, B](
-    value: A,
-    inline configs: FieldConfig[A, B] | CaseConfig[A, B]*
-  ) = ${ createTransformationBetween[A, B]('value, 'configs) }
-
-  def createTransformationBetween[A: Type, B: Type](
-    value: Expr[A],
-    configs: Expr[Seq[FieldConfig[A, B] | CaseConfig[A, B]]]
-  )(using Quotes): Expr[B] = {
-    import quotes.reflect.*
-
-    val plan = Planner.betweenTypes[A, B]
-    val config = Configuration.parse(configs)
-    val reconfiguredPlan = config.foldLeft(plan) { (plan, config) => plan.configure(config) }
-
-    Logger.debug("Original plan", plan)
-    Logger.debug("Config", config)
-    Logger.debug("Reconfigured plan", reconfiguredPlan)
-    
-    reconfiguredPlan.refine match {
-      case Left(errors) =>
-        val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
-        report.errorAndAbort(rendered)
-      case Right(totalPlan) =>
-        recurse(totalPlan, value)(using value).asExprOf[B]
-    }
-  }
+  def run[A: Type](plan: Plan[Nothing], sourceValue: Expr[A])(using Quotes): Expr[Any] =
+    recurse(plan, sourceValue)(using sourceValue)
 
   private def recurse[A: Type](plan: Plan[Nothing], value: Expr[Any])(using toplevelValue: Expr[A])(using Quotes): Expr[Any] = {
     import quotes.reflect.*
