@@ -14,9 +14,10 @@ final case class Function(args: ListMap[String, Type[?]], returnTpe: Type[?], ex
   }
 
   // TODO: This should probably not live here
-  def fillInExprTypes[TypeFn[args <: FunctionArguments]: Type](initial: Expr[TypeFn[Nothing]])(using Quotes) = {
+  def encodeAsType[TypeFn[args <: FunctionArguments]: Type](initial: Expr[TypeFn[Nothing]])(using Quotes) = {
     import quotes.reflect.*
 
+    Logger.info("Encoding a Function as type for later usage...")
     val refinedArgs = args.foldLeft(TypeRepr.of[FunctionArguments]) {
       case (acc, name -> tpe) =>
         Refinement(acc, name, tpe.repr)
@@ -39,42 +40,51 @@ object Function {
     unapply(expr.asTerm).map { (vals, term) =>
       val returnTpe = term.tpe.asType
       val args = vals.map(valDef => valDef.name -> valDef.tpt.tpe.asType).to(ListMap)
-      Function(args, returnTpe, expr)
+      Logger.loggedDebug("Result"):
+        Function(args, returnTpe, expr)
     }
   }
 
-  def fromFunctionArguments[Args <: FunctionArguments: Type](functionExpr: Expr[Any])(using Quotes): Option[Function] = {
+  def fromFunctionArguments[Args <: FunctionArguments: Type, Func: Type](functionExpr: Expr[Func])(using Quotes): Option[Function] = {
     import quotes.reflect.*
     val repr = TypeRepr.of[Args]
+    val func = TypeRepr.of[Func]
 
-    Option.when(Type.of[Args])
+    Logger.debug("Trying to build a Function from FunctionArguments", Type.of[Args])
+    Logger.debug("... and functionExpr of type", Type.of[Func])
 
-    val args =
-      List
-        .unfold(Type.of[Args].repr) {
-          case Refinement(leftover, name, tpe) => Some(name -> tpe.asType, leftover)
-          case other                           => None
-        }
-        .reverse
-        .to(ListMap)
+    Option
+      .when(!(repr =:= TypeRepr.of[Nothing]) && func.isFunctionType)(func.typeArgs.last)
+      .map { retTpe =>
+        val args =
+          List
+            .unfold(Type.of[Args].repr) {
+              case Refinement(leftover, name, tpe) => Some(name -> tpe.asType, leftover)
+              case other                           => None
+            }
+            .reverse
+            .to(ListMap)
 
-    Function(args, ???, functionExpr)
+        Logger.loggedDebug("Result"):
+          Function(args, retTpe.asType, functionExpr)
+      }
+
   }
 
   // TODO: This should probably not live here
-  transparent inline def fillInTypes[TypeFn[args <: FunctionArguments]](
+  transparent inline def encodeAsType[TypeFn[args <: FunctionArguments]](
     inline function: Any,
     initial: TypeFn[Nothing]
-  ) = ${ fillInTypesMacro('function, 'initial) }
+  ) = ${ encodeAsTypeMacro('function, 'initial) }
 
-  private def fillInTypesMacro[TypeFn[args <: FunctionArguments]: Type](
+  private def encodeAsTypeMacro[TypeFn[args <: FunctionArguments]: Type](
     function: Expr[Any],
     initial: Expr[TypeFn[Nothing]]
   )(using Quotes) = {
     import quotes.reflect.*
 
     val func = fromExpr(function).getOrElse(report.errorAndAbort(s"Couldn't construct a function TODO ERROR MESSAGE"))
-    func.fillInExprTypes(initial)
+    func.encodeAsType(initial)
   }
 
   private def unapply(using Quotes)(arg: quotes.reflect.Term): Option[(List[quotes.reflect.ValDef], quotes.reflect.Term)] = {

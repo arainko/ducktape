@@ -10,22 +10,23 @@ import scala.quoted.*
 
 object PlanInterpreter {
 
-  transparent inline def transformVia[A, Args <: FunctionArguments](
+  transparent inline def transformVia[A, Func, Args <: FunctionArguments](
     value: A,
-    inline function: Any,
+    inline function: Func,
     inline configs: Field[A, Args] | CaseConfig[A, Args]*
   ): Any = ${ createTransformationVia('value, 'function, 'configs) }
 
-  def createTransformationVia[A: Type, Args <: FunctionArguments: Type](
+  def createTransformationVia[A: Type, Func: Type, Args <: FunctionArguments: Type](
     value: Expr[A],
-    function: Expr[Any],
+    function: Expr[Func],
     configs: Expr[Seq[Field[A, Args] | CaseConfig[A, Args]]]
   )(using Quotes) = {
     import quotes.reflect.*
 
     val plan =
       Function
-        .fromExpr(function)
+        .fromFunctionArguments[Args, Func](function)
+        .orElse(Function.fromExpr(function))
         .map(Planner.betweenTypeAndFunction[A])
         .getOrElse(
           Plan.Error(
@@ -37,7 +38,14 @@ object PlanInterpreter {
           )
         )
 
-    plan.refine match {
+    val config = Configuration.parse(configs)
+    val reconfiguredPlan = config.foldLeft(plan) { (plan, config) => plan.configure(config) }
+
+    Logger.debug("Original plan", plan)
+    Logger.debug("Config", config)
+    Logger.debug("Reconfigured plan", reconfiguredPlan)
+
+    reconfiguredPlan.refine match {
       case Left(errors) =>
         val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
         report.errorAndAbort(rendered)
@@ -60,9 +68,11 @@ object PlanInterpreter {
     val plan = Planner.betweenTypes[A, B]
     val config = Configuration.parse(configs)
     val reconfiguredPlan = config.foldLeft(plan) { (plan, config) => plan.configure(config) }
+
     Logger.debug("Original plan", plan)
     Logger.debug("Config", config)
     Logger.debug("Reconfigured plan", reconfiguredPlan)
+    
     reconfiguredPlan.refine match {
       case Left(errors) =>
         val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")

@@ -7,7 +7,9 @@ extension [Source] (source: Source) {
 
   def into[Dest]: AppliedBuilder[Source, Dest] = AppliedBuilder[Source, Dest](source)
 
-  transparent inline def via(inline function: Any): Any = PlanInterpreter.transformVia[Source, Nothing](source, function)
+  transparent inline def via[Func](inline function: Func): Any = 
+    PlanInterpreter.transformVia[Source, Func, Nothing](source, function)
 
-  transparent inline def intoVia(inline function: Any): Any = AppliedViaBuilder.create(source, function)
+  transparent inline def intoVia[Func](inline function: Func): Any = 
+    AppliedViaBuilder.create(source, function)
 }

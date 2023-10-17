@@ -46,7 +46,7 @@ object Configuration {
       .map(_.asTerm)
       .flatMap {
         case Apply(
-              TypeApply(Select(Ident("Field"), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
+              TypeApply(Select(Ident("Field" | "Arg"), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
           Configuration.At.Successful(
@@ -56,7 +56,7 @@ object Configuration {
           ) :: Nil
 
         case Apply(
-              TypeApply(Select(Ident("Field"), "computed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
+              TypeApply(Select(Ident("Field" | "Arg"), "computed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
               PathSelector(path) :: function :: Nil
             ) =>
           Configuration.At.Successful(
@@ -66,7 +66,7 @@ object Configuration {
           ) :: Nil
 
         case Apply(
-              TypeApply(Select(Ident("Field"), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
+              TypeApply(Select(Ident("Field" | "Arg"), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
               PathSelector(path) :: fieldSource :: Nil
             ) =>
           parseAllMatching(fieldSource.asExpr, path, destFieldTpe.tpe, fieldSourceTpe.tpe)

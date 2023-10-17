@@ -100,20 +100,25 @@ final case class ProdTest2(test: Test2)
   case class PersonFields(int: Int, str: String)
   case class PersonFields2(int: Int, str: String, extra: Int)
 
-  def fields: PersonFields2 = ???
+  def fields: PersonFields2 = PersonFields2(23, "23", 24)
 
   // Debug.showCode {
-  internal.PlanInterpreter.transformBetween[PersonCostamCostam, PersonCostamCostam2](
-    ???, Field.allMatching(a => a.p.p, fields)
-  )
+  // internal.PlanInterpreter.transformBetween[PersonCostamCostam, PersonCostamCostam2](
+  //   ???, Field.allMatching(a => a.p.p, fields)
+  // )
   // }
 
-  def costam(int: Int, str: String): Int = ???
+  def costam(int: Int, str: String): Int = int
 
-  // internal.CodePrinter.code {
-    val a = (??? : PersonFields2).intoVia(costam).transform()
+  internal.CodePrinter.code {
+    val a = fields.intoVia(costam)
+    .transform(
+      Arg.const(_.int, 1), 
+      Arg.computed(_.str, _.extra.toString)
+    )
+    println(a)
   //   // (??? : PersonCostamCostam).into[PersonCostamCostam2].transform(Field.allMatching(_.p.p, fields))
-  // }
+  }
 
   // val aaa: AppliedViaBuilder[Person1, Int, FunctionArguments{val int: Int; val str: String}] =
   //   Transformer.Debug.showCode {
