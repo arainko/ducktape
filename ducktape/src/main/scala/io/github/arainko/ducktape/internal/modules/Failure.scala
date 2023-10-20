@@ -37,7 +37,6 @@ private[ducktape] object Failure {
   final case class MirrorMaterialization(mirroredType: Type[?], notFoundTypeMemberName: String) extends Failure {
 
     override final def render(using Quotes): String = {
-      import quotes.reflect.*
 
       s"""
         |Mirror materialization for ${mirroredType.show} failed. 
