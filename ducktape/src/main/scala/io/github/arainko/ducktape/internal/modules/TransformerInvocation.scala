@@ -1,7 +1,5 @@
 package io.github.arainko.ducktape.internal.modules
 
-import io.github.arainko.ducktape.Transformer
-
 import scala.quoted.*
 
 private[ducktape] object TransformerInvocation {
@@ -9,11 +7,11 @@ private[ducktape] object TransformerInvocation {
     import quotes.reflect.*
 
     term.asExpr match {
-      case '{ ($transformer: Transformer.ForProduct[a, b]).transform($appliedTo) } =>
+      case '{ ($transformer: io.github.arainko.ducktape.Transformer.ForProduct[a, b]).transform($appliedTo) } =>
         TransformerLambda.fromForProduct(transformer).map(_ -> appliedTo.asTerm)
-      case '{ ($transformer: Transformer.FromAnyVal[a, b]).transform($appliedTo) } =>
+      case '{ ($transformer: io.github.arainko.ducktape.Transformer.FromAnyVal[a, b]).transform($appliedTo) } =>
         TransformerLambda.fromFromAnyVal(transformer).map(_ -> appliedTo.asTerm)
-      case '{ ($transformer: Transformer.ToAnyVal[a, b]).transform($appliedTo) } =>
+      case '{ ($transformer: io.github.arainko.ducktape.Transformer.ToAnyVal[a, b]).transform($appliedTo) } =>
         TransformerLambda.fromToAnyVal(transformer).map(_ -> appliedTo.asTerm)
       case other => None
     }
