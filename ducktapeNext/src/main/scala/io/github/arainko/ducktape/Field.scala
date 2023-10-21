@@ -2,6 +2,9 @@ package io.github.arainko.ducktape
 
 import scala.annotation.compileTimeOnly
 
+// Kept around for source compat with 0.1.x
+inline def Arg: Field.type = Field
+
 opaque type Field[A, B] = Unit
 
 object Field {
@@ -24,12 +27,3 @@ object Field {
   def allMatching[A, B, DestFieldTpe, ProductTpe](selector: Selector ?=> B => DestFieldTpe, product: ProductTpe): Field[A, B] =
     ???
 }
-
-opaque type Case[A, B] = Unit
-
-object Case {
-  @compileTimeOnly("Case.const is only useable as a case configuration for transformations")
-  def const[A, B, SourceTpe, FieldTpe](selector: Selector ?=> A => SourceTpe, value: FieldTpe): Case[A, B] = ???
-}
-
-inline def Arg: Field.type = Field

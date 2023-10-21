@@ -118,7 +118,6 @@ object Structure {
                 )
 
               Structure.Coproduct(Type.of[A], constantString[label], names.zip(structures).toMap)
-
           }
       }
   }

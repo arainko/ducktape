@@ -5,7 +5,7 @@ import io.github.arainko.ducktape.internal.Debug
 
 import scala.quoted.*
 
-enum Configuration derives Debug {
+private[ducktape] enum Configuration derives Debug {
   def tpe: Type[?]
 
   case Const(value: Expr[Any], tpe: Type[?])
@@ -13,7 +13,7 @@ enum Configuration derives Debug {
   case FieldReplacement(source: Expr[Any], name: String, tpe: Type[?])
 }
 
-object Configuration {
+private[ducktape] object Configuration {
   enum Target derives Debug {
     case Source, Dest
 
@@ -56,7 +56,7 @@ object Configuration {
           ) :: Nil
 
         case Apply(
-              TypeApply(Select(Ident("Field" | "Arg"), "computed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
+              TypeApply(Select(Ident("Field" | "Arg"), "computed" | "renamed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
               PathSelector(path) :: function :: Nil
             ) =>
           Configuration.At.Successful(
@@ -81,15 +81,15 @@ object Configuration {
             Configuration.Const(value.asExpr, value.tpe.asType)
           ) :: Nil
 
-        // case Apply(
-        //       TypeApply(Select(Ident("Arg"), "const"), a :: b :: args :: destFieldTpe :: constTpe :: Nil),
-        //       PathSelector(path) :: value :: Nil
-        //     ) =>
-        //   Configuration.At.Successful(
-        //     path,
-        //     Target.Dest,
-        //     Configuration.Const(value.asExpr, value.tpe.asType)
-        //   ) :: Nil
+        case Apply(
+              TypeApply(Select(Ident("Case"), "computed"), a :: b :: sourceTpe :: computedTpe :: Nil),
+              PathSelector(path) :: function :: Nil
+            ) =>
+          Configuration.At.Successful(
+            path,
+            Target.Source,
+            Configuration.Computed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]])
+          ) :: Nil
 
         case oopsie => report.errorAndAbort(oopsie.show(using Printer.TreeStructure), oopsie.pos)
       }

@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape.internal
 
-
 import io.github.arainko.ducktape.*
 import scala.quoted.*
 

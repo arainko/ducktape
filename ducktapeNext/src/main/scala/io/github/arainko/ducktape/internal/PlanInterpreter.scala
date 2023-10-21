@@ -79,7 +79,8 @@ object PlanInterpreter {
         (destCollectionTpe, sourceTpe, destTpe) match {
           case ('[destCollTpe], '[srcElem], '[destElem]) =>
             val sourceValue = value.asExprOf[Iterable[srcElem]]
-            val factory = Expr.summon[Factory[destElem, destCollTpe]].get // TODO: Make it nicer
+            // TODO: Make it nicer, move this into Planner since we cannot be sure that a facotry exists
+            val factory = Expr.summon[Factory[destElem, destCollTpe]].get 
             def transformation(value: Expr[srcElem])(using Quotes): Expr[destElem] = recurse(plan, value).asExprOf[destElem]
             '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
         }
