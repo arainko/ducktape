@@ -56,6 +56,36 @@ private[ducktape] object Configuration {
           ) :: Nil
 
         case Apply(
+              TypeApply(Select(Ident("Field" | "Arg"), "default"), a :: b :: destFieldTpe :: Nil),
+              PathSelector(path) :: Nil
+            ) =>
+          val segments = path.toVector
+          val parentTpe =
+            segments
+              .lift(segments.length - 2) // next to last elem aka the parent of the selected field
+              .map(_.tpe)
+              .getOrElse(path.root)
+          val default =
+            for {
+              selectedField <-
+                path.segments.lastOption
+                  .flatMap(_.narrow[Path.Segment.Field])
+                  .toRight("Path's length should be at least 1")
+              structure <-
+                Structure
+                  .fromTypeRepr(parentTpe.repr)
+                  .narrow[Structure.Product]
+                  .toRight("Selected field's parent is not a product")
+              default <-
+                Defaults
+                  .of(structure)
+                  .get(selectedField.name)
+                  .toRight(s"The field '${selectedField.name}' doesn't have a default value")
+            } yield Configuration.At.Successful(path, Target.Dest, Configuration.Const(default, default.asTerm.tpe.asType))
+
+          default.left.map(error => Configuration.At.Failed(path, Target.Dest, error)).merge :: Nil
+
+        case Apply(
               TypeApply(Select(Ident("Field" | "Arg"), "computed" | "renamed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
               PathSelector(path) :: function :: Nil
             ) =>
@@ -105,8 +135,8 @@ private[ducktape] object Configuration {
     val result =
       Structure
         .fromTypeRepr(destFieldTpe)
-        .as[Structure.Product | Structure.Function]
-        .zip(Structure.fromTypeRepr(fieldSourceTpe).as[Structure.Product])
+        .narrow[Structure.Product | Structure.Function]
+        .zip(Structure.fromTypeRepr(fieldSourceTpe).narrow[Structure.Product])
         .map { (destStruct, fieldSourceStruct) =>
           val fields = destStruct match {
             case p: Structure.Product  => p.fields

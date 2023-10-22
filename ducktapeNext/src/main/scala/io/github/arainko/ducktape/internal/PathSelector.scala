@@ -11,7 +11,7 @@ object PathSelector {
     import quotes.reflect.{ Selector as _, * }
 
     @tailrec
-    def recurse(using Quotes)(acc: Path, term: quotes.reflect.Term): Path = {
+    def recurse(using Quotes)(acc: List[Path.Segment], term: quotes.reflect.Term): Path = {
       import quotes.reflect.*
 
       term match {
@@ -32,21 +32,21 @@ object PathSelector {
           recurse(acc.prepended(Path.Segment.Case(tpe.tpe.asType)), tree)
         // Function arg selection can only happen as the first selection (aka the last one to be parsed) so this not being recursive is fine (?)
         case TypeApply(
-              Select(Apply(Select(Ident(_), "selectDynamic"), Literal(StringConstant(argName)) :: Nil), "$asInstanceOf$"),
+              Select(Apply(Select(ident @ Ident(_), "selectDynamic"), Literal(StringConstant(argName)) :: Nil), "$asInstanceOf$"),
               argTpe :: Nil
             ) =>
           Logger.debug(s"Matched 'selectDynamic' (matching a function arg selector) with name = $argName")
-          acc.prepended(Path.Segment.Field(argTpe.tpe.asType, argName))
-        case Ident(_) =>
+          Path(ident.tpe.asType, acc.prepended(Path.Segment.Field(argTpe.tpe.asType, argName)).toVector)
+        case ident @ Ident(_) =>
           Logger.debug(s"Matched 'Ident', returning...")
-          acc
+          Path(ident.tpe.asType, acc.toVector)
         case other =>
           Logger.debug(s"Matched an unexpected term")
           report.errorAndAbort(other.show(using Printer.TreeShortCode))
       }
     }
 
-    Some(Logger.loggedInfo("Parsed path")(recurse(Path.empty, expr)))
+    Some(Logger.loggedInfo("Parsed path")(recurse(Nil, expr)))
   }
 
 }

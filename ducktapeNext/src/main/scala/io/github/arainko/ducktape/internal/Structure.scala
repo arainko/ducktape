@@ -19,7 +19,7 @@ sealed trait Structure derives Debug {
       case other     => other
     }
 
-  final def as[A <: Structure](using tt: TypeTest[Structure, A]): Option[A] = tt.unapply(this.force)
+  final def narrow[A <: Structure](using tt: TypeTest[Structure, A]): Option[A] = tt.unapply(this.force)
 }
 
 object Structure {

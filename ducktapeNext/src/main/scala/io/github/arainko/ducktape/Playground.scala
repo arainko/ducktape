@@ -66,6 +66,9 @@ final case class Gen[A](int: Int, value: A)
 final case class ProdTest1(test: Test1)
 final case class ProdTest2(test: Test2)
 
+final case class DeffTest1(int: Int)
+final case class DeffTest2(int: Int, str: String = "default")
+
 @main def main: Unit = {
 
   val p = Person1(1, "asd", Nested1(1))
@@ -75,6 +78,9 @@ final case class ProdTest2(test: Test2)
   val cos = summon[TypeTest[Any, Int | String]]
 
   println(cos.unapply(test))
+
+  internal.CodePrinter.code:
+    (??? : DeffTest1).into[DeffTest2].transform(Field.default(a => a.str))
 
   /*
   Use cases that I need to support:
@@ -153,12 +159,12 @@ final case class ProdTest2(test: Test2)
   //   )
   //   }
 
-    internal.CodePrinter.code:
-      Transformations.between[SortedMap[ValueGen[Int], String], HashMap[Int, String]](???)
+    // internal.CodePrinter.code:
+    //   Transformations.between[SortedMap[ValueGen[Int], String], HashMap[Int, String]](???)
 
   SortedMap.empty[Int, String]
 
-  (1, "").to[Int *: String *: EmptyTuple]
+  // (1, "").to[Int *: String *: EmptyTuple]
   // Case2.const(_.at[Test1.Empty.type], Test3.Empty1.Impl)
   // )
 }

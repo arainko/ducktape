@@ -17,9 +17,9 @@ enum Plan[+E <: PlanError] {
 
   def destTpe: Type[?]
 
-  def sourceContext: Plan.Context
+  def sourceContext: Path
 
-  def destContext: Plan.Context
+  def destContext: Path
 
   final def configure(config: Configuration.At)(using Quotes): Plan[Plan.Error] = Plan.configure(this, config)
 
@@ -28,39 +28,39 @@ enum Plan[+E <: PlanError] {
   case Upcast(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context
+    sourceContext: Path,
+    destContext: Path
   ) extends Plan[Nothing]
 
   case UserDefined(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     transformer: Expr[Transformer[?, ?]]
   ) extends Plan[Nothing]
 
   case Derived(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     transformer: Expr[Transformer.Derived[?, ?]]
   ) extends Plan[Nothing]
 
   case Configured(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     config: Configuration
   ) extends Plan[Nothing]
 
   case BetweenProductFunction(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     argPlans: ListMap[String, Plan[E]],
     function: Function
   ) extends Plan[E]
@@ -68,55 +68,55 @@ enum Plan[+E <: PlanError] {
   case BetweenUnwrappedWrapped(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context
+    sourceContext: Path,
+    destContext: Path
   ) extends Plan[Nothing]
 
   case BetweenWrappedUnwrapped(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     fieldName: String
   ) extends Plan[Nothing]
 
   case BetweenSingletons(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     expr: Expr[Any]
   ) extends Plan[Nothing]
 
   case BetweenProducts(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     fieldPlans: Map[String, Plan[E]]
   ) extends Plan[E]
 
   case BetweenCoproducts(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     casePlans: Vector[Plan[E]]
   ) extends Plan[E]
 
   case BetweenOptions(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     plan: Plan[E]
   ) extends Plan[E]
 
   case BetweenNonOptionOption(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     plan: Plan[E]
   ) extends Plan[E]
 
@@ -124,8 +124,8 @@ enum Plan[+E <: PlanError] {
     destCollectionTpe: Type[?],
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     plan: Plan[E]
   ) extends Plan[E]
 
@@ -133,8 +133,8 @@ enum Plan[+E <: PlanError] {
   case Error(
     sourceTpe: Type[?],
     destTpe: Type[?],
-    sourceContext: Plan.Context,
-    destContext: Plan.Context,
+    sourceContext: Path,
+    destContext: Path,
     message: String
   ) extends Plan[Plan.Error]
 }
@@ -144,26 +144,6 @@ object Plan {
   def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.sourceTpe, plan.destTpe)
 
   given debug[E <: Plan.Error]: Debug[Plan[E]] = Debug.derived
-
-  final case class Context(root: Type[?], path: Path) derives Debug {
-    def add(segment: Path.Segment): Context = copy(path = path.appended(segment))
-
-    def currentTpe(using Quotes): Type[?] = {
-      import quotes.reflect.*
-
-      path.toVector.reverse.collectFirst { case Path.Segment.Field(tpe, name) => tpe }
-        .getOrElse(root)
-        .repr
-        .widen
-        .asType
-    }
-
-    def render(using Quotes): String = path.render
-  }
-
-  object Context {
-    def empty(root: Type[?]): Context = Context(root, Path.empty)
-  }
 
   private def configure[E <: Plan.Error](plan: Plan[E], config: Configuration.At)(using Quotes): Plan[Plan.Error] = {
     extension (currentPlan: Plan[?]) {
@@ -257,7 +237,7 @@ object Plan {
       }
     }
 
-    recurse(plan, config.path.toList)
+    recurse(plan, config.path.segments.toList)
   }
 
   private def refine(plan: Plan[Plan.Error]): Either[List[Plan.Error], Plan[Nothing]] = {

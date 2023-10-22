@@ -42,8 +42,8 @@ object Transformations {
           Plan.Error(
             Type.of[A],
             Type.of[Any],
-            Plan.Context.empty(Type.of[A]),
-            Plan.Context.empty(Type.of[Any]),
+            Path.empty(Type.of[A]),
+            Path.empty(Type.of[Any]),
             "Couldn't create a transformation plan from a function"
           )
         )

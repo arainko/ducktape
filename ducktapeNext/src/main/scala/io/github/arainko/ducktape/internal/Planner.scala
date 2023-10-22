@@ -14,15 +14,15 @@ object Planner {
 
     val sourceStruct = Structure.of[Source]
     val destStruct = Structure.fromFunction(function)
-    recurse(sourceStruct, destStruct, Plan.Context.empty(Type.of[Source]), Plan.Context.empty(destStruct.tpe))
+    recurse(sourceStruct, destStruct, Path.empty(Type.of[Source]), Path.empty(destStruct.tpe))
   }
 
   def betweenTypes[Source: Type, Dest: Type](using Quotes): Plan[Plan.Error] =
-    recurseAndCreatePlan[Source, Dest](Plan.Context.empty(Type.of[Source]), Plan.Context.empty(Type.of[Dest]))
+    recurseAndCreatePlan[Source, Dest](Path.empty(Type.of[Source]), Path.empty(Type.of[Dest]))
 
   private def recurseAndCreatePlan[Source: Type, Dest: Type](
-    sourceContext: Plan.Context,
-    destContext: Plan.Context
+    sourceContext: Path,
+    destContext: Path
   )(using Quotes): Plan[Plan.Error] = {
     val src = Structure.of[Source]
     val dest = Structure.of[Dest]
@@ -32,8 +32,8 @@ object Planner {
   private def recurse(
     source: Structure,
     dest: Structure,
-    sourceContext: Plan.Context,
-    destContext: Plan.Context
+    sourceContext: Path,
+    destContext: Path
   )(using Quotes): Plan[Plan.Error] = {
     import quotes.reflect.*
 
@@ -108,16 +108,16 @@ object Planner {
   private def planProductTransformation(
     source: Structure.Product,
     dest: Structure.Product,
-    sourceContext: Plan.Context,
-    destContext: Plan.Context
+    sourceContext: Path,
+    destContext: Path
   )(using Quotes) = {
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-      val updatedDestContext = destContext.add(Path.Segment.Field(destFieldStruct.tpe, destField))
+      val updatedDestContext = destContext.appended(Path.Segment.Field(destFieldStruct.tpe, destField))
       val plan =
         source.fields
           .get(destField)
           .map { sourceStruct =>
-            val updatedSourceContext = sourceContext.add(Path.Segment.Field(sourceStruct.tpe, destField))
+            val updatedSourceContext = sourceContext.appended(Path.Segment.Field(sourceStruct.tpe, destField))
             recurse(sourceStruct, destFieldStruct, updatedSourceContext, updatedDestContext)
           }
           .getOrElse(
@@ -137,16 +137,16 @@ object Planner {
   private def planProductFunctionTransformation(
     source: Structure.Product,
     dest: Structure.Function,
-    sourceContext: Plan.Context,
-    destContext: Plan.Context
+    sourceContext: Path,
+    destContext: Path
   )(using Quotes) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
-      val updatedDestContext = destContext.add(Path.Segment.Field(destFieldStruct.tpe, destField))
+      val updatedDestContext = destContext.appended(Path.Segment.Field(destFieldStruct.tpe, destField))
       val plan =
         source.fields
           .get(destField)
           .map { sourceStruct =>
-            val updatedSourceContext = sourceContext.add(Path.Segment.Field(sourceStruct.tpe, destField))
+            val updatedSourceContext = sourceContext.appended(Path.Segment.Field(sourceStruct.tpe, destField))
             recurse(sourceStruct, destFieldStruct, updatedSourceContext, updatedDestContext)
           }
           .getOrElse(
@@ -166,16 +166,16 @@ object Planner {
   private def planCoproductTransformation(
     source: Structure.Coproduct,
     dest: Structure.Coproduct,
-    sourceContext: Plan.Context,
-    destContext: Plan.Context
+    sourceContext: Path,
+    destContext: Path
   )(using Quotes) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
-      val updatedSourceContext = sourceContext.add(Path.Segment.Case(sourceCaseStruct.tpe))
+      val updatedSourceContext = sourceContext.appended(Path.Segment.Case(sourceCaseStruct.tpe))
 
       dest.children
         .get(sourceName)
         .map { destCaseStruct =>
-          val updatedDestContext = destContext.add(Path.Segment.Case(destCaseStruct.tpe))
+          val updatedDestContext = destContext.appended(Path.Segment.Case(destCaseStruct.tpe))
           recurse(sourceCaseStruct, destCaseStruct, updatedSourceContext, updatedDestContext)
         }
         .getOrElse(
