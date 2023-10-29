@@ -9,9 +9,9 @@ import scala.quoted.*
 private[ducktape] object Logger {
 
   // Logger Config
-  private transparent inline def level = Level.Debug
+  private transparent inline def level = Level.Info
   private val output = Output.StdOut
-  private def filter(msg: String, meta: Metainformation) = true
+  private def filter(msg: String, meta: Metainformation) = meta.contains("Transformations")
 
   enum Level {
     case Off, Debug, Info

@@ -135,7 +135,9 @@ enum Plan[+E <: PlanError] {
     destTpe: Type[?],
     sourceContext: Path,
     destContext: Path,
-    message: String
+    message: String,
+    span: Option[Span],
+    // suppressed: Option[Plan.Error]
   ) extends Plan[Plan.Error]
 }
 
@@ -165,7 +167,7 @@ object Plan {
                   .get(fieldName)
                   .map(fieldPlan => recurse(fieldPlan, tail))
                   .getOrElse(
-                    Plan.Error(sourceTpe, destTpe, sourceContext, destContext, s"'$fieldName' is not a valid field accessor")
+                    Plan.Error(sourceTpe, destTpe, sourceContext, destContext, s"'$fieldName' is not a valid field accessor", Some(config.span))
                   )
 
               plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
@@ -175,7 +177,7 @@ object Plan {
                   .get(fieldName)
                   .map(argPlan => recurse(argPlan, tail))
                   .getOrElse(
-                    Plan.Error(sourceTpe, destTpe, sourceContext, destContext, s"'$fieldName' is not a valid arg accessor")
+                    Plan.Error(sourceTpe, destTpe, sourceContext, destContext, s"'$fieldName' is not a valid arg accessor", Some(config.span))
                   )
 
               plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
@@ -185,7 +187,8 @@ object Plan {
                 plan.destTpe,
                 plan.sourceContext,
                 plan.destContext,
-                s"A field accessor '$fieldName' can only be used to configure product or function transformations"
+                s"A field accessor '$fieldName' can only be used to configure product or function transformations",
+                Some(config.span)
               )
           }
 
@@ -199,7 +202,7 @@ object Plan {
                 .map((casePlan, idx) => plan.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail))))
                 .getOrElse(
                   Plan
-                    .Error(sourceTpe, destTpe, sourceContext, destContext, s"'at[${tpe.repr.show}]' is not a valid case accessor")
+                    .Error(sourceTpe, destTpe, sourceContext, destContext, s"'at[${tpe.repr.show}]' is not a valid case accessor", Some(config.span))
                 )
             case plan =>
               Plan.Error(
@@ -207,31 +210,34 @@ object Plan {
                 plan.destTpe,
                 plan.sourceContext,
                 plan.destContext,
-                s"A case accessor can only be used to configure coproduct transformations"
+                s"A case accessor can only be used to configure coproduct transformations",
+                Some(config.span)
               )
           }
 
         case Nil =>
           config match {
-            case cfg @ Configuration.At.Successful(_, _, config) if current.conformsTo(cfg) =>
+            case cfg @ Configuration.At.Successful(_, _, config, _) if current.conformsTo(cfg) =>
               Plan.Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config)
 
-            case Configuration.At.Successful(path, target, config) =>
+            case Configuration.At.Successful(path, target, config, span) =>
               Plan.Error(
                 current.sourceTpe,
                 current.destTpe,
                 current.sourceContext,
                 current.destContext,
-                s"A replacement plan doesn't conform to the plan it's supposed to replace. ${config.tpe.repr.show} <:< ${current.destContext.currentTpe.repr.show}"
+                s"A replacement plan doesn't conform to the plan it's supposed to replace. ${config.tpe.repr.show} <:< ${current.destContext.currentTpe.repr.show}",
+                Some(span)
               )
 
-            case Configuration.At.Failed(path, target, message) =>
+            case Configuration.At.Failed(path, target, message, span) =>
               Plan.Error(
                 current.sourceTpe,
                 current.destTpe,
                 current.sourceContext,
                 current.destContext,
-                message
+                message,
+                Some(span)
               )
           }
       }

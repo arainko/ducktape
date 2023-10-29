@@ -100,7 +100,8 @@ object Planner {
             dest.tpe,
             sourceContext,
             destContext,
-            s"Couldn't build a transformation plan between ${source.tpe.repr.show} and ${dest.tpe.repr.show}"
+            s"Couldn't build a transformation plan between ${source.tpe.repr.show} and ${dest.tpe.repr.show}",
+            None
           )
       }
   }
@@ -126,7 +127,8 @@ object Planner {
               destFieldStruct.tpe,
               sourceContext, // TODO: Revise
               updatedDestContext, // TODO: Revise
-              s"No field named '$destField' found in ${source.tpe.repr.show}"
+              s"No field named '$destField' found in ${source.tpe.repr.show}",
+              None
             )
           )
       destField -> plan
@@ -155,7 +157,8 @@ object Planner {
               destFieldStruct.tpe,
               sourceContext, // TODO: Revise
               updatedDestContext, // TODO: Revise
-              s"No field named '$destField' found in ${source.tpe.repr.show}"
+              s"No field named '$destField' found in ${source.tpe.repr.show}",
+              None
             )
           )
       destField -> plan
@@ -184,7 +187,8 @@ object Planner {
             Type.of[Any],
             updatedSourceContext, // TODO: Revise
             destContext, // TODO: Revise
-            s"No child named '$sourceName' found in ${dest.tpe.repr.show}"
+            s"No child named '$sourceName' found in ${dest.tpe.repr.show}",
+            None
           )
         )
     }

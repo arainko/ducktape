@@ -29,9 +29,10 @@ private[ducktape] object Configuration {
   enum At derives Debug {
     def path: Path
     def target: Target
+    def span: Span
 
-    case Successful(path: Path, target: Target, config: Configuration)
-    case Failed(path: Path, target: Target, message: String)
+    case Successful(path: Path, target: Target, config: Configuration, span: Span)
+    case Failed(path: Path, target: Target, message: String, span: Span)
   }
 
   def parse[A: Type, B: Type](
@@ -45,17 +46,18 @@ private[ducktape] object Configuration {
       .view
       .map(_.asTerm)
       .flatMap {
-        case Apply(
+        case cfg @ Apply(
               TypeApply(Select(Ident("Field" | "Arg"), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
           Configuration.At.Successful(
             path,
             Target.Dest,
-            Configuration.Const(value.asExpr, value.tpe.asType)
+            Configuration.Const(value.asExpr, value.tpe.asType),
+            Span.fromPosition(cfg.pos)
           ) :: Nil
 
-        case Apply(
+        case cfg @ Apply(
               TypeApply(Select(Ident("Field" | "Arg"), "default"), a :: b :: destFieldTpe :: Nil),
               PathSelector(path) :: Nil
             ) =>
@@ -70,7 +72,7 @@ private[ducktape] object Configuration {
               selectedField <-
                 path.segments.lastOption
                   .flatMap(_.narrow[Path.Segment.Field])
-                  .toRight("Path's length should be at least 1")
+                  .toRight("Selected path's length should be at least 1")
               structure <-
                 Structure
                   .fromTypeRepr(parentTpe.repr)
@@ -81,47 +83,61 @@ private[ducktape] object Configuration {
                   .of(structure)
                   .get(selectedField.name)
                   .toRight(s"The field '${selectedField.name}' doesn't have a default value")
-            } yield Configuration.At.Successful(path, Target.Dest, Configuration.Const(default, default.asTerm.tpe.asType))
+            } yield Configuration.At.Successful(
+              path,
+              Target.Dest,
+              Configuration.Const(default, default.asTerm.tpe.asType),
+              Span.fromPosition(cfg.pos)
+            )
 
-          default.left.map(error => Configuration.At.Failed(path, Target.Dest, error)).merge :: Nil
+          default.left.map(error => Configuration.At.Failed(path, Target.Dest, error, Span.fromPosition(cfg.pos))).merge :: Nil
 
-        case Apply(
+        case cfg @ Apply(
               TypeApply(Select(Ident("Field" | "Arg"), "computed" | "renamed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
               PathSelector(path) :: function :: Nil
             ) =>
           Configuration.At.Successful(
             path,
             Target.Dest,
-            Configuration.Computed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]])
+            Configuration.Computed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
+            Span.fromPosition(cfg.pos)
           ) :: Nil
 
-        case Apply(
+        case cfg @ Apply(
               TypeApply(Select(Ident("Field" | "Arg"), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
               PathSelector(path) :: fieldSource :: Nil
             ) =>
-          parseAllMatching(fieldSource.asExpr, path, destFieldTpe.tpe, fieldSourceTpe.tpe)
+          parseAllMatching(fieldSource.asExpr, path, destFieldTpe.tpe, fieldSourceTpe.tpe, Span.fromPosition(cfg.pos))
 
-        case Apply(
+        case cfg @ Apply(
               TypeApply(Select(Ident("Case"), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
           Configuration.At.Successful(
             path,
             Target.Source,
-            Configuration.Const(value.asExpr, value.tpe.asType)
+            Configuration.Const(value.asExpr, value.tpe.asType),
+            Span.fromPosition(cfg.pos)
           ) :: Nil
 
-        case Apply(
+        case cfg @ Apply(
               TypeApply(Select(Ident("Case"), "computed"), a :: b :: sourceTpe :: computedTpe :: Nil),
               PathSelector(path) :: function :: Nil
             ) =>
           Configuration.At.Successful(
             path,
             Target.Source,
-            Configuration.Computed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]])
+            Configuration.Computed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
+            Span.fromPosition(cfg.pos)
           ) :: Nil
 
-        case oopsie => report.errorAndAbort(oopsie.show(using Printer.TreeStructure), oopsie.pos)
+        case oopsie =>
+          Configuration.At.Failed(
+            Path.empty(Type.of[Nothing]),
+            Target.Dest,
+            "Unsupported config expression",
+            Span.fromPosition(oopsie.pos)
+          ) :: Nil
       }
       .toList
   }
@@ -130,7 +146,8 @@ private[ducktape] object Configuration {
     sourceExpr: Expr[Any],
     path: Path,
     destFieldTpe: quotes.reflect.TypeRepr,
-    fieldSourceTpe: quotes.reflect.TypeRepr
+    fieldSourceTpe: quotes.reflect.TypeRepr,
+    span: Span
   ) = {
     val result =
       Structure
@@ -148,7 +165,8 @@ private[ducktape] object Configuration {
               Configuration.At.Successful(
                 path.appended(Path.Segment.Field(source.tpe, fieldName)),
                 Target.Dest,
-                Configuration.FieldReplacement(sourceExpr, fieldName, source.tpe)
+                Configuration.FieldReplacement(sourceExpr, fieldName, source.tpe),
+                span
               )
           }.toList
         }
@@ -157,13 +175,14 @@ private[ducktape] object Configuration {
             .Failed(
               path,
               Target.Dest,
-              "Field.allMatching only works when targeting a product or a function and supplying a product"
+              "Field.allMatching only works when targeting a product or a function and supplying a product",
+              span
             ) :: Nil
         )
 
     result match {
       case Nil =>
-        Configuration.At.Failed(path, Target.Dest, "No matching fields found") :: Nil // TODO: Better error message
+        Configuration.At.Failed(path, Target.Dest, "No matching fields found", span) :: Nil // TODO: Better error message
       case configs => configs
     }
   }

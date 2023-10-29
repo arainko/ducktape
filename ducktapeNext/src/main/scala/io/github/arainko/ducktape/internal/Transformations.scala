@@ -44,7 +44,8 @@ object Transformations {
             Type.of[Any],
             Path.empty(Type.of[A]),
             Path.empty(Type.of[Any]),
-            "Couldn't create a transformation plan from a function"
+            "Couldn't create a transformation plan from a function",
+            Some(Span.fromExpr(function))
           )
         )
 
@@ -63,12 +64,30 @@ object Transformations {
 
     Logger.debug("Original plan", plan)
     Logger.debug("Config", configs)
-    Logger.debug("Reconfigured plan", reconfiguredPlan)
+    Logger.info("Reconfigured plan", reconfiguredPlan)
+    
 
     reconfiguredPlan.refine match {
       case Left(errors) =>
-        val rendered = errors.map(err => s"${err.message} @ ${err.sourceContext.render}").mkString("\n")
-        report.errorAndAbort(rendered)
+        Logger.info("All errors", errors.map(_.message))
+
+        errors.collect {
+          case Plan.Error(_, _, sourceContext, _, message, Some(span)) =>
+            Logger.info("Span", span)
+            report.error(s"$message @ ${sourceContext.render}", span.toPosition)
+        }
+
+        val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
+        Logger.info(s"Accumulated span", spanForAccumulatedErrors)
+        val accumulatedErrors =
+          errors
+            .filter(_.span.isEmpty)
+            .map(err => s"${err.message} @ ${err.sourceContext.render}")
+            .mkString("\n") + "HAHAHA"
+
+        // Logger.info("Fun", spanForAccumulatedErrors.toPosition.sourceCode)
+            
+        report.errorAndAbort(accumulatedErrors, spanForAccumulatedErrors.toPosition)
       case Right(totalPlan) =>
         PlanInterpreter.run[A](totalPlan, value)
     }

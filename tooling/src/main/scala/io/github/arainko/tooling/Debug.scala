@@ -17,6 +17,10 @@ private[ducktape] object Debug {
     extension (value: String) def show(using Quotes): String = s""""${value}""""
   }
 
+  given int: Debug[Int] with {
+    extension (self: Int) def show(using Quotes): String = self.toString()
+  }
+
   given wildcardTpe: Debug[Type[?]] with {
     extension (value: Type[?]) def show(using Quotes): String = {
       import quotes.reflect.*

@@ -10,6 +10,7 @@ import scala.collection.SortedMap
 import io.github.arainko.ducktape.internal.Transformations
 import scala.collection.immutable.HashMap
 import java.util.IdentityHashMap
+import io.github.arainko.ducktape.internal.PositionTest
 
 final case class Value(int: Int) extends AnyVal
 final case class ValueGen[A](int: A) extends AnyVal
@@ -79,8 +80,23 @@ final case class DeffTest2(int: Int, str: String = "default")
 
   println(cos.unapply(test))
 
-  internal.CodePrinter.code:
-    (??? : DeffTest1).into[DeffTest2].transform(Field.default(a => a.str))
+  // // internal.CodePrinter.code:
+    // (??? : DeffTest1).into[DeffTest2].transform(
+
+    //   Field.default(a => a._1),
+    //   Field.default(a => a.int),
+    //   // Field.default(a => a.int.toByte)
+    // )
+
+  // PositionTest.positions(
+  //   "asdasdasdas",
+  //   "asdas",
+  //   "aaaa",
+  //   4,
+  //   5
+  //   )
+
+  // 1.to[String]
 
   /*
   Use cases that I need to support:
@@ -90,15 +106,19 @@ final case class DeffTest2(int: Int, str: String = "default")
     - fill in a missing Source Case
    */
   // DebugMacros.code {
-  //   PlanInterpreter.transformBetween[ProdTest1, ProdTest2](
-  //     ProdTest1(Test1.Cos(Nested1(1))),
-  //     // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
-  //     Field2.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
-  //     Field2.const(_.test.at[Test2.Cos].int.int, 123), // overriden field
-  //     // Field2.const(_.add, 1), // missing field
-  //     Case2.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))), // missing case
-  //     // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
-  //   )
+  // PlanInterpreter.transformBetween[ProdTest1, ProdTest2](
+  ProdTest1(Test1.Cos(Nested1(1)))
+    .into[ProdTest2]
+    .transform(
+      // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
+      // Field.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
+      Field.const(_.test.at[Test2.Cos].int.int, 123), // overriden fieldn,
+      Field.default(_.test)
+      // Field2.const(_.add, 1), // missing field
+      // Case.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))) // missing case
+      // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
+    )
+
   // }
 
   case class PersonCostamCostam(p: PersonCostam)
@@ -146,7 +166,7 @@ final case class DeffTest2(int: Int, str: String = "default")
 
   summon[Mirror.Of[Test3]]
 
-  summon[Mirror.Of[Int *: String *: Int *:Int *: String *: Int *: EmptyTuple]]
+  summon[Mirror.Of[Int *: String *: Int *: Int *: String *: Int *: EmptyTuple]]
 
   // DebugMacros.code {
 
@@ -159,8 +179,8 @@ final case class DeffTest2(int: Int, str: String = "default")
   //   )
   //   }
 
-    // internal.CodePrinter.code:
-    //   Transformations.between[SortedMap[ValueGen[Int], String], HashMap[Int, String]](???)
+  // internal.CodePrinter.code:
+  //   Transformations.between[SortedMap[ValueGen[Int], String], HashMap[Int, String]](???)
 
   SortedMap.empty[Int, String]
 
