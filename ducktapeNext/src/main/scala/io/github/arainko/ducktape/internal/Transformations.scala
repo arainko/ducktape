@@ -66,12 +66,19 @@ object Transformations {
     Logger.debug("Config", configs)
     Logger.info("Reconfigured plan", reconfiguredPlan)
     
-
     reconfiguredPlan.refine match {
       case Left(errors) =>
         Logger.info("All errors", errors.map(_.message))
+        val ogErrors = 
+          plan
+            .refine
+            .swap
+            .getOrElse(Nil)
+            .filter(error => errors.exists(err => err.destContext.isAncestorOrSiblingOf(error.destContext))) // O(n^2), maybe there's a better way?
 
-        errors.collect {
+        val errs = errors ::: ogErrors
+
+        (errs).collect {
           case Plan.Error(_, _, sourceContext, _, message, Some(span)) =>
             Logger.info("Span", span)
             report.error(s"$message @ ${sourceContext.render}", span.toPosition)
@@ -80,7 +87,7 @@ object Transformations {
         val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
         Logger.info(s"Accumulated span", spanForAccumulatedErrors)
         val accumulatedErrors =
-          errors
+          errs
             .filter(_.span.isEmpty)
             .map(err => s"${err.message} @ ${err.sourceContext.render}")
             .mkString("\n") + "HAHAHA"

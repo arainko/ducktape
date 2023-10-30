@@ -112,12 +112,14 @@ final case class DeffTest2(int: Int, str: String = "default")
     .transform(
       // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
       // Field.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
+      
       Field.const(_.test.at[Test2.Cos].int.int, 123), // overriden fieldn,
       Field.default(_.test)
       // Field2.const(_.add, 1), // missing field
       // Case.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))) // missing case
       // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
     )
+
 
   // }
 
