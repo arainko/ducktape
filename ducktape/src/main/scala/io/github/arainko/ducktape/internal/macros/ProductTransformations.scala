@@ -39,13 +39,13 @@ private[ducktape] object ProductTransformations {
     given Fields.Source = Fields.Source.fromMirror(Source)
     given Fields.Dest = Fields.Dest.fromMirror(Dest)
 
-    val materializedConfig = MaterializedConfiguration.Product.fromFieldConfig(config)
-    val nonConfiguredFields = Fields.dest.byName -- materializedConfig.map(_.destFieldName)
+    // val materializedConfig = MaterializedConfiguration.Product.fromFieldConfig(config)
+    val nonConfiguredFields = Fields.dest.byName
     val transformedFields = fieldTransformations(sourceValue, nonConfiguredFields.values.toList)
-    val configuredFields = fieldConfigurations(materializedConfig, sourceValue)
+    // val configuredFields = fieldConfigurations(materializedConfig, sourceValue)
 
     Constructor(TypeRepr.of[Dest])
-      .appliedToArgs(transformedFields ++ configuredFields)
+      .appliedToArgs(transformedFields)
       .asExprOf[Dest]
   }
 
@@ -189,6 +189,7 @@ private[ducktape] object ProductTransformations {
         sourceValue.accessField(source)
       case '{ $transformer: Transformer[source, dest] } =>
         val field = sourceValue.accessField(source).asExprOf[source]
+        // '{ $transformer.transform($field) }.asTerm
         LiftTransformation.liftTransformation(transformer, field).asTerm
     }
   }

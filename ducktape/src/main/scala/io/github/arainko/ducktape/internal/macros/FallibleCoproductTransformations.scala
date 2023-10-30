@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.fallible.{ FallibleTransformer, Mode }
 import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.FallibleCoproduct.{ Computed, Const, Total }
 import io.github.arainko.ducktape.internal.modules.MaterializedConfiguration.{ Coproduct, FallibleCoproduct }
 import io.github.arainko.ducktape.internal.modules.*
-import io.github.arainko.ducktape.{ BuilderConfig, FallibleBuilderConfig, Transformer }
+import io.github.arainko.ducktape.{ BuilderConfig, FallibleBuilderConfig}
 
 import scala.deriving.*
 import scala.quoted.*

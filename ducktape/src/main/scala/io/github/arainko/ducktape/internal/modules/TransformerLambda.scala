@@ -33,6 +33,7 @@ private[ducktape] object TransformerLambda {
 
     transformer match {
       case '{ $t: Transformer.ForProduct[a, b] } =>
+        println("Constructing TransformerLambda.ForProduct")
         TransformerLambda.fromForProduct(t)
       case '{ $t: Transformer.FromAnyVal[a, b] } =>
         TransformerLambda.fromFromAnyVal(t)

@@ -22,6 +22,7 @@ private[ducktape] object Replacer {
           tree match {
             // by checking symbols we know if the term refers to the TransformerLambda parameter so we can replace it
             case Select(ident: Ident, fieldName) if transformerLambda.param.symbol == ident.symbol =>
+              println(s"Replacer: got the Ident case, replacing with Select.unique, ${ident.show}, $fieldName")
               Select.unique(appliedTo.asTerm, fieldName)
             case other => super.transformTerm(other)(owner)
           }

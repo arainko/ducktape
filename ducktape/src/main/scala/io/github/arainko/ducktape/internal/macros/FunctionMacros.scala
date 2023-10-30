@@ -10,7 +10,6 @@ import scala.quoted.*
 // is kept here for consistency
 private[ducktape] object FunctionMacros {
 
-  @nowarn("msg=unused local definition")
   def deriveMirror[Func: Type](using Quotes): Expr[FunctionMirror[Func]] = {
     import quotes.reflect.*
 

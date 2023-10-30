@@ -112,11 +112,11 @@ object Transformer extends LowPriorityTransformerInstances {
   sealed trait ForProduct[Source, Dest] extends Transformer[Source, Dest]
 
   object ForProduct {
-    @deprecated(message = "Use the variant with a Transformer instead", since = "0.1.1")
-    private[ducktape] def make[Source, Dest](f: Source => Dest): ForProduct[Source, Dest] =
-      new {
-        def transform(from: Source): Dest = f(from)
-      }
+    // @deprecated(message = "Use the variant with a Transformer instead", since = "0.1.1")
+    // private[ducktape] def make[Source, Dest](f: Source => Dest): ForProduct[Source, Dest] =
+    //   new {
+    //     def transform(from: Source): Dest = f(from)
+    //   }
 
     private[ducktape] def make[Source, Dest](transfomer: Transformer[Source, Dest]): ForProduct[Source, Dest] =
       new {

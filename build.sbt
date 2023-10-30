@@ -11,7 +11,7 @@ ThisBuild / startYear := Some(2023)
 ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
 ThisBuild / tlSonatypeUseLegacyHost := false
-ThisBuild / scalaVersion := "3.3.1"
+ThisBuild / scalaVersion := "3.4.0-RC1-bin-20231027-c0eae68-NIGHTLY"
 
 ThisBuild / semanticdbEnabled := true
 ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
@@ -36,12 +36,12 @@ ThisBuild / tlVersionIntroduced := Map("3" -> "0.1.6")
 lazy val root = tlCrossRootProject.aggregate(ducktape)
 
 lazy val ducktape =
-  crossProject(JVMPlatform, JSPlatform, NativePlatform)
+  crossProject(JVMPlatform /* JSPlatform, NativePlatform*/)
     .crossType(CrossType.Pure)
     .enablePlugins(TypelevelMimaPlugin)
     .in(file("ducktape"))
     .settings(
-      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings", "-deprecation", "-Wunused:all"),
+      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax",/* "-Xfatal-warnings",*/ "-deprecation", "-Wunused:all"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0-M10" % Test
     )
     .jvmSettings(tlMimaPreviousVersions ++= Set("0.1.0", "0.1.1", "0.1.2", "0.1.3", "0.1.4", "0.1.5"))

@@ -10,13 +10,20 @@ import scala.quoted.*
 //TODO: if this is moved to `modules` the compiler crashes, investigate further?
 private[ducktape] object LiftTransformation {
 
+  inline def run[A, B](inline transformer: Transformer[A, B], value: A) = ${ liftTransformation('transformer, 'value) }
+
   def liftTransformation[A: Type, B: Type](transformer: Expr[Transformer[A, B]], appliedTo: Expr[A])(using Quotes): Expr[B] = {
     import quotes.reflect.*
 
-    liftIdentityTransformation(transformer, appliedTo)
-      .orElse(liftBasicTransformation(transformer, appliedTo))
-      .orElse(liftDerivedTransformation(transformer, appliedTo))
-      .getOrElse('{ $transformer.transform($appliedTo) })
+    println(s"What is bein fed: ${transformer.asTerm.show}, ${appliedTo.asTerm.show}")
+
+    // liftIdentityTransformation(transformer, appliedTo)
+      // .orElse(liftBasicTransformation(transformer, appliedTo))
+      // .orElse(liftDerivedTransformation(transformer, appliedTo))
+      liftDerivedTransformation(transformer, appliedTo)
+      .getOrElse(
+        '{ $transformer.transform($appliedTo) }
+        )
       .asTerm
       .changeOwner(Symbol.spliceOwner)
       .asExprOf[B]
@@ -127,6 +134,7 @@ private[ducktape] object LiftTransformation {
 
     transformerLambda match {
       case tl: TransformerLambda.ForProduct[quotes.type] =>
+        println("REACHED ForProduct")
         val replacer = Replacer(transformerLambda, appliedTo)
         val newArgs =
           tl.methodArgs
@@ -134,17 +142,23 @@ private[ducktape] object LiftTransformation {
             .map(transformTransformerInvocation) // recurse down into nested calls
 
         tl.defs match {
-          case Nil =>
-            Apply(tl.methodCall, newArgs)
+          // case Nil =>
+          //   println("Nil case")
+          //   Apply(tl.methodCall, newArgs)
           case nonEmpty =>
-            Inlined(None, nonEmpty, Apply(tl.methodCall, newArgs))
+            println("Non empty case")
+            Inlined(None, nonEmpty,
+              Apply(tl.methodCall, newArgs)
+            )
         }
 
-      case tl: TransformerLambda.ToAnyVal[quotes.type] =>
-        Apply(tl.constructorCall, List(appliedTo.asTerm))
+      // case tl: TransformerLambda.ToAnyVal[quotes.type] =>
+      //   println("REACHED ToAnyVal")
+      //   Apply(tl.constructorCall, List(appliedTo.asTerm))
 
-      case tl: TransformerLambda.FromAnyVal[quotes.type] =>
-        Select.unique(appliedTo.asTerm, tl.fieldName)
+      // case tl: TransformerLambda.FromAnyVal[quotes.type] =>
+      //   println("REACHED FromAnyVal")
+      //   Select.unique(appliedTo.asTerm, tl.fieldName)
     }
   }
 
@@ -154,10 +168,14 @@ private[ducktape] object LiftTransformation {
 
     term match {
       case Untyped(TransformerInvocation(transformerLambda, appliedTo)) =>
+        println("Hit untyped")
         optimizeTransformerInvocation(transformerLambda, appliedTo.asExpr)
       case NamedArg(name, Untyped(TransformerInvocation(transformerLambda, appliedTo))) =>
+        println("Hit namedArg")
         NamedArg(name, optimizeTransformerInvocation(transformerLambda, appliedTo.asExpr))
-      case other => other
+      case other =>
+        println("Hit other")
+        other
     }
   }
 }
