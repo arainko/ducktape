@@ -21,7 +21,7 @@ enum Plan[+E <: PlanError] {
 
   def destContext: Path
 
-  final def configure(config: Configuration.At)(using Quotes): Plan[Plan.Error] = Plan.configure(this, config)
+  final def configureAll(configs: List[Configuration.At])(using Quotes): Plan.Reconfigured = Plan.configureAll(this, configs)
 
   final def refine: Either[List[Plan.Error], Plan[Nothing]] = Plan.refine(this)
 
@@ -136,7 +136,7 @@ enum Plan[+E <: PlanError] {
     sourceContext: Path,
     destContext: Path,
     message: String,
-    span: Option[Span],
+    span: Option[Span]
     // suppressed: Option[Plan.Error]
   ) extends Plan[Plan.Error]
 }
@@ -147,103 +147,136 @@ object Plan {
 
   given debug[E <: Plan.Error]: Debug[Plan[E]] = Debug.derived
 
-  private def configure[E <: Plan.Error](plan: Plan[E], config: Configuration.At)(using Quotes): Plan[Plan.Error] = {
-    extension (currentPlan: Plan[?]) {
-      def conformsTo(update: Configuration.At.Successful)(using Quotes) = {
-        update.config.tpe.repr <:< currentPlan.destContext.currentTpe.repr
+  final case class Reconfigured(configErrors: List[Plan.Error], result: Plan[Plan.Error])
+
+  private def configureAll(plan: Plan[Plan.Error], configs: List[Configuration.At])(using Quotes): Plan.Reconfigured = {
+    // Buffer of all errors that originate from a config
+    val errors = List.newBuilder[Plan.Error]
+
+    def configureSingle(plan: Plan[Plan.Error], config: Configuration.At)(using Quotes): Plan[Plan.Error] = {
+      extension (currentPlan: Plan[?]) {
+        def isReplaceableBy(update: Configuration.At.Successful)(using Quotes) = {
+          update.config.tpe.repr <:< currentPlan.destContext.currentTpe.repr
+        }
       }
-    }
 
-    def recurse(
-      current: Plan[E],
-      segments: List[Path.Segment]
-    )(using Quotes): Plan[Plan.Error] = {
-      segments match {
-        case (segment @ Path.Segment.Field(_, fieldName)) :: tail =>
-          current match {
-            case plan @ BetweenProducts(sourceTpe, destTpe, sourceContext, destContext, fieldPlans) =>
-              val fieldPlan =
-                fieldPlans
-                  .get(fieldName)
-                  .map(fieldPlan => recurse(fieldPlan, tail))
-                  .getOrElse(
-                    Plan.Error(sourceTpe, destTpe, sourceContext, destContext, s"'$fieldName' is not a valid field accessor", Some(config.span))
-                  )
+      def recurse(
+        current: Plan[Plan.Error],
+        segments: List[Path.Segment]
+      )(using Quotes): Plan[Plan.Error] = {
+        segments match {
+          case (segment @ Path.Segment.Field(_, fieldName)) :: tail =>
+            current match {
+              case plan @ BetweenProducts(sourceTpe, destTpe, sourceContext, destContext, fieldPlans) =>
+                val fieldPlan =
+                  fieldPlans
+                    .get(fieldName)
+                    .map(fieldPlan => recurse(fieldPlan, tail))
+                    .getOrElse(
+                      Plan.Error(
+                        sourceTpe,
+                        destTpe,
+                        sourceContext,
+                        destContext,
+                        s"'$fieldName' is not a valid field accessor",
+                        Some(config.span)
+                      )
+                    )
 
-              plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
-            case plan @ BetweenProductFunction(sourceTpe, destTpe, sourceContext, destContext, argPlans, function) =>
-              val argPlan =
-                argPlans
-                  .get(fieldName)
-                  .map(argPlan => recurse(argPlan, tail))
-                  .getOrElse(
-                    Plan.Error(sourceTpe, destTpe, sourceContext, destContext, s"'$fieldName' is not a valid arg accessor", Some(config.span))
-                  )
+                plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
+              case plan @ BetweenProductFunction(sourceTpe, destTpe, sourceContext, destContext, argPlans, function) =>
+                val argPlan =
+                  argPlans
+                    .get(fieldName)
+                    .map(argPlan => recurse(argPlan, tail))
+                    .getOrElse(
+                      Plan.Error(
+                        sourceTpe,
+                        destTpe,
+                        sourceContext,
+                        destContext,
+                        s"'$fieldName' is not a valid arg accessor",
+                        Some(config.span)
+                      )
+                    )
 
-              plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
-            case plan => // TODO: Somehow keep around information if plan is as Plan.Error so that the error message is nicer
-              Plan.Error(
-                plan.sourceTpe,
-                plan.destTpe,
-                plan.sourceContext,
-                plan.destContext,
-                s"A field accessor '$fieldName' can only be used to configure product or function transformations",
-                Some(config.span)
-              )
-          }
-
-        case (segment @ Path.Segment.Case(tpe)) :: tail =>
-          current match {
-            case plan @ BetweenCoproducts(sourceTpe, destTpe, sourceContext, destContext, casePlans) =>
-              def targetTpe(plan: Plan[E]) = if (config.target.isSource) plan.sourceTpe.repr else plan.destTpe.repr
-
-              casePlans.zipWithIndex
-                .find((plan, idx) => tpe.repr =:= targetTpe(plan))
-                .map((casePlan, idx) => plan.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail))))
-                .getOrElse(
-                  Plan
-                    .Error(sourceTpe, destTpe, sourceContext, destContext, s"'at[${tpe.repr.show}]' is not a valid case accessor", Some(config.span))
+                plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
+              case plan => // TODO: Somehow keep around information if plan is as Plan.Error so that the error message is nicer
+                Plan.Error(
+                  plan.sourceTpe,
+                  plan.destTpe,
+                  plan.sourceContext,
+                  plan.destContext,
+                  s"A field accessor '$fieldName' can only be used to configure product or function transformations",
+                  Some(config.span)
                 )
-            case plan =>
-              Plan.Error(
-                plan.sourceTpe,
-                plan.destTpe,
-                plan.sourceContext,
-                plan.destContext,
-                s"A case accessor can only be used to configure coproduct transformations",
-                Some(config.span)
-              )
-          }
+            }
 
-        case Nil =>
-          config match {
-            case cfg @ Configuration.At.Successful(_, _, config, _) if current.conformsTo(cfg) =>
-              Plan.Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config)
+          case (segment @ Path.Segment.Case(tpe)) :: tail =>
+            current match {
+              case plan @ BetweenCoproducts(sourceTpe, destTpe, sourceContext, destContext, casePlans) =>
+                def targetTpe(plan: Plan[Plan.Error]) = if (config.target.isSource) plan.sourceTpe.repr else plan.destTpe.repr
 
-            case Configuration.At.Successful(path, target, config, span) =>
-              Plan.Error(
-                current.sourceTpe,
-                current.destTpe,
-                current.sourceContext,
-                current.destContext,
-                s"A replacement plan doesn't conform to the plan it's supposed to replace. ${config.tpe.repr.show} <:< ${current.destContext.currentTpe.repr.show}",
-                Some(span)
-              )
+                casePlans.zipWithIndex
+                  .find((plan, idx) => tpe.repr =:= targetTpe(plan))
+                  .map((casePlan, idx) => plan.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail))))
+                  .getOrElse(
+                    Plan
+                      .Error(
+                        sourceTpe,
+                        destTpe,
+                        sourceContext,
+                        destContext,
+                        s"'at[${tpe.repr.show}]' is not a valid case accessor",
+                        Some(config.span)
+                      )
+                  )
+              case plan =>
+                Plan.Error(
+                  plan.sourceTpe,
+                  plan.destTpe,
+                  plan.sourceContext,
+                  plan.destContext,
+                  s"A case accessor can only be used to configure coproduct transformations",
+                  Some(config.span)
+                )
+            }
 
-            case Configuration.At.Failed(path, target, message, span) =>
-              Plan.Error(
-                current.sourceTpe,
-                current.destTpe,
-                current.sourceContext,
-                current.destContext,
-                message,
-                Some(span)
-              )
-          }
+          case Nil =>
+            import scala.util.chaining.*
+
+            config match {
+              case cfg @ Configuration.At.Successful(path, target, config, span) =>
+                if (current.isReplaceableBy(cfg))
+                  Plan.Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config)
+                else
+                  Plan.Error(
+                    current.sourceTpe,
+                    current.destTpe,
+                    current.sourceContext,
+                    current.destContext,
+                    s"A replacement plan doesn't conform to the plan it's supposed to replace. ${config.tpe.repr.show} <:< ${current.destContext.currentTpe.repr.show}",
+                    Some(span)
+                  ).tap(error => errors.addOne(error))
+
+              case Configuration.At.Failed(path, target, message, span) =>
+                Plan.Error(
+                  current.sourceTpe,
+                  current.destTpe,
+                  current.sourceContext,
+                  current.destContext,
+                  message,
+                  Some(span)
+                ).tap(error => errors.addOne(error))
+            }
+        }
       }
+
+      recurse(plan, config.path.segments.toList)
     }
 
-    recurse(plan, config.path.segments.toList)
+    val reconfiguredPlan = configs.foldLeft(plan) { (plan, config) => configureSingle(plan, config) }
+    Plan.Reconfigured(errors.result(), reconfiguredPlan)
   }
 
   private def refine(plan: Plan[Plan.Error]): Either[List[Plan.Error], Plan[Nothing]] = {
