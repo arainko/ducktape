@@ -64,39 +64,46 @@ object Transformations {
 
     Logger.debug("Original plan", plan)
     Logger.debug("Config", configs)
-    Logger.info("Reconfigured plan", reconfiguredPlan.result)
+    Logger.debug("Reconfigured plan", reconfiguredPlan.result)
     
     reconfiguredPlan.result.refine match {
       case Left(errors) =>
-        Logger.info("All errors", errors.map(_.message))
         val ogErrors = 
           plan
             .refine
             .swap
+            .map(_.toList)
             .getOrElse(Nil)
             .filter(error => errors.exists(err => err.destContext.isAncestorOrSiblingOf(error.destContext))) // O(n^2), maybe there's a better way?
+
 
         val allErrors = errors ::: reconfiguredPlan.configErrors ::: ogErrors
 
         val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
-        Logger.info(s"Accumulated span", spanForAccumulatedErrors)
+
+        // allErrors
+        // .groupMap()
+
+        val a = allErrors
+          .groupBy(_.span.getOrElse(spanForAccumulatedErrors))
+
+
         val accumulatedErrors =
           allErrors
             .filter(_.span.isEmpty)
-            .map(err => s"${err.message} @ ${err.sourceContext.render}")
+            .map(_.render)
             .mkString("\n") + "HAHAHA"
 
         allErrors.collect {
-          case Plan.Error(_, _, sourceContext, _, message, Some(span)) =>
-            Logger.info("Span", span)
-            report.error(s"$message @ ${sourceContext.render}", span.toPosition)
+          case err @ Plan.Error(_, _, _, _, _, Some(span)) =>
+            report.error(err.render, span.toPosition)
         }
 
-        // Logger.info("Fun", spanForAccumulatedErrors.toPosition.sourceCode)
-            
         report.errorAndAbort(accumulatedErrors, spanForAccumulatedErrors.toPosition)
       case Right(totalPlan) =>
         PlanInterpreter.run[A](totalPlan, value)
     }
   }
+
+  extension (self: Plan.Error) private def render(using Quotes) = s"${self.message} @ ${self.sourceContext.render}"
 }

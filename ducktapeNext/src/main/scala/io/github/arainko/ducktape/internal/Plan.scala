@@ -23,7 +23,7 @@ enum Plan[+E <: PlanError] {
 
   final def configureAll(configs: List[Configuration.At])(using Quotes): Plan.Reconfigured = Plan.configureAll(this, configs)
 
-  final def refine: Either[List[Plan.Error], Plan[Nothing]] = Plan.refine(this)
+  final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing]] = Plan.refine(this)
 
   case Upcast(
     sourceTpe: Type[?],
@@ -155,9 +155,8 @@ object Plan {
 
     def configureSingle(plan: Plan[Plan.Error], config: Configuration.At)(using Quotes): Plan[Plan.Error] = {
       extension (currentPlan: Plan[?]) {
-        def isReplaceableBy(update: Configuration.At.Successful)(using Quotes) = {
+        def isReplaceableBy(update: Configuration.At.Successful)(using Quotes) =
           update.config.tpe.repr <:< currentPlan.destContext.currentTpe.repr
-        }
       }
 
       def recurse(
@@ -257,7 +256,7 @@ object Plan {
                     current.destContext,
                     s"A replacement plan doesn't conform to the plan it's supposed to replace. ${config.tpe.repr.show} <:< ${current.destContext.currentTpe.repr.show}",
                     Some(span)
-                  ).tap(error => errors.addOne(error))
+                  ).tap(errors.addOne)
 
               case Configuration.At.Failed(path, target, message, span) =>
                 Plan.Error(
@@ -267,7 +266,7 @@ object Plan {
                   current.destContext,
                   message,
                   Some(span)
-                ).tap(error => errors.addOne(error))
+                ).tap(errors.addOne)
             }
         }
       }
@@ -275,11 +274,11 @@ object Plan {
       recurse(plan, config.path.segments.toList)
     }
 
-    val reconfiguredPlan = configs.foldLeft(plan) { (plan, config) => configureSingle(plan, config) }
+    val reconfiguredPlan = configs.foldLeft(plan)(configureSingle)
     Plan.Reconfigured(errors.result(), reconfiguredPlan)
   }
 
-  private def refine(plan: Plan[Plan.Error]): Either[List[Plan.Error], Plan[Nothing]] = {
+  private def refine(plan: Plan[Plan.Error]): Either[NonEmptyList[Plan.Error], Plan[Nothing]] = {
 
     @tailrec
     def recurse(stack: List[Plan[Plan.Error]], errors: List[Plan.Error]): List[Plan.Error] =
@@ -308,6 +307,6 @@ object Plan {
       }
     val errors = recurse(plan :: Nil, Nil)
     // if no errors were accumulated that means there are no Plan.Error nodes which means we operate on a Plan[Nothing]
-    Either.cond(errors.isEmpty, plan.asInstanceOf[Plan[Nothing]], errors)
+    NonEmptyList.fromList(errors).toLeft(plan.asInstanceOf[Plan[Nothing]])
   }
 }
