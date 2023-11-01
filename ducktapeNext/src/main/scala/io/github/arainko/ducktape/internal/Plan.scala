@@ -135,7 +135,7 @@ enum Plan[+E <: PlanError] {
     destTpe: Type[?],
     sourceContext: Path,
     destContext: Path,
-    message: String,
+    message: ErrorMessage,
     span: Option[Span],
     suppressed: Option[Plan.Error]
   ) extends Plan[Plan.Error]
@@ -177,7 +177,7 @@ object Plan {
                         destTpe,
                         sourceContext,
                         destContext,
-                        s"'$fieldName' is not a valid field accessor",
+                        ErrorMessage.InvalidFieldAccessor(fieldName),
                         Some(config.span),
                         None
                       )
@@ -195,7 +195,7 @@ object Plan {
                         destTpe,
                         sourceContext,
                         destContext,
-                        s"'$fieldName' is not a valid arg accessor",
+                        ErrorMessage.InvalidArgAccessor(fieldName),
                         Some(config.span),
                         None
                       )

@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.*
 import scala.quoted.*
+import scala.quoted.runtime.StopMacroExpansion
 
 object Transformations {
   inline def between[A, B](
@@ -72,25 +73,30 @@ object Transformations {
         val ogErrors = plan.refine.swap.map(_.toList).getOrElse(Nil)
         val allErrors = errors ::: reconfiguredPlan.configErrors ::: ogErrors
         val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
-        val groupedBySpan =
-          allErrors
-            .groupBy(_.span.getOrElse(spanForAccumulatedErrors))
-            .transform((_, errors) => errors.map(_.render).toList.distinct.mkString("\n"))
-            
-        groupedBySpan.tail.foreach { (span, errorMessafe) => report.error(errorMessafe, span.toPosition) }
-        val (finalErrorSpan, finalErrorMessage) = groupedBySpan.head
-        report.errorAndAbort(finalErrorMessage, finalErrorSpan.toPosition)
+        allErrors
+          .groupBy(_.span.getOrElse(spanForAccumulatedErrors))
+          .transform((_, errors) => errors.map(_.render).toList.distinct.mkString(System.lineSeparator))
+          .foreach { (span, errorMessafe) => report.error(errorMessafe, span.toPosition) }
+
+        throw new StopMacroExpansion
       case Right(totalPlan) =>
         PlanInterpreter.run[A](totalPlan, value)
     }
   }
 
-  extension (self: Plan.Error) private def render(using Quotes) = {
-    val suppressedErrors = 
-      List.unfold(self)(_.suppressed.map(suppressedErr => suppressedErr -> suppressedErr))
+  extension (self: Plan.Error)
+    private def render(using Quotes) = {
+      def renderSingle(error: Plan.Error)(using Quotes) = 
+        s"${error.message}".stripMargin
+        
+      def ident(times: Int) = "  " * times
 
-    Logger.debug("dupsko", suppressedErrors)
+      val suppressedErrors =
+        List
+          .unfold(self)(_.suppressed.map(suppressedErr => suppressedErr -> suppressedErr))
+          .zipWithIndex
+          .map((err, depth) => s"SUPPRESSES: ${renderSingle(err)}".linesWithSeparators.map(line => ident(depth + 1) + line).mkString)
 
-    s"${self.message} @ ${self.sourceContext.render} " + Debug.show(suppressedErrors)
-  }
+      String.join(System.lineSeparator, (renderSingle(self) :: suppressedErrors)*)
+    }
 }
