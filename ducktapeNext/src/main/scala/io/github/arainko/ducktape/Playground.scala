@@ -107,27 +107,29 @@ final case class DeffTest2(int: Int, str: String = "default")
    */
   // DebugMacros.code {
   // PlanInterpreter.transformBetween[ProdTest1, ProdTest2](
+    // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
+    // Field.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
   ProdTest1(Test1.Cos(Nested1(1)))
     .into[ProdTest2]
     .transform(
-      // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
-      // Field.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
-      
-      Field.default(_.test),
-
-      Field.default(_.test),
-      
       Field.const(_.test.at[Test2.Cos].int.int, 123), // overridden fieldn,
 
       Field.default(_.test),
 
       Field.default(_.test),
+      
+
+      Field.default(_.test),
+
 
       Field.default(_.test.ordinal.toByte),
       // Field2.const(_.add, 1), // missing field
       // Case.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))) // missing case
       // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
+      
     )
+
+
 
 
   // }

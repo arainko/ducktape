@@ -45,7 +45,8 @@ object Transformations {
             Path.empty(Type.of[A]),
             Path.empty(Type.of[Any]),
             "Couldn't create a transformation plan from a function",
-            Some(Span.fromExpr(function))
+            Some(Span.fromExpr(function)),
+            None
           )
         )
 
@@ -64,46 +65,32 @@ object Transformations {
 
     Logger.debug("Original plan", plan)
     Logger.debug("Config", configs)
-    Logger.debug("Reconfigured plan", reconfiguredPlan.result)
-    
+    Logger.debug("Reconfigured plan", reconfiguredPlan)
+
     reconfiguredPlan.result.refine match {
       case Left(errors) =>
-        val ogErrors = 
-          plan
-            .refine
-            .swap
-            .map(_.toList)
-            .getOrElse(Nil)
-            .filter(error => errors.exists(err => err.destContext.isAncestorOrSiblingOf(error.destContext))) // O(n^2), maybe there's a better way?
-
-
+        val ogErrors = plan.refine.swap.map(_.toList).getOrElse(Nil)
         val allErrors = errors ::: reconfiguredPlan.configErrors ::: ogErrors
-
         val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
-
-        // allErrors
-        // .groupMap()
-
-        val a = allErrors
-          .groupBy(_.span.getOrElse(spanForAccumulatedErrors))
-
-
-        val accumulatedErrors =
+        val groupedBySpan =
           allErrors
-            .filter(_.span.isEmpty)
-            .map(_.render)
-            .mkString("\n") + "HAHAHA"
-
-        allErrors.collect {
-          case err @ Plan.Error(_, _, _, _, _, Some(span)) =>
-            report.error(err.render, span.toPosition)
-        }
-
-        report.errorAndAbort(accumulatedErrors, spanForAccumulatedErrors.toPosition)
+            .groupBy(_.span.getOrElse(spanForAccumulatedErrors))
+            .transform((_, errors) => errors.map(_.render).toList.distinct.mkString("\n"))
+            
+        groupedBySpan.tail.foreach { (span, errorMessafe) => report.error(errorMessafe, span.toPosition) }
+        val (finalErrorSpan, finalErrorMessage) = groupedBySpan.head
+        report.errorAndAbort(finalErrorMessage, finalErrorSpan.toPosition)
       case Right(totalPlan) =>
         PlanInterpreter.run[A](totalPlan, value)
     }
   }
 
-  extension (self: Plan.Error) private def render(using Quotes) = s"${self.message} @ ${self.sourceContext.render}"
+  extension (self: Plan.Error) private def render(using Quotes) = {
+    val suppressedErrors = 
+      List.unfold(self)(_.suppressed.map(suppressedErr => suppressedErr -> suppressedErr))
+
+    Logger.debug("dupsko", suppressedErrors)
+
+    s"${self.message} @ ${self.sourceContext.render} " + Debug.show(suppressedErrors)
+  }
 }

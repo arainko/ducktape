@@ -5,7 +5,7 @@ import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.collection.immutable.ListMap
 
-private[ducktape] trait Debug[A] {
+private[ducktape] trait Debug[-A] {
   extension (self: A) def show(using Quotes): String 
 }
 
@@ -44,13 +44,6 @@ private[ducktape] object Debug {
       value
         .map((key, value) => s"${debugKey.show(key)} -> ${debugValue.show(value)}")
         .mkString("Map(", ", ", ")")
-  }
-
-  given listMap[K, V](using debugKey: Debug[K], debugValue: Debug[V]): Debug[ListMap[K, V]] with {
-    extension (value: ListMap[K, V]) def show(using Quotes): String =
-      value
-        .map((key, value) => s"${debugKey.show(key)} -> ${debugValue.show(value)}")
-        .mkString("ListMap(", ", ", ")")
   }
 
   given option[A](using debug: Debug[A]): Debug[Option[A]] with {

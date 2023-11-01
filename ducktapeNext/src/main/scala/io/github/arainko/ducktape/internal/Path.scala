@@ -24,23 +24,6 @@ final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
 
   def toList: List[Path.Segment] = self.segments.toList
 
-  def isAncestorOrSiblingOf(that: Path)(using Quotes): Boolean = {
-    import quotes.reflect.*
-    /*
-      val this = String#int1.str1.int2.str2
-      val that = String#int1.str1.int2.str2.int3.str3
-     */
-    if (self.segments.length > that.segments.length) false
-    else
-      self.root.repr =:= that.root.repr && self.segments.zip(that.segments).forall {
-        case Path.Segment.Case(leftTpe) -> Path.Segment.Case(rightTpe) =>
-          leftTpe.repr =:= rightTpe.repr
-        case Path.Segment.Field(leftTpe, leftName) -> Path.Segment.Field(rightTpe, rightName) =>
-          leftName == rightName && leftTpe.repr =:= rightTpe.repr
-        case _ => false
-      }
-  }
-
   def render(using Quotes): String = {
     import quotes.reflect.*
     given Printer[TypeRepr] = Printer.TypeReprCode

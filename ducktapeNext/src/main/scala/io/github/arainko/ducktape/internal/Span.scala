@@ -22,17 +22,7 @@ object Span {
 
     val minSpan = spans.minByOption(_.start)
     val macroPos = Position.ofMacroExpansion
-    minSpan.map(min => Span(macroPos.start, min.start - 1)).getOrElse(Span.fromPosition(macroPos))
+    // try to calculate a span that doesn't start at the same line a config span is at
+    minSpan.map(min => Span(macroPos.start, min.start - macroPos.endColumn - 1)).getOrElse(Span.fromPosition(macroPos))
   }
 }
-
-// ProdTest1(Test1.Cos(Nested1(1)))
-//     .into[ProdTest2]
-//     .transform(
-//       // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
-//       // Field.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
-//       Field.const(_.test.at[Test2.Cos].int.int, 123), // overriden field
-
-
-
-     

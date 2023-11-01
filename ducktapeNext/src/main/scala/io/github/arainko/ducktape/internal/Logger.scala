@@ -9,7 +9,7 @@ import scala.quoted.*
 private[ducktape] object Logger {
 
   // Logger Config
-  private transparent inline def level = Level.Info
+  private transparent inline def level = Level.Debug
   private val output = Output.StdOut
   private def filter(msg: String, meta: Metainformation) = meta.contains("Transformations")
 

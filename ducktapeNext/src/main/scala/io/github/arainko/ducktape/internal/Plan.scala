@@ -136,8 +136,8 @@ enum Plan[+E <: PlanError] {
     sourceContext: Path,
     destContext: Path,
     message: String,
-    span: Option[Span]
-    // suppressed: Option[Plan.Error]
+    span: Option[Span],
+    suppressed: Option[Plan.Error]
   ) extends Plan[Plan.Error]
 }
 
@@ -147,7 +147,7 @@ object Plan {
 
   given debug[E <: Plan.Error]: Debug[Plan[E]] = Debug.derived
 
-  final case class Reconfigured(configErrors: List[Plan.Error], result: Plan[Plan.Error])
+  final case class Reconfigured(configErrors: List[Plan.Error], result: Plan[Plan.Error]) derives Debug
 
   private def configureAll(plan: Plan[Plan.Error], configs: List[Configuration.At])(using Quotes): Plan.Reconfigured = {
     // Buffer of all errors that originate from a config
@@ -178,7 +178,8 @@ object Plan {
                         sourceContext,
                         destContext,
                         s"'$fieldName' is not a valid field accessor",
-                        Some(config.span)
+                        Some(config.span),
+                        None
                       )
                     )
 
@@ -195,19 +196,32 @@ object Plan {
                         sourceContext,
                         destContext,
                         s"'$fieldName' is not a valid arg accessor",
-                        Some(config.span)
+                        Some(config.span),
+                        None
                       )
                     )
 
                 plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
-              case plan => // TODO: Somehow keep around information if plan is as Plan.Error so that the error message is nicer
+
+              case suppressed: Plan.Error =>
                 Plan.Error(
                   plan.sourceTpe,
                   plan.destTpe,
                   plan.sourceContext,
                   plan.destContext,
                   s"A field accessor '$fieldName' can only be used to configure product or function transformations",
-                  Some(config.span)
+                  Some(config.span),
+                  Some(suppressed)
+                )
+              case plan =>
+                Plan.Error(
+                  plan.sourceTpe,
+                  plan.destTpe,
+                  plan.sourceContext,
+                  plan.destContext,
+                  s"A field accessor '$fieldName' can only be used to configure product or function transformations",
+                  Some(config.span),
+                  None
                 )
             }
 
@@ -227,9 +241,21 @@ object Plan {
                         sourceContext,
                         destContext,
                         s"'at[${tpe.repr.show}]' is not a valid case accessor",
-                        Some(config.span)
+                        Some(config.span),
+                        None
                       )
                   )
+
+              case suppressed: Plan.Error =>
+                 Plan.Error(
+                  plan.sourceTpe,
+                  plan.destTpe,
+                  plan.sourceContext,
+                  plan.destContext,
+                  s"A case accessor can only be used to configure coproduct transformations",
+                  Some(config.span),
+                  Some(suppressed)
+                )
               case plan =>
                 Plan.Error(
                   plan.sourceTpe,
@@ -237,7 +263,8 @@ object Plan {
                   plan.sourceContext,
                   plan.destContext,
                   s"A case accessor can only be used to configure coproduct transformations",
-                  Some(config.span)
+                  Some(config.span),
+                  None
                 )
             }
 
@@ -255,7 +282,8 @@ object Plan {
                     current.sourceContext,
                     current.destContext,
                     s"A replacement plan doesn't conform to the plan it's supposed to replace. ${config.tpe.repr.show} <:< ${current.destContext.currentTpe.repr.show}",
-                    Some(span)
+                    Some(span),
+                    None
                   ).tap(errors.addOne)
 
               case Configuration.At.Failed(path, target, message, span) =>
@@ -265,7 +293,8 @@ object Plan {
                   current.sourceContext,
                   current.destContext,
                   message,
-                  Some(span)
+                  Some(span),
+                  None
                 ).tap(errors.addOne)
             }
         }
