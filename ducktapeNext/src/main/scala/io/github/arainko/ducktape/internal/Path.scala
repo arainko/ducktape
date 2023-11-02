@@ -46,7 +46,7 @@ object Path {
     extension (self: Path) def show(using Quotes): String = self.render
   }
 
-  enum Segment {
+  enum Segment derives Debug {
     def tpe: Type[?]
 
     final def narrow[A <: Segment](using tt: TypeTest[Segment, A]): Option[A] = tt.unapply(this)

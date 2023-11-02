@@ -45,8 +45,7 @@ object Transformations {
             Type.of[Any],
             Path.empty(Type.of[A]),
             Path.empty(Type.of[Any]),
-            "Couldn't create a transformation plan from a function",
-            Some(Span.fromExpr(function)),
+            ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
             None
           )
         )
@@ -74,7 +73,7 @@ object Transformations {
         val allErrors = errors ::: reconfiguredPlan.configErrors ::: ogErrors
         val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
         allErrors
-          .groupBy(_.span.getOrElse(spanForAccumulatedErrors))
+          .groupBy(_.message.span.getOrElse(spanForAccumulatedErrors))
           .transform((_, errors) => errors.map(_.render).toList.distinct.mkString(System.lineSeparator))
           .foreach { (span, errorMessafe) => report.error(errorMessafe, span.toPosition) }
 

@@ -7,6 +7,7 @@ import scala.annotation.tailrec
 import scala.collection.immutable.ListMap
 import scala.collection.{ Factory, IterableFactory }
 import scala.quoted.*
+import io.github.arainko.ducktape.internal.Configuration.Target
 
 type PlanError = Plan.Error
 
@@ -136,7 +137,6 @@ enum Plan[+E <: PlanError] {
     sourceContext: Path,
     destContext: Path,
     message: ErrorMessage,
-    span: Option[Span],
     suppressed: Option[Plan.Error]
   ) extends Plan[Plan.Error]
 }
@@ -177,8 +177,7 @@ object Plan {
                         destTpe,
                         sourceContext,
                         destContext,
-                        ErrorMessage.InvalidFieldAccessor(fieldName),
-                        Some(config.span),
+                        ErrorMessage.InvalidFieldAccessor(fieldName, Some(config.span)),
                         None
                       )
                     )
@@ -195,8 +194,7 @@ object Plan {
                         destTpe,
                         sourceContext,
                         destContext,
-                        ErrorMessage.InvalidArgAccessor(fieldName),
-                        Some(config.span),
+                        ErrorMessage.InvalidArgAccessor(fieldName, Some(config.span)),
                         None
                       )
                     )
@@ -209,8 +207,7 @@ object Plan {
                   plan.destTpe,
                   plan.sourceContext,
                   plan.destContext,
-                  s"A field accessor '$fieldName' can only be used to configure product or function transformations",
-                  Some(config.span),
+                  ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
                   Some(suppressed)
                 )
               case plan =>
@@ -219,8 +216,7 @@ object Plan {
                   plan.destTpe,
                   plan.sourceContext,
                   plan.destContext,
-                  s"A field accessor '$fieldName' can only be used to configure product or function transformations",
-                  Some(config.span),
+                  ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
                   None
                 )
             }
@@ -240,20 +236,20 @@ object Plan {
                         destTpe,
                         sourceContext,
                         destContext,
-                        s"'at[${tpe.repr.show}]' is not a valid case accessor",
-                        Some(config.span),
+                        ErrorMessage.InvalidCaseAccessor(tpe, Some(config.span)),
                         None
                       )
                   )
 
               case suppressed: Plan.Error =>
-                 Plan.Error(
+                Plan.Error(
                   plan.sourceTpe,
                   plan.destTpe,
                   plan.sourceContext,
                   plan.destContext,
-                  s"A case accessor can only be used to configure coproduct transformations",
-                  Some(config.span),
+                  ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
+
+                  // Some(config.span),
                   Some(suppressed)
                 )
               case plan =>
@@ -262,8 +258,7 @@ object Plan {
                   plan.destTpe,
                   plan.sourceContext,
                   plan.destContext,
-                  s"A case accessor can only be used to configure coproduct transformations",
-                  Some(config.span),
+                  ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
                   None
                 )
             }
@@ -276,26 +271,30 @@ object Plan {
                 if (current.isReplaceableBy(cfg))
                   Plan.Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config)
                 else
-                  Plan.Error(
+                  Plan
+                    .Error(
+                      current.sourceTpe,
+                      current.destTpe,
+                      current.sourceContext,
+                      current.destContext,
+                      ErrorMessage.InvalidConfiguration(config.tpe, current.destContext.currentTpe, target, Some(span)),
+                      None
+                    )
+                    .tap(errors.addOne)
+
+              case Configuration.At.Failed(path, target, message, span) =>
+                Plan
+                  .Error(
                     current.sourceTpe,
                     current.destTpe,
                     current.sourceContext,
                     current.destContext,
-                    s"A replacement plan doesn't conform to the plan it's supposed to replace. ${config.tpe.repr.show} <:< ${current.destContext.currentTpe.repr.show}",
-                    Some(span),
+                    ???,
+                    // message,
+                    // Some(span),
                     None
-                  ).tap(errors.addOne)
-
-              case Configuration.At.Failed(path, target, message, span) =>
-                Plan.Error(
-                  current.sourceTpe,
-                  current.destTpe,
-                  current.sourceContext,
-                  current.destContext,
-                  message,
-                  Some(span),
-                  None
-                ).tap(errors.addOne)
+                  )
+                  .tap(errors.addOne)
             }
         }
       }
