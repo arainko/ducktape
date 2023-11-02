@@ -3,6 +3,7 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.*
 import scala.quoted.*
 import scala.quoted.runtime.StopMacroExpansion
+import io.github.arainko.ducktape.internal.ErrorMessage.RelatesTo
 
 object Transformations {
   inline def between[A, B](
@@ -69,11 +70,19 @@ object Transformations {
 
     reconfiguredPlan.result.refine match {
       case Left(errors) =>
-        val ogErrors = plan.refine.swap.map(_.toList).getOrElse(Nil)
-        val allErrors = errors ::: reconfiguredPlan.configErrors ::: ogErrors
+        // val ogErrors = plan.refine.swap
+        // .map(_.toList)
+        //   .getOrElse(Nil)
+        //   .filter(error =>
+        //     errors.exists(err => err.destContext.isAncestorOrSiblingOf(error.destContext))
+        //   ) // O(n^2), maybe there's a better way?
+        val allErrors = errors ::: reconfiguredPlan.configErrors // ::: ogErrors
         val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
-        allErrors
-          .groupBy(_.message.span.getOrElse(spanForAccumulatedErrors))
+        allErrors.groupBy {
+          _.message.span match
+            case None       => spanForAccumulatedErrors
+            case span: Span => span
+        }
           .transform((_, errors) => errors.map(_.render).toList.distinct.mkString(System.lineSeparator))
           .foreach { (span, errorMessafe) => report.error(errorMessafe, span.toPosition) }
 
@@ -85,16 +94,24 @@ object Transformations {
 
   extension (self: Plan.Error)
     private def render(using Quotes) = {
-      def renderSingle(error: Plan.Error)(using Quotes) = 
-        s"${error.message}".stripMargin
-        
+      def renderSingle(error: Plan.Error)(using Quotes) = {
+        val renderedPath =
+          error.message.relatesTo match
+            case RelatesTo.Source => error.sourceContext.render
+            case RelatesTo.Dest   => error.destContext.render
+
+        s"${error.message.render} @ $renderedPath"
+      }
+
       def ident(times: Int) = "  " * times
 
       val suppressedErrors =
         List
           .unfold(self)(_.suppressed.map(suppressedErr => suppressedErr -> suppressedErr))
           .zipWithIndex
-          .map((err, depth) => s"SUPPRESSES: ${renderSingle(err)}".linesWithSeparators.map(line => ident(depth + 1) + line).mkString)
+          .map((err, depth) =>
+            s"SUPPRESSES: ${renderSingle(err)}".linesWithSeparators.map(line => ident(depth + 1) + line).mkString
+          )
 
       String.join(System.lineSeparator, (renderSingle(self) :: suppressedErrors)*)
     }

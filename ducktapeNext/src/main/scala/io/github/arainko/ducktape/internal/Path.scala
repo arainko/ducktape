@@ -24,18 +24,32 @@ final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
 
   def toList: List[Path.Segment] = self.segments.toList
 
+  def isAncestorOrSiblingOf(that: Path)(using Quotes): Boolean = {
+    import quotes.reflect.*
+    
+    if (self.segments.length > that.segments.length) false
+    else
+      self.root.repr =:= that.root.repr && self.segments.zip(that.segments).forall {
+        case Path.Segment.Case(leftTpe) -> Path.Segment.Case(rightTpe) =>
+          leftTpe.repr =:= rightTpe.repr
+        case Path.Segment.Field(leftTpe, leftName) -> Path.Segment.Field(rightTpe, rightName) =>
+          leftName == rightName && leftTpe.repr =:= rightTpe.repr
+        case _ => false
+      }
+  }
+
   def render(using Quotes): String = {
     import quotes.reflect.*
     given Printer[TypeRepr] = Printer.TypeReprShortCode
 
-    val printerRoot = root.repr.show
+    val printedRoot = root.repr.show
 
-    if (self.segments.isEmpty) printerRoot
+    if (self.segments.isEmpty) printedRoot
     else
       self.segments.map {
         case Path.Segment.Field(_, name) => name
         case Path.Segment.Case(tpe)      => s"at[${tpe.repr.show}]"
-      }.mkString(s"$printerRoot#", ".", "")
+      }.mkString(s"$printedRoot.", ".", "")
   }
 }
 

@@ -177,7 +177,7 @@ object Plan {
                         destTpe,
                         sourceContext,
                         destContext,
-                        ErrorMessage.InvalidFieldAccessor(fieldName, Some(config.span)),
+                        ErrorMessage.InvalidFieldAccessor(fieldName, config.span),
                         None
                       )
                     )
@@ -194,7 +194,7 @@ object Plan {
                         destTpe,
                         sourceContext,
                         destContext,
-                        ErrorMessage.InvalidArgAccessor(fieldName, Some(config.span)),
+                        ErrorMessage.InvalidArgAccessor(fieldName, config.span),
                         None
                       )
                     )
@@ -236,7 +236,7 @@ object Plan {
                         destTpe,
                         sourceContext,
                         destContext,
-                        ErrorMessage.InvalidCaseAccessor(tpe, Some(config.span)),
+                        ErrorMessage.InvalidCaseAccessor(tpe, config.span),
                         None
                       )
                   )
@@ -277,7 +277,7 @@ object Plan {
                       current.destTpe,
                       current.sourceContext,
                       current.destContext,
-                      ErrorMessage.InvalidConfiguration(config.tpe, current.destContext.currentTpe, target, Some(span)),
+                      ErrorMessage.InvalidConfiguration(config.tpe, current.destContext.currentTpe, target, span),
                       None
                     )
                     .tap(errors.addOne)
@@ -289,9 +289,7 @@ object Plan {
                     current.destTpe,
                     current.sourceContext,
                     current.destContext,
-                    ???,
-                    // message,
-                    // Some(span),
+                    ErrorMessage.CouldntCreateTransformationFromFunction(span), //TODO: this is a placeholder
                     None
                   )
                   .tap(errors.addOne)
