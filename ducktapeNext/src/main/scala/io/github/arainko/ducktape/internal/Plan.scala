@@ -7,7 +7,6 @@ import scala.annotation.tailrec
 import scala.collection.immutable.ListMap
 import scala.collection.{ Factory, IterableFactory }
 import scala.quoted.*
-import io.github.arainko.ducktape.internal.Configuration.Target
 
 type PlanError = Plan.Error
 

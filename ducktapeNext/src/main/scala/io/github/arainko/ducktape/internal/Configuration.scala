@@ -14,18 +14,6 @@ private[ducktape] enum Configuration derives Debug {
 }
 
 private[ducktape] object Configuration {
-  enum Target derives Debug {
-    case Source, Dest
-
-    final def isSource: Boolean =
-      this match {
-        case Source => true
-        case Dest   => false
-      }
-
-    final def isDest: Boolean = !isSource
-  }
-
   enum At derives Debug {
     def path: Path
     def target: Target

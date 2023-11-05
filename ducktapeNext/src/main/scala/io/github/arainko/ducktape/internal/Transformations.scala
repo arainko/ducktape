@@ -3,7 +3,6 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.*
 import scala.quoted.*
 import scala.quoted.runtime.StopMacroExpansion
-import io.github.arainko.ducktape.internal.ErrorMessage.RelatesTo
 
 object Transformations {
   inline def between[A, B](
@@ -114,9 +113,9 @@ object Transformations {
     private def render(using Quotes) = {
       def renderSingle(error: Plan.Error)(using Quotes) = {
         val renderedPath =
-          error.message.relatesTo match
-            case RelatesTo.Source => error.sourceContext.render
-            case RelatesTo.Dest   => error.destContext.render
+          error.message.target match
+            case Target.Source => error.sourceContext.render
+            case Target.Dest   => error.destContext.render
 
         s"${error.message.render} @ $renderedPath"
       }

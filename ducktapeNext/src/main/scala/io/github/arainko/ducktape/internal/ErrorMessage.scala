@@ -3,52 +3,44 @@ package io.github.arainko.ducktape.internal
 import scala.quoted.Quotes
 import scala.quoted.Type
 import scala.annotation.constructorOnly
-import io.github.arainko.ducktape.internal.Configuration.Target
 import io.github.arainko.ducktape.internal.Path.Segment
 
-sealed abstract class ErrorMessage(val relatesTo: ErrorMessage.RelatesTo) derives Debug {
+sealed trait ErrorMessage derives Debug {
   def render(using Quotes): String
   def span: Span | None.type
+  def target: Target
 }
 
 object ErrorMessage {
-  enum RelatesTo derives Debug {
-    case Source, Dest
-  }
-
-  object RelatesTo {
-    def fromTarget(target: Configuration.Target) =
-      target match {
-        case Configuration.Target.Source => RelatesTo.Source
-        case Configuration.Target.Dest   => RelatesTo.Dest
-      }
-
-  }
-
-  final case class NoFieldFound(fieldName: String, sourceTpe: Type[?]) extends ErrorMessage(RelatesTo.Dest) {
+  final case class NoFieldFound(fieldName: String, sourceTpe: Type[?]) extends ErrorMessage {
     def render(using Quotes): String = s"No field '$fieldName' found in ${sourceTpe.repr.show}"
     def span = None
+    val target = Target.Dest
   }
 
-  final case class NoChildFound(childName: String, destTpe: Type[?]) extends ErrorMessage(RelatesTo.Source) {
+  final case class NoChildFound(childName: String, destTpe: Type[?]) extends ErrorMessage {
     def render(using Quotes): String = s"No child named '$childName' found in ${destTpe.repr.show}"
     def span = None
+    val target = Target.Source
   }
 
-  final case class InvalidFieldAccessor(fieldName: String, span: Span) extends ErrorMessage(RelatesTo.Dest) {
+  final case class InvalidFieldAccessor(fieldName: String, span: Span) extends ErrorMessage {
     def render(using Quotes): String = s"'$fieldName' is not a valid field accessor"
+    val target = Target.Dest
   }
 
-  final case class InvalidArgAccessor(fieldName: String, span: Span) extends ErrorMessage(RelatesTo.Dest) {
+  final case class InvalidArgAccessor(fieldName: String, span: Span) extends ErrorMessage {
     def render(using Quotes): String = s"'$fieldName' is not a valid arg accessor"
+    val target = Target.Dest
   }
 
-  final case class InvalidCaseAccessor(tpe: Type[?], span: Span) extends ErrorMessage(RelatesTo.Source) {
+  final case class InvalidCaseAccessor(tpe: Type[?], span: Span) extends ErrorMessage {
     def render(using Quotes): String = s"'at[${tpe.repr.show}]' is not a valid case accessor"
+    val target = Target.Source
   }
 
   final case class InvalidConfiguration(configTpe: Type[?], expectedTpe: Type[?], target: Target, span: Span)
-      extends ErrorMessage(RelatesTo.fromTarget(target)) {
+      extends ErrorMessage {
 
     def render(using Quotes): String = {
       val renderedConfigTpe = configTpe.repr.show
@@ -57,18 +49,19 @@ object ErrorMessage {
     }
   }
 
-  final case class CouldntBuildTransformation(source: Type[?], dest: Type[?]) extends ErrorMessage(RelatesTo.Dest) {
+  final case class CouldntBuildTransformation(source: Type[?], dest: Type[?]) extends ErrorMessage {
     def render(using Quotes): String = s"Couldn't build a transformation plan between ${source.repr.show} and ${dest.repr.show}"
     def span = None
+    val target = Target.Dest
   }
 
-  final case class CouldntCreateTransformationFromFunction(span: Span) extends ErrorMessage(RelatesTo.Dest) {
+  final case class CouldntCreateTransformationFromFunction(span: Span) extends ErrorMessage {
     def render(using Quotes): String = "Couldn't create a transformation plan from a function"
+    val target = Target.Dest
   }
 
   // This error message is not fully right, it happens when some config is already applied to a given field or on a non product/coproduct
-  final case class InvalidPathSegment(segment: Path.Segment, target: Target, span: Span)
-      extends ErrorMessage(RelatesTo.fromTarget(target)) {
+  final case class InvalidPathSegment(segment: Path.Segment, target: Target, span: Span) extends ErrorMessage {
     def render(using Quotes): String =
       segment match {
         case Segment.Field(tpe, name) =>
