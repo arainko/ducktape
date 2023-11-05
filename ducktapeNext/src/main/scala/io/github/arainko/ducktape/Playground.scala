@@ -70,6 +70,8 @@ final case class ProdTest2(test: Test2)
 final case class DeffTest1(int: Int)
 final case class DeffTest2(int: Int, str: String = "default")
 
+final case class Rec[A](value: A, rec: Option[Rec[A]])
+
 @main def main: Unit = {
 
   val p = Person1(1, "asd", Nested1(1))
@@ -80,6 +82,10 @@ final case class DeffTest2(int: Int, str: String = "default")
 
   println(cos.unapply(test))
 
+
+  val rec: Rec[Int] = Rec(1, None)
+
+  rec.to[Rec[Int | String]]
   // // internal.CodePrinter.code:
     // (??? : DeffTest1).into[DeffTest2].transform(
 
@@ -110,11 +116,11 @@ final case class DeffTest2(int: Int, str: String = "default")
     // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
     // Field.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
 
-  ProdTest1(Test1.Cos(Nested1(1)))
-    .into[ProdTest2]
-    .transform(
-      Field.const(_.test.at[Test2.Cos].int.int, 123), // overridden fieldn,
-      Case.const(_.test.at[Test1.Empty.type], ???),
+  // ProdTest1(Test1.Cos(Nested1(1)))
+  //   .into[ProdTest2]
+  //   .transform(
+  //     Field.const(_.test.at[Test2.Cos].int.int, 123), // overridden fieldn,
+  //     Case.const(_.test.at[Test1.Empty.type], ???),
       // Field.const(_.test.at[Test2.Cos].int.additional, 1),
       // Field.default(_.test),
 
@@ -131,7 +137,7 @@ final case class DeffTest2(int: Int, str: String = "default")
       // Case.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))) // missing case
       // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
       
-    )
+    // )
 
 
 

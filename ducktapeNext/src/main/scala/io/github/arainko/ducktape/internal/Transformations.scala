@@ -16,7 +16,7 @@ object Transformations {
   )(using Quotes): Expr[B] = {
     import quotes.reflect.*
 
-    val plan = Planner.betweenTypes[A, B]
+    val plan = Planner.between(Structure.of[A], Structure.of[B])
     val config = Configuration.parse(configs)
     createTransformation(value, plan, config).asExprOf[B]
   }
@@ -38,7 +38,7 @@ object Transformations {
       Function
         .fromFunctionArguments[Args, Func](function)
         .orElse(Function.fromExpr(function))
-        .map(Planner.betweenTypeAndFunction[A])
+        .map(function => Planner.between(Structure.of[A], Structure.fromFunction(function)))
         .getOrElse(
           Plan.Error(
             Type.of[A],
@@ -73,31 +73,19 @@ object Transformations {
           plan.refine.swap
             .map(_.toList)
             .getOrElse(Nil)
-            .filterNot(ogError =>
+            .filterNot(ogError => //filter out things that were successfully configured to not show these to the user
               ogError.message.target match
                 case Target.Source =>
-                  reconfiguredPlan.successfulConfigs.exists(succ => 
+                  reconfiguredPlan.successes.exists(succ => 
                     succ.target == Target.Source && succ.path.isAncestorOrSiblingOf(ogError.sourceContext)
                   )
                 case Target.Dest =>
-                  reconfiguredPlan.successfulConfigs.exists(succ =>
+                  reconfiguredPlan.successes.exists(succ =>
                     succ.target == Target.Dest && succ.path.isAncestorOrSiblingOf(ogError.destContext)
                   )
             )
 
-          //  reconfiguredPlan.configErrors
-        // val ogErrors = plan.refine.swap
-        // .map(_.toList)
-        //   .getOrElse(Nil)
-        //   .filter(error =>
-        //     errors.exists(err => err.destContext.isAncestorOrSiblingOf(error.destContext))
-        //   ) // O(n^2), maybe there's a better way?
-        Logger.debug("ORIGINAL ERRORS", plan.refine.swap.map(_.toList).getOrElse(Nil))
-        Logger.debug("ERRORS", errors)
-        Logger.debug("CONFIG ERRORS", reconfiguredPlan)
-        Logger.debug("OG ERRORS", ogErrors)
-
-        val allErrors = errors ::: reconfiguredPlan.configErrors ::: ogErrors
+        val allErrors = errors ::: reconfiguredPlan.errors ::: ogErrors
         val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
         allErrors.groupBy {
           _.message.span match

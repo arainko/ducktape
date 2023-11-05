@@ -147,8 +147,8 @@ object Plan {
   given debug[E <: Plan.Error]: Debug[Plan[E]] = Debug.derived
 
   final case class Reconfigured(
-    configErrors: List[Plan.Error],
-    successfulConfigs: List[Configuration.At.Successful],
+    errors: List[Plan.Error],
+    successes: List[Configuration.At.Successful],
     result: Plan[Plan.Error]
   ) derives Debug
 

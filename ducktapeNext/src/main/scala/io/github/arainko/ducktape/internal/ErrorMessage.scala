@@ -75,4 +75,10 @@ object ErrorMessage {
     export config.{ span, target }
     def render(using Quotes): String = config.message
   }
+
+  case object RecursionSuspected extends ErrorMessage {
+    def render(using Quotes): String = "Recursive type suspected, consider using Transformer.define or Transformer.defineVia instead"
+    val span: Span | None.type = None
+    val target: Target = Target.Dest
+  }
 }
