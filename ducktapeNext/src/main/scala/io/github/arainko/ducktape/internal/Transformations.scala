@@ -70,13 +70,31 @@ object Transformations {
 
     reconfiguredPlan.result.refine match {
       case Left(errors) =>
+        val successfulConfigPaths = reconfiguredPlan.successfulConfigs.map(_.destContext.render).toSet        
+
+        val ogErrors =
+          plan
+            .refine
+            .swap
+            .map(_.toList)
+            .getOrElse(Nil)
+            .view
+            .filter(ogError => reconfiguredPlan.successfulConfigs.exists(_.destContext.isAncestorOrSiblingOf(ogError.destContext)))
+            .filter(error => errors.exists(err => err.destContext.isAncestorOrSiblingOf(error.destContext)))
+            .toList
+
+          //  reconfiguredPlan.configErrors
         // val ogErrors = plan.refine.swap
         // .map(_.toList)
         //   .getOrElse(Nil)
         //   .filter(error =>
         //     errors.exists(err => err.destContext.isAncestorOrSiblingOf(error.destContext))
         //   ) // O(n^2), maybe there's a better way?
-        val allErrors = errors ::: reconfiguredPlan.configErrors // ::: ogErrors
+        Logger.debug("ERRORS", errors)
+        Logger.debug("CONFIG ERRORS", reconfiguredPlan)
+        Logger.debug(s"OG ERRORS", ogErrors)
+
+        val allErrors = errors ::: reconfiguredPlan.configErrors ::: ogErrors
         val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
         allErrors.groupBy {
           _.message.span match

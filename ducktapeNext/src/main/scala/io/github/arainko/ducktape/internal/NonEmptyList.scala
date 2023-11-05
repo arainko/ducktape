@@ -1,5 +1,7 @@
 package io.github.arainko.ducktape.internal
 
+import scala.quoted.Quotes
+
 private[ducktape] opaque type NonEmptyList[+A] = ::[A]
 
 private[ducktape] object NonEmptyList {
@@ -15,6 +17,8 @@ private[ducktape] object NonEmptyList {
 
   private[ducktape] def fromList[A](list: List[A]): Option[NonEmptyList[A]] =
     PartialFunction.condOpt(list) { case cons @ (_ :: _) => fromCons(cons) }
+
+  private [ducktape] given [A: Debug]: Debug[NonEmptyList[A]] = Debug.collection[A, List]
 
   extension [A](self: NonEmptyList[A]) {
     export toList.{ reduceLeft, head, tail, exists, filter, collect }

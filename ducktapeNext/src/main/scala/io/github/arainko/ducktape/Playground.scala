@@ -114,7 +114,7 @@ final case class DeffTest2(int: Int, str: String = "default")
   ProdTest1(Test1.Cos(Nested1(1)))
     .into[ProdTest2]
     .transform(
-      // Field.const(_.test.at[Test2.Cos].int.int, 123), // overridden fieldn,
+      Field.const(_.test.at[Test2.Cos].int.int, 123), // overridden fieldn,
       Case.const(_.test.at[Test1.Empty.type], ???),
       // Field.const(_.test.at[Test2.Cos].int.additional, 1),
       // Field.default(_.test),

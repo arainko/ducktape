@@ -25,6 +25,7 @@ final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
   def toList: List[Path.Segment] = self.segments.toList
 
   def isAncestorOrSiblingOf(that: Path)(using Quotes): Boolean = {
+    /*
     import quotes.reflect.*
     
     if (self.segments.length > that.segments.length) false
@@ -36,6 +37,8 @@ final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
           leftName == rightName && leftTpe.repr =:= rightTpe.repr
         case _ => false
       }
+      */
+    that.render.contains(this.render) 
   }
 
   def render(using Quotes): String = {

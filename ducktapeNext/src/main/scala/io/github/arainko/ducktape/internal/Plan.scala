@@ -147,11 +147,16 @@ object Plan {
 
   given debug[E <: Plan.Error]: Debug[Plan[E]] = Debug.derived
 
-  final case class Reconfigured(configErrors: List[Plan.Error], result: Plan[Plan.Error]) derives Debug
+  final case class Reconfigured(
+    configErrors: List[Plan.Error],
+    successfulConfigs: List[Plan.Configured],
+    result: Plan[Plan.Error]
+  ) derives Debug
 
   private def configureAll(plan: Plan[Plan.Error], configs: List[Configuration.At])(using Quotes): Plan.Reconfigured = {
     // Buffer of all errors that originate from a config
     val errors = List.newBuilder[Plan.Error]
+    val successful = List.newBuilder[Plan.Configured]
 
     def configureSingle(plan: Plan[Plan.Error], config: Configuration.At)(using Quotes): Plan[Plan.Error] = {
       extension (currentPlan: Plan[?]) {
@@ -269,7 +274,9 @@ object Plan {
             config match {
               case cfg @ Configuration.At.Successful(path, target, config, span) =>
                 if (current.isReplaceableBy(cfg))
-                  Plan.Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config)
+                  Plan
+                    .Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config)
+                    .tap(successful.addOne)
                 else
                   Plan
                     .Error(
@@ -289,7 +296,7 @@ object Plan {
                     current.destTpe,
                     current.sourceContext,
                     current.destContext,
-                    ErrorMessage.CouldntCreateTransformationFromFunction(span), //TODO: this is a placeholder
+                    ErrorMessage.CouldntCreateTransformationFromFunction(span), // TODO: this is a placeholder
                     None
                   )
                   .tap(errors.addOne)
@@ -301,7 +308,7 @@ object Plan {
     }
 
     val reconfiguredPlan = configs.foldLeft(plan)(configureSingle)
-    Plan.Reconfigured(errors.result(), reconfiguredPlan)
+    Plan.Reconfigured(errors.result(), successful.result(), reconfiguredPlan)
   }
 
   private def refine(plan: Plan[Plan.Error]): Either[NonEmptyList[Plan.Error], Plan[Nothing]] = {
