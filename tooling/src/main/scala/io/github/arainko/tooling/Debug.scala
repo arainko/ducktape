@@ -4,6 +4,7 @@ import scala.quoted.*
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.collection.immutable.ListMap
+import scala.reflect.ClassTag
 
 private[ducktape] trait Debug[-A] {
   extension (self: A) def show(using Quotes): String 
@@ -21,6 +22,10 @@ private[ducktape] object Debug {
     extension (self: Int) def show(using Quotes): String = self.toString()
   }
 
+  given bool: Debug[Boolean] with {
+    extension (self: Boolean) def show(using Quotes): String = self.toString
+  }
+
   given wildcardTpe: Debug[Type[?]] with {
     extension (value: Type[?]) def show(using Quotes): String = {
       import quotes.reflect.*
@@ -35,15 +40,18 @@ private[ducktape] object Debug {
     }
   }
 
-  given collection[A, Coll[a] <: Iterable[a]](using debug: Debug[A]): Debug[Coll[A]] with {
-    extension (value: Coll[A]) def show(using Quotes): String = value.map(debug.show).toString()
+  given collection[A, Coll[a] <: Iterable[a]](using debug: Debug[A], tag: ClassTag[Coll[A]]): Debug[Coll[A]] with {
+    extension (value: Coll[A]) def show(using Quotes): String = {
+      val name = tag.runtimeClass.getSimpleName()
+      value.map(debug.show).mkString(s"$name(".bold, ", ", ")".bold)
+    }
   }
 
   given map[K, V](using debugKey: Debug[K], debugValue: Debug[V]): Debug[Map[K, V]] with {
     extension (value: Map[K, V]) def show(using Quotes): String =
       value
         .map((key, value) => s"${debugKey.show(key)} -> ${debugValue.show(value)}")
-        .mkString("Map(", ", ", ")")
+        .mkString("Map(".bold, ", ", ")".bold)
   }
 
   given option[A](using debug: Debug[A]): Debug[Option[A]] with {
@@ -84,17 +92,17 @@ private[ducktape] object Debug {
   private inline def product[A](using A: Mirror.ProductOf[A]): Debug[A] =
     new {
       extension (value: A) def show(using Quotes): String = {
-        val tpeName = constValue[A.MirroredLabel].toString
+        val tpeName = constValue[A.MirroredLabel].toString.bold
         val instances = summonAll[Tuple.Map[A.MirroredElemTypes, Debug]].toIArray.map(_.asInstanceOf[Debug[Any]])
         val prod = value.asInstanceOf[Product]
-        val startParen = if (prod.productArity == 0) "" else "(" 
-        val endParen = if (prod.productArity == 0) "" else ")"
+        val startParen = if (prod.productArity == 0) "" else "(".bold
+        val endParen = if (prod.productArity == 0) "" else ")".bold
         prod
           .productElementNames
           .zip(instances)
           .zip(prod.productIterator)
-          .map { case label -> debug -> value => s"$label = ${debug.show(value)}"}
-          .mkString(s"${tpeName}${startParen}", ", ", endParen)
+          .map { case label -> debug -> value => s"${label.yellow} ${"=".yellow} ${debug.show(value)}"}
+          .mkString(s"$tpeName$startParen", ", ", endParen)
       }
     }
 
@@ -115,4 +123,12 @@ private[ducktape] object Debug {
       case _: EmptyTuple => Nil
     }
 
+  extension (self: String) {
+    private def bold: String = s"${Console.BOLD}$self${Console.RESET}"
+    private def underlined: String = s"${Console.UNDERLINED}$self${Console.RESET}"
+    private def red: String = s"${Console.RED}$self${Console.RESET}"
+    private def magenta: String = s"${Console.MAGENTA}$self${Console.RESET}"
+    private def cyan: String = s"${Console.CYAN}$self${Console.RESET}"
+    private def yellow: String = s"${Console.YELLOW}$self${Console.RESET}"
+  }
 }

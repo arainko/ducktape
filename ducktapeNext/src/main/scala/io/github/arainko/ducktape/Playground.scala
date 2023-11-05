@@ -110,7 +110,6 @@ final case class DeffTest2(int: Int, str: String = "default")
     // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
     // Field.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
 
-  //TODO: There's a bug here where config error overshadow errors that are not resolved if they occur 
   ProdTest1(Test1.Cos(Nested1(1)))
     .into[ProdTest2]
     .transform(
@@ -119,7 +118,9 @@ final case class DeffTest2(int: Int, str: String = "default")
       // Field.const(_.test.at[Test2.Cos].int.additional, 1),
       // Field.default(_.test),
 
-      Field.default(_.test),
+      // Field.default(_.test),
+      // Field.default(_.test),
+      // Field.default(_.test),
       
 
       // Field.default(_.test),

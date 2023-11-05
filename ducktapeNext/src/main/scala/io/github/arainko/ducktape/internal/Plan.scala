@@ -148,14 +148,14 @@ object Plan {
 
   final case class Reconfigured(
     configErrors: List[Plan.Error],
-    successfulConfigs: List[Plan.Configured],
+    successfulConfigs: List[Configuration.At.Successful],
     result: Plan[Plan.Error]
   ) derives Debug
 
   private def configureAll(plan: Plan[Plan.Error], configs: List[Configuration.At])(using Quotes): Plan.Reconfigured = {
     // Buffer of all errors that originate from a config
     val errors = List.newBuilder[Plan.Error]
-    val successful = List.newBuilder[Plan.Configured]
+    val successful = List.newBuilder[Configuration.At.Successful]
 
     def configureSingle(plan: Plan[Plan.Error], config: Configuration.At)(using Quotes): Plan[Plan.Error] = {
       extension (currentPlan: Plan[?]) {
@@ -252,8 +252,6 @@ object Plan {
                   plan.sourceContext,
                   plan.destContext,
                   ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
-
-                  // Some(config.span),
                   Some(suppressed)
                 )
               case plan =>
@@ -272,11 +270,11 @@ object Plan {
 
             config match {
               case cfg @ Configuration.At.Successful(path, target, config, span) =>
-                if (current.isReplaceableBy(cfg))
+                if (current.isReplaceableBy(cfg)) {
+                  successful.addOne(cfg)
                   Plan
                     .Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config)
-                    .tap(successful.addOne)
-                else
+                } else
                   Plan
                     .Error(
                       current.sourceTpe,
@@ -288,14 +286,14 @@ object Plan {
                     )
                     .tap(errors.addOne)
 
-              case Configuration.At.Failed(path, target, message, span) =>
+              case cfg @ Configuration.At.Failed(path, target, message, span) =>
                 Plan
                   .Error(
                     current.sourceTpe,
                     current.destTpe,
                     current.sourceContext,
                     current.destContext,
-                    ErrorMessage.CouldntCreateTransformationFromFunction(span), // TODO: this is a placeholder
+                    ErrorMessage.ConfigurationFailed(cfg),
                     None
                   )
                   .tap(errors.addOne)

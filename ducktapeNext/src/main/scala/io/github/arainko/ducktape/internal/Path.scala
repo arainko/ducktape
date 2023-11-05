@@ -38,14 +38,18 @@ final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
         case _ => false
       }
       */
-    that.render.contains(this.render) 
+    val thatRendered = that.render
+    val thisRendered = this.render
+    Logger.debug("that rendered", thatRendered)
+    Logger.debug("this rendered", thisRendered)
+    Logger.loggedDebug("Result")(thatRendered.contains(thisRendered))
   }
 
   def render(using Quotes): String = {
     import quotes.reflect.*
     given Printer[TypeRepr] = Printer.TypeReprShortCode
 
-    val printedRoot = root.repr.show
+    val printedRoot = root.repr.widen.show
 
     if (self.segments.isEmpty) printedRoot
     else

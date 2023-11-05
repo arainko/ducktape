@@ -71,6 +71,8 @@ object ErrorMessage {
       }
   }
 
+  final case class ConfigurationFailed(config: Configuration.At.Failed) extends ErrorMessage {
+    export config.{ span, target }
+    def render(using Quotes): String = config.message
+  }
 }
-
-// final case class ErrorMessage()
