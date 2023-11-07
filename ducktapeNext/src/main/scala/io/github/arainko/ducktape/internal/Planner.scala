@@ -13,15 +13,6 @@ object Planner {
     recurse(source, dest, Path.empty(source.tpe), Path.empty(dest.tpe))
   }
 
-  private def recurseAndCreatePlan[Source: Type, Dest: Type](
-    sourceContext: Path,
-    destContext: Path
-  )(using Quotes, Depth): Plan[Plan.Error] = {
-    val src = Structure.of[Source]
-    val dest = Structure.of[Dest]
-    recurse(src, dest, sourceContext, destContext)
-  }
-
   private def recurse(
     source: Structure,
     dest: Structure,
@@ -29,81 +20,78 @@ object Planner {
     destContext: Path
   )(using quotes: Quotes, depth: Depth): Plan[Plan.Error] = {
     import quotes.reflect.*
+    given Depth = Depth.incremented(using depth)
 
-    if depth > 64 then
-      Plan.Error(source.tpe, dest.tpe, sourceContext, destContext, ErrorMessage.RecursionSuspected, None)
-    else {
+    Logger.loggedInfo("Plan"):
+      (source.force -> dest.force) match {
+        case _ if Depth.current > 64 =>
+          Plan.Error(source.tpe, dest.tpe, sourceContext, destContext, ErrorMessage.RecursionSuspected, None)
 
-      given Depth = Depth.incremented(using depth)
+        case (source: Product, dest: Function) =>
+          planProductFunctionTransformation(source, dest, sourceContext, destContext)
 
-      Logger.loggedInfo("Plan"):
-        (source.force -> dest.force) match {
-          case (source: Product, dest: Function) =>
-            planProductFunctionTransformation(source, dest, sourceContext, destContext)
+        case UserDefinedTransformation(transformer) =>
+          Plan.UserDefined(source.tpe, dest.tpe, sourceContext, destContext, transformer)
 
-          case UserDefinedTransformation(transformer) =>
-            Plan.UserDefined(source.tpe, dest.tpe, sourceContext, destContext, transformer)
+        case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
+          Plan.Upcast(source.tpe, dest.tpe, sourceContext, destContext)
 
-          case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
-            Plan.Upcast(source.tpe, dest.tpe, sourceContext, destContext)
+        case Optional(_, srcName, srcParamStruct) -> Optional(_, destName, destParamStruct) =>
+          Plan.BetweenOptions(
+            srcParamStruct.tpe,
+            destParamStruct.tpe,
+            sourceContext,
+            destContext,
+            recurse(srcParamStruct, destParamStruct, sourceContext, destContext)
+          )
 
-          case Structure('[Option[srcTpe]], srcName) -> Structure('[Option[destTpe]], destName) =>
-            Plan.BetweenOptions(
-              Type.of[srcTpe],
-              Type.of[destTpe],
-              sourceContext,
-              destContext,
-              recurseAndCreatePlan[srcTpe, destTpe](sourceContext, destContext)
-            )
+        case struct -> Optional(_, _, paramStruct) =>
+          Plan.BetweenNonOptionOption(
+            struct.tpe,
+            paramStruct.tpe,
+            sourceContext,
+            destContext,
+            recurse(struct, paramStruct, sourceContext, destContext)
+          )
 
-          case Structure('[a], _) -> Structure('[Option[destTpe]], destName) =>
-            Plan.BetweenNonOptionOption(
-              Type.of[a],
-              Type.of[destTpe],
-              sourceContext,
-              destContext,
-              recurseAndCreatePlan[a, destTpe](sourceContext, destContext)
-            )
+        case Collection(_, _, srcParamStruct) -> Collection(destCollTpe, _, destParamStruct) =>
+          Plan.BetweenCollections(
+            destCollTpe,
+            srcParamStruct.tpe,
+            destParamStruct.tpe,
+            sourceContext,
+            destContext,
+            recurse(srcParamStruct, destParamStruct, sourceContext, destContext)
+          )
 
-          case Structure(source @ '[Iterable[srcTpe]], srcName) -> Structure(dest @ '[Iterable[destTpe]], destName) =>
-            Plan.BetweenCollections(
-              dest,
-              Type.of[srcTpe],
-              Type.of[destTpe],
-              sourceContext,
-              destContext,
-              recurseAndCreatePlan[srcTpe, destTpe](sourceContext, destContext)
-            )
+        case (source: Product, dest: Product) =>
+          planProductTransformation(source, dest, sourceContext, destContext)
 
-          case (source: Product, dest: Product) =>
-            planProductTransformation(source, dest, sourceContext, destContext)
+        case (source: Coproduct, dest: Coproduct) =>
+          planCoproductTransformation(source, dest, sourceContext, destContext)
 
-          case (source: Coproduct, dest: Coproduct) =>
-            planCoproductTransformation(source, dest, sourceContext, destContext)
+        case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
+          Plan.BetweenSingletons(source.tpe, dest.tpe, sourceContext, destContext, dest.value)
 
-          case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
-            Plan.BetweenSingletons(source.tpe, dest.tpe, sourceContext, destContext, dest.value)
+        case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
+          Plan.BetweenWrappedUnwrapped(source.tpe, dest.tpe, sourceContext, destContext, source.paramFieldName)
 
-          case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
-            Plan.BetweenWrappedUnwrapped(source.tpe, dest.tpe, sourceContext, destContext, source.paramFieldName)
+        case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr =>
+          Plan.BetweenUnwrappedWrapped(source.tpe, dest.tpe, sourceContext, destContext)
 
-          case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr =>
-            Plan.BetweenUnwrappedWrapped(source.tpe, dest.tpe, sourceContext, destContext)
+        case DerivedTransformation(transformer) =>
+          Plan.Derived(source.tpe, dest.tpe, sourceContext, destContext, transformer)
 
-          case DerivedTransformation(transformer) =>
-            Plan.Derived(source.tpe, dest.tpe, sourceContext, destContext, transformer)
-
-          case (source, dest) =>
-            Plan.Error(
-              source.tpe,
-              dest.tpe,
-              sourceContext,
-              destContext,
-              ErrorMessage.CouldntBuildTransformation(source.tpe, dest.tpe),
-              None
-            )
-        }
-    }
+        case (source, dest) =>
+          Plan.Error(
+            source.tpe,
+            dest.tpe,
+            sourceContext,
+            destContext,
+            ErrorMessage.CouldntBuildTransformation(source.tpe, dest.tpe),
+            None
+          )
+      }
   }
 
   private def planProductTransformation(
@@ -196,21 +184,24 @@ object Planner {
   }
 
   object UserDefinedTransformation {
-    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[Transformer[?, ?]]] = {
+    def unapply(structs: (Structure, Structure))(using Quotes, Depth): Option[Expr[Transformer[?, ?]]] = {
       val (src, dest) = structs
 
-      (src.tpe -> dest.tpe) match {
-        case '[src] -> '[dest] => Expr.summon[Transformer[src, dest]]
-      }
+      // if current depth is lower or equal to 1 then that means we're most likely referring to ourselves
+      if Depth.current <= 1 then None
+      else
+        (src.tpe -> dest.tpe) match {
+          case '[src] -> '[dest] => Expr.summon[Transformer[src, dest]]
+        }
     }
   }
 
   object DerivedTransformation {
-    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[Transformer[?, ?]]] = {
+    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[Transformer.Derived[?, ?]]] = {
       val (src, dest) = structs
 
       (src.tpe -> dest.tpe) match {
-        case '[src] -> '[dest] => Expr.summon[Transformer[src, dest]]
+        case '[src] -> '[dest] => Expr.summon[Transformer.Derived[src, dest]]
       }
     }
   }

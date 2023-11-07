@@ -1,9 +1,6 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.internal.Logger
-
 import scala.annotation.tailrec
-import scala.collection.mutable.ListBuffer
 import scala.quoted.*
 
 object PathSelector {

@@ -2,7 +2,6 @@ package io.github.arainko.ducktape.internal
 
 import scala.quoted.Quotes
 import scala.quoted.Type
-import scala.annotation.constructorOnly
 import io.github.arainko.ducktape.internal.Path.Segment
 
 sealed trait ErrorMessage derives Debug {

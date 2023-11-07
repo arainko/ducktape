@@ -1,17 +1,17 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.internal.{ Debug, Metainformation }
+import io.github.arainko.ducktape.internal.{ Metainformation }
 
 import scala.Ordering.Implicits.*
-import scala.compiletime.*
 import scala.quoted.*
+import scala.annotation.nowarn
 
 private[ducktape] object Logger {
 
   // Logger Config
   private transparent inline def level = Level.Debug
   private val output = Output.StdOut
-  private def filter(msg: String, meta: Metainformation) = meta.contains("Path") || meta.contains("Trans")
+  @nowarn private def filter(msg: String, meta: Metainformation) = meta.contains("Struct")
 
   enum Level {
     case Off, Debug, Info

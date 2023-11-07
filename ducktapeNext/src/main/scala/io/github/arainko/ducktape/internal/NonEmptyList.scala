@@ -1,7 +1,5 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.Quotes
-
 private[ducktape] opaque type NonEmptyList[+A] = ::[A]
 
 private[ducktape] object NonEmptyList {

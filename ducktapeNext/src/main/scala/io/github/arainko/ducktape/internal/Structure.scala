@@ -26,16 +26,26 @@ object Structure {
   def unapply(struct: Structure): (Type[?], String) = struct.tpe -> struct.name
 
   case class Product(tpe: Type[?], name: String, fields: Map[String, Structure]) extends Structure
+
   case class Coproduct(tpe: Type[?], name: String, children: Map[String, Structure]) extends Structure
+
   case class Function(
     tpe: Type[?],
     name: String,
     args: ListMap[String, Structure],
     function: io.github.arainko.ducktape.internal.Function
   ) extends Structure
+
+  case class Optional(tpe: Type[? <: Option[?]], name: String, paramStruct: Structure) extends Structure
+
+  case class Collection(tpe: Type[? <: Iterable[?]], name: String, paramStruct: Structure) extends Structure
+
   case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
+
   case class Ordinary(tpe: Type[?], name: String) extends Structure
-  case class ValueClass(tpe: Type[?], name: String, paramTpe: Type[?], paramFieldName: String) extends Structure
+
+  case class ValueClass(tpe: Type[? <: AnyVal], name: String, paramTpe: Type[?], paramFieldName: String) extends Structure
+
   case class Lazy(private val deferredStruct: () => Structure) extends Structure {
     lazy val struct = deferredStruct()
     lazy val tpe = struct.tpe
@@ -61,63 +71,72 @@ object Structure {
     given Printer[TypeRepr] = Printer.TypeReprShortCode
 
     Logger.loggedInfo("Structure"):
-      Expr.summon[Mirror.Of[A]] match {
-        case None =>
-          Type.of[A].repr match {
-            case valueClassRepr if valueClassRepr <:< TypeRepr.of[AnyVal] && valueClassRepr.typeSymbol.flags.is(Flags.Case) =>
-              val param = valueClassRepr.typeSymbol.caseFields.head
-              val paramTpe = valueClassRepr.memberType(param)
-              Structure.ValueClass(Type.of[A], valueClassRepr.show, paramTpe.asType, param.name)
-            case other =>
-              Structure.Ordinary(Type.of[A], TypeRepr.of[A].show)
-          }
-        case Some(value) =>
-          value match {
-            case '{
-                  type label <: String
-                  $m: Mirror.Singleton {
-                    type MirroredLabel = `label`
-                  }
-                } =>
-              val value = materializeSingleton[A]
-              Structure.Singleton(Type.of[A], constantString[label], value.asExpr)
-            case '{
-                  type label <: String
-                  $m: Mirror.SingletonProxy {
-                    type MirroredLabel = `label`
-                  }
-                } =>
-              val value = materializeSingleton[A]
-              Structure.Singleton(Type.of[A], constantString[label], value.asExpr)
-            case '{
-                  type label <: String
-                  $m: Mirror.Product {
-                    type MirroredLabel = `label`
-                    type MirroredElemLabels = labels
-                    type MirroredElemTypes = types
-                  }
-                } =>
-              val structures =
-                tupleTypeElements(TypeRepr.of[types]).map(tpe =>
-                  tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
-                )
-              val names = constStringTuple(TypeRepr.of[labels])
-              Structure.Product(Type.of[A], constantString[label], names.zip(structures).toMap)
-            case '{
-                  type label <: String
-                  $m: Mirror.Sum {
-                    type MirroredLabel = `label`
-                    type MirroredElemLabels = labels
-                    type MirroredElemTypes = types
-                  }
-                } =>
-              val names = constStringTuple(TypeRepr.of[labels])
-              val structures =
-                tupleTypeElements(TypeRepr.of[types]).map(tpe =>
-                  tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
-                )
+      Type.of[A] match {
+        case tpe @ '[Option[param]] =>
+          Structure.Optional(tpe, tpe.repr.show, Structure.of[param])
 
-              Structure.Coproduct(Type.of[A], constantString[label], names.zip(structures).toMap)
+        case tpe @ '[Iterable[param]] =>
+          Structure.Collection(tpe, tpe.repr.show, Structure.of[param])
+
+        case tpe @ '[AnyVal] if tpe.repr.typeSymbol.flags.is(Flags.Case) =>
+          val repr = tpe.repr
+          val param = repr.typeSymbol.caseFields.head
+          val paramTpe = repr.memberType(param)
+          Structure.ValueClass(tpe, repr.show, paramTpe.asType, param.name)
+
+        case _ =>
+          Expr.summon[Mirror.Of[A]] match {
+            case None =>
+              Structure.Ordinary(Type.of[A], Type.of[A].repr.show)
+
+            case Some(value) =>
+              value match {
+                case '{
+                      type label <: String
+                      $m: Mirror.Singleton {
+                        type MirroredLabel = `label`
+                      }
+                    } =>
+                  val value = materializeSingleton[A]
+                  Structure.Singleton(Type.of[A], constantString[label], value.asExpr)
+                case '{
+                      type label <: String
+                      $m: Mirror.SingletonProxy {
+                        type MirroredLabel = `label`
+                      }
+                    } =>
+                  val value = materializeSingleton[A]
+                  Structure.Singleton(Type.of[A], constantString[label], value.asExpr)
+                case '{
+                      type label <: String
+                      $m: Mirror.Product {
+                        type MirroredLabel = `label`
+                        type MirroredElemLabels = labels
+                        type MirroredElemTypes = types
+                      }
+                    } =>
+                  val structures =
+                    tupleTypeElements(TypeRepr.of[types]).map(tpe =>
+                      tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
+                    )
+                  val names = constStringTuple(TypeRepr.of[labels])
+                  Structure.Product(Type.of[A], constantString[label], names.zip(structures).toMap)
+                case '{
+                      type label <: String
+                      $m: Mirror.Sum {
+                        type MirroredLabel = `label`
+                        type MirroredElemLabels = labels
+                        type MirroredElemTypes = types
+                      }
+                    } =>
+                  val names = constStringTuple(TypeRepr.of[labels])
+                  val structures =
+                    tupleTypeElements(TypeRepr.of[types]).map(tpe =>
+                      tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
+                    )
+
+                  Structure.Coproduct(Type.of[A], constantString[label], names.zip(structures).toMap)
+              }
           }
       }
   }

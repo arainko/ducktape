@@ -14,8 +14,6 @@ object Transformations {
     value: Expr[A],
     configs: Expr[Seq[Field[A, B] | Case[A, B]]]
   )(using Quotes): Expr[B] = {
-    import quotes.reflect.*
-
     val plan = Planner.between(Structure.of[A], Structure.of[B])
     val config = Configuration.parse(configs)
     createTransformation(value, plan, config).asExprOf[B]
@@ -32,8 +30,6 @@ object Transformations {
     function: Expr[Func],
     configs: Expr[Seq[Field[A, Args] | Case[A, Args]]]
   )(using Quotes) = {
-    import quotes.reflect.*
-
     val plan =
       Function
         .fromFunctionArguments[Args, Func](function)

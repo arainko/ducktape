@@ -2,9 +2,7 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.*
-import io.github.arainko.ducktape.{ Case => CaseConfig, Field => FieldConfig }
 
-import scala.annotation.{ nowarn, tailrec }
 import scala.collection.Factory
 import scala.quoted.*
 

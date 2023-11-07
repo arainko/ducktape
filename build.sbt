@@ -50,7 +50,7 @@ lazy val ducktapeNext =
   project
     .in(file("ducktapeNext"))
     .settings(
-      scalacOptions ++= List("-Xcheck-macros", "-Xfatal-warnings", "-deprecation"),
+      scalacOptions ++= List("-Xcheck-macros", "-deprecation", "-Wunused:all"),
     )
     .dependsOn(tooling)
 

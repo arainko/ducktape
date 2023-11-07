@@ -1,16 +1,9 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.Debug
-import scala.annotation.nowarn
 import scala.deriving.Mirror
 import scala.reflect.TypeTest
-import scala.reflect.ClassTag
-import scala.quoted.Quotes
 import scala.collection.SortedMap
 import io.github.arainko.ducktape.internal.Transformations
-import scala.collection.immutable.HashMap
-import java.util.IdentityHashMap
-import io.github.arainko.ducktape.internal.PositionTest
 
 final case class Value(int: Int) extends AnyVal
 final case class ValueGen[A](int: A) extends AnyVal
@@ -71,6 +64,7 @@ final case class DeffTest1(int: Int)
 final case class DeffTest2(int: Int, str: String = "default")
 
 final case class Rec[A](value: A, rec: Option[Rec[A]])
+final case class NotRec[A](value: A)
 
 @main def main: Unit = {
 
@@ -85,7 +79,17 @@ final case class Rec[A](value: A, rec: Option[Rec[A]])
 
   val rec: Rec[Int] = Rec(1, None)
 
-  rec.to[Rec[Int | String]]
+  // given Transformer[NotRec[Int], NotRec[Int | String]] = 
+  //   Transformer.defineVia[NotRec[Int]](NotRec[Int | String]).build()
+
+  internal.CodePrinter.code:
+    given Transformer[Rec[Int], Rec[Int | String]] = DefinitionBuilder[Rec[Int], Rec[Int | String]].build()
+
+
+    
+  // rec.to[Rec[Int | String]]
+
+
   // // internal.CodePrinter.code:
     // (??? : DeffTest1).into[DeffTest2].transform(
 
@@ -116,12 +120,12 @@ final case class Rec[A](value: A, rec: Option[Rec[A]])
     // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
     // Field.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
 
-  // ProdTest1(Test1.Cos(Nested1(1)))
-  //   .into[ProdTest2]
-  //   .transform(
-  //     Field.const(_.test.at[Test2.Cos].int.int, 123), // overridden fieldn,
-  //     Case.const(_.test.at[Test1.Empty.type], ???),
-      // Field.const(_.test.at[Test2.Cos].int.additional, 1),
+  ProdTest1(Test1.Cos(Nested1(1)))
+    .into[ProdTest2]
+    .transform(
+      Field.const(_.test.at[Test2.Cos].int.int, 123), // overridden fieldn,
+      Case.const(_.test.at[Test1.Empty.type], ???),
+      Field.const(_.test.at[Test2.Cos].int.additional, 1),
       // Field.default(_.test),
 
       // Field.default(_.test),
@@ -137,7 +141,7 @@ final case class Rec[A](value: A, rec: Option[Rec[A]])
       // Case.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))) // missing case
       // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
       
-    // )
+    )
 
 
 

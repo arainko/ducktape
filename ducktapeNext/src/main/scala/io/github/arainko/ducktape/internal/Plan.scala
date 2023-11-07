@@ -5,7 +5,6 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ListMap
-import scala.collection.{ Factory, IterableFactory }
 import scala.quoted.*
 
 type PlanError = Plan.Error
@@ -121,7 +120,7 @@ enum Plan[+E <: PlanError] {
   ) extends Plan[E]
 
   case BetweenCollections(
-    destCollectionTpe: Type[?],
+    destCollectionTpe: Type[? <: Iterable[?]],
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -231,7 +230,7 @@ object Plan {
                 def targetTpe(plan: Plan[Plan.Error]) = if (config.target.isSource) plan.sourceTpe.repr else plan.destTpe.repr
 
                 casePlans.zipWithIndex
-                  .find((plan, idx) => tpe.repr =:= targetTpe(plan))
+                  .find((plan, _) => tpe.repr =:= targetTpe(plan))
                   .map((casePlan, idx) => plan.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail))))
                   .getOrElse(
                     Plan

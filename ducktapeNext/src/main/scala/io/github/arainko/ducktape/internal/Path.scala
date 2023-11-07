@@ -11,7 +11,6 @@ final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
   def prepended(segment: Path.Segment): Path = self.copy(segments = segments.prepended(segment))
 
   def currentTpe(using Quotes): Type[?] = {
-    import quotes.reflect.*
 
     segments.reverse.collectFirst { case Path.Segment.Field(tpe, name) => tpe }
       .getOrElse(root)
