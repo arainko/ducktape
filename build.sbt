@@ -51,6 +51,7 @@ lazy val ducktapeNext =
     .in(file("ducktapeNext"))
     .settings(
       scalacOptions ++= List("-Xcheck-macros", "-deprecation", "-Wunused:all"),
+      libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0-M10" % Test
     )
     .dependsOn(tooling)
 

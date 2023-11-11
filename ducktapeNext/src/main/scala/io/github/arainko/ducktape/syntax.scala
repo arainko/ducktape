@@ -8,7 +8,7 @@ extension [Source] (source: Source) {
   def into[Dest]: AppliedBuilder[Source, Dest] = AppliedBuilder[Source, Dest](source)
 
   transparent inline def via[Func](inline function: Func): Any = 
-    Transformations.via[Source, Func, Nothing](source, function)
+    Transformations.viaInferred[Source, Func, Nothing](source, function)
 
   transparent inline def intoVia[Func](inline function: Func): Any = 
     AppliedViaBuilder.create(source, function)

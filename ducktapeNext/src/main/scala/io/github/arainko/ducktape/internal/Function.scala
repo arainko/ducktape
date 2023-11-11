@@ -13,7 +13,7 @@ final case class Function(args: ListMap[String, Type[?]], returnTpe: Type[?], ex
   }
 
   // TODO: This should probably not live here
-  def encodeAsType[TypeFn[args <: FunctionArguments]: Type](initial: Expr[TypeFn[Nothing]])(using Quotes) = {
+  def encodeAsType[TypeFn[args <: FunctionArguments, retTpe]: Type](initial: Expr[TypeFn[Nothing, Nothing]])(using Quotes) = {
     import quotes.reflect.*
 
     Logger.info("Encoding a Function as type for later usage...")
@@ -22,7 +22,7 @@ final case class Function(args: ListMap[String, Type[?]], returnTpe: Type[?], ex
         Refinement(acc, name, tpe.repr)
     }
     returnTpe -> refinedArgs.asType match {
-      case '[retTpe] -> '[Function.IsFuncArgs[args]] => '{ $initial.asInstanceOf[TypeFn[args]] }
+      case '[retTpe] -> '[Function.IsFuncArgs[args]] => '{ $initial.asInstanceOf[TypeFn[args, retTpe]] }
     }
   }
 
@@ -71,14 +71,14 @@ object Function {
   }
 
   // TODO: This should probably not live here
-  transparent inline def encodeAsType[TypeFn[args <: FunctionArguments]](
+  transparent inline def encodeAsType[TypeFn[args <: FunctionArguments, retTpe]](
     inline function: Any,
-    initial: TypeFn[Nothing]
+    initial: TypeFn[Nothing, Nothing]
   ) = ${ encodeAsTypeMacro('function, 'initial) }
 
-  private def encodeAsTypeMacro[TypeFn[args <: FunctionArguments]: Type](
+  private def encodeAsTypeMacro[TypeFn[args <: FunctionArguments, retTpe]: Type](
     function: Expr[Any],
-    initial: Expr[TypeFn[Nothing]]
+    initial: Expr[TypeFn[Nothing, Nothing]]
   )(using Quotes) = {
     import quotes.reflect.*
 

@@ -64,7 +64,7 @@ final case class DeffTest1(int: Int)
 final case class DeffTest2(int: Int, str: String = "default")
 
 final case class Rec[A](value: A, rec: Option[Rec[A]])
-final case class NotRec[A](value: A)
+final case class NotRec[A](value: A = "string")
 
 @main def main: Unit = {
 
@@ -79,13 +79,23 @@ final case class NotRec[A](value: A)
 
   val rec: Rec[Int] = Rec(1, None)
 
-  // given Transformer[NotRec[Int], NotRec[Int | String]] = 
-  //   Transformer.defineVia[NotRec[Int]](NotRec[Int | String]).build()
+  // // given Transformer[NotRec[Int], NotRec[Int | String]] = 
+  // internal.CodePrinter.code:
+  //   Transformer.defineVia[NotRec[Int]](NotRec[Int | String]).build(Field.const(_.value, ""))
 
-  internal.CodePrinter.code:
-    given Transformer[Rec[Int], Rec[Int | String]] = DefinitionBuilder[Rec[Int], Rec[Int | String]].build()
+  // internal.CodePrinter.code:
+  //   NotRec(1).via(NotRec[Int | String])
+
+  // internal.CodePrinter.code:
+  //   NotRec(1).into[NotRec[Int | String]].transform(Field.default(_.value))
+
+  // internal.CodePrinter.code:
+  //   given Transformer[Rec[Int], Rec[Int | String]] = DefinitionBuilder[Rec[Int], Rec[Int | String]].build()
 
 
+  def test1[A, B](a: A)(using t: Transformer[A, B]): B = 
+    internal.CodePrinter.code:
+      a.to[B]
     
   // rec.to[Rec[Int | String]]
 

@@ -3,6 +3,7 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.*
 import scala.quoted.*
 import scala.quoted.runtime.StopMacroExpansion
+import io.github.arainko.ducktape.internal.Function.fromFunctionArguments
 
 object Transformations {
   inline def between[A, B](
@@ -19,21 +20,29 @@ object Transformations {
     createTransformation(value, plan, config).asExprOf[B]
   }
 
-  transparent inline def via[A, Func, Args <: FunctionArguments](
+  inline def via[A, B, Func, Args <: FunctionArguments](
+    value: A,
+    function: Func,
+    inline configs: Field[A, Args] | Case[A, Args]*
+  ): B = ${ createTransformationVia[A, B, Func, Args]('value, 'function, 'configs) }
+
+  transparent inline def viaInferred[A, Func, Args <: FunctionArguments](
     value: A,
     inline function: Func,
     inline configs: Field[A, Args] | Case[A, Args]*
-  ): Any = ${ createTransformationVia('value, 'function, 'configs) }
+  ): Any = ${ createTransformationViaInferred('value, 'function, 'configs) }
 
-  private def createTransformationVia[A: Type, Func: Type, Args <: FunctionArguments: Type](
+  private def createTransformationViaInferred[A: Type, Func: Type, Args <: FunctionArguments: Type](
     value: Expr[A],
     function: Expr[Func],
     configs: Expr[Seq[Field[A, Args] | Case[A, Args]]]
   )(using Quotes) = {
     val plan =
+      // Function
+      //   .fromFunctionArguments[Args, Func](function)
+      //   .orElse(
       Function
-        .fromFunctionArguments[Args, Func](function)
-        .orElse(Function.fromExpr(function))
+        .fromExpr(function)
         .map(function => Planner.between(Structure.of[A], Structure.fromFunction(function)))
         .getOrElse(
           Plan.Error(
@@ -48,6 +57,30 @@ object Transformations {
 
     val config = Configuration.parse(configs)
     createTransformation(value, plan, config)
+  }
+
+  private def createTransformationVia[A: Type, B: Type, Func: Type, Args <: FunctionArguments: Type](
+    value: Expr[A],
+    function: Expr[Func],
+    configs: Expr[Seq[Field[A, Args] | Case[A, Args]]]
+  )(using Quotes) = {
+    val plan =
+      Function
+        .fromFunctionArguments[Args, Func](function)
+        .map(function => Planner.between(Structure.of[A], Structure.fromFunction(function)))
+        .getOrElse(
+          Plan.Error(
+            Type.of[A],
+            Type.of[Any],
+            Path.empty(Type.of[A]),
+            Path.empty(Type.of[Any]),
+            ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
+            None
+          )
+        )
+
+    val config = Configuration.parse(configs)
+    createTransformation(value, plan, config).asExprOf[B]
   }
 
   private def createTransformation[A: Type](
@@ -69,12 +102,11 @@ object Transformations {
           plan.refine.swap
             .map(_.toList)
             .getOrElse(Nil)
-            .filterNot(ogError => //filter out things that were successfully configured to not show these to the user
+            .filterNot(ogError => // filter out things that were successfully configured to not show these to the user
               ogError.message.target match
                 case Target.Source =>
-                  reconfiguredPlan.successes.exists(succ => 
-                    succ.target == Target.Source && succ.path.isAncestorOrSiblingOf(ogError.sourceContext)
-                  )
+                  reconfiguredPlan.successes
+                    .exists(succ => succ.target == Target.Source && succ.path.isAncestorOrSiblingOf(ogError.sourceContext))
                 case Target.Dest =>
                   reconfiguredPlan.successes.exists(succ =>
                     succ.target == Target.Dest && succ.path.isAncestorOrSiblingOf(ogError.destContext)

@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
+import scala.util.chaining.*
 
 object Defaults {
   def of(struct: Structure.Product)(using Quotes): Map[String, Expr[Any]] = {
@@ -8,7 +9,7 @@ object Defaults {
 
     Logger.debug(s"Searching for defaults for a type of", struct.tpe)
 
-    val tpe = struct.tpe.repr
+    val tpe = struct.tpe.repr.widen
     val sym = tpe.typeSymbol
     val fieldNamesWithDefaults = 
       Logger.loggedDebug("Fields that have a default"):
@@ -18,7 +19,7 @@ object Defaults {
     val companion = Ref(sym.companionModule)
     val defaultValues = companionBody.collect {
       case defaultMethod @ DefDef(name, _, _, _) if name.startsWith("$lessinit$greater$default") =>
-        companion.select(defaultMethod.symbol).appliedToTypes(tpe.typeArgs).asExpr
+        companion.select(defaultMethod.symbol).appliedToTypes(tpe.typeArgs).tap(Logger.loggedDebug("Default")(_)).asExpr
     }
 
     fieldNamesWithDefaults.zip(defaultValues).toMap

@@ -29,4 +29,8 @@ object Field {
   @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
   def allMatching[A, B, DestFieldTpe, ProductTpe](selector: Selector ?=> B => DestFieldTpe, product: ProductTpe): Field[A, B] =
     ???
+
+  @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
+  def allMatching[A, B, DestFieldTpe, ProductTpe](product: ProductTpe): Field[A, B] =
+    ???
 }

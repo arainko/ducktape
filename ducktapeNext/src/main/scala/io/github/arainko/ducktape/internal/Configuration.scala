@@ -118,6 +118,8 @@ private[ducktape] object Configuration {
             Span.fromPosition(cfg.pos)
           ) :: Nil
 
+        case DeprecatedConfig(configs) => configs
+
         case oopsie =>
           Configuration.At.Failed(
             Path.empty(Type.of[Nothing]),
@@ -171,6 +173,43 @@ private[ducktape] object Configuration {
       case Nil =>
         Configuration.At.Failed(path, Target.Dest, "No matching fields found", span) :: Nil // TODO: Better error message
       case configs => configs
+    }
+  }
+
+  object DeprecatedConfig {
+    def unapply(using Quotes)(term: quotes.reflect.Term) = {
+      import quotes.reflect.*
+
+      PartialFunction.condOpt(term.asExpr):
+        case cfg @ '{
+              type sourceSubtype
+              type src >: `sourceSubtype`
+              Case.const[`sourceSubtype`].apply[`src`, dest]($value)
+            } =>
+          val path = Path.empty(Type.of[src]).appended(Path.Segment.Case(Type.of[sourceSubtype]))
+          Configuration.At.Successful(
+            path,
+            Target.Source,
+            Configuration.Const(value, value.asTerm.tpe.asType),
+            Span.fromExpr(cfg)
+          ) :: Nil
+
+        case cfg @ '{
+              type sourceSubtype
+              type src >: `sourceSubtype`
+              Case.computed[`sourceSubtype`].apply[`src`, dest]($function)
+            } =>
+          val path = Path.empty(Type.of[src]).appended(Path.Segment.Case(Type.of[sourceSubtype]))
+          Configuration.At.Successful(
+            path,
+            Target.Source,
+            Configuration.Computed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
+            Span.fromExpr(cfg)
+          ) :: Nil
+
+        case cfg @ '{ Field.allMatching[a, b, source, dest]($fieldSource) } => 
+          
+          parseAllMatching(fieldSource, Path.empty(Type.of[dest]), TypeRepr.of[dest], TypeRepr.of[source], Span.fromExpr(cfg))
     }
   }
 
