@@ -3,7 +3,7 @@ package io.github.arainko.ducktape
 import scala.annotation.compileTimeOnly
 
 // Kept around for source compat with 0.1.x
-inline def Arg: Field.type = Field
+def Arg: Field.type = Field
 
 opaque type Field[A, B] = Unit
 
@@ -31,6 +31,6 @@ object Field {
     ???
 
   @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
-  def allMatching[A, B, DestFieldTpe, ProductTpe](product: ProductTpe): Field[A, B] =
+  def allMatching[A, B, ProductTpe](product: ProductTpe): Field[A, B] =
     ???
 }

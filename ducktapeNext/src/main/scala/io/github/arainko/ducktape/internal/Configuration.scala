@@ -34,7 +34,7 @@ private[ducktape] object Configuration {
       .map(_.asTerm)
       .flatMap {
         case cfg @ Apply(
-              TypeApply(Select(Ident("Field" | "Arg"), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
+              TypeApply(Select(IdentOfType('[Field.type]), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
           Configuration.At.Successful(
@@ -45,7 +45,7 @@ private[ducktape] object Configuration {
           ) :: Nil
 
         case cfg @ Apply(
-              TypeApply(Select(Ident("Field" | "Arg"), "default"), a :: b :: destFieldTpe :: Nil),
+              TypeApply(Select(IdentOfType('[Field.type]), "default"), a :: b :: destFieldTpe :: Nil),
               PathSelector(path) :: Nil
             ) =>
           val segments = path.toVector
@@ -80,7 +80,7 @@ private[ducktape] object Configuration {
           default.left.map(error => Configuration.At.Failed(path, Target.Dest, error, Span.fromPosition(cfg.pos))).merge :: Nil
 
         case cfg @ Apply(
-              TypeApply(Select(Ident("Field" | "Arg"), "computed" | "renamed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
+              TypeApply(Select(IdentOfType('[Field.type]), "computed" | "renamed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
               PathSelector(path) :: function :: Nil
             ) =>
           Configuration.At.Successful(
@@ -91,13 +91,13 @@ private[ducktape] object Configuration {
           ) :: Nil
 
         case cfg @ Apply(
-              TypeApply(Select(Ident("Field" | "Arg"), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
+              TypeApply(Select(IdentOfType('[Field.type]), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
               PathSelector(path) :: fieldSource :: Nil
             ) =>
           parseAllMatching(fieldSource.asExpr, path, destFieldTpe.tpe, fieldSourceTpe.tpe, Span.fromPosition(cfg.pos))
 
         case cfg @ Apply(
-              TypeApply(Select(Ident("Case"), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
+              TypeApply(Select(IdentOfType('[Case.type]), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
           Configuration.At.Successful(
@@ -108,7 +108,7 @@ private[ducktape] object Configuration {
           ) :: Nil
 
         case cfg @ Apply(
-              TypeApply(Select(Ident("Case"), "computed"), a :: b :: sourceTpe :: computedTpe :: Nil),
+              TypeApply(Select(IdentOfType('[Case.type]), "computed"), a :: b :: sourceTpe :: computedTpe :: Nil),
               PathSelector(path) :: function :: Nil
             ) =>
           Configuration.At.Successful(
@@ -124,7 +124,7 @@ private[ducktape] object Configuration {
           Configuration.At.Failed(
             Path.empty(Type.of[Nothing]),
             Target.Dest,
-            "Unsupported config expression",
+            s"Unsupported config expression: ${oopsie.show}",
             Span.fromPosition(oopsie.pos)
           ) :: Nil
       }
@@ -207,10 +207,18 @@ private[ducktape] object Configuration {
             Span.fromExpr(cfg)
           ) :: Nil
 
-        case cfg @ '{ Field.allMatching[a, b, source, dest]($fieldSource) } => 
-          
-          parseAllMatching(fieldSource, Path.empty(Type.of[dest]), TypeRepr.of[dest], TypeRepr.of[source], Span.fromExpr(cfg))
+        case cfg @ '{ Field.allMatching[a, b, source]($fieldSource) } => 
+          parseAllMatching(fieldSource, Path.empty(Type.of[b]), TypeRepr.of[b], TypeRepr.of[source], Span.fromExpr(cfg))
     }
   }
 
+  private object IdentOfType {
+    def unapply(using Quotes)(term: quotes.reflect.Term): Option[Type[?]] = {
+      import quotes.reflect.*
+
+      PartialFunction.condOpt(term) {
+        case ident: Ident => ident.tpe.asType
+      }
+    }
+  }
 }

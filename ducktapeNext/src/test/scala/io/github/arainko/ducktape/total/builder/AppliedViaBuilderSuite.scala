@@ -16,7 +16,7 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
     val actual =
       testClass
         .intoVia(method)
-        .transform(Arg.const(_.additionalArg, List("const")))
+        .transform(Field.const(_.additionalArg, List("const")))
 
     assertEquals(actual, expected)
   }

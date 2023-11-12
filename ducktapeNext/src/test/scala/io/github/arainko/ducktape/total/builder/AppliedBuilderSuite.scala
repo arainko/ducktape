@@ -195,13 +195,11 @@ class AppliedBuilderSuite extends DucktapeSuite {
   test("Case.computed applies a function to that given subtype") {
 
     def actual(value: NotEnumMoreCases) =
-      internal.CodePrinter.code:
-        value
-          .into[MoreCases]
-          .transform(
-            Case.computed[NotEnumMoreCases.Case4](case4 => if (case4.value == 1) MoreCases.Case1 else MoreCases.Case4)
-          )
-
+      value
+        .into[MoreCases]
+        .transform(
+          Case.computed[NotEnumMoreCases.Case4](case4 => if (case4.value == 1) MoreCases.Case1 else MoreCases.Case4)
+        )
 
     val expectedForValue1 = MoreCases.Case1
     val expectedForOther = MoreCases.Case4
