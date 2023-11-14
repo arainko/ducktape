@@ -115,7 +115,7 @@ object Planner {
               destFieldStruct.tpe,
               sourceContext, // TODO: Revise
               updatedDestContext, // TODO: Revise
-              ErrorMessage.NoFieldFound(destField, source.tpe),
+              ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
               None
             )
           )
@@ -145,7 +145,7 @@ object Planner {
               destFieldStruct.tpe,
               sourceContext, // TODO: Revise
               updatedDestContext, // TODO: Revise
-              ErrorMessage.NoFieldFound(destField, source.tpe),
+              ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
               None
             )
           )

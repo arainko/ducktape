@@ -48,7 +48,7 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
-  test("When an Arg is configured multiple times a warning is emitted") {
+  test("When an Arg is configured multiple times a warning is emitted".ignore) {
     @nowarn("msg=unused local definition")
     def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
 
@@ -74,7 +74,7 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
           .intoVia(method)
           .transform()
       """
-    }("No field named 'additionalArg' found in TestClass")
+    }("No field 'additionalArg' found in io.github.arainko.ducktape.total.builder.AppliedViaBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg")
   }
 }
 

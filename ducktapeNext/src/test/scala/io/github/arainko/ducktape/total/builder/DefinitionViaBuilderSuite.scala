@@ -93,7 +93,7 @@ class DefinitionViaBuilderSuite extends DucktapeSuite {
           .defineVia[TestClass](method)
           .build()
       """
-    }("No field named 'additionalArg' found in TestClass")
+    }("No field 'additionalArg' found in io.github.arainko.ducktape.total.builder.DefinitionViaBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg")
   }
 
 }

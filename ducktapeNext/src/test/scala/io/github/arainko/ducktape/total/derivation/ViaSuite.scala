@@ -72,7 +72,7 @@ class ViaSuite extends DucktapeSuite {
 
       value.via(method)
       """
-    }("No field named 'extraField' found in Input")
+    }("No field 'extraField' found in io.github.arainko.ducktape.total.derivation.Input @ Nothing.extraField")
   }
 
 }

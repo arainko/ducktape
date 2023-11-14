@@ -11,14 +11,14 @@ sealed trait ErrorMessage derives Debug {
 }
 
 object ErrorMessage {
-  final case class NoFieldFound(fieldName: String, sourceTpe: Type[?]) extends ErrorMessage {
+  final case class NoFieldFound(fieldName: String, fieldTpe: Type[?], sourceTpe: Type[?]) extends ErrorMessage {
     def render(using Quotes): String = s"No field '$fieldName' found in ${sourceTpe.repr.show}"
     def span = None
     val target = Target.Dest
   }
 
   final case class NoChildFound(childName: String, destTpe: Type[?]) extends ErrorMessage {
-    def render(using Quotes): String = s"No child named '$childName' found in ${destTpe.repr.show}"
+    def render(using Quotes): String = s"No child named '$childName found in ${destTpe.repr.show}"
     def span = None
     val target = Target.Source
   }

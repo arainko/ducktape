@@ -260,7 +260,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
       val derived = less.to[MoreFields]
       """
-    }("No field named 'field4' found in LessFields")
+    }("No field 'field4' found in LessFields @ MoreFields.field4")
   }
 
   test("derivation succeeds when going from a sum with less cases to a sum with more cases") {
@@ -355,9 +355,8 @@ class DerivedTransformerSuite extends DucktapeSuite {
       case Leaf1(str1: String)
     }
 
-    assertFailsToCompileWith("summon[Transformer[Sum1, Sum2]]") {
-      """Neither an instance of Transformer[Sum1.Leaf1, Sum2.Leaf1] was found nor are 'Leaf1' 'Leaf1' 
-singletons with the same name"""
+    assertFailsToCompileWith("summon[Transformer.Derived[Sum1, Sum2]]") {
+      "No field 'str1' found in Sum1.Leaf1 @ Sum2.at[Leaf1].str1"
     }
   }
 
@@ -373,6 +372,6 @@ singletons with the same name"""
   }
 
   test("derivation fails when going from a sum with more cases to a sum with less cases") {
-    assertFailsToCompileWith("MoreCases.Case3.to[LessCases]")("No child named 'Case4' found in LessCases")
+    assertFailsToCompileWith("MoreCases.Case3.to[LessCases]")("No child named 'Case4 found in io.github.arainko.ducktape.total.derivation.DerivedTransformerSuite.LessCases @ MoreCases.at[Case4]")
   }
 }

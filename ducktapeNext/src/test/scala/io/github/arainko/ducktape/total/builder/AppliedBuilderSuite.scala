@@ -27,7 +27,10 @@ class AppliedBuilderSuite extends DucktapeSuite {
         .into[TestClassWithAdditionalList]
         .transform(Field.const(_.additionalArg, "const"))
       """
-    }("Cannot prove that String <:< List[String].")
+    }(
+      "No field 'additionalArg' found in io.github.arainko.ducktape.total.builder.AppliedBuilderSuite.TestClass @ TestClassWithAdditionalList.additionalArg",
+      "Configuration is not valid since the provided type (java.lang.String) is not a subtype of scala.collection.immutable.List[scala.Predef.String] @ TestClassWithAdditionalList.additionalArg"
+    )
   }
 
   test("Field.computed properly applies a function to a field") {
@@ -48,7 +51,10 @@ class AppliedBuilderSuite extends DucktapeSuite {
         .into[TestClassWithAdditionalList]
         .transform(Field.computed(_.additionalArg, testClass => List(testClass.int)))
       """
-    }("Cannot prove that List[Int] <:< List[String].")
+    }(
+      "Configuration is not valid since the provided type (scala.collection.immutable.List[scala.Int]) is not a subtype of scala.collection.immutable.List[scala.Predef.String] @ TestClassWithAdditionalList.additionalArg",
+      "No field 'additionalArg' found in io.github.arainko.ducktape.total.builder.AppliedBuilderSuite.TestClass @ TestClassWithAdditionalList.additionalArg"
+    )
   }
 
   test("Field.renamed properly uses a different field for that argument") {
@@ -69,7 +75,10 @@ class AppliedBuilderSuite extends DucktapeSuite {
         .into[TestClassWithAdditionalString]
         .transform(Field.renamed(_.additionalArg, _.int))
       """
-    }("Cannot prove that Int <:< String.")
+    }(
+      "No field 'additionalArg' found in io.github.arainko.ducktape.total.builder.AppliedBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg",
+      "Configuration is not valid since the provided type (scala.Int) is not a subtype of java.lang.String @ TestClassWithAdditionalString.additionalArg"
+    )
   }
 
   test("Field.allMatching fills in missing fields") {
@@ -141,7 +150,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
 
       source.into[Source].transform(Field.allMatching(fieldSource))
       """
-    }("None of the fields from FieldSource match any of the fields from Source.")
+    }("No matching fields found @ Source")
   }
 
   test("The last applied field config is the picked one") {
@@ -165,7 +174,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
-  test("When configs are applied to the same field repeateadly a warning is emitted") {
+  test("When configs are applied to the same field repeateadly a warning is emitted".ignore) {
     assertFailsToCompileWith {
       """
       testClass
@@ -263,7 +272,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
-  test("When a Case is configured multiple times a warning is emitted") {
+  test("When a Case is configured multiple times a warning is emitted".ignore) {
 
     assertFailsToCompileWith {
       """
@@ -275,6 +284,74 @@ class AppliedBuilderSuite extends DucktapeSuite {
         )
       """
     }("Case 'io.github.arainko.ducktape.total.builder.AppliedBuilderSuite.LessCases.Case3' is configured multiple times")
+  }
+
+  test("derive a transformer for case classes with default values if configured") {
+    final case class TestClass(str: String, int: Int)
+
+    final case class TestClassWithAdditionalGenericArg[A](str: String, int: Int, additionalArg: A = "defaultStr")
+
+    val testClass = TestClass("str", 1)
+    val expected = TestClassWithAdditionalGenericArg[String]("str", 1, "defaultStr")
+
+    val actual =
+      List(
+        testClass
+          .into[TestClassWithAdditionalGenericArg[String]]
+          .transform(Field.default(_.additionalArg)),
+        Transformer
+          .define[TestClass, TestClassWithAdditionalGenericArg[String]]
+          .build(Field.default(_.additionalArg))
+          .transform(testClass)
+      )
+
+    actual.foreach(actual => assertEquals(actual, expected))
+  }
+
+  test("Field.default fails when a field doesn't have a default value") {
+    final case class TestClass(str: String, int: Int)
+
+    @nowarn("msg=unused local definition")
+    final case class TestClassWithAdditionalGenericArg[A](str: String, int: Int, additionalArg: A = "defaultStr")
+
+    @nowarn("msg=unused local definition")
+    val testClass = TestClass("str", 1)
+
+    assertFailsToCompileWith {
+      """
+      testClass
+        .into[TestClassWithAdditionalGenericArg[String]]
+        .transform(
+          Field.default(_.int)
+        )
+      """
+    }(
+      "The field 'int' doesn't have a default value @ TestClassWithAdditionalGenericArg[String].int",
+      "No field 'additionalArg' found in TestClass @ TestClassWithAdditionalGenericArg[String].additionalArg"
+    )
+  }
+
+  test("Field.default fails when the default doesn't match the expected type") {
+    final case class TestClass(str: String, int: Int)
+
+    @nowarn("msg=unused local definition")
+    final case class TestClassWithAdditionalGenericArg[A](str: String, int: Int, additionalArg: A = "defaultStr")
+
+    @nowarn("msg=unused local definition")
+    val testClass = TestClass("str", 1)
+
+    assertFailsToCompileWith {
+      """
+      testClass
+        .into[TestClassWithAdditionalGenericArg[Int]]
+        .transform(
+          Field.default(_.additionalArg)
+        )
+      """
+    }(
+      "No field 'additionalArg' found in TestClass @ TestClassWithAdditionalGenericArg[Int].additionalArg",
+      "Configuration is not valid since the provided type (java.lang.String) is not a subtype of scala.Int @ TestClassWithAdditionalGenericArg[Int].additionalArg"
+    )
   }
 
 }

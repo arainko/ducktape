@@ -40,7 +40,7 @@ private[ducktape] object Configuration {
           Configuration.At.Successful(
             path,
             Target.Dest,
-            Configuration.Const(value.asExpr, value.tpe.asType),
+            Configuration.Const(value.asExpr, value.tpe.widen.asType),
             Span.fromPosition(cfg.pos)
           ) :: Nil
 

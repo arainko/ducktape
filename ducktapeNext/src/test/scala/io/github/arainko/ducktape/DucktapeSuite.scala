@@ -7,8 +7,8 @@ trait DucktapeSuite extends FunSuite {
     assert(compiletime.testing.typeChecks(code), "Code snippet compiled despite expecting not to")
   }
 
-  transparent inline def assertFailsToCompileWith(inline code: String)(expected: String)(using Location) = {
-    val errors = compiletime.testing.typeCheckErrors(code).map(_.message).mkString("\n").strip()
-    assert(clue(errors).strip().contains(clue(expected)), "Error did not contain expected value")
+  transparent inline def assertFailsToCompileWith(inline code: String)(expected: String*)(using Location) = {
+    val errors = compiletime.testing.typeCheckErrors(code).map(_.message).toSet
+    assertEquals(errors, expected.toSet, "Error did not contain expected value")
   }
 }
