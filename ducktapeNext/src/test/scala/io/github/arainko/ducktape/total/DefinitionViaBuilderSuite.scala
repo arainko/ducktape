@@ -1,8 +1,8 @@
-package io.github.arainko.ducktape.total.builder
+package io.github.arainko.ducktape.total
 
 import io.github.arainko.*
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.total.builder.DefinitionViaBuilderSuite.*
+import io.github.arainko.ducktape.total.DefinitionViaBuilderSuite.*
 import munit.*
 
 class DefinitionViaBuilderSuite extends DucktapeSuite {
@@ -93,7 +93,7 @@ class DefinitionViaBuilderSuite extends DucktapeSuite {
           .defineVia[TestClass](method)
           .build()
       """
-    }("No field 'additionalArg' found in io.github.arainko.ducktape.total.builder.DefinitionViaBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg")
+    }("No field 'additionalArg' found in io.github.arainko.ducktape.total.DefinitionViaBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg")
   }
 
 }

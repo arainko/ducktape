@@ -1,7 +1,7 @@
-package io.github.arainko.ducktape.total.builder
+package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
-import io.github.arainko.ducktape.total.builder.AppliedViaBuilderSuite.*
+import io.github.arainko.ducktape.total.AppliedViaBuilderSuite.*
 
 import scala.annotation.nowarn
 
@@ -74,7 +74,7 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
           .intoVia(method)
           .transform()
       """
-    }("No field 'additionalArg' found in io.github.arainko.ducktape.total.builder.AppliedViaBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg")
+    }("No field 'additionalArg' found in io.github.arainko.ducktape.total.AppliedViaBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg")
   }
 }
 

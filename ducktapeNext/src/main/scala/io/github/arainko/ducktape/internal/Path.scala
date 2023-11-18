@@ -46,15 +46,14 @@ final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
 
   def render(using Quotes): String = {
     import quotes.reflect.*
-    given Printer[TypeRepr] = Printer.TypeReprShortCode
 
-    val printedRoot = root.repr.widen.show
+    val printedRoot = root.repr.widen.show(using Printer.TypeReprShortCode)
 
     if (self.segments.isEmpty) printedRoot
     else
       self.segments.map {
         case Path.Segment.Field(_, name) => name
-        case Path.Segment.Case(tpe)      => s"at[${tpe.repr.show}]"
+        case Path.Segment.Case(tpe)      => s"at[${tpe.repr.show(using Printer.TypeReprAnsiCode)}]"
       }.mkString(s"$printedRoot.", ".", "")
   }
 }

@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.total.derivation
+package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.model.*
@@ -356,7 +356,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
     }
 
     assertFailsToCompileWith("summon[Transformer.Derived[Sum1, Sum2]]") {
-      "No field 'str1' found in Sum1.Leaf1 @ Sum2.at[Leaf1].str1"
+      "No field 'str1' found in Sum1.Leaf1 @ Sum2.at[Sum2.Leaf1].str1"
     }
   }
 
@@ -372,6 +372,6 @@ class DerivedTransformerSuite extends DucktapeSuite {
   }
 
   test("derivation fails when going from a sum with more cases to a sum with less cases") {
-    assertFailsToCompileWith("MoreCases.Case3.to[LessCases]")("No child named 'Case4 found in io.github.arainko.ducktape.total.derivation.DerivedTransformerSuite.LessCases @ MoreCases.at[Case4]")
+    assertFailsToCompileWith("MoreCases.Case3.to[LessCases]")("No child named 'Case4 found in io.github.arainko.ducktape.total.DerivedTransformerSuite.LessCases @ MoreCases.at[io.github.arainko.ducktape.total.DerivedTransformerSuite.MoreCases.Case4]")
   }
 }

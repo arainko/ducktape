@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.total.derivation
+package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
 import munit.FunSuite
@@ -72,7 +72,7 @@ class ViaSuite extends DucktapeSuite {
 
       value.via(method)
       """
-    }("No field 'extraField' found in io.github.arainko.ducktape.total.derivation.Input @ Nothing.extraField")
+    }("No field 'extraField' found in io.github.arainko.ducktape.total.Input @ Nothing.extraField")
   }
 
 }

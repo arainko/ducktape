@@ -18,7 +18,7 @@ object ErrorMessage {
   }
 
   final case class NoChildFound(childName: String, destTpe: Type[?]) extends ErrorMessage {
-    def render(using Quotes): String = s"No child named '$childName found in ${destTpe.repr.show}"
+    def render(using Quotes): String = s"No child named '$childName' found in ${destTpe.repr.show}"
     def span = None
     val target = Target.Source
   }

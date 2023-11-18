@@ -1,4 +1,4 @@
-package io.github.arainko.ducktape.total.builder
+package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
 
@@ -28,7 +28,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
         .transform(Field.const(_.additionalArg, "const"))
       """
     }(
-      "No field 'additionalArg' found in io.github.arainko.ducktape.total.builder.AppliedBuilderSuite.TestClass @ TestClassWithAdditionalList.additionalArg",
+      "No field 'additionalArg' found in io.github.arainko.ducktape.total.AppliedBuilderSuite.TestClass @ TestClassWithAdditionalList.additionalArg",
       "Configuration is not valid since the provided type (java.lang.String) is not a subtype of scala.collection.immutable.List[scala.Predef.String] @ TestClassWithAdditionalList.additionalArg"
     )
   }
@@ -53,7 +53,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
       """
     }(
       "Configuration is not valid since the provided type (scala.collection.immutable.List[scala.Int]) is not a subtype of scala.collection.immutable.List[scala.Predef.String] @ TestClassWithAdditionalList.additionalArg",
-      "No field 'additionalArg' found in io.github.arainko.ducktape.total.builder.AppliedBuilderSuite.TestClass @ TestClassWithAdditionalList.additionalArg"
+      "No field 'additionalArg' found in io.github.arainko.ducktape.total.AppliedBuilderSuite.TestClass @ TestClassWithAdditionalList.additionalArg"
     )
   }
 
@@ -76,7 +76,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
         .transform(Field.renamed(_.additionalArg, _.int))
       """
     }(
-      "No field 'additionalArg' found in io.github.arainko.ducktape.total.builder.AppliedBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg",
+      "No field 'additionalArg' found in io.github.arainko.ducktape.total.AppliedBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg",
       "Configuration is not valid since the provided type (scala.Int) is not a subtype of java.lang.String @ TestClassWithAdditionalString.additionalArg"
     )
   }
