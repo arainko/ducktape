@@ -9,7 +9,7 @@ import scala.annotation.nowarn
 private[ducktape] object Logger {
 
   // Logger Config
-  private transparent inline def level = Level.Debug
+  private[ducktape] transparent inline given level: Level = Level.Off
   private val output = Output.StdOut
   @nowarn private def filter(msg: String, meta: Metainformation) = meta.contains("DeprecatedConfig")
 
