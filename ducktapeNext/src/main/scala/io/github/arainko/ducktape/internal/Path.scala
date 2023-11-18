@@ -5,7 +5,7 @@ import io.github.arainko.ducktape.internal.*
 import scala.quoted.*
 import scala.reflect.TypeTest
 
-final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
+private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
   def appended(segment: Path.Segment): Path = self.copy(segments = segments.appended(segment))
 
   def prepended(segment: Path.Segment): Path = self.copy(segments = segments.prepended(segment))
@@ -26,7 +26,7 @@ final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
   def isAncestorOrSiblingOf(that: Path)(using Quotes): Boolean = {
     /*
     import quotes.reflect.*
-    
+
     if (self.segments.length > that.segments.length) false
     else
       self.root.repr =:= that.root.repr && self.segments.zip(that.segments).forall {
@@ -36,7 +36,7 @@ final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
           leftName == rightName && leftTpe.repr =:= rightTpe.repr
         case _ => false
       }
-      */
+     */
     val thatRendered = that.render
     val thisRendered = this.render
     Logger.debug("that rendered", thatRendered)
@@ -58,7 +58,7 @@ final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
   }
 }
 
-object Path {
+private[ducktape] object Path {
   def empty(root: Type[?]): Path = Path(root, Vector.empty)
 
   given debug: Debug[Path] with {

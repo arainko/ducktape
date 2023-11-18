@@ -16,7 +16,7 @@ private[ducktape] object NonEmptyList {
   private[ducktape] def fromList[A](list: List[A]): Option[NonEmptyList[A]] =
     PartialFunction.condOpt(list) { case cons @ (_ :: _) => fromCons(cons) }
 
-  private [ducktape] given [A: Debug]: Debug[NonEmptyList[A]] = Debug.collection[A, List]
+  private[ducktape] given [A: Debug]: Debug[NonEmptyList[A]] = Debug.collection[A, List]
 
   extension [A](self: NonEmptyList[A]) {
     export toList.{ reduceLeft, head, tail, exists, filter, collect }
@@ -29,7 +29,7 @@ private[ducktape] object NonEmptyList {
 
     private[ducktape] def map[B](f: A => B): NonEmptyList[B] = unsafeCoerce(toList.map(f))
 
-    private [ducktape] def groupBy[K](f: A => K): Map[K, NonEmptyList[A]] = unsafeCoerceK(self.groupBy(f))
+    private[ducktape] def groupBy[K](f: A => K): Map[K, NonEmptyList[A]] = unsafeCoerceK(self.groupBy(f))
 
     private[ducktape] def reverse: NonEmptyList[A] = unsafeCoerce(toList.reverse)
   }

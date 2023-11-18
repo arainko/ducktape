@@ -21,7 +21,10 @@ object DefinitionViaBuilder {
     extension [Source](partial: PartiallyApplied[Source]) {
       transparent inline def apply[Func](inline function: Func): Any = {
         val builder = instance[Source, Func](function)
-        internal.Function.encodeAsType[[args <: FunctionArguments, retTpe] =>> DefinitionViaBuilder[Source, retTpe, Func, args]](function, builder)
+        internal.Function.encodeAsType[[args <: FunctionArguments, retTpe] =>> DefinitionViaBuilder[Source, retTpe, Func, args]](
+          function,
+          builder
+        )
       }
     }
   }

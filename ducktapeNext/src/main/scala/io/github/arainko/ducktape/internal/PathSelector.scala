@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal
 import scala.annotation.tailrec
 import scala.quoted.*
 
-object PathSelector {
+private[ducktape] object PathSelector {
   def unapply(using Quotes)(expr: quotes.reflect.Term): Some[Path] = {
     import quotes.reflect.{ Selector as _, * }
 

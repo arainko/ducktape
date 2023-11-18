@@ -1,9 +1,8 @@
 package io.github.arainko.ducktape
 
+import scala.collection.SortedMap
 import scala.deriving.Mirror
 import scala.reflect.TypeTest
-import scala.collection.SortedMap
-import io.github.arainko.ducktape.internal.Transformations
 
 final case class Value(int: Int) extends AnyVal
 final case class ValueGen[A](int: A) extends AnyVal
@@ -76,10 +75,9 @@ final case class NotRec[A](value: A = "string")
 
   println(cos.unapply(test))
 
-
   val rec: Rec[Int] = Rec(1, None)
 
-  // // given Transformer[NotRec[Int], NotRec[Int | String]] = 
+  // // given Transformer[NotRec[Int], NotRec[Int | String]] =
   // internal.CodePrinter.code:
   //   Transformer.defineVia[NotRec[Int]](NotRec[Int | String]).build(Field.const(_.value, ""))
 
@@ -92,21 +90,19 @@ final case class NotRec[A](value: A = "string")
   // internal.CodePrinter.code:
   //   given Transformer[Rec[Int], Rec[Int | String]] = DefinitionBuilder[Rec[Int], Rec[Int | String]].build()
 
-
-  def test1[A, B](a: A)(using t: Transformer[A, B]): B = 
+  def test1[A, B](a: A)(using t: Transformer[A, B]): B =
     internal.CodePrinter.code:
       a.to[B]
-    
+
   // rec.to[Rec[Int | String]]
 
-
   // // internal.CodePrinter.code:
-    // (??? : DeffTest1).into[DeffTest2].transform(
+  // (??? : DeffTest1).into[DeffTest2].transform(
 
-    //   Field.default(a => a._1),
-    //   Field.default(a => a.int),
-    //   // Field.default(a => a.int.toByte)
-    // )
+  //   Field.default(a => a._1),
+  //   Field.default(a => a.int),
+  //   // Field.default(a => a.int.toByte)
+  // )
 
   // PositionTest.positions(
   //   "asdasdasdas",
@@ -127,34 +123,29 @@ final case class NotRec[A](value: A = "string")
    */
   // DebugMacros.code {
   // PlanInterpreter.transformBetween[ProdTest1, ProdTest2](
-    // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
-    // Field.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
+  // Field2.const(_.test.at[Test2.Cos].int.additional, 1), // missing field
+  // Field.computed(_.test.at[Test2.Cos].int.additional, _.test.ordinal + 123),
 
   ProdTest1(Test1.Cos(Nested1(1)))
     .into[ProdTest2]
     .transform(
       Field.const(_.test.at[Test2.Cos].int.int, 123), // overridden fieldn,
       Case.const(_.test.at[Test1.Empty.type], ???),
-      Field.const(_.test.at[Test2.Cos].int.additional, 1),
+      Field.const(_.test.at[Test2.Cos].int.additional, 1)
       // Field.default(_.test),
 
       // Field.default(_.test),
       // Field.default(_.test),
       // Field.default(_.test),
-      
 
       // Field.default(_.test),
-
 
       // Field.default(_.test.ordinal),
       // Field2.const(_.add, 1), // missing field
       // Case.const(_.test.at[Test1.Empty.type], Test2.Cos(Nested2(1, 1))) // missing case
       // Case2.const(_.test.at[Test1.Cos], Test2.Cos(Nested2(1, 1))) // overriden case
-      
+
     )
-
-
-
 
   // }
 

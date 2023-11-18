@@ -6,7 +6,7 @@ import io.github.arainko.ducktape.internal.*
 import scala.collection.Factory
 import scala.quoted.*
 
-object PlanInterpreter {
+private[ducktape] object PlanInterpreter {
 
   def run[A: Type](plan: Plan[Nothing], sourceValue: Expr[A])(using Quotes): Expr[Any] =
     recurse(plan, sourceValue)
@@ -78,7 +78,7 @@ object PlanInterpreter {
           case ('[destCollTpe], '[srcElem], '[destElem]) =>
             val sourceValue = value.asExprOf[Iterable[srcElem]]
             // TODO: Make it nicer, move this into Planner since we cannot be sure that a facotry exists
-            val factory = Expr.summon[Factory[destElem, destCollTpe]].get 
+            val factory = Expr.summon[Factory[destElem, destCollTpe]].get
             def transformation(value: Expr[srcElem])(using Quotes): Expr[destElem] = recurse(plan, value).asExprOf[destElem]
             '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
         }

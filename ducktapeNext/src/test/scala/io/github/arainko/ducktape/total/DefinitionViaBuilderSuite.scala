@@ -30,7 +30,6 @@ class DefinitionViaBuilderSuite extends DucktapeSuite {
       Transformer
         .defineVia[TestClass](method)
         .build(Arg.computed(_.additionalArg, testClass => List(testClass.str)))
-        
 
     assertEquals(transformer.transform(testClass), expected)
   }
@@ -93,7 +92,9 @@ class DefinitionViaBuilderSuite extends DucktapeSuite {
           .defineVia[TestClass](method)
           .build()
       """
-    }("No field 'additionalArg' found in io.github.arainko.ducktape.total.DefinitionViaBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg")
+    }(
+      "No field 'additionalArg' found in io.github.arainko.ducktape.total.DefinitionViaBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg"
+    )
   }
 
 }

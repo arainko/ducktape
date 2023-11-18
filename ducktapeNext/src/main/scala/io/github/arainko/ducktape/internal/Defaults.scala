@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal
 import scala.quoted.*
 import scala.util.chaining.*
 
-object Defaults {
+private[ducktape] object Defaults {
   def of(struct: Structure.Product)(using Quotes): Map[String, Expr[Any]] = {
     import quotes.reflect.*
 
@@ -11,10 +11,10 @@ object Defaults {
 
     val tpe = struct.tpe.repr.widen
     val sym = tpe.typeSymbol
-    val fieldNamesWithDefaults = 
+    val fieldNamesWithDefaults =
       Logger.loggedDebug("Fields that have a default"):
         sym.caseFields.filter(_.flags.is(Flags.HasDefault)).map(_.name)
-        
+
     val companionBody = sym.companionClass.tree.asInstanceOf[ClassDef].body // sus but it works?
     val companion = Ref(sym.companionModule)
     val defaultValues = companionBody.collect {

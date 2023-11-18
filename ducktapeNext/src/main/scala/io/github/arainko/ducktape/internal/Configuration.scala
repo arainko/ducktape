@@ -207,7 +207,7 @@ private[ducktape] object Configuration {
             Span.fromExpr(cfg)
           ) :: Nil
 
-        case cfg @ '{ Field.allMatching[a, b, source]($fieldSource) } => 
+        case cfg @ '{ Field.allMatching[a, b, source]($fieldSource) } =>
           parseAllMatching(fieldSource, Path.empty(Type.of[b]), TypeRepr.of[b], TypeRepr.of[source], Span.fromExpr(cfg))
     }
   }

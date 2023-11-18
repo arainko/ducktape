@@ -5,7 +5,7 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
 
-object Planner {
+private[ducktape] object Planner {
   import Structure.*
 
   def between(source: Structure, dest: Structure)(using Quotes) = {

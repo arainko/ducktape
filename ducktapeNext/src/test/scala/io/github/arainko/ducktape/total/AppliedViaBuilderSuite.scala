@@ -20,7 +20,6 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
 
     assertEquals(actual, expected)
   }
-  
 
   test("Arg.computed properly applies a function to an argument") {
     def method(str: String, int: Int, additionalArg: List[String]) = TestClassWithAdditionalList(int, str, additionalArg)
@@ -74,7 +73,9 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
           .intoVia(method)
           .transform()
       """
-    }("No field 'additionalArg' found in io.github.arainko.ducktape.total.AppliedViaBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg")
+    }(
+      "No field 'additionalArg' found in io.github.arainko.ducktape.total.AppliedViaBuilderSuite.TestClass @ TestClassWithAdditionalString.additionalArg"
+    )
   }
 }
 

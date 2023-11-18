@@ -1,17 +1,16 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.internal.{ Metainformation }
+import io.github.arainko.ducktape.internal.Metainformation
 
 import scala.Ordering.Implicits.*
 import scala.quoted.*
-import scala.annotation.nowarn
 
 private[ducktape] object Logger {
 
   // Logger Config
   private[ducktape] transparent inline given level: Level = Level.Off
   private val output = Output.StdOut
-  @nowarn private def filter(msg: String, meta: Metainformation) = meta.contains("DeprecatedConfig")
+  private def filter(msg: String, meta: Metainformation) = true
 
   enum Level {
     case Off, Debug, Info

@@ -1,7 +1,7 @@
 package io.github.arainko.ducktape.total
 
-import io.github.arainko.ducktape.DucktapeSuite
 import io.github.arainko.ducktape.*
+
 import scala.annotation.nowarn
 
 class NestedConfigurationSuite extends DucktapeSuite {

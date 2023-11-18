@@ -1,11 +1,12 @@
 package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.*
-import scala.quoted.*
-import scala.quoted.runtime.StopMacroExpansion
 import io.github.arainko.ducktape.internal.Function.fromFunctionArguments
 
-object Transformations {
+import scala.quoted.*
+import scala.quoted.runtime.StopMacroExpansion
+
+private[ducktape] object Transformations {
   inline def between[A, B](
     value: A,
     inline configs: Field[A, B] | Case[A, B]*
@@ -38,9 +39,6 @@ object Transformations {
     configs: Expr[Seq[Field[A, Args] | Case[A, Args]]]
   )(using Quotes) = {
     val plan =
-      // Function
-      //   .fromFunctionArguments[Args, Func](function)
-      //   .orElse(
       Function
         .fromExpr(function)
         .map(function => Planner.between(Structure.of[A], Structure.fromFunction(function)))

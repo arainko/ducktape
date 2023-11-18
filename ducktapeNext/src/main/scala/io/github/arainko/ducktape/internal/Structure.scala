@@ -9,7 +9,7 @@ import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.TypeTest
 
-sealed trait Structure derives Debug {
+private[ducktape] sealed trait Structure derives Debug {
   def tpe: Type[?]
 
   final def force: Structure =
@@ -21,7 +21,7 @@ sealed trait Structure derives Debug {
   final def narrow[A <: Structure](using tt: TypeTest[Structure, A]): Option[A] = tt.unapply(this.force)
 }
 
-object Structure {
+private[ducktape] object Structure {
   case class Product(tpe: Type[?], fields: Map[String, Structure]) extends Structure
 
   case class Coproduct(tpe: Type[?], children: Map[String, Structure]) extends Structure

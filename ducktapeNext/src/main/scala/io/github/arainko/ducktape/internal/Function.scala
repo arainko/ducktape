@@ -5,7 +5,7 @@ import io.github.arainko.ducktape.*
 import scala.collection.immutable.ListMap
 import scala.quoted.*
 
-final case class Function(args: ListMap[String, Type[?]], returnTpe: Type[?], expr: Expr[Any]) derives Debug {
+private[ducktape] final case class Function(args: ListMap[String, Type[?]], returnTpe: Type[?], expr: Expr[Any]) derives Debug {
 
   def appliedTo(using Quotes)(terms: List[quotes.reflect.Term]): Expr[Any] = {
     import quotes.reflect.*
@@ -28,7 +28,7 @@ final case class Function(args: ListMap[String, Type[?]], returnTpe: Type[?], ex
 
 }
 
-object Function {
+private[ducktape] object Function {
   private type IsFuncArgs[A <: FunctionArguments] = A
 
   def fromExpr(expr: Expr[Any])(using Quotes): Option[Function] = {
@@ -44,7 +44,9 @@ object Function {
     }
   }
 
-  def fromFunctionArguments[Args <: FunctionArguments: Type, Func: Type](functionExpr: Expr[Func])(using Quotes): Option[Function] = {
+  def fromFunctionArguments[Args <: FunctionArguments: Type, Func: Type](
+    functionExpr: Expr[Func]
+  )(using Quotes): Option[Function] = {
     import quotes.reflect.*
     val repr = TypeRepr.of[Args]
     val func = TypeRepr.of[Func]

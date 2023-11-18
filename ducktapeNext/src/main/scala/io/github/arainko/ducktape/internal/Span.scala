@@ -2,14 +2,14 @@ package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
 
-final case class Span(start: Int, end: Int) derives Debug {
+private[ducktape] final case class Span(start: Int, end: Int) derives Debug {
   def toPosition(using Quotes): quotes.reflect.Position = {
     import quotes.reflect.*
     Position(SourceFile.current, start, end)
   }
 }
 
-object Span {
+private[ducktape] object Span {
   def fromExpr(expr: Expr[Any])(using Quotes): Span = {
     import quotes.reflect.*
     fromPosition(expr.asTerm.pos)

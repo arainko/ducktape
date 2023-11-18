@@ -160,7 +160,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
 
     val expected = TestClassWithAdditionalString(1, "str", "str-computed")
 
-    @nowarn("msg=Field 'additionalArg' is configured multiple times")
+    // @nowarn("msg=Field 'additionalArg' is configured multiple times")
     val actual =
       testClass
         .into[TestClassWithAdditionalString]

@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
+
 import scala.annotation.nowarn
 
 class ErrorReportingSuite extends DucktapeSuite {

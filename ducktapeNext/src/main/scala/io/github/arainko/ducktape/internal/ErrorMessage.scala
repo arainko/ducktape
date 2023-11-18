@@ -1,16 +1,16 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.Quotes
-import scala.quoted.Type
 import io.github.arainko.ducktape.internal.Path.Segment
 
-sealed trait ErrorMessage derives Debug {
+import scala.quoted.{ Quotes, Type }
+
+private[ducktape] sealed trait ErrorMessage derives Debug {
   def render(using Quotes): String
   def span: Span | None.type
   def target: Target
 }
 
-object ErrorMessage {
+private[ducktape] object ErrorMessage {
   final case class NoFieldFound(fieldName: String, fieldTpe: Type[?], sourceTpe: Type[?]) extends ErrorMessage {
     def render(using Quotes): String = s"No field '$fieldName' found in ${sourceTpe.repr.show}"
     def span = None
@@ -76,7 +76,8 @@ object ErrorMessage {
   }
 
   case object RecursionSuspected extends ErrorMessage {
-    def render(using Quotes): String = "Recursive type suspected, consider using Transformer.define or Transformer.defineVia instead"
+    def render(using Quotes): String =
+      "Recursive type suspected, consider using Transformer.define or Transformer.defineVia instead"
     val span: Span | None.type = None
     val target: Target = Target.Dest
   }

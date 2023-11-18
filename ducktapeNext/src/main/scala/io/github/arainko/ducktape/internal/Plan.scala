@@ -7,9 +7,9 @@ import scala.annotation.tailrec
 import scala.collection.immutable.ListMap
 import scala.quoted.*
 
-type PlanError = Plan.Error
+private[ducktape] type PlanError = Plan.Error
 
-enum Plan[+E <: PlanError] {
+private[ducktape] enum Plan[+E <: PlanError] {
   import Plan.*
 
   def sourceTpe: Type[?]
@@ -139,7 +139,7 @@ enum Plan[+E <: PlanError] {
   ) extends Plan[Plan.Error]
 }
 
-object Plan {
+private[ducktape] object Plan {
 
   def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.sourceTpe, plan.destTpe)
 
