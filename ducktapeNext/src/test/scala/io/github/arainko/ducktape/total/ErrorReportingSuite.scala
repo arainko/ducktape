@@ -134,4 +134,60 @@ class ErrorReportingSuite extends DucktapeSuite {
       "'at[SourceLevel2]' is not a valid case accessor @ SourceToplevel1.at[SourceToplevel1.Level1].level2"
     )
   }: @nowarn("msg=unused local definition")
+
+  test("erroneous config doesn't overshadow errors that lie in its subpaths") {
+    final case class SourceToplevel1(level1: SourceLevel1)
+    final case class SourceLevel1(level2: SourceLevel2)
+    final case class SourceLevel2(int: Int)
+
+    final case class DestToplevel1(level1: DestLevel1)
+    final case class DestLevel1(level2: DestLevel2, level2Extra: String)
+    final case class DestLevel2(int: Int, level3extra: String)
+
+    def source: SourceToplevel1 = ???
+
+    assertFailsToCompileWith {
+      """
+      source.into[DestToplevel1].transform(Field.default(_.level1))
+      """
+    }(
+      """No field 'level2Extra' found in SourceLevel1 @ DestToplevel1.level1.level2Extra
+      |No field 'level3extra' found in SourceLevel2 @ DestToplevel1.level1.level2.level3extra""".stripMargin,
+      "The field 'level1' doesn't have a default value @ DestToplevel1.level1"
+    )
+  }: @nowarn("msg=unused local definition")
+
+  test("erroneous configs on plan nodes that produce an error show the suppressed error") {
+    final case class SourceToplevel1()
+
+    final case class DestToplevel1(level2Extra: Int)
+
+    def source: SourceToplevel1 = ???
+
+    assertFailsToCompileWith {
+      """
+      source.into[DestToplevel1].transform(
+        Field.default(_.level2Extra),
+        Field.default(_.level2Extra.toByte)
+      )
+      """
+    }(
+      """The path segment 'toByte' is not valid as it is not a field of a case class or an argument of a function @ DestToplevel1
+      |  SUPPRESSES: The field 'level2Extra' doesn't have a default value @ DestToplevel1.level2Extra""".stripMargin,
+      "The field 'level2Extra' doesn't have a default value @ DestToplevel1.level2Extra",
+      "No field 'level2Extra' found in SourceToplevel1 @ DestToplevel1.level2Extra"
+    )
+  }: @nowarn("msg=unused local definition")
+
+  test("recursive transformations are detected") {
+    final case class Rec[A](value: Int, rec: Option[Rec[A]])
+
+    def source: Rec[Int] = ???
+
+    assertFailsToCompileWith {
+      """
+      source.to[Rec[Int | String]]
+      """
+    }("Recursive type suspected, consider using Transformer.define or Transformer.defineVia instead @ Rec[Int | String]" + (".rec" * 32))
+  }: @nowarn("msg=unused local definition")
 }

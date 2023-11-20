@@ -376,4 +376,17 @@ class DerivedTransformerSuite extends DucktapeSuite {
       "No child named 'Case4' found in io.github.arainko.ducktape.total.DerivedTransformerSuite.LessCases @ MoreCases.at[io.github.arainko.ducktape.total.DerivedTransformerSuite.MoreCases.Case4]"
     )
   }
+
+  test("a toplevel transformer is taken into consideration when using .to") {
+    final case class Source(int: Int, str: String)
+    final case class Dest(int: Int, str: String)
+
+    given Transformer[Source, Dest] = src => Dest(0, "asd")
+
+    val source = Source(1, "")
+
+    val expected =  Dest(0, "asd")
+    val actual = source.to[Dest]
+    assertEquals(actual, expected)
+  }
 }
