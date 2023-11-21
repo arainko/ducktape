@@ -1,10 +1,10 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.Transformations
+import io.github.arainko.ducktape.internal.{Transformations, TransformationSite}
 
 final class AppliedViaBuilder[Source, Dest, Func, Args <: FunctionArguments] private (value: Source, function: Func) {
   inline def transform(inline config: Field[Source, Args] | Case[Source, Args]*): Dest =
-    Transformations.via[Source, Dest, Func, Args](value, function, config*)
+    Transformations.via[Source, Dest, Func, Args](value, function, TransformationSite.Transformation, config*)
 }
 
 object AppliedViaBuilder {

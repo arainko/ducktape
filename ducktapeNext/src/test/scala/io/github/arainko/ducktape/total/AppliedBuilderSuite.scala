@@ -353,7 +353,6 @@ class AppliedBuilderSuite extends DucktapeSuite {
       "Configuration is not valid since the provided type (java.lang.String) is not a subtype of scala.Int @ TestClassWithAdditionalGenericArg[Int].additionalArg"
     )
   }
-
 }
 
 object AppliedBuilderSuite {

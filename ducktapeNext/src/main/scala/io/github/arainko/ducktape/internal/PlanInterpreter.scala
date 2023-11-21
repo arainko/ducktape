@@ -9,9 +9,9 @@ import scala.quoted.*
 private[ducktape] object PlanInterpreter {
 
   def run[A: Type](plan: Plan[Nothing], sourceValue: Expr[A])(using Quotes): Expr[Any] =
-    recurse(plan, sourceValue)
+    recurse(plan, sourceValue)(using sourceValue)
 
-  private def recurse[A: Type](plan: Plan[Nothing], value: Expr[Any])(using Quotes): Expr[Any] = {
+  private def recurse[A: Type](plan: Plan[Nothing], value: Expr[Any])(using toplevelValue: Expr[A])(using Quotes): Expr[Any] = {
     import quotes.reflect.*
 
     plan match {
@@ -21,8 +21,10 @@ private[ducktape] object PlanInterpreter {
         config match {
           case Configuration.Const(value, _) =>
             value
-          case Configuration.Computed(_, function) =>
+          case Configuration.CaseComputed(_, function) =>
             '{ $function.apply($value) }
+          case Configuration.FieldComputed(_, function) =>
+            '{ $function.apply($toplevelValue) }
           case Configuration.FieldReplacement(source, name, tpe) =>
             source.accessFieldByName(name).asExpr
         }

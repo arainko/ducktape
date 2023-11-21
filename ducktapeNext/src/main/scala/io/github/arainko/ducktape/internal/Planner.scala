@@ -8,7 +8,7 @@ import scala.quoted.*
 private[ducktape] object Planner {
   import Structure.*
 
-  def between(source: Structure, dest: Structure)(using Quotes) = {
+  def between(source: Structure, dest: Structure)(using Quotes, TransformationSite) = {
     given Depth = Depth.zero
     recurse(source, dest, Path.empty(source.tpe), Path.empty(dest.tpe))
   }
@@ -18,7 +18,7 @@ private[ducktape] object Planner {
     dest: Structure,
     sourceContext: Path,
     destContext: Path
-  )(using quotes: Quotes, depth: Depth): Plan[Plan.Error] = {
+  )(using quotes: Quotes, depth: Depth, transformationSite: TransformationSite): Plan[Plan.Error] = {
     import quotes.reflect.*
     given Depth = Depth.incremented(using depth)
 
@@ -99,7 +99,7 @@ private[ducktape] object Planner {
     dest: Structure.Product,
     sourceContext: Path,
     destContext: Path
-  )(using Quotes, Depth) = {
+  )(using Quotes, Depth, TransformationSite) = {
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
       val updatedDestContext = destContext.appended(Path.Segment.Field(destFieldStruct.tpe, destField))
       val plan =
@@ -129,7 +129,7 @@ private[ducktape] object Planner {
     dest: Structure.Function,
     sourceContext: Path,
     destContext: Path
-  )(using Quotes, Depth) = {
+  )(using Quotes, Depth, TransformationSite) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
       val updatedDestContext = destContext.appended(Path.Segment.Field(destFieldStruct.tpe, destField))
       val plan =
@@ -159,7 +159,7 @@ private[ducktape] object Planner {
     dest: Structure.Coproduct,
     sourceContext: Path,
     destContext: Path
-  )(using Quotes, Depth) = {
+  )(using Quotes, Depth, TransformationSite) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
       val updatedSourceContext = sourceContext.appended(Path.Segment.Case(sourceCaseStruct.tpe))
 
@@ -184,15 +184,20 @@ private[ducktape] object Planner {
   }
 
   object UserDefinedTransformation {
-    def unapply(structs: (Structure, Structure))(using Quotes, Depth): Option[Expr[Transformer[?, ?]]] = {
+    def unapply(structs: (Structure, Structure))(using Quotes, Depth, TransformationSite): Option[Expr[Transformer[?, ?]]] = {
       val (src, dest) = structs
 
-      // if current depth is lower or equal to 1 then that means we're most likely referring to ourselves
-      if Depth.current <= 1 then None
-      else
+      def summonTransformer =
         (src.tpe -> dest.tpe) match {
           case '[src] -> '[dest] => Expr.summon[Transformer[src, dest]]
         }
+
+      // if current depth is lower or equal to 1 then that means we're most likely referring to ourselves
+      summon[TransformationSite] match {
+        case TransformationSite.Definition if Depth.current <= 1 => None
+        case TransformationSite.Definition                       => summonTransformer
+        case TransformationSite.Transformation                   => summonTransformer
+      }
     }
   }
 

@@ -8,7 +8,8 @@ private[ducktape] enum Configuration derives Debug {
   def tpe: Type[?]
 
   case Const(value: Expr[Any], tpe: Type[?])
-  case Computed(tpe: Type[?], function: Expr[Any => Any])
+  case CaseComputed(tpe: Type[?], function: Expr[Any => Any])
+  case FieldComputed(tpe: Type[?], function: Expr[Any => Any])
   case FieldReplacement(source: Expr[Any], name: String, tpe: Type[?])
 }
 
@@ -86,7 +87,7 @@ private[ducktape] object Configuration {
           Configuration.At.Successful(
             path,
             Target.Dest,
-            Configuration.Computed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
+            Configuration.FieldComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
           ) :: Nil
 
@@ -114,7 +115,7 @@ private[ducktape] object Configuration {
           Configuration.At.Successful(
             path,
             Target.Source,
-            Configuration.Computed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
+            Configuration.CaseComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
           ) :: Nil
 
@@ -203,7 +204,7 @@ private[ducktape] object Configuration {
           Configuration.At.Successful(
             path,
             Target.Source,
-            Configuration.Computed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
+            Configuration.CaseComputed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
             Span.fromExpr(cfg)
           ) :: Nil
 

@@ -134,6 +134,38 @@ class NestedConfigurationSuite extends DucktapeSuite {
     )
   }: @nowarn("msg=unused local definition")
 
+  test("Field.computed works for nested fields") {
+    final case class SourceToplevel1(level1: SourceLevel1)
+    final case class SourceLevel1(level2: SourceLevel2)
+    final case class SourceLevel2(int: Int)
+
+    final case class DestToplevel1(level1: DestLevel1)
+    final case class DestLevel1(level2: DestLevel2)
+    final case class DestLevel2(int: Int, extra: String)
+
+    val source = SourceToplevel1(SourceLevel1(SourceLevel2(1)))
+    val expected = DestToplevel1(DestLevel1(DestLevel2(1, "1CONF")))
+
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .transform(
+          Field.computed(_.level1.level2.extra, a => a.level1.level2.int.toString() + "CONF")
+        ),
+      source
+        .intoVia(DestToplevel1.apply)
+        .transform(Field.computed(_.level1.level2.extra, a => a.level1.level2.int.toString() + "CONF")),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .build(Field.computed(_.level1.level2.extra, a => a.level1.level2.int.toString() + "CONF"))
+        .transform(source),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .build(Field.computed(_.level1.level2.extra, a => a.level1.level2.int.toString() + "CONF"))
+        .transform(source)
+    )(expected)
+  }
+
   test("nested coproduct cases can be configured") {
     enum SourceToplevel1 {
       case Level1(level2: SourceLevel2)

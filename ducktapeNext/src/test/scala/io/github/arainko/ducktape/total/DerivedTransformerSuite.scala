@@ -389,4 +389,5 @@ class DerivedTransformerSuite extends DucktapeSuite {
     val actual = source.to[Dest]
     assertEquals(actual, expected)
   }
+
 }
