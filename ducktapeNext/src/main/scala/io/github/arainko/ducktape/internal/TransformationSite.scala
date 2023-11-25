@@ -1,22 +1,19 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.FromExpr
-import scala.quoted.Expr
-import scala.quoted.Quotes
+import scala.quoted.*
 
-enum TransformationSite {
+private[ducktape] enum TransformationSite {
   case Definition
   case Transformation
 }
 
-object TransformationSite {
-  given fromExpr: FromExpr[TransformationSite] =
-    new {
-      def unapply(x: Expr[TransformationSite])(using Quotes): Option[TransformationSite] =
-        x match {
-          case '{ TransformationSite.Definition }     => Some(TransformationSite.Definition)
-          case '{ TransformationSite.Transformation } => Some(TransformationSite.Transformation)
-          case _                                      => None
-        }
-    }
+private[ducktape] object TransformationSite {
+  def fromStringExpr(value: Expr["transformation" | "definition"])(using Quotes): TransformationSite = {
+    import quotes.reflect.*
+
+    summon[FromExpr["transformation" | "definition"]].unapply(value).map {
+      case "transformation" => TransformationSite.Transformation
+      case "definition"     => TransformationSite.Definition
+    }.getOrElse(report.errorAndAbort("Couldn't parse TransformationSite from a literal string", value))
+  }
 }

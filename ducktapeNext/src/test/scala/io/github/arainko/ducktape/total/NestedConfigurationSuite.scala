@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.internal.*
 
 import scala.annotation.nowarn
 
@@ -409,4 +410,57 @@ class NestedConfigurationSuite extends DucktapeSuite {
       "Configuration is not valid since the provided type (123) is not a subtype of DestLevel3 @ SourceToplevel1.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra]"
     )
   }: @nowarn("msg=unused local definition")
+
+  test("Case.computed works for nested cases") {
+    enum SourceToplevel1 {
+      case Level1(level2: SourceLevel2)
+    }
+
+    enum SourceLevel2 {
+      case Level2(level3: SourceLevel3)
+    }
+
+    enum SourceLevel3 {
+      case One(int: Int)
+      case Two(str: String)
+      case Extra(int: Int)
+    }
+
+    enum DestToplevel1 {
+      case Level1(level2: DestLevel2)
+    }
+
+    enum DestLevel2 {
+      case Level2(level3: DestLevel3)
+    }
+
+    enum DestLevel3 {
+      case One(int: Int)
+      case Two(str: String)
+    }
+
+    val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.Extra(1)))
+    val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One(6)))
+
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .transform(
+          Case.computed(
+            _.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra],
+            extra => DestLevel3.One(extra.int + 5)
+          )
+        ),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .build(
+          Case.computed(
+            _.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra],
+            extra => DestLevel3.One(extra.int + 5)
+          )
+        )
+        .transform(source)
+    )(expected)
+
+  }
 }

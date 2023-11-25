@@ -1,14 +1,14 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.{Transformations, TransformationSite}
+import io.github.arainko.ducktape.internal.Transformations
 
 extension [Source](source: Source) {
-  inline def to[Dest]: Dest = Transformations.between[Source, Dest](source, TransformationSite.Transformation)
+  inline def to[Dest]: Dest = Transformations.between[Source, Dest](source, "transformation")
 
   def into[Dest]: AppliedBuilder[Source, Dest] = AppliedBuilder[Source, Dest](source)
 
   transparent inline def via[Func](inline function: Func): Any =
-    Transformations.viaInferred[Source, Func, Nothing](source, TransformationSite.Transformation, function)
+    Transformations.viaInferred[Source, Func, Nothing](source, "transformation", function)
 
   transparent inline def intoVia[Func](inline function: Func): Any =
     AppliedViaBuilder.create(source, function)
