@@ -15,4 +15,10 @@ trait DucktapeSuite extends FunSuite {
     val errors = compiletime.testing.typeCheckErrors(code).map(_.message).toSet
     assertEquals(errors, expected.toSet, "Error did not contain expected value")
   }
+
+  extension [A](inline self: A) {
+    inline def code: A = internal.CodePrinter.code(self)
+
+    inline def structure: A = internal.CodePrinter.structure(self)
+  }
 }

@@ -36,7 +36,7 @@ private[ducktape] object Planner {
         case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
           Plan.Upcast(source.tpe, dest.tpe, sourceContext, destContext)
 
-        case Optional(_, srcName, srcParamStruct) -> Optional(_, destName, destParamStruct) =>
+        case Optional(_, srcParamStruct) -> Optional(_, destParamStruct) =>
           Plan.BetweenOptions(
             srcParamStruct.tpe,
             destParamStruct.tpe,
@@ -45,7 +45,7 @@ private[ducktape] object Planner {
             recurse(srcParamStruct, destParamStruct, sourceContext, destContext)
           )
 
-        case struct -> Optional(_, _, paramStruct) =>
+        case struct -> Optional(_, paramStruct) =>
           Plan.BetweenNonOptionOption(
             struct.tpe,
             paramStruct.tpe,
@@ -54,7 +54,7 @@ private[ducktape] object Planner {
             recurse(struct, paramStruct, sourceContext, destContext)
           )
 
-        case Collection(_, _, srcParamStruct) -> Collection(destCollTpe, _, destParamStruct) =>
+        case Collection(_, srcParamStruct) -> Collection(destCollTpe, destParamStruct) =>
           Plan.BetweenCollections(
             destCollTpe,
             srcParamStruct.tpe,

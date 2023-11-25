@@ -32,9 +32,9 @@ private[ducktape] object Structure {
     function: io.github.arainko.ducktape.internal.Function
   ) extends Structure
 
-  case class Optional(tpe: Type[? <: Option[?]], name: String, paramStruct: Structure) extends Structure
+  case class Optional(tpe: Type[? <: Option[?]], paramStruct: Structure) extends Structure
 
-  case class Collection(tpe: Type[? <: Iterable[?]], name: String, paramStruct: Structure) extends Structure
+  case class Collection(tpe: Type[? <: Iterable[?]], paramStruct: Structure) extends Structure
 
   case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
 
@@ -63,15 +63,14 @@ private[ducktape] object Structure {
 
   def of[A: Type](using Quotes): Structure = {
     import quotes.reflect.*
-    given Printer[TypeRepr] = Printer.TypeReprShortCode
 
     Logger.loggedInfo("Structure"):
       Type.of[A] match {
         case tpe @ '[Option[param]] =>
-          Structure.Optional(tpe, tpe.repr.show, Structure.of[param])
+          Structure.Optional(tpe, Structure.of[param])
 
         case tpe @ '[Iterable[param]] =>
-          Structure.Collection(tpe, tpe.repr.show, Structure.of[param])
+          Structure.Collection(tpe, Structure.of[param])
 
         case tpe @ '[AnyVal] if tpe.repr.typeSymbol.flags.is(Flags.Case) =>
           val repr = tpe.repr

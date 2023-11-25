@@ -385,9 +385,26 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
     val source = Source(1, "")
 
-    val expected =  Dest(0, "asd")
+    val expected = Dest(0, "asd")
     val actual = source.to[Dest]
     assertEquals(actual, expected)
+  }
+
+  test("Transformer.define* can be used to create recursive transformers") {
+    final case class Rec[+A](value: Int, rec: Option[Rec[A]])
+
+    val source = Rec(1, Some(Rec(2, Some(Rec(3, None)))))
+    val expected = Rec(1, Some(Rec(2, Some(Rec(3, None)))))
+
+    locally {
+      given transformer: Transformer[Rec[Int], Rec[Int | String]] = Transformer.define[Rec[Int], Rec[Int | String]].build()
+      assertEquals(transformer.transform(source), expected)
+    }
+
+    locally {
+      given transformer: Transformer[Rec[Int], Rec[Int | String]] = Transformer.defineVia[Rec[Int]](Rec[Int | String]).build()
+      assertEquals(transformer.transform(source), expected)
+    }
   }
 
 }
