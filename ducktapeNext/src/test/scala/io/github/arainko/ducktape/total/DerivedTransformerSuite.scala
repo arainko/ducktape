@@ -373,7 +373,7 @@ class DerivedTransformerSuite extends DucktapeSuite {
 
   test("derivation fails when going from a sum with more cases to a sum with less cases") {
     assertFailsToCompileWith("MoreCases.Case3.to[LessCases]")(
-      "No child named 'Case4' found in io.github.arainko.ducktape.total.DerivedTransformerSuite.LessCases @ MoreCases.at[io.github.arainko.ducktape.total.DerivedTransformerSuite.MoreCases.Case4]"
+      "No child named 'Case4' found in io.github.arainko.ducktape.total.DerivedTransformerSuite.LessCases @ MoreCases.at[io.github.arainko.ducktape.total.DerivedTransformerSuite.MoreCases.Case4.type]"
     )
   }
 
