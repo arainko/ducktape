@@ -2,9 +2,9 @@ import com.typesafe.tools.mima.core._
 import xerial.sbt.Sonatype._
 import org.typelevel.sbt.TypelevelMimaPlugin
 
-Global / onChangedBuildSource := ReloadOnSourceChanges
+// Global / onChangedBuildSource := ReloadOnSourceChanges
 
-ThisBuild / tlBaseVersion := "0.1"
+ThisBuild / tlBaseVersion := "0.2"
 ThisBuild / organization := "io.github.arainko"
 ThisBuild / organizationName := "arainko"
 ThisBuild / startYear := Some(2023)
@@ -41,10 +41,17 @@ lazy val ducktape =
     .enablePlugins(TypelevelMimaPlugin)
     .in(file("ducktape"))
     .settings(
-      scalacOptions ++= List("-Xcheck-macros", "-no-indent", "-old-syntax", "-Xfatal-warnings", "-deprecation", "-Wunused:all"),
+      scalacOptions ++= List("-Xcheck-macros", "-deprecation", "-Werror", "-Wunused:all"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0-M10" % Test
     )
-    .jvmSettings(tlMimaPreviousVersions ++= Set("0.1.0", "0.1.1", "0.1.2", "0.1.3", "0.1.4", "0.1.5"))
+    .dependsOn(tooling)
+
+lazy val tooling =
+  crossProject(JVMPlatform, JSPlatform, NativePlatform)
+    .crossType(CrossType.Pure)
+    .disablePlugins(MimaPlugin)
+    .enablePlugins(NoPublishPlugin)
+    .in(file("tooling"))
 
 lazy val docs =
   project
