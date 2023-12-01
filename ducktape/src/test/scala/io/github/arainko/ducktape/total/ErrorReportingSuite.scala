@@ -66,7 +66,7 @@ class ErrorReportingSuite extends DucktapeSuite {
       source.to[DestToplevel1]
       """
     } {
-    """No child named 'Level1Extra2' found in DestToplevel1 @ SourceToplevel1.at[SourceToplevel1.Level1Extra2.type]
+      """No child named 'Level1Extra2' found in DestToplevel1 @ SourceToplevel1.at[SourceToplevel1.Level1Extra2.type]
     |No child named 'Level1Extra1' found in DestToplevel1 @ SourceToplevel1.at[SourceToplevel1.Level1Extra1.type]
     |No child named 'Level2Extra2' found in DestLevel2 @ SourceToplevel1.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2Extra2.type]
     |No child named 'Level2Extra1' found in DestLevel2 @ SourceToplevel1.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2Extra1.type]

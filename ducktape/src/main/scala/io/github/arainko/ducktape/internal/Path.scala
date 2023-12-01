@@ -53,7 +53,7 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
     else
       self.segments.map {
         case Path.Segment.Field(_, name) => name
-        case Path.Segment.Case(tpe)      => 
+        case Path.Segment.Case(tpe) =>
           val repr = tpe.repr
           val suffix = if (repr.isSingleton) ".type" else ""
           s"at[${tpe.repr.show(using Printer.TypeReprAnsiCode)}${suffix}]"

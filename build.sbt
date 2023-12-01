@@ -46,7 +46,7 @@ lazy val ducktape =
     )
     .dependsOn(tooling)
 
-lazy val tooling = 
+lazy val tooling =
   crossProject(JVMPlatform, JSPlatform, NativePlatform)
     .crossType(CrossType.Pure)
     .disablePlugins(MimaPlugin)
