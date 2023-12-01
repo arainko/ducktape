@@ -11,7 +11,7 @@ object Case {
   @compileTimeOnly("Case.computed is only useable as a case configuration for transformations")
   def computed[A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, function: SourceTpe => DestTpe): Case[A, B] = ???
 
-  @deprecated
+  @deprecated(message = "Use the variant that accepts a path selector instead (Case.const(_.at[SourceSubtype], ...))", since = "0.2.0-M1")
   @compileTimeOnly("'Case.const' needs to be erased from the AST with a macro.")
   def const[SourceSubtype]: Case.Const[SourceSubtype] = ???
 
@@ -25,7 +25,7 @@ object Case {
     }
   }
 
-  @deprecated
+  @deprecated(message = "Use the variant that accepts a path selector instead (Case.computed(_.at[SourceSubtype], ...))", since = "0.2.0-M1")
   @compileTimeOnly("'Case.computed' needs to be erased from the AST with a macro.")
   def computed[SourceSubtype]: Case.Computed[SourceSubtype] = ???
 
