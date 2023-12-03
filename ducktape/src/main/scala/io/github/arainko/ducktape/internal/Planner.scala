@@ -37,12 +37,15 @@ private[ducktape] object Planner {
           Plan.Upcast(source.tpe, dest.tpe, sourceContext, destContext)
 
         case Optional(_, srcParamStruct) -> Optional(_, destParamStruct) =>
+          val updatedSourceContext = sourceContext.appended(Path.Segment.Element(srcParamStruct.tpe))
+          val updatedDestContext = destContext.appended(Path.Segment.Element(destParamStruct.tpe))
+          
           Plan.BetweenOptions(
             srcParamStruct.tpe,
             destParamStruct.tpe,
             sourceContext,
             destContext,
-            recurse(srcParamStruct, destParamStruct, sourceContext, destContext)
+            recurse(srcParamStruct, destParamStruct, updatedSourceContext, updatedDestContext)
           )
 
         case struct -> Optional(_, paramStruct) =>
@@ -51,17 +54,20 @@ private[ducktape] object Planner {
             paramStruct.tpe,
             sourceContext,
             destContext,
-            recurse(struct, paramStruct, sourceContext, destContext)
+            recurse(struct, paramStruct, sourceContext, destContext.appended(Path.Segment.Element(paramStruct.tpe)))
           )
 
         case Collection(_, srcParamStruct) -> Collection(destCollTpe, destParamStruct) =>
+          val updatedSourceContext = sourceContext.appended(Path.Segment.Element(srcParamStruct.tpe))
+          val updatedDestContext = destContext.appended(Path.Segment.Element(destParamStruct.tpe))
+
           Plan.BetweenCollections(
             destCollTpe,
             srcParamStruct.tpe,
             destParamStruct.tpe,
             sourceContext,
             destContext,
-            recurse(srcParamStruct, destParamStruct, sourceContext, destContext)
+            recurse(srcParamStruct, destParamStruct, updatedSourceContext, updatedDestContext)
           )
 
         case (source: Product, dest: Product) =>

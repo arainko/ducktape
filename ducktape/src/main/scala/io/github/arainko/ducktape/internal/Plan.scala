@@ -264,6 +264,37 @@ private[ducktape] object Plan {
                 )
             }
 
+          case (segment @ Path.Segment.Element(tpe)) :: tail =>
+            current match {
+              case p @ BetweenCollections(_, _, _, _, _, plan) =>
+                p.copy(plan = recurse(plan, tail))
+
+              case p @ BetweenOptions(_, _, _, _, plan) =>
+                p.copy(plan = recurse(plan, tail))
+                
+              case p @ BetweenNonOptionOption(_, _, _, _, plan) =>
+                p.copy(plan = recurse(plan, tail))
+
+              case suppressed: Plan.Error =>
+                Plan.Error(
+                  plan.sourceTpe,
+                  plan.destTpe,
+                  plan.sourceContext,
+                  plan.destContext,
+                  ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
+                  Some(suppressed)
+                )
+              case plan =>
+                Plan.Error(
+                  plan.sourceTpe,
+                  plan.destTpe,
+                  plan.sourceContext,
+                  plan.destContext,
+                  ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
+                  None
+                )
+            }
+
           case Nil =>
             import scala.util.chaining.*
 
