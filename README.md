@@ -8,10 +8,10 @@ If this project interests you, please drop a 🌟 - these things are worthless b
 
 ### Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.0-M1"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2-b612c42-20231203T160116Z-SNAPSHOT"
 
 // or if you're using Scala.js or Scala Native
-libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.0-M1"
+libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2-b612c42-20231203T160116Z-SNAPSHOT"
 ```
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
@@ -40,6 +40,8 @@ val transformed = personWithMoreFields.to[Person]
 
 Automatic case class to case class transformations are supported given that
 the source type has all the fields of the destination type and the types corresponding to these fields have an instance of `Transformer` in scope.
+
+NEW
 
 If these requirements are not met, a compiletime error is issued:
 ```scala
@@ -355,13 +357,13 @@ val definedViaTransformer =
   Transformer
     .defineVia[TestClass](method)
     .build(Arg.const(_.additionalArg, List("const")))
-// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$anon$26@197320e4
+// definedViaTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$anon$26@36156a7c
 
 val definedTransformer =
   Transformer
     .define[TestClass, TestClassWithAdditionalList]   
     .build(Field.const(_.additionalArg, List("const")))
-// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$40448/0x0000000105696c40@325d3706
+// definedTransformer: Transformer[TestClass, TestClassWithAdditionalList] = repl.MdocSession$MdocApp7$$Lambda$20073/0x0000000803831448@585507ad
 
 val transformedVia = definedViaTransformer.transform(testClass)
 // transformedVia: TestClassWithAdditionalList = TestClassWithAdditionalList(

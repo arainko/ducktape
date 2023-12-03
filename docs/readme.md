@@ -35,6 +35,8 @@ val transformed = personWithMoreFields.to[Person]
 Automatic case class to case class transformations are supported given that
 the source type has all the fields of the destination type and the types corresponding to these fields have an instance of `Transformer` in scope.
 
+NEW
+
 If these requirements are not met, a compiletime error is issued:
 ```scala mdoc:fail
 val person = Person("Jerry", "Smith", 20)
