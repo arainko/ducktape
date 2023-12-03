@@ -59,7 +59,7 @@ lazy val docs =
     .enablePlugins(NoPublishPlugin, MdocPlugin)
     .disablePlugins(MimaPlugin)
     .settings(
-      mdocVariables := Map("VERSION" -> version.value),
+      mdocVariables := Map("VERSION" -> tlLatestVersion.value.mkString),
       libraryDependencies += ("org.scalameta" %% "scalafmt-dynamic" % "3.6.1").cross(CrossVersion.for3Use2_13)
     )
     .dependsOn(ducktape.jvm)

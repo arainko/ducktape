@@ -16,6 +16,77 @@ libraryDependencies += "io.github.arainko" %%% "ducktape" % "@VERSION@"
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
 
+### Motivating example
+
+```scala mdoc
+import java.time.Instant
+import io.github.arainko.ducktape.*
+
+// imagine this is a wire model of some kind - JSON, protobuf, avro, what have you...
+object wire:
+  final case class Person(
+    firstName: String,
+    lastName: String,
+    paymentMethods: List[wire.PaymentMethod],
+    status: wire.Status,
+    updatedAt: Option[Instant],
+  )
+
+  enum Status:
+    case Registered, PendingRegistration, Removed
+
+  enum PaymentMethod:
+    case Card(name: String, digits: Long, expires: Instant)
+    case PayPal(email: String)
+    case Cash
+
+end wire
+
+object domain:
+  final case class Person( // <-- fields reshuffled 
+    lastName: String,
+    firstName: String,
+    status: Option[domain.Status], // <-- 'status' in the domain model is optional
+    paymentMethods: Vector[domain.Payment], // <-- collection type changed from a List to a Vector
+    updatedAt: Option[Instant],
+  )
+
+  enum Status:
+    case Registered, PendingRegistration, Removed
+    case PendingRemoval // <-- additional enum case
+
+  enum Payment:
+    case Card(name: String, digits: Long, expires: Instant)
+    case PayPal(email: String)
+    case Cash
+
+end domain
+
+val wirePerson: wire.Person = wire.Person(
+  "John",
+  "Doe",
+  List(wire.PaymentMethod.Cash, wire.PaymentMethod.PayPal("john@doe.com")),
+  wire.Status.PendingRegistration,
+  Some(Instant.ofEpochSecond(0))
+)
+
+val domainPerson = wirePerson.to[domain.Person]
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+  
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(
+    wirePerson.to[domain.Person]
+  )
+``` 
+</details>
+
+
+
 ### Total transformations - examples
 
 #### 1. *Case class to case class*
@@ -24,9 +95,9 @@ NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing
 import io.github.arainko.ducktape.*
 
 final case class Person(firstName: String, lastName: String, age: Int)
-final case class PersonButMoreFields(firstName: String, lastName: String, age: Int, socialSecurityNo: String)
+final case class PersonButMoreFields(firstName: String, lastName: String, age: Int, socialSecurityNo: String, extra: String)
 
-val personWithMoreFields = PersonButMoreFields("John", "Doe", 30, "SOCIAL-NUM-12345")
+val personWithMoreFields = PersonButMoreFields("John", "Doe", 30, "SOCIAL-NUM-12345", "extra")
 
 val transformed = personWithMoreFields.to[Person]
 
@@ -34,8 +105,6 @@ val transformed = personWithMoreFields.to[Person]
 
 Automatic case class to case class transformations are supported given that
 the source type has all the fields of the destination type and the types corresponding to these fields have an instance of `Transformer` in scope.
-
-NEW
 
 If these requirements are not met, a compiletime error is issued:
 ```scala mdoc:fail
@@ -47,7 +116,7 @@ person.to[PersonButMoreFields]
 
 #### 2. *Enum to enum*
 
-```scala
+```scala mdoc:reset
 import io.github.arainko.ducktape.*
 
 enum Size:
@@ -57,15 +126,12 @@ enum ExtraSize:
   case ExtraSmall, Small, Medium, Large, ExtraLarge
 
 val transformed = Size.Small.to[ExtraSize]
-// transformed: ExtraSize = Small
 ```
 
 We can't go to a coproduct that doesn't contain all of our cases (name wise):
 
-```scala
+```scala mdoc:fail
 val size = ExtraSize.Small.to[Size]
-// error:
-// No child named 'ExtraSmall' in Size
 ```
 
 Automatic enum to enum transformations are supported given that the destination enum contains a subset of cases
