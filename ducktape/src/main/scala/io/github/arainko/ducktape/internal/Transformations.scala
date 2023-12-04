@@ -101,9 +101,9 @@ private[ducktape] object Transformations {
 
     val reconfiguredPlan = plan.configureAll(configs)
 
-    Logger.debug("Original plan", plan)
-    Logger.debug("Config", configs)
-    Logger.debug("Reconfigured plan", reconfiguredPlan)
+    Logger.info("Original plan", plan)
+    Logger.info("Config", configs)
+    Logger.info("Reconfigured plan", reconfiguredPlan)
 
     reconfiguredPlan.result.refine match {
       case Left(errors) =>

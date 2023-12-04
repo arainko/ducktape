@@ -22,7 +22,7 @@ private[ducktape] object Planner {
     import quotes.reflect.*
     given Depth = Depth.incremented(using depth)
 
-    Logger.loggedInfo(s"Plan @ depth: ${Depth.current}"):
+    Logger.loggedDebug(s"Plan @ depth ${Depth.current}"):
       (source.force -> dest.force) match {
         case _ if Depth.current > 64 =>
           Plan.Error(source.tpe, dest.tpe, sourceContext, destContext, ErrorMessage.RecursionSuspected, None)

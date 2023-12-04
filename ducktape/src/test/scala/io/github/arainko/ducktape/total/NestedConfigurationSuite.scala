@@ -522,23 +522,75 @@ class NestedConfigurationSuite extends DucktapeSuite {
     val source = SourceToplevel1.Level1(Some(SourceLevel2.Level2(List(SourceLevel3.Level3(SourceLevel4.Extra)))))
     val expected = DestToplevel1.Level1(Some(DestLevel2.Level2(Vector(DestLevel3.Level3(Some(DestLevel4.One))))))
 
-    source
-      .into[DestToplevel1]
-      .transform(
-        Case.const(_.at[SourceToplevel1.Level1].level2.element.at[SourceLevel2.Level2].level3.element.at[SourceLevel3.Level3].level4.at[SourceLevel4.Extra.type], DestLevel4.One)
-      )
-    
     // scalafmt: { maxColumn = 150 }
-    // assertEachEquals(
-    //   // Transformer
-    //   //   .define[SourceToplevel1, DestToplevel1]
-    //   //   .build(
-    //   //     // Case.const(_.at[SourceToplevel1.Level1].level2.element.at[SourceLevel2.Level2].level3.element.at[SourceLevel3.Extra.type], DestLevel3.One)
-    //   //   )
-    //   //   .transform(source)
-    // )(expected)
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .transform(
+          Case.const(
+            _.at[SourceToplevel1.Level1].level2.element
+              .at[SourceLevel2.Level2]
+              .level3
+              .element
+              .at[SourceLevel3.Level3]
+              .level4
+              .at[SourceLevel4.Extra.type],
+            DestLevel4.One
+          )
+        ),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .build(
+          Case.const(
+            _.at[SourceToplevel1.Level1].level2.element
+              .at[SourceLevel2.Level2]
+              .level3
+              .element
+              .at[SourceLevel3.Level3]
+              .level4
+              .at[SourceLevel4.Extra.type],
+            DestLevel4.One
+          )
+        )
+        .transform(source)
+    )(expected)
   }
 
+  //TODO: add test for this but with Field
+  test("nested coproduct cases with the NonOptionOption variant can be configured") {
+    enum SourceToplevel1 {
+      case Level1(level2: SourceLevel2)
+    }
+
+    enum SourceLevel2 {
+      case One, Two, Extra
+    }
+
+    enum DestToplevel1 {
+      case Level1(level2: Option[DestLevel2])
+    }
+
+    enum DestLevel2 {
+      case One
+      case Two
+    }
+
+    val source = SourceToplevel1.Level1(SourceLevel2.Extra)
+    val expected = DestToplevel1.Level1(Some(DestLevel2.Two))
+
+    // scalafmt: { maxColumn = 150 }
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .transform(
+          Case.const(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Extra.type], DestLevel2.Two)
+        ),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .build(Case.const(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Extra.type], DestLevel2.Two))
+        .transform(source)
+    )(expected)
+  }
 
   test("Case.computed works for nested cases") {
     enum SourceToplevel1 {

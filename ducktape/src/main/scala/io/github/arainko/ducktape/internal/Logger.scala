@@ -4,14 +4,13 @@ import io.github.arainko.ducktape.internal.Metainformation
 
 import scala.Ordering.Implicits.*
 import scala.quoted.*
-import scala.annotation.nowarn
 
 private[ducktape] object Logger {
 
   // Logger Config
-  private[ducktape] transparent inline given level: Level = Level.Debug
+  private[ducktape] transparent inline given level: Level = Level.Off
   private val output = Output.StdOut
-  @nowarn private def filter(msg: String, meta: Metainformation) = msg.contains("SourceLevel4")
+  private def filter(msg: String, meta: Metainformation) = true
 
   enum Level {
     case Off, Debug, Info

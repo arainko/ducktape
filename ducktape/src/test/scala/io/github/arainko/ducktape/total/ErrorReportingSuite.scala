@@ -189,7 +189,7 @@ class ErrorReportingSuite extends DucktapeSuite {
       source.to[Rec[Int | String]]
       """
     }(
-      "Recursive type suspected, consider using Transformer.define or Transformer.defineVia instead @ Rec[Int | String]" + (".rec" * 32)
+      "Recursive type suspected, consider using Transformer.define or Transformer.defineVia instead @ Rec[Int | String]" + (".rec.element" * 32)
     )
   }: @nowarn("msg=unused local definition")
 }
