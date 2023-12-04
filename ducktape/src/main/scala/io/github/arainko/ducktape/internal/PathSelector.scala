@@ -27,7 +27,7 @@ private[ducktape] object PathSelector {
         case TypeApply(Apply(TypeApply(Select(Ident(_), "at"), _), tree :: Nil), tpe :: Nil) =>
           Logger.debug(s"Matched 'TypeApply' (matching '.at')", tpe.tpe.asType)
           recurse(acc.prepended(Path.Segment.Case(tpe.tpe.asType)), tree)
-        case Apply(TypeApply(Select(Ident(_), "element"), wrapperTpe :: elemTpe :: Nil), tree :: Nil) =>
+        case Apply(TypeApply(Select(Ident(_), "element"), elemTpe :: Nil), tree :: Nil) =>
           Logger.debug(s"Matched 'Apply(TypeApply(...)) (matching .element)'", elemTpe.tpe.asType)
           recurse(acc.prepended(Path.Segment.Element(elemTpe.tpe.asType)), tree)
         // Function arg selection can only happen as the first selection (aka the last one to be parsed) so this not being recursive is fine (?)
