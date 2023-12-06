@@ -556,7 +556,6 @@ class NestedConfigurationSuite extends DucktapeSuite {
     )(expected)
   }
 
-  //TODO: add test for this but with Field
   test("nested coproduct cases with the NonOptionOption transformation variant can be configured") {
     enum SourceToplevel1 {
       case Level1(level2: SourceLevel2)

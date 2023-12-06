@@ -1,4 +1,4 @@
-# ![ducktape-logo-32](https://user-images.githubusercontent.com/46346508/236060869-3b118075-f660-44c9-9d0d-d40fba5c8db0.svg) ducktape
+# ![ducktape-logo-32](https://user-images.githubusercontent.com/46346508/236060869-3b118075-f660-44c9-9d0d-d40fba5c8db0.svg) ducktape 0.2.x
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape_3/badge.svg?style=flat-square)](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape_3)
 
@@ -6,7 +6,7 @@
 
 If this project interests you, please drop a 🌟 - these things are worthless but give me a dopamine rush nonetheless.
 
-### Installation
+## Installation
 ```scala
 libraryDependencies += "io.github.arainko" %% "ducktape" % "@VERSION@"
 
@@ -16,14 +16,18 @@ libraryDependencies += "io.github.arainko" %%% "ducktape" % "@VERSION@"
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
 
-### Motivating example
+You're currently browsing the documentation for `ducktape 0.2.x`, if you're looking for the `0.1.x` docs go here: https://github.com/arainko/ducktape/tree/series/0.1.x#-ducktape
 
-```scala mdoc
+## Motivating example
+
+`ducktape` is all about painlessly transforming between similiarly structured case classes/enums/sealed traits:
+
+```scala mdoc:silent
 import java.time.Instant
 import io.github.arainko.ducktape.*
 
 // imagine this is a wire model of some kind - JSON, protobuf, avro, what have you...
-object wire:
+object wire {
   final case class Person(
     firstName: String,
     lastName: String,
@@ -39,10 +43,9 @@ object wire:
     case Card(name: String, digits: Long, expires: Instant)
     case PayPal(email: String)
     case Cash
+}
 
-end wire
-
-object domain:
+object domain {
   final case class Person( // <-- fields reshuffled 
     lastName: String,
     firstName: String,
@@ -59,17 +62,22 @@ object domain:
     case Card(name: String, digits: Long, expires: Instant)
     case PayPal(email: String)
     case Cash
-
-end domain
+}
 
 val wirePerson: wire.Person = wire.Person(
   "John",
   "Doe",
-  List(wire.PaymentMethod.Cash, wire.PaymentMethod.PayPal("john@doe.com")),
+  List(
+    wire.PaymentMethod.Cash,
+    wire.PaymentMethod.PayPal("john@doe.com"),
+    wire.PaymentMethod.Card("J. Doe", 12345, Instant.now)
+  ),
   wire.Status.PendingRegistration,
   Some(Instant.ofEpochSecond(0))
 )
+```
 
+```scala mdoc
 val domainPerson = wirePerson.to[domain.Person]
 ```
 
@@ -86,6 +94,120 @@ val domainPerson = wirePerson.to[domain.Person]
 </details>
 
 
+But now imagine that your wire model differs ever so slightly from your domain model, maybe the wire model's `PaymentMethod.Card` doesn't have the `name` field for some inexplicable reason...
+
+```scala mdoc:reset:invisible
+import java.time.Instant
+import io.github.arainko.ducktape.*
+
+object domain {
+  final case class Person( 
+    lastName: String,
+    firstName: String,
+    status: Option[domain.Status],
+    paymentMethods: Vector[domain.Payment],
+    updatedAt: Option[Instant],
+  )
+
+  enum Status:
+    case Registered, PendingRegistration, Removed
+    case PendingRemoval
+
+  enum Payment:
+    case Card(name: String, digits: Long, expires: Instant)
+    case PayPal(email: String)
+    case Cash
+}
+```
+
+```scala mdoc:silent
+object wire {
+  final case class Person(
+    firstName: String,
+    lastName: String,
+    paymentMethods: List[wire.PaymentMethod],
+    status: wire.Status,
+    updatedAt: Option[Instant],
+  )
+
+  enum Status:
+    case Registered, PendingRegistration, Removed
+
+  enum PaymentMethod:
+    case Card(digits: Long, expires: Instant) // <-- poof, 'name' is gone
+    case PayPal(email: String)
+    case Cash
+}
+
+val wirePerson: wire.Person = wire.Person(
+  "John",
+  "Doe",
+  List(
+    wire.PaymentMethod.Cash,
+    wire.PaymentMethod.PayPal("john@doe.com"),
+    wire.PaymentMethod.Card(12345, Instant.now)
+  ),
+  wire.Status.PendingRegistration,
+  Some(Instant.ofEpochSecond(0))
+)
+```
+...and when you try to transform between these two representations the compiler now yells at you.
+```scala mdoc:fail
+val domainPerson = wirePerson.to[domain.Person]
+```
+
+Now onto dealing with that, let's first examine the error message:
+
+`No field 'name' found in MdocApp0.this.wire.PaymentMethod.Card @ Person.paymentMethods.element.at[MdocApp0.this.domain.Payment.Card].name`
+
+especially the part after `@`:
+
+`Person.paymentMethods.element.at[MdocApp0.this.domain.Payment.Card].name`
+
+the thing above is basically a path to the field/subtype under which `ducktape` was not able to create a transformation, these are meant to be copy-pastable for when you're actually trying to fix the error, eg. by setting the `name` field to a constant value:
+
+```scala mdoc
+val domainPerson = 
+  wirePerson
+    .into[domain.Person]
+    .transform(Field.const(_.paymentMethods.element.at[domain.Payment.Card].name, "CONST NAME"))
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+  
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  val wirePerson1: wire.Person = wire.Person(
+    "John",
+    "Doe",
+    List(
+      wire.PaymentMethod.Cash,
+      wire.PaymentMethod.PayPal("john@doe.com"),
+      wire.PaymentMethod.Card(12345, Instant.now)
+    ),
+    wire.Status.PendingRegistration,
+    Some(Instant.ofEpochSecond(0))
+  )
+
+  Docs.printCode(
+    wirePerson1
+      .into[domain.Person]
+      .transform(Field.const(_.paymentMethods.element.at[domain.Payment.Card].name, "CONST NAME"))
+  )
+``` 
+</details>
+
+## Cookbook (TODO: replace examples with this)
+
+### Case class to case class
+
+## Paths, how do they work? (TODO)
+
+## Coming from ducktape 0.1.x (TODO)
+
+## Popping the hood (TODO)
 
 ### Total transformations - examples
 
@@ -100,7 +222,6 @@ final case class PersonButMoreFields(firstName: String, lastName: String, age: I
 val personWithMoreFields = PersonButMoreFields("John", "Doe", 30, "SOCIAL-NUM-12345", "extra")
 
 val transformed = personWithMoreFields.to[Person]
-
 ```
 
 Automatic case class to case class transformations are supported given that
@@ -192,7 +313,7 @@ val withAllMatchingFields =
 
 In case we repeatedly apply configurations to the same field a warning is emitted (which can be ignored with `@nowarn`) and the latest one is chosen:
 
-```scala mdoc:warn
+```scala mdoc
 
 val withRepeatedConfig =
   person
@@ -382,7 +503,7 @@ given recursive[A, B](using Transformer.Derived[A, B]): Transformer[Rec[A], Rec[
 Rec("1", Some(Rec("2", Some(Rec("3", None))))).to[Rec[Option[String]]]
 ```
 
-### A look at the generated code
+### A look at the generated code (TODO: replace this and use expandable details tags to show the generated code)
 
 To inspect the code that is generated you can use `Transformer.Debug.showCode`, this method will print 
 the generated code at compile time for you to analyze and see if there's something funny going on after the macro expands.
