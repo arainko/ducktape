@@ -199,6 +199,134 @@ val domainPerson =
 ``` 
 </details>
 
+## Transfomation rules
+
+Let's go over the priority and rules that `ducktape` uses to create a transformation (in the same order they're tried in the implementation):
+
+### 1. User supplied `Transformers`
+
+Custom instances of a `Transfomer` are always prioritized since these also function as an extension mechanism of the library.
+
+```scala mdoc
+// this transformation is not supported out of the box
+given Transformer[String, List[String]] = str => str :: Nil
+
+"single value".to[List[String]]
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  Docs.printCode("single value".to[List[String]])
+``` 
+</details>
+
+### 2. Upcasting
+
+Transforming a type to its supertype is just an upcast.
+
+```scala mdoc
+// (Int | String) >: Int
+1.to[Int | String]
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  Docs.printCode(1.to[Int | String])
+``` 
+</details>
+
+### 3. Mapping over an `Option`
+
+Transforming between options comes down to mapping over it and recursively deriving a transformation for the value inside.
+
+```scala mdoc
+given Transformer[Int, String] = int => int.toString
+
+Option(1).to[Option[String]]
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  Docs.printCode(Option(1).to[Option[String]])
+``` 
+</details>
+
+### 4. Transforming and wrapping in an `Option`
+
+If a transformation between two types is possible then transforming between the source type and an `Option` of the destination type is just wrapping the transformation result in a `Some`.
+
+```scala mdoc
+1.to[Option[Int | String]]
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  Docs.printCode(1.to[Option[Int | String]])
+``` 
+</details>
+
+### 5. Mapping over and changing the collection type
+
+```scala mdoc:nest
+//`.to` is already a method on collections
+import io.github.arainko.ducktape.to as convertTo
+
+List(1, 2, 3, 4).convertTo[Vector[Int | String]]
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  Docs.printCode(List(1, 2, 3, 4).convertTo[Vector[Int | String]])
+``` 
+</details>
+
+### 6. Transforming between case classes
+
+```scala mdoc:reset
+import io.github.arainko.ducktape.*
+
+case class SourceToplevel(level1: SourceLevel1)
+case class SourceLevel1(extra: String, int: Int, level2s: List[SourceLevel2])
+case class SourceLevel2(value: Int)
+
+case class DestToplevel(level1: DestLevel1)
+case class DestLevel1(int: Int | String, level2s: Vector[DestLevel2])
+case class DestLevel2(value: Option[Int])
+
+SourceToplevel(SourceLevel1("extra", 1, List(SourceLevel2(1), SourceLevel2(2)))).to[DestToplevel]
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(
+    SourceToplevel(SourceLevel1("extra", 1, List(SourceLevel2(1), SourceLevel2(2)))).to[DestToplevel]
+    )
+``` 
+</details>
+
+
+### 7. Transforming between enums/sealed traits
+
+### 8. Same named singletons
+
+### 9. Unwrapping a value class
+
+### 10. Wrapping a value class
+
+### 11. Automatically derived `Transformer.Derived`
+
 ## Cookbook (TODO: replace examples with this)
 
 ### Case class to case class
