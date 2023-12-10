@@ -199,6 +199,145 @@ val domainPerson =
 ``` 
 </details>
 
+## Basics
+
+```scala
+// Entrypoint to the library
+import io.github.arainko.ducktape.*
+```
+
+The import above brings in a number of extension methods, let's examine how these work by redefining a simplified version of the model first seen in the [motivating example](#motivating-example):
+
+```scala mdoc:reset:silent
+object wire {
+  final case class Person(
+    firstName: String,
+    lastName: String,
+    paymentMethods: List[wire.PaymentMethod],
+  )
+
+  enum PaymentMethod:
+    case Card(name: String, digits: Long)
+    case PayPal(email: String)
+    case Cash
+}
+
+object domain {
+  final case class Person(
+    firstName: String,
+    lastName: String,
+    paymentMethods: Vector[domain.PaymentMethod],
+  )
+
+  enum PaymentMethod:
+    case Card(name: String, digits: Long)
+    case PayPal(email: String)
+    case Cash
+}
+
+val wirePerson = wire.Person("John", "Doe", 
+  List(
+    wire.PaymentMethod.Cash,
+    wire.PaymentMethod.PayPal("john@doe.com"),
+    wire.PaymentMethod.Card("J. Doe", 23232323)
+  )
+)
+
+```
+
+* `Source#to[Dest]` - for any two types `Source` and `Dest`, used to create a direct transformation between `Source` and `Dest`:
+```scala mdoc
+import io.github.arainko.ducktape.*
+
+wirePerson.to[domain.Person]
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(wirePerson.to[domain.Person])
+``` 
+</details>
+
+Read more about the rules under which the transformations are generated in ['Transformation rules'](#transfomation-rules).
+
+* `Source#into[Dest]` -  for any two types `Source` and `Dest`, used to create a 'transformation builder' that allows fixing transformation errors and overriding transformations for selected fields or subtypes.
+
+```scala mdoc
+import io.github.arainko.ducktape.*
+
+wirePerson
+  .into[domain.Person]
+  .transform(Field.const(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, "overridden@email.com"))
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(
+    wirePerson
+      .into[domain.Person]
+      .transform(Field.const(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, "overridden@email.com"))
+  )
+``` 
+</details>
+
+Read more in the section about [configuring transformations](#configuring-transformations).
+
+* `Source#via(<method reference>)` - for any type `Source` and a `method reference` that can be eta-expanded into a function with named arguments, used to expand the method's argument list with the fields of the `Source` type
+
+```scala mdoc
+import io.github.arainko.ducktape.*
+
+wirePerson.via(domain.Person.apply)
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(wirePerson.via(domain.Person.apply))
+``` 
+</details>
+
+To read about how these transformations are generated head on over to the section about [transformation rules](#transfomation-rules).
+
+* `Source.intoVia(<method reference>)` - for any type `Source` and a `method reference` that can be eta-expanded into a function with named arguments, used to create a 'transformation builder' that allows fixing transformation errors and overriding transformations for selected fields or subtypes.
+
+```scala mdoc
+import io.github.arainko.ducktape.*
+
+wirePerson
+  .intoVia(domain.Person.apply)
+  .transform(Field.const(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, "overridden@email.com"))
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(
+    wirePerson
+      .intoVia(domain.Person.apply)
+      .transform(Field.const(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, "overridden@email.com"))
+  )
+``` 
+</details>
+
+Read more in the section about [configuring transformations](#configuring-transformations).
+
+## Configuring transformations
+
+
+
 ## Transfomation rules
 
 Let's go over the priority and rules that `ducktape` uses to create a transformation (in the same order they're tried in the implementation):
@@ -218,6 +357,8 @@ given Transformer[String, List[String]] = str => str :: Nil
   <summary>Click to see the generated code</summary>
 
 ```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
   Docs.printCode("single value".to[List[String]])
 ``` 
 </details>
@@ -291,7 +432,11 @@ List(1, 2, 3, 4).convertTo[Vector[Int | String]]
 
 ### 6. Transforming between case classes
 
-```scala mdoc:reset
+A source case class can be transformed into the destination case class given that:
+* source has fields whose names cover all of the destination's fields,
+* a transformation for the types corresponding to those fields can be derived.
+
+```scala mdoc:reset-object
 import io.github.arainko.ducktape.*
 
 case class SourceToplevel(level1: SourceLevel1)
@@ -319,13 +464,128 @@ SourceToplevel(SourceLevel1("extra", 1, List(SourceLevel2(1), SourceLevel2(2))))
 
 ### 7. Transforming between enums/sealed traits
 
+A source coproduct can be transformed into the destination coproduct given that:
+* destination's children have names that match all of the source's children,
+* a transformation between those two corresponding types can be derived.
+
+```scala mdoc
+sealed trait PaymentMethod
+
+object PaymentMethod {
+  case class Card(name: String, digits: Long, expires: Long) extends PaymentMethod
+  case object Cash extends PaymentMethod
+  case class PayPal(email: String) extends PaymentMethod
+}
+
+enum OtherPaymentMethod {
+  case Card(name: String, digits: Long, expires: Long)
+  case PayPal(email: String)
+  case Cash
+  case FakeMoney
+}
+
+(PaymentMethod.Cash: PaymentMethod).to[OtherPaymentMethod]
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode((PaymentMethod.Cash: PaymentMethod).to[OtherPaymentMethod])
+``` 
+</details>
+
 ### 8. Same named singletons
+
+Transformations between same named singletons come down to just reffering to the destination singleton.
+
+```scala mdoc
+object example1 {
+  case object Singleton
+}
+
+object example2 {
+  case object Singleton
+}
+
+example1.Singleton.to[example2.Singleton.type]
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(example1.Singleton.to[example2.Singleton.type])
+``` 
+</details>
 
 ### 9. Unwrapping a value class
 
+```scala mdoc
+case class Wrapper1(value: Int) extends AnyVal
+
+Wrapper1(1).to[Int]
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(Wrapper1(1).to[Int])
+``` 
+</details>
+
 ### 10. Wrapping a value class
 
+```scala mdoc
+case class Wrapper2(value: Int) extends AnyVal
+
+1.to[Wrapper2]
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(1.to[Wrapper2])
+``` 
+</details>
+
 ### 11. Automatically derived `Transformer.Derived`
+
+Instances of `Transformer.Derived` are automatically derived as a fallback to support use cases where a generic type (eg. a field of a case class) is unknown at definition site.
+
+Note that `Transformer[A, B] <: Transformer.Derived[A, B]` so any `Transformer` in scope is eligible to become a `Transformer.Derived`.
+
+```scala mdoc
+final case class Source[A](field1: Int, field2: String, generic: A)
+final case class Dest[A](field1: Int, field2: String, generic: A)
+
+def transformSource[A, B](source: Source[A])(using Transformer.Derived[A, B]): Dest[B] = source.to[Dest[B]]
+
+transformSource[Int, Option[Int]](Source(1, "2", 3))
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode {
+    def transformSource[A, B](source: Source[A])(using Transformer.Derived[A, B]): Dest[B]  =  source.to[Dest[B]]
+
+    transformSource[Int, Option[Int]](Source(1, "2", 3))
+  }
+``` 
+</details>
 
 ## Cookbook (TODO: replace examples with this)
 
