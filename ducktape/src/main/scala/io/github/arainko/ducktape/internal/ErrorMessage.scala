@@ -67,6 +67,8 @@ private[ducktape] object ErrorMessage {
           s"The path segment '$name' is not valid as it is not a field of a case class or an argument of a function"
         case Segment.Case(tpe) =>
           s"The path segment 'at[${tpe.repr.show}]' is not valid because its parent is not a coproduct or the picked type is not a subtype of that coproduct"
+        case Segment.Element(_) =>
+          s"The path segment 'element' is not valid" // TODO: Revise this error message
       }
   }
 

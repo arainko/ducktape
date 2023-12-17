@@ -128,7 +128,6 @@ private[ducktape] enum Plan[+E <: PlanError] {
     plan: Plan[E]
   ) extends Plan[E]
 
-  // TODO: Use a well typed error definition here and not a String
   case Error(
     sourceTpe: Type[?],
     destTpe: Type[?],
@@ -140,6 +139,18 @@ private[ducktape] enum Plan[+E <: PlanError] {
 }
 
 private[ducktape] object Plan {
+
+  object Error {
+    def from(plan: Plan[Plan.Error], message: ErrorMessage, suppressed: Option[Plan.Error]): Plan.Error =
+      Plan.Error(
+        plan.sourceTpe,
+        plan.destTpe,
+        plan.sourceContext,
+        plan.destContext,
+        message,
+        suppressed
+      )
+  }
 
   def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.sourceTpe, plan.destTpe)
 
@@ -174,16 +185,7 @@ private[ducktape] object Plan {
                   fieldPlans
                     .get(fieldName)
                     .map(fieldPlan => recurse(fieldPlan, tail))
-                    .getOrElse(
-                      Plan.Error(
-                        sourceTpe,
-                        destTpe,
-                        sourceContext,
-                        destContext,
-                        ErrorMessage.InvalidFieldAccessor(fieldName, config.span),
-                        None
-                      )
-                    )
+                    .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidFieldAccessor(fieldName, config.span), None))
 
                 plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
               case plan @ BetweenProductFunction(sourceTpe, destTpe, sourceContext, destContext, argPlans, function) =>
@@ -191,77 +193,52 @@ private[ducktape] object Plan {
                   argPlans
                     .get(fieldName)
                     .map(argPlan => recurse(argPlan, tail))
-                    .getOrElse(
-                      Plan.Error(
-                        sourceTpe,
-                        destTpe,
-                        sourceContext,
-                        destContext,
-                        ErrorMessage.InvalidArgAccessor(fieldName, config.span),
-                        None
-                      )
-                    )
+                    .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidArgAccessor(fieldName, config.span), None))
 
                 plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
 
               case suppressed: Plan.Error =>
-                Plan.Error(
-                  plan.sourceTpe,
-                  plan.destTpe,
-                  plan.sourceContext,
-                  plan.destContext,
-                  ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
-                  Some(suppressed)
-                )
+                Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), Some(suppressed))
+
               case plan =>
-                Plan.Error(
-                  plan.sourceTpe,
-                  plan.destTpe,
-                  plan.sourceContext,
-                  plan.destContext,
-                  ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
-                  None
-                )
+                Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), None)
             }
 
           case (segment @ Path.Segment.Case(tpe)) :: tail =>
             current match {
+              // BetweenNonOptionOption keeps the same type as its source so we passthrough it when traversing source nodes
+              case plan: BetweenNonOptionOption[Plan.Error] if config.target.isSource =>
+                plan.copy(plan = recurse(plan.plan, segments))
+
               case plan @ BetweenCoproducts(sourceTpe, destTpe, sourceContext, destContext, casePlans) =>
                 def targetTpe(plan: Plan[Plan.Error]) = if (config.target.isSource) plan.sourceTpe.repr else plan.destTpe.repr
 
                 casePlans.zipWithIndex
                   .find((plan, _) => tpe.repr =:= targetTpe(plan))
                   .map((casePlan, idx) => plan.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail))))
-                  .getOrElse(
-                    Plan
-                      .Error(
-                        sourceTpe,
-                        destTpe,
-                        sourceContext,
-                        destContext,
-                        ErrorMessage.InvalidCaseAccessor(tpe, config.span),
-                        None
-                      )
-                  )
+                  .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidCaseAccessor(tpe, config.span), None))
 
               case suppressed: Plan.Error =>
-                Plan.Error(
-                  plan.sourceTpe,
-                  plan.destTpe,
-                  plan.sourceContext,
-                  plan.destContext,
-                  ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
-                  Some(suppressed)
-                )
+                Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), Some(suppressed))
               case plan =>
-                Plan.Error(
-                  plan.sourceTpe,
-                  plan.destTpe,
-                  plan.sourceContext,
-                  plan.destContext,
-                  ErrorMessage.InvalidPathSegment(segment, config.target, config.span),
-                  None
-                )
+                Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), None)
+            }
+
+          case (segment @ Path.Segment.Element(tpe)) :: tail =>
+            current match {
+              case p @ BetweenCollections(_, _, _, _, _, plan) =>
+                p.copy(plan = recurse(plan, tail))
+
+              case p @ BetweenOptions(_, _, _, _, plan) =>
+                p.copy(plan = recurse(plan, tail))
+
+              case p @ BetweenNonOptionOption(_, _, _, _, plan) =>
+                p.copy(plan = recurse(plan, tail))
+
+              case suppressed: Plan.Error =>
+                Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), Some(suppressed))
+              case plan =>
+                Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), None)
             }
 
           case Nil =>
@@ -274,28 +251,16 @@ private[ducktape] object Plan {
                   Plan
                     .Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config)
                 } else
-                  Plan
-                    .Error(
-                      current.sourceTpe,
-                      current.destTpe,
-                      current.sourceContext,
-                      current.destContext,
+                  Plan.Error
+                    .from(
+                      current,
                       ErrorMessage.InvalidConfiguration(config.tpe, current.destContext.currentTpe, target, span),
                       None
                     )
                     .tap(errors.addOne)
 
               case cfg @ Configuration.At.Failed(path, target, message, span) =>
-                Plan
-                  .Error(
-                    current.sourceTpe,
-                    current.destTpe,
-                    current.sourceContext,
-                    current.destContext,
-                    ErrorMessage.ConfigurationFailed(cfg),
-                    None
-                  )
-                  .tap(errors.addOne)
+                Plan.Error.from(current, ErrorMessage.ConfigurationFailed(cfg), None).tap(errors.addOne)
             }
         }
       }

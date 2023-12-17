@@ -1,11 +1,13 @@
 package io.github.arainko.ducktape.docs
 
-import scala.quoted.*
-import org.scalafmt.interfaces.Scalafmt
-import java.nio.file.Path
 import org.scalafmt.dynamic.ConsoleScalafmtReporter
-import java.io.PrintStream
-import java.io.OutputStream
+import org.scalafmt.interfaces.Scalafmt
+
+import java.io.{ OutputStream, PrintStream }
+import java.nio.file.Path
+import scala.quoted.*
+import scala.util.chaining.*
+import java.time.Instant
 
 /**
  * Sometimes the code printed with `Printer.TreeShortCode` is not fully legal (at least in scalafmt terms)
@@ -26,8 +28,12 @@ object Docs {
      * Printer.TreeShortCode prints type lambdas with a => instead of =>> which makes scalafmt REALLY, REALLY upset
      * this beauty fixes it until https://github.com/lampepfl/dotty/pull/16968 is merged to dotty
      */
-    val typeLambdaRegex = """\[(\[\p{L}+ >: Nothing <: \p{L}+\]) =>""".r
-    def fixTypeLambdas(input: String): String = typeLambdaRegex.replaceAllIn(input, "[$1 =>>")
+    val typeLambdaSingleArgRegex = """\[(\[\p{L}+ >: Nothing <: \p{L}+\]) =>""".r
+    val typeLambdaTwoArgsRegex = """\[(\[\p{L}+ >: Nothing <: \p{L}+\, \p{L}+ >: Nothing <: \p{L}+\]) =>""".r
+    def fixTypeLambdas(input: String): String =
+      typeLambdaSingleArgRegex
+        .replaceAllIn(input, "[$1 =>>")
+        .pipe(typeLambdaTwoArgsRegex.replaceAllIn(_, "[$1 =>>"))
 
     val struct = fixTypeLambdas(Printer.TreeShortCode.show(value.asTerm))
 
