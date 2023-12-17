@@ -181,7 +181,6 @@ private[ducktape] object Plan {
           case (segment @ Path.Segment.Field(_, fieldName)) :: tail =>
             current match {
               case plan @ BetweenProducts(sourceTpe, destTpe, sourceContext, destContext, fieldPlans) =>
-
                 val fieldPlan =
                   fieldPlans
                     .get(fieldName)

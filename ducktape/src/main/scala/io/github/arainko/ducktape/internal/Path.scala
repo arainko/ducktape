@@ -12,9 +12,9 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
 
   def currentTpe(using Quotes): Type[?] = {
 
-    segments.reverse.collectFirst { 
-      case Path.Segment.Element(tpe) => tpe
-      case Path.Segment.Field(tpe, name) => tpe 
+    segments.reverse.collectFirst {
+      case Path.Segment.Element(tpe)     => tpe
+      case Path.Segment.Field(tpe, name) => tpe
     }
       .getOrElse(root)
       .repr
@@ -56,7 +56,7 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
     else
       self.segments.map {
         case Path.Segment.Field(_, name) => name
-        case Path.Segment.Element(_) => "element"
+        case Path.Segment.Element(_)     => "element"
         case Path.Segment.Case(tpe) =>
           val repr = tpe.repr
           val suffix = if (repr.isSingleton) ".type" else ""

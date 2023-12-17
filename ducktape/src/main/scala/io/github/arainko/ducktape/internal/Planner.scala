@@ -39,7 +39,7 @@ private[ducktape] object Planner {
         case Optional(_, srcParamStruct) -> Optional(_, destParamStruct) =>
           val updatedSourceContext = sourceContext.appended(Path.Segment.Element(srcParamStruct.tpe))
           val updatedDestContext = destContext.appended(Path.Segment.Element(destParamStruct.tpe))
-          
+
           Plan.BetweenOptions(
             srcParamStruct.tpe,
             destParamStruct.tpe,

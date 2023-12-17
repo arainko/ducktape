@@ -336,7 +336,7 @@ Read more in the section about [configuring transformations](#configuring-transf
 
 ## Configuring transformations
 
-### Introduction & explanation
+### Introduction and explanation
 
 Transformations can customized or 'fixed' with a slew of configuration options, let's examine a quick example based on a slightly modified version of the previously introduced model:
 
@@ -467,15 +467,204 @@ What's worth noting is that any of the configuration options are purely a compil
 
 ### Product configurations
 
-* `Field.const`
-* `Field.computed`
-* `Field.default`
-* `Field.allMatching`
+Let's introduce another payment method (not part of any of the previous payment method ADTs, just a standalone case class).
+
+```scala mdoc
+case class PaymentBand(name: String, digits: Long, color: String = "red")
+
+val card: wire.PaymentMethod.Card = 
+  wire.PaymentMethod.Card(name = "J. Doe", digits = 213712345)
+```
+
+* `Field.const` - allows to supply a constant value for a given field
+```scala mdoc
+card
+  .into[PaymentBand]
+  .transform(Field.const(_.color, "blue"))
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(
+   card
+    .into[PaymentBand]
+    .transform(Field.const(_.color, "blue"))
+  )
+``` 
+</details>
+
+* `Field.computed` - allows to compute a value with a function the shape of `Dest => FieldTpe`
+```scala mdoc
+card
+  .into[PaymentBand]
+  .transform(
+    Field.computed(_.color, card => if (card.digits % 2 == 0) "green" else "yellow")
+  )
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(
+   card
+    .into[PaymentBand]
+    .transform(
+      Field.computed(_.color, card => if (card.digits % 2 == 0) "green" else "yellow")
+    )
+  )
+``` 
+</details>
+
+* `Field.default` - only works when a field's got a default value defined (defaults are not taken into consideration by default)
+
+```scala mdoc
+card
+  .into[PaymentBand]
+  .transform(Field.default(_.color))
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(
+   card
+    .into[PaymentBand]
+    .transform(Field.default(_.color))
+  )
+``` 
+</details>
+
+* `Field.allMatching` - allow to supply a field source whose fields will replace all matching fields in the destination (given that the names and the types match up)
+
+```scala mdoc
+case class FieldSource(color: String, digits: Long, extra: Int)
+val source = FieldSource("magenta", 123445678, 23)
+
+card
+  .into[PaymentBand]
+  .transform(Field.allMatching(paymentBand => paymentBand, source))
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(
+  card
+    .into[PaymentBand]
+    .transform(Field.allMatching(paymentBand => paymentBand, source))
+  )
+``` 
+</details>
 
 ### Coproduct configurations
 
-* `Case.const`
-* `Case.computed`
+```scala mdoc
+val transfer = wire.PaymentMethod.Transfer("2764262")
+```
+
+* `Case.const` - allows to supply a constant value for a given subtype of a coproduct
+```scala mdoc
+transfer
+  .into[domain.PaymentMethod]
+  .transform(Case.const(_.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash))
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(
+  transfer
+    .into[domain.PaymentMethod]
+    .transform(Case.const(_.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash))
+  )
+``` 
+</details>
+
+
+* `Case.computed` - allow to supply a function of the selected source type to the expected destination type
+```scala mdoc
+transfer
+  .into[domain.PaymentMethod]
+  .transform(
+    Case.computed(_.at[wire.PaymentMethod.Transfer], transfer => domain.PaymentMethod.Card("J. Doe", transfer.accountNo.toLong))
+  )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printCode(
+  transfer
+    .into[domain.PaymentMethod]
+    .transform(
+      Case.computed(_.at[wire.PaymentMethod.Transfer], transfer => domain.PaymentMethod.Card("J. Doe", transfer.accountNo.toLong))
+    )
+  )
+``` 
+</details>
+
+### Specifics and limitations
+
+* Configs can override transformations
+```scala mdoc
+wirePerson
+  .into[domain.Person]
+  .transform(
+    Field.const(_.age, 24),
+    Case.const(_.paymentMethods.element.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash),
+    Field.const(_.paymentMethods.element, domain.PaymentMethod.Cash) // <-- override all payment methods to `Cash`
+  )
+```
+
+* Configs can override each other
+
+```scala mdoc
+wirePerson
+  .into[domain.Person]
+  .transform(
+    Case.const(_.paymentMethods.element.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash),
+    Field.const(_.age, 24),
+    Field.const(_.age, 50) // <-- override the previously configured 'age' field`
+  )
+```
+
+* Config on a field or a case 'above' overrides the configs 'below'
+```scala mdoc
+wirePerson
+  .into[domain.Person]
+  .transform(
+    Field.const(_.age, 24),
+    Case.const(_.paymentMethods.element.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash),
+    Field.const(_.paymentMethods.element, domain.PaymentMethod.Cash), // <-- override all payment methods to `Cash`,
+    Field.const(_.paymentMethods, Vector.empty[domain.PaymentMethod]) // <-- also override the 'parent' of '_.paymentMethods.element' so now payment methods are just empty
+  )
+```
+
+However, first configuring the field a level above and then the field a level below is not supported:
+```scala mdoc:fail
+wirePerson
+  .into[domain.Person]
+  .transform(
+    Field.const(_.age, 24),
+    Case.const(_.paymentMethods.element.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash),
+    Field.const(_.paymentMethods, Vector.empty[domain.PaymentMethod]), // <-- configure the field a level above first
+    Field.const(_.paymentMethods.element, domain.PaymentMethod.Cash), // <-- then the field below it
+  )
+```
 
 ## Transfomation rules
 
