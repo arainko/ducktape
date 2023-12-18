@@ -8,10 +8,10 @@ If this project interests you, please drop a 🌟 - these things are worthless b
 
 ## Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.0-M1"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.0-M2"
 
 // or if you're using Scala.js or Scala Native
-libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.0-M1"
+libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.0-M2"
 ```
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
@@ -89,7 +89,7 @@ val domainPerson = wirePerson.to[domain.Person]
 //     Card(
 //       name = "J. Doe",
 //       digits = 12345L,
-//       expires = 2023-12-17T14:54:13.882678035Z
+//       expires = 2023-12-18T15:00:25.065351Z
 //     )
 //   ),
 //   updatedAt = Some(value = 1970-01-01T00:00:00Z)
@@ -201,7 +201,7 @@ val domainPerson =
 //     Card(
 //       name = "CONST NAME",
 //       digits = 12345L,
-//       expires = 2023-12-17T14:54:13.890982787Z
+//       expires = 2023-12-18T15:00:25.078582Z
 //     )
 //   ),
 //   updatedAt = Some(value = 1970-01-01T00:00:00Z)
