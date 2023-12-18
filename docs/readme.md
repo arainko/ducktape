@@ -16,6 +16,9 @@ libraryDependencies += "io.github.arainko" %%% "ducktape" % "@VERSION@"
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
 
+You're currently browsing the documentation for `ducktape 0.1.x`, if you're looking for the `0.2.x` docs go here: https://github.com/arainko/ducktape/tree/series/0.2.x#-ducktape
+
+
 ### Total transformations - examples
 
 #### 1. *Case class to case class*
