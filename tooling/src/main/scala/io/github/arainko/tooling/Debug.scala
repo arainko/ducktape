@@ -71,9 +71,13 @@ private[ducktape] object Debug {
     }
   }
 
-  given deferred[A]: Debug[() => A] with {
-    extension (value: () => A) def show(using Quotes): String = 
+  given deferred: Debug[() => Any] with {
+    extension (value: () => Any) def show(using Quotes): String = 
       s"Deferred(...)"
+  }
+
+  given function: Debug[Nothing => Any] with {
+    extension (self: Nothing => Any) def show(using Quotes): String = s"Function(...)"
   }
 
   given expr[A]: Debug[Expr[A]] with {

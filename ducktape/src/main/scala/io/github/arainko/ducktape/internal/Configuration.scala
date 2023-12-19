@@ -14,6 +14,7 @@ private[ducktape] enum Configuration derives Debug {
 }
 
 private[ducktape] object Configuration {
+
   enum At derives Debug {
     def path: Path
     def target: Target
