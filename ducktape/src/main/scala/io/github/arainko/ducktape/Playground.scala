@@ -14,8 +14,11 @@ object Playground extends App {
       .into[DestToplevel]
       .transform(
         Field.const(_.extra, Some(1)),
-        Field.useNones(a => a.level1)
+        Field.useNones(_.level1)
       )
+
+  val cos = Field.useNones[Option[Int], Option[Int]].regional(_.element)
+  
 
   println(dest)
 }

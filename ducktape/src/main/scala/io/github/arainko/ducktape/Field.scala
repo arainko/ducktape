@@ -2,6 +2,15 @@ package io.github.arainko.ducktape
 
 import scala.annotation.compileTimeOnly
 
+sealed trait Regional
+
+object Regional {
+  extension [F[a, b] <: (Case[b, a] | Field[a, b]), A, B](self: F[A, B]) {
+    // @compileTimeOnly("woowow")
+    def regional[DestFieldTpe](selector: Selector ?=> B => DestFieldTpe): F[A, B] = ???
+  }
+}
+
 // Kept around for source compat with 0.1.x
 def Arg: Field.type = Field
 
@@ -28,6 +37,8 @@ object Field {
 
   def useNones[A, B, FieldType](selector: Selector ?=> B => FieldType): Field[A, B] = ???
 
+  def useNones[A, B]: Field[A, B] & Regional = ???
+  
   @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
   def allMatching[A, B, DestFieldTpe, ProductTpe](selector: Selector ?=> B => DestFieldTpe, product: ProductTpe): Field[A, B] =
     ???
