@@ -172,7 +172,7 @@ class ErrorReportingSuite extends DucktapeSuite {
       )
       """
     }(
-      """The path segment 'toByte' is not valid as it is not a field of a case class or an argument of a function @ DestToplevel1
+      """The path segment 'toByte' is not valid as it is not a field of a case class or an argument of a function @ DestToplevel1.level2Extra
       |  SUPPRESSES: The field 'level2Extra' doesn't have a default value @ DestToplevel1.level2Extra""".stripMargin,
       "The field 'level2Extra' doesn't have a default value @ DestToplevel1.level2Extra",
       "No field 'level2Extra' found in SourceToplevel1 @ DestToplevel1.level2Extra"
