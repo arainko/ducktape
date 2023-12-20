@@ -26,6 +26,8 @@ object Field {
   @compileTimeOnly("Field.default is only useable as a field configuration for transformations")
   def default[A, B, FieldType](selector: Selector ?=> B => FieldType): Field[A, B] = ???
 
+  def useNones[A, B, FieldType](selector: Selector ?=> B => FieldType): Field[A, B] = ???
+
   @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
   def allMatching[A, B, DestFieldTpe, ProductTpe](selector: Selector ?=> B => DestFieldTpe, product: ProductTpe): Field[A, B] =
     ???

@@ -113,6 +113,9 @@ private[ducktape] object PlanConfigurer {
             )
             .tap(errors.addOne)
 
+      case cfg @ Configuration.At.Regional(path, target, modifier, span) =>
+        regional(current, modifier)
+
       case cfg @ Configuration.At.Failed(path, target, message, span) =>
         Plan.Error.from(current, ErrorMessage.ConfigurationFailed(cfg), None).tap(errors.addOne)
     }
@@ -125,4 +128,51 @@ private[ducktape] object PlanConfigurer {
       case other =>
         Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), None)
     }
+
+  def regional(
+    plan: Plan[Plan.Error],
+    modifier: Configuration.Modifier
+  )(using Quotes): Plan[Plan.Error] =
+    plan match {
+      case plan: Upcast => plan
+
+      case plan: UserDefined => plan
+
+      case plan: Derived => plan
+
+      case plan: Configured => plan
+
+      case plan: BetweenProductFunction[Plan.Error] =>
+        plan.copy(argPlans = plan.argPlans.transform((_, plan) => regional(plan, modifier)))
+
+      case plan: BetweenUnwrappedWrapped => plan
+
+      case plan: BetweenWrappedUnwrapped => plan
+
+      case plan: BetweenSingletons => plan
+
+      case plan: BetweenProducts[Plan.Error] =>
+        plan.copy(fieldPlans = plan.fieldPlans.transform((_, plan) => regional(plan, modifier)))
+
+      case plan: BetweenCoproducts[Plan.Error] =>
+        plan.copy(casePlans = plan.casePlans.map(regional(_, modifier)))
+
+      case plan: BetweenOptions[Plan.Error] =>
+        plan.copy(plan = regional(plan.plan, modifier))
+
+      case plan: BetweenNonOptionOption[Plan.Error] =>
+        plan.copy(plan = regional(plan.plan, modifier))
+
+      case plan: BetweenCollections[Plan.Error] =>
+        plan.copy(plan = regional(plan.plan, modifier))
+
+      case plan: Error => 
+        modifier(plan) match {
+          case config: Configuration =>
+            Plan.Configured(plan.sourceTpe, plan.destTpe, plan.sourceContext, plan.destContext, config)
+          case other: plan.type => 
+            other
+        }
+    }
+
 }

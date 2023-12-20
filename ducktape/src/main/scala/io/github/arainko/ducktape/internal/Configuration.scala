@@ -15,12 +15,22 @@ private[ducktape] enum Configuration derives Debug {
 
 private[ducktape] object Configuration {
 
+  trait Modifier {
+    def apply(plan: Plan.Error)(using Quotes): Configuration | plan.type
+  }
+
+  object Modifier {
+    given Debug[Modifier] = new:
+      extension (self: Modifier) def show(using Quotes): String = "Modifier(...)"
+  }
+
   enum At derives Debug {
     def path: Path
     def target: Target
     def span: Span
 
     case Successful(path: Path, target: Target, config: Configuration, span: Span)
+    case Regional(path: Path, target: Target, modifier: Modifier, span: Span)
     case Failed(path: Path, target: Target, message: String, span: Span)
   }
 
@@ -119,6 +129,18 @@ private[ducktape] object Configuration {
             Configuration.CaseComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
           ) :: Nil
+
+        case cfg @ Apply(
+              TypeApply(Select(IdentOfType('[Field.type]), "useNones"), a :: b :: destFieldTpe :: Nil),
+              PathSelector(path) :: Nil
+            ) =>
+          val modifier: Modifier = new:
+            def apply(plan: Plan.Error)(using Quotes): Configuration | plan.type =
+              plan.destTpe match {
+                case tpe @ '[Option[a]] => Configuration.Const('{ None }, tpe)
+                case _                  => plan
+              }
+          Configuration.At.Regional(path, Target.Dest, modifier, Span.fromPosition(cfg.pos)) :: Nil
 
         case DeprecatedConfig(configs) => configs
 

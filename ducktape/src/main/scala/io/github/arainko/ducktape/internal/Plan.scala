@@ -6,9 +6,7 @@ import io.github.arainko.ducktape.internal.*
 import scala.collection.immutable.ListMap
 import scala.quoted.*
 
-private[ducktape] type PlanError = Plan.Error
-
-private[ducktape] enum Plan[+E <: PlanError] {
+private[ducktape] sealed trait Plan[+E <: Plan.Error] {
   import Plan.*
 
   def sourceTpe: Type[?]
@@ -22,15 +20,17 @@ private[ducktape] enum Plan[+E <: PlanError] {
   final def configureAll(configs: List[Configuration.At])(using Quotes): Plan.Reconfigured = PlanConfigurer.run(this, configs)
 
   final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing]] = PlanRefiner.run(this)
+}
 
-  case Upcast(
+private[ducktape] object Plan {
+  case class Upcast(
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
     destContext: Path
   ) extends Plan[Nothing]
 
-  case UserDefined(
+  case class UserDefined(
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -38,7 +38,7 @@ private[ducktape] enum Plan[+E <: PlanError] {
     transformer: Expr[Transformer[?, ?]]
   ) extends Plan[Nothing]
 
-  case Derived(
+  case class Derived(
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -46,7 +46,7 @@ private[ducktape] enum Plan[+E <: PlanError] {
     transformer: Expr[Transformer.Derived[?, ?]]
   ) extends Plan[Nothing]
 
-  case Configured(
+  case class Configured(
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -54,7 +54,7 @@ private[ducktape] enum Plan[+E <: PlanError] {
     config: Configuration
   ) extends Plan[Nothing]
 
-  case BetweenProductFunction(
+  case class BetweenProductFunction[+E <: Plan.Error](
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -63,14 +63,14 @@ private[ducktape] enum Plan[+E <: PlanError] {
     function: Function
   ) extends Plan[E]
 
-  case BetweenUnwrappedWrapped(
+  case class BetweenUnwrappedWrapped(
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
     destContext: Path
   ) extends Plan[Nothing]
 
-  case BetweenWrappedUnwrapped(
+  case class BetweenWrappedUnwrapped(
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -78,7 +78,7 @@ private[ducktape] enum Plan[+E <: PlanError] {
     fieldName: String
   ) extends Plan[Nothing]
 
-  case BetweenSingletons(
+  case class BetweenSingletons(
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -86,7 +86,7 @@ private[ducktape] enum Plan[+E <: PlanError] {
     expr: Expr[Any]
   ) extends Plan[Nothing]
 
-  case BetweenProducts(
+  case class BetweenProducts[+E <: Plan.Error](
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -94,7 +94,7 @@ private[ducktape] enum Plan[+E <: PlanError] {
     fieldPlans: Map[String, Plan[E]]
   ) extends Plan[E]
 
-  case BetweenCoproducts(
+  case class BetweenCoproducts[+E <: Plan.Error](
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -102,7 +102,7 @@ private[ducktape] enum Plan[+E <: PlanError] {
     casePlans: Vector[Plan[E]]
   ) extends Plan[E]
 
-  case BetweenOptions(
+  case class BetweenOptions[+E <: Plan.Error](
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -110,7 +110,7 @@ private[ducktape] enum Plan[+E <: PlanError] {
     plan: Plan[E]
   ) extends Plan[E]
 
-  case BetweenNonOptionOption(
+  case class BetweenNonOptionOption[+E <: Plan.Error](
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -118,7 +118,7 @@ private[ducktape] enum Plan[+E <: PlanError] {
     plan: Plan[E]
   ) extends Plan[E]
 
-  case BetweenCollections(
+  case class BetweenCollections[+E <: Plan.Error](
     destCollectionTpe: Type[? <: Iterable[?]],
     sourceTpe: Type[?],
     destTpe: Type[?],
@@ -127,7 +127,7 @@ private[ducktape] enum Plan[+E <: PlanError] {
     plan: Plan[E]
   ) extends Plan[E]
 
-  case Error(
+  case class Error(
     sourceTpe: Type[?],
     destTpe: Type[?],
     sourceContext: Path,
@@ -135,9 +135,6 @@ private[ducktape] enum Plan[+E <: PlanError] {
     message: ErrorMessage,
     suppressed: Option[Plan.Error]
   ) extends Plan[Plan.Error]
-}
-
-private[ducktape] object Plan {
 
   object Error {
     def from(plan: Plan[Plan.Error], message: ErrorMessage, suppressed: Option[Plan.Error]): Plan.Error =
