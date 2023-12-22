@@ -50,7 +50,7 @@ private[ducktape] object PlanConfigurer {
                 plan.copy(plan = recurse(plan.plan, segments))
 
               case plan @ BetweenCoproducts(sourceTpe, destTpe, sourceContext, destContext, casePlans) =>
-                def targetTpe(plan: Plan[Plan.Error]) = if (config.target.isSource) plan.sourceTpe.repr else plan.destTpe.repr
+                def targetTpe(plan: Plan[Plan.Error]) = if (config.target.isSource) plan.source.tpe.repr else plan.dest.tpe.repr
 
                 casePlans.zipWithIndex
                   .find((plan, _) => tpe.repr =:= targetTpe(plan))
@@ -103,7 +103,7 @@ private[ducktape] object PlanConfigurer {
         if (current.isReplaceableBy(cfg)) {
           successful.addOne(cfg)
           Plan
-            .Configured(current.sourceTpe, current.destTpe, current.sourceContext, current.destContext, config)
+            .Configured(current.source, current.dest, current.sourceContext, current.destContext, config)
         } else
           Plan.Error
             .from(
@@ -169,7 +169,7 @@ private[ducktape] object PlanConfigurer {
       case plan: Error => 
         modifier(plan) match {
           case config: Configuration =>
-            Plan.Configured(plan.sourceTpe, plan.destTpe, plan.sourceContext, plan.destContext, config)
+            Plan.Configured(plan.source, plan.dest, plan.sourceContext, plan.destContext, config)
           case other: plan.type => 
             other
         }

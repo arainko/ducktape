@@ -9,9 +9,13 @@ import scala.quoted.*
 private[ducktape] sealed trait Plan[+E <: Plan.Error] {
   import Plan.*
 
-  def sourceTpe: Type[?]
+  def source: Structure
 
-  def destTpe: Type[?]
+  def dest: Structure
+
+  // final def sourceTpe: Type[?] = source.tpe
+
+  // final def destTpe: Type[?] = dest.tpe
 
   def sourceContext: Path
 
@@ -24,39 +28,39 @@ private[ducktape] sealed trait Plan[+E <: Plan.Error] {
 
 private[ducktape] object Plan {
   case class Upcast(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path
   ) extends Plan[Nothing]
 
   case class UserDefined(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     transformer: Expr[Transformer[?, ?]]
   ) extends Plan[Nothing]
 
   case class Derived(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     transformer: Expr[Transformer.Derived[?, ?]]
   ) extends Plan[Nothing]
 
   case class Configured(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     config: Configuration
   ) extends Plan[Nothing]
 
   case class BetweenProductFunction[+E <: Plan.Error](
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     argPlans: ListMap[String, Plan[E]],
@@ -64,55 +68,55 @@ private[ducktape] object Plan {
   ) extends Plan[E]
 
   case class BetweenUnwrappedWrapped(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path
   ) extends Plan[Nothing]
 
   case class BetweenWrappedUnwrapped(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     fieldName: String
   ) extends Plan[Nothing]
 
   case class BetweenSingletons(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     expr: Expr[Any]
   ) extends Plan[Nothing]
 
   case class BetweenProducts[+E <: Plan.Error](
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     fieldPlans: Map[String, Plan[E]]
   ) extends Plan[E]
 
   case class BetweenCoproducts[+E <: Plan.Error](
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     casePlans: Vector[Plan[E]]
   ) extends Plan[E]
 
   case class BetweenOptions[+E <: Plan.Error](
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     plan: Plan[E]
   ) extends Plan[E]
 
   case class BetweenNonOptionOption[+E <: Plan.Error](
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     plan: Plan[E]
@@ -120,16 +124,16 @@ private[ducktape] object Plan {
 
   case class BetweenCollections[+E <: Plan.Error](
     destCollectionTpe: Type[? <: Iterable[?]],
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     plan: Plan[E]
   ) extends Plan[E]
 
   case class Error(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     message: ErrorMessage,
@@ -139,8 +143,8 @@ private[ducktape] object Plan {
   object Error {
     def from(plan: Plan[Plan.Error], message: ErrorMessage, suppressed: Option[Plan.Error]): Plan.Error =
       Plan.Error(
-        plan.sourceTpe,
-        plan.destTpe,
+        plan.source,
+        plan.dest,
         plan.sourceContext,
         plan.destContext,
         message,
@@ -148,7 +152,7 @@ private[ducktape] object Plan {
       )
   }
 
-  def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.sourceTpe, plan.destTpe)
+  def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.source.tpe, plan.dest.tpe)
 
   given debug: Debug[Plan[Plan.Error]] = Debug.derived
 

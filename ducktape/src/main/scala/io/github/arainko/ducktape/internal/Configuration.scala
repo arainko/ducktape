@@ -136,7 +136,7 @@ private[ducktape] object Configuration {
             ) =>
           val modifier: Modifier = new:
             def apply(plan: Plan.Error)(using Quotes): Configuration | plan.type =
-              plan.destTpe match {
+              plan.dest.tpe match {
                 case tpe @ '[Option[a]] => Configuration.Const('{ None }, tpe)
                 case _                  => plan
               }

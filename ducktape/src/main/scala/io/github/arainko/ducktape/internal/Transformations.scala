@@ -46,14 +46,16 @@ private[ducktape] object Transformations {
   )(using Quotes) = {
     given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
 
+    val sourceStruct = Structure.of[A](None)
+
     val plan =
       Function
         .fromExpr(function)
-        .map(function => Planner.between(Structure.of[A](None), Structure.fromFunction(function)))
+        .map(function => Planner.between(sourceStruct, Structure.fromFunction(function)))
         .getOrElse(
           Plan.Error(
-            Type.of[A],
-            Type.of[Any],
+            sourceStruct,
+            Structure.of[Any](None),
             Path.empty(Type.of[A]),
             Path.empty(Type.of[Any]),
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
@@ -73,14 +75,16 @@ private[ducktape] object Transformations {
   )(using Quotes) = {
     given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
 
+    val sourceStruct = Structure.of[A](None)
+
     val plan =
       Function
         .fromFunctionArguments[Args, Func](function)
-        .map(function => Planner.between(Structure.of[A](None), Structure.fromFunction(function)))
+        .map(function => Planner.between(sourceStruct, Structure.fromFunction(function)))
         .getOrElse(
           Plan.Error(
-            Type.of[A],
-            Type.of[Any],
+            sourceStruct,
+            Structure.of[Any](None),
             Path.empty(Type.of[A]),
             Path.empty(Type.of[Any]),
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),

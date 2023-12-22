@@ -25,24 +25,24 @@ private[ducktape] object Planner {
     Logger.loggedDebug(s"Plan @ depth ${Depth.current}"):
       (source.force -> dest.force) match {
         case _ if Depth.current > 64 =>
-          Plan.Error(source.tpe, dest.tpe, sourceContext, destContext, ErrorMessage.RecursionSuspected, None)
+          Plan.Error(source, dest, sourceContext, destContext, ErrorMessage.RecursionSuspected, None)
 
         case (source: Product, dest: Function) =>
           planProductFunctionTransformation(source, dest, sourceContext, destContext)
 
         case UserDefinedTransformation(transformer) =>
-          Plan.UserDefined(source.tpe, dest.tpe, sourceContext, destContext, transformer)
+          Plan.UserDefined(source, dest, sourceContext, destContext, transformer)
 
         case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
-          Plan.Upcast(source.tpe, dest.tpe, sourceContext, destContext)
+          Plan.Upcast(source, dest, sourceContext, destContext)
 
         case Optional(_, _, srcParamStruct) -> Optional(_, _, destParamStruct) =>
           val updatedSourceContext = sourceContext.appended(Path.Segment.Element(srcParamStruct.tpe))
           val updatedDestContext = destContext.appended(Path.Segment.Element(destParamStruct.tpe))
 
           Plan.BetweenOptions(
-            srcParamStruct.tpe,
-            destParamStruct.tpe,
+            srcParamStruct,
+            destParamStruct,
             sourceContext,
             destContext,
             recurse(srcParamStruct, destParamStruct, updatedSourceContext, updatedDestContext)
@@ -50,8 +50,8 @@ private[ducktape] object Planner {
 
         case struct -> Optional(_, _, paramStruct) =>
           Plan.BetweenNonOptionOption(
-            struct.tpe,
-            paramStruct.tpe,
+            struct,
+            paramStruct,
             sourceContext,
             destContext,
             recurse(struct, paramStruct, sourceContext, destContext.appended(Path.Segment.Element(paramStruct.tpe)))
@@ -63,8 +63,8 @@ private[ducktape] object Planner {
 
           Plan.BetweenCollections(
             destCollTpe,
-            srcParamStruct.tpe,
-            destParamStruct.tpe,
+            srcParamStruct,
+            destParamStruct,
             sourceContext,
             destContext,
             recurse(srcParamStruct, destParamStruct, updatedSourceContext, updatedDestContext)
@@ -77,21 +77,21 @@ private[ducktape] object Planner {
           planCoproductTransformation(source, dest, sourceContext, destContext)
 
         case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
-          Plan.BetweenSingletons(source.tpe, dest.tpe, sourceContext, destContext, dest.value)
+          Plan.BetweenSingletons(source, dest, sourceContext, destContext, dest.value)
 
         case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
-          Plan.BetweenWrappedUnwrapped(source.tpe, dest.tpe, sourceContext, destContext, source.paramFieldName)
+          Plan.BetweenWrappedUnwrapped(source, dest, sourceContext, destContext, source.paramFieldName)
 
         case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr =>
-          Plan.BetweenUnwrappedWrapped(source.tpe, dest.tpe, sourceContext, destContext)
+          Plan.BetweenUnwrappedWrapped(source, dest, sourceContext, destContext)
 
         case DerivedTransformation(transformer) =>
-          Plan.Derived(source.tpe, dest.tpe, sourceContext, destContext, transformer)
+          Plan.Derived(source, dest, sourceContext, destContext, transformer)
 
         case (source, dest) =>
           Plan.Error(
-            source.tpe,
-            dest.tpe,
+            source,
+            dest,
             sourceContext,
             destContext,
             ErrorMessage.CouldntBuildTransformation(source.tpe, dest.tpe),
@@ -117,8 +117,8 @@ private[ducktape] object Planner {
           }
           .getOrElse(
             Plan.Error(
-              Type.of[Nothing],
-              destFieldStruct.tpe,
+              Structure.of[Nothing](None),
+              destFieldStruct,
               sourceContext, // TODO: Revise
               updatedDestContext, // TODO: Revise
               ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
@@ -127,7 +127,7 @@ private[ducktape] object Planner {
           )
       destField -> plan
     }
-    Plan.BetweenProducts(source.tpe, dest.tpe, sourceContext, destContext, fieldPlans)
+    Plan.BetweenProducts(source, dest, sourceContext, destContext, fieldPlans)
   }
 
   private def planProductFunctionTransformation(
@@ -147,8 +147,8 @@ private[ducktape] object Planner {
           }
           .getOrElse(
             Plan.Error(
-              Type.of[Nothing],
-              destFieldStruct.tpe,
+              Structure.of[Nothing](None),
+              destFieldStruct,
               sourceContext, // TODO: Revise
               updatedDestContext, // TODO: Revise
               ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
@@ -157,7 +157,7 @@ private[ducktape] object Planner {
           )
       destField -> plan
     }
-    Plan.BetweenProductFunction(source.tpe, dest.tpe, sourceContext, destContext, argPlans, dest.function)
+    Plan.BetweenProductFunction(source, dest, sourceContext, destContext, argPlans, dest.function)
   }
 
   private def planCoproductTransformation(
@@ -177,8 +177,8 @@ private[ducktape] object Planner {
         }
         .getOrElse(
           Plan.Error(
-            sourceCaseStruct.tpe,
-            Type.of[Any],
+            sourceCaseStruct,
+            Structure.of[Any](None),
             updatedSourceContext, // TODO: Revise
             destContext, // TODO: Revise
             ErrorMessage.NoChildFound(sourceName, dest.tpe),
@@ -186,7 +186,7 @@ private[ducktape] object Planner {
           )
         )
     }
-    Plan.BetweenCoproducts(source.tpe, dest.tpe, sourceContext, destContext, casePlans.toVector)
+    Plan.BetweenCoproducts(source, dest, sourceContext, destContext, casePlans.toVector)
   }
 
   object UserDefinedTransformation {
