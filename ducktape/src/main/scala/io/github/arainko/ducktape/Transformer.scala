@@ -19,4 +19,12 @@ object Transformer {
   sealed trait Derived[Source, Dest] {
     def transform(value: Source): Dest
   }
+
+  trait Fallible[F[+x], Source, Dest] extends Fallible.Derived[F, Source, Dest]
+
+  object Fallible {
+    sealed trait Derived[F[+x], Source, Dest] {
+      def transform(source: Source): F[Dest]
+    }
+  }
 }
