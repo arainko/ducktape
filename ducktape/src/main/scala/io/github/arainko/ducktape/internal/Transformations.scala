@@ -19,7 +19,7 @@ private[ducktape] object Transformations {
     configs: Expr[Seq[Field[A, B] | Case[A, B]]]
   )(using Quotes): Expr[B] = {
     given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
-    val plan = Planner.between(Structure.of[A], Structure.of[B])
+    val plan = Planner.between(Structure.of[A](None), Structure.of[B](None))
     val config = Configuration.parse(configs)
     createTransformation(value, plan, config).asExprOf[B]
   }
@@ -49,7 +49,7 @@ private[ducktape] object Transformations {
     val plan =
       Function
         .fromExpr(function)
-        .map(function => Planner.between(Structure.of[A], Structure.fromFunction(function)))
+        .map(function => Planner.between(Structure.of[A](None), Structure.fromFunction(function)))
         .getOrElse(
           Plan.Error(
             Type.of[A],
@@ -76,7 +76,7 @@ private[ducktape] object Transformations {
     val plan =
       Function
         .fromFunctionArguments[Args, Func](function)
-        .map(function => Planner.between(Structure.of[A], Structure.fromFunction(function)))
+        .map(function => Planner.between(Structure.of[A](None), Structure.fromFunction(function)))
         .getOrElse(
           Plan.Error(
             Type.of[A],
