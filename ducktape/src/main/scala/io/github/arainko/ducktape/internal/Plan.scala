@@ -59,23 +59,22 @@ private[ducktape] object Plan {
   ) extends Plan[Nothing]
 
   case class BetweenProductFunction[+E <: Plan.Error](
-    source: Structure,
-    dest: Structure,
+    source: Structure.Product,
+    dest: Structure.Function,
     sourceContext: Path,
     destContext: Path,
-    argPlans: ListMap[String, Plan[E]],
-    function: Function
+    argPlans: ListMap[String, Plan[E]]
   ) extends Plan[E]
 
   case class BetweenUnwrappedWrapped(
     source: Structure,
-    dest: Structure,
+    dest: Structure.ValueClass,
     sourceContext: Path,
     destContext: Path
   ) extends Plan[Nothing]
 
   case class BetweenWrappedUnwrapped(
-    source: Structure,
+    source: Structure.ValueClass,
     dest: Structure,
     sourceContext: Path,
     destContext: Path,
@@ -83,24 +82,23 @@ private[ducktape] object Plan {
   ) extends Plan[Nothing]
 
   case class BetweenSingletons(
-    source: Structure,
-    dest: Structure,
+    source: Structure.Singleton,
+    dest: Structure.Singleton,
     sourceContext: Path,
-    destContext: Path,
-    expr: Expr[Any]
+    destContext: Path
   ) extends Plan[Nothing]
 
   case class BetweenProducts[+E <: Plan.Error](
-    source: Structure,
-    dest: Structure,
+    source: Structure.Product,
+    dest: Structure.Product,
     sourceContext: Path,
     destContext: Path,
     fieldPlans: Map[String, Plan[E]]
   ) extends Plan[E]
 
   case class BetweenCoproducts[+E <: Plan.Error](
-    source: Structure,
-    dest: Structure,
+    source: Structure.Coproduct,
+    dest: Structure.Coproduct,
     sourceContext: Path,
     destContext: Path,
     casePlans: Vector[Plan[E]]

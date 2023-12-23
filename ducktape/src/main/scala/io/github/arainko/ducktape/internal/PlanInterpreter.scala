@@ -49,7 +49,7 @@ private[ducktape] object PlanInterpreter {
         }.toList
         ifStatement(branches).asExpr
 
-      case Plan.BetweenProductFunction(sourceTpe, destTpe, _, _, argPlans, function) =>
+      case Plan.BetweenProductFunction(sourceTpe, destTpe, _, _, argPlans) =>
         val args = argPlans.map {
           case (fieldName, p: Plan.Configured) =>
             recurse(p, value).asTerm
@@ -57,7 +57,7 @@ private[ducktape] object PlanInterpreter {
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             recurse(plan, fieldValue).asTerm
         }
-        function.appliedTo(args.toList)
+        destTpe.function.appliedTo(args.toList)
 
       case Plan.BetweenOptions(sourceTpe, destTpe, _, _, plan) =>
         (sourceTpe.tpe -> destTpe.tpe) match {
@@ -85,7 +85,7 @@ private[ducktape] object PlanInterpreter {
             '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
         }
 
-      case Plan.BetweenSingletons(sourceTpe, destTpe, _, _, expr) => expr
+      case Plan.BetweenSingletons(sourceTpe, destTpe, _, _) => destTpe.value
 
       case Plan.BetweenWrappedUnwrapped(sourceTpe, destTpe, _, _, fieldName) =>
         value.accessFieldByName(fieldName).asExpr

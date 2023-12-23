@@ -77,7 +77,7 @@ private[ducktape] object Planner {
           planCoproductTransformation(source, dest, sourceContext, destContext)
 
         case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
-          Plan.BetweenSingletons(source, dest, sourceContext, destContext, dest.value)
+          Plan.BetweenSingletons(source, dest, sourceContext, destContext)
 
         case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
           Plan.BetweenWrappedUnwrapped(source, dest, sourceContext, destContext, source.paramFieldName)
@@ -117,7 +117,7 @@ private[ducktape] object Planner {
           }
           .getOrElse(
             Plan.Error(
-              Structure.of[Nothing](None),
+              Structure.of[Nothing],
               destFieldStruct,
               sourceContext, // TODO: Revise
               updatedDestContext, // TODO: Revise
@@ -147,7 +147,7 @@ private[ducktape] object Planner {
           }
           .getOrElse(
             Plan.Error(
-              Structure.of[Nothing](None),
+              Structure.of[Nothing],
               destFieldStruct,
               sourceContext, // TODO: Revise
               updatedDestContext, // TODO: Revise
@@ -157,7 +157,7 @@ private[ducktape] object Planner {
           )
       destField -> plan
     }
-    Plan.BetweenProductFunction(source, dest, sourceContext, destContext, argPlans, dest.function)
+    Plan.BetweenProductFunction(source, dest, sourceContext, destContext, argPlans)
   }
 
   private def planCoproductTransformation(
@@ -178,7 +178,7 @@ private[ducktape] object Planner {
         .getOrElse(
           Plan.Error(
             sourceCaseStruct,
-            Structure.of[Any](None),
+            Structure.of[Any],
             updatedSourceContext, // TODO: Revise
             destContext, // TODO: Revise
             ErrorMessage.NoChildFound(sourceName, dest.tpe),

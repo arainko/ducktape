@@ -42,16 +42,19 @@ private[ducktape] object Structure {
 
   case class ValueClass(tpe: Type[? <: AnyVal], paramTpe: Type[?], paramFieldName: String) extends Structure
 
-  case class Lazy(private val deferredStruct: () => Structure) extends Structure {
+  case class Lazy private (tpe: Type[?], private val deferredStruct: () => Structure) extends Structure {
     lazy val struct = deferredStruct()
-    lazy val tpe = struct.tpe
+  }
+
+  object Lazy {
+    def of[A: Type](using Quotes): Lazy = Lazy(Type.of[A], () => Structure.of[A])
   }
 
   def fromFunction(function: io.github.arainko.ducktape.internal.Function)(using Quotes): Structure.Function = {
     import quotes.reflect.*
 
     val args =
-      function.args.transform((name, tpe) => tpe match { case '[argTpe] => Lazy(() => Structure.of[argTpe]) })
+      function.args.transform((name, tpe) => tpe match { case '[argTpe] => Lazy.of[argTpe] })
 
     Structure.Function(function.returnTpe, args, function)
   }
@@ -66,6 +69,9 @@ private[ducktape] object Structure {
 
     Logger.loggedInfo("Structure"):
       Type.of[A] match {
+        case tpe @ '[Nothing] =>
+          Structure.Ordinary(tpe)
+
         case tpe @ '[Option[param]] =>
           Structure.Optional(tpe, Structure.of[param])
 
@@ -109,7 +115,7 @@ private[ducktape] object Structure {
                     } =>
                   val structures =
                     tupleTypeElements(TypeRepr.of[types]).map(tpe =>
-                      tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
+                      tpe.asType match { case '[tpe] => Lazy.of[tpe] }
                     )
                   val names = constStringTuple(TypeRepr.of[labels])
                   Structure.Product(Type.of[A], names.zip(structures).toMap)
@@ -122,7 +128,7 @@ private[ducktape] object Structure {
                   val names = constStringTuple(TypeRepr.of[labels])
                   val structures =
                     tupleTypeElements(TypeRepr.of[types]).map(tpe =>
-                      tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
+                      tpe.asType match { case '[tpe] => Lazy.of[tpe] }
                     )
 
                   Structure.Coproduct(Type.of[A], names.zip(structures).toMap)

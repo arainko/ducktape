@@ -15,7 +15,7 @@ private[ducktape] object PlanRefiner {
               recurse(fieldPlans.values.toList ::: next, errors)
             case Plan.BetweenCoproducts(_, _, _, _, casePlans) =>
               recurse(casePlans.toList ::: next, errors)
-            case Plan.BetweenProductFunction(_, _, _, _, argPlans, _) =>
+            case Plan.BetweenProductFunction(_, _, _, _, argPlans) =>
               recurse(argPlans.values.toList ::: next, errors)
             case Plan.BetweenOptions(_, _, _, _, plan)         => recurse(plan :: next, errors)
             case Plan.BetweenNonOptionOption(_, _, _, _, plan) => recurse(plan :: next, errors)

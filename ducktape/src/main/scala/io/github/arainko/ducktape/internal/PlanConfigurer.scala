@@ -31,7 +31,7 @@ private[ducktape] object PlanConfigurer {
 
                 plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
 
-              case plan @ BetweenProductFunction(sourceTpe, destTpe, sourceContext, destContext, argPlans, function) =>
+              case plan @ BetweenProductFunction(sourceTpe, destTpe, sourceContext, destContext, argPlans) =>
                 val argPlan =
                   argPlans
                     .get(fieldName)
