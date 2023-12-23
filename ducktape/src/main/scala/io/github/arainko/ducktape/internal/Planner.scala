@@ -36,7 +36,7 @@ private[ducktape] object Planner {
         case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
           Plan.Upcast(source, dest, sourceContext, destContext)
 
-        case Optional(_, _, srcParamStruct) -> Optional(_, _, destParamStruct) =>
+        case Optional(_, srcParamStruct) -> Optional(_, destParamStruct) =>
           val updatedSourceContext = sourceContext.appended(Path.Segment.Element(srcParamStruct.tpe))
           val updatedDestContext = destContext.appended(Path.Segment.Element(destParamStruct.tpe))
 
@@ -48,7 +48,7 @@ private[ducktape] object Planner {
             recurse(srcParamStruct, destParamStruct, updatedSourceContext, updatedDestContext)
           )
 
-        case struct -> Optional(_, _, paramStruct) =>
+        case struct -> Optional(_, paramStruct) =>
           Plan.BetweenNonOptionOption(
             struct,
             paramStruct,
@@ -57,7 +57,7 @@ private[ducktape] object Planner {
             recurse(struct, paramStruct, sourceContext, destContext.appended(Path.Segment.Element(paramStruct.tpe)))
           )
 
-        case Collection(_, _, srcParamStruct) -> Collection(destCollTpe, _, destParamStruct) =>
+        case Collection(_, srcParamStruct) -> Collection(destCollTpe, destParamStruct) =>
           val updatedSourceContext = sourceContext.appended(Path.Segment.Element(srcParamStruct.tpe))
           val updatedDestContext = destContext.appended(Path.Segment.Element(destParamStruct.tpe))
 

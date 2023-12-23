@@ -19,7 +19,7 @@ private[ducktape] object Transformations {
     configs: Expr[Seq[Field[A, B] | Case[A, B]]]
   )(using Quotes): Expr[B] = {
     given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
-    val plan = Planner.between(Structure.of[A](None), Structure.of[B](None))
+    val plan = Planner.between(Structure.of[A], Structure.of[B])
     val config = Configuration.parse(configs)
     createTransformation(value, plan, config).asExprOf[B]
   }
@@ -46,7 +46,7 @@ private[ducktape] object Transformations {
   )(using Quotes) = {
     given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
 
-    val sourceStruct = Structure.of[A](None)
+    val sourceStruct = Structure.of[A]
 
     val plan =
       Function
@@ -55,7 +55,7 @@ private[ducktape] object Transformations {
         .getOrElse(
           Plan.Error(
             sourceStruct,
-            Structure.of[Any](None),
+            Structure.of[Any],
             Path.empty(Type.of[A]),
             Path.empty(Type.of[Any]),
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
@@ -75,7 +75,7 @@ private[ducktape] object Transformations {
   )(using Quotes) = {
     given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
 
-    val sourceStruct = Structure.of[A](None)
+    val sourceStruct = Structure.of[A]
 
     val plan =
       Function
@@ -84,7 +84,7 @@ private[ducktape] object Transformations {
         .getOrElse(
           Plan.Error(
             sourceStruct,
-            Structure.of[Any](None),
+            Structure.of[Any],
             Path.empty(Type.of[A]),
             Path.empty(Type.of[Any]),
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),

@@ -8,12 +8,9 @@ import scala.collection.immutable.ListMap
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.TypeTest
-import scala.annotation.threadUnsafe
 
 private[ducktape] sealed trait Structure derives Debug {
   def tpe: Type[?]
-
-  def parent: Structure.Lazy | None.type
 
   final def force: Structure =
     this match {
@@ -25,88 +22,66 @@ private[ducktape] sealed trait Structure derives Debug {
 }
 
 private[ducktape] object Structure {
-  private given Debug[Structure.Lazy | None.type] = new:
-    extension (self: Lazy | None.type)
-      def show(using Quotes): String =
-        self match {
-          case lzy: Lazy => "Lazy(...)"
-          case None      => "None"
-        }
+  case class Product(tpe: Type[?], fields: Map[String, Structure]) extends Structure
 
-  case class Product(tpe: Type[?], parent: Structure.Lazy | None.type, fields: Map[String, Structure]) extends Structure
-
-  case class Coproduct(tpe: Type[?], parent: Structure.Lazy | None.type, children: Map[String, Structure]) extends Structure
+  case class Coproduct(tpe: Type[?], children: Map[String, Structure]) extends Structure
 
   case class Function(
     tpe: Type[?],
-    parent: Structure.Lazy | None.type,
     args: ListMap[String, Structure],
     function: io.github.arainko.ducktape.internal.Function
   ) extends Structure
 
-  case class Optional(tpe: Type[? <: Option[?]], parent: Structure.Lazy | None.type, paramStruct: Structure) extends Structure
+  case class Optional(tpe: Type[? <: Option[?]], paramStruct: Structure) extends Structure
 
-  case class Collection(tpe: Type[? <: Iterable[?]], parent: Structure.Lazy | None.type, paramStruct: Structure) extends Structure
+  case class Collection(tpe: Type[? <: Iterable[?]], paramStruct: Structure) extends Structure
 
-  case class Singleton(tpe: Type[?], parent: Structure.Lazy | None.type, name: String, value: Expr[Any]) extends Structure
+  case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
 
-  case class Ordinary(tpe: Type[?], parent: Structure.Lazy | None.type) extends Structure
+  case class Ordinary(tpe: Type[?]) extends Structure
 
-  case class ValueClass(
-    tpe: Type[? <: AnyVal],
-    parent: Structure.Lazy | None.type,
-    paramTpe: Type[?],
-    paramFieldName: String
-  ) extends Structure
+  case class ValueClass(tpe: Type[? <: AnyVal], paramTpe: Type[?], paramFieldName: String) extends Structure
 
   case class Lazy(private val deferredStruct: () => Structure) extends Structure {
-    @threadUnsafe lazy val struct: Structure = deferredStruct()
-    @threadUnsafe lazy val tpe: Type[?] = struct.tpe
-    @threadUnsafe lazy val parent: Lazy | None.type = struct.parent
+    lazy val struct = deferredStruct()
+    lazy val tpe = struct.tpe
   }
 
   def fromFunction(function: io.github.arainko.ducktape.internal.Function)(using Quotes): Structure.Function = {
     import quotes.reflect.*
 
-    def args(parent: () => Structure) =
-      function.args.transform((name, tpe) => tpe match { case '[argTpe] => Lazy(() => Structure.of[argTpe](Lazy(parent))) })
+    val args =
+      function.args.transform((name, tpe) => tpe match { case '[argTpe] => Lazy(() => Structure.of[argTpe]) })
 
-    @threadUnsafe 
-    lazy val struct: Structure.Function = Structure.Function(function.returnTpe, None, args(() => struct), function)
-    struct
+    Structure.Function(function.returnTpe, args, function)
   }
 
   def fromTypeRepr(using Quotes)(repr: quotes.reflect.TypeRepr): Structure =
     repr.widen.asType match {
-      case '[tpe] => Structure.of[tpe](None)
+      case '[tpe] => Structure.of[tpe]
     }
 
-  def of[A: Type](parent: Structure.Lazy | None.type)(using Quotes): Structure = {
+  def of[A: Type](using Quotes): Structure = {
     import quotes.reflect.*
 
     Logger.loggedInfo("Structure"):
       Type.of[A] match {
         case tpe @ '[Option[param]] =>
-          @threadUnsafe 
-          lazy val struct: Structure = Structure.Optional(tpe, parent, Structure.of[param](Lazy(() => struct)))
-          struct
+          Structure.Optional(tpe, Structure.of[param])
 
         case tpe @ '[Iterable[param]] =>
-          @threadUnsafe 
-          lazy val struct: Structure = Structure.Collection(tpe, parent, Structure.of[param](Lazy(() => struct)))
-          struct
+          Structure.Collection(tpe, Structure.of[param])
 
         case tpe @ '[AnyVal] if tpe.repr.typeSymbol.flags.is(Flags.Case) =>
           val repr = tpe.repr
           val param = repr.typeSymbol.caseFields.head
           val paramTpe = repr.memberType(param)
-          Structure.ValueClass(tpe, parent, paramTpe.asType, param.name)
+          Structure.ValueClass(tpe, paramTpe.asType, param.name)
 
         case _ =>
           Expr.summon[Mirror.Of[A]] match {
             case None =>
-              Logger.info("It's ordinary")
-              Structure.Ordinary(Type.of[A], parent)
+              Structure.Ordinary(Type.of[A])
 
             case Some(value) =>
               value match {
@@ -117,7 +92,7 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val value = materializeSingleton[A]
-                  Structure.Singleton(Type.of[A], parent, constantString[label], value.asExpr)
+                  Structure.Singleton(Type.of[A], constantString[label], value.asExpr)
                 case '{
                       type label <: String
                       $m: Mirror.SingletonProxy {
@@ -125,24 +100,19 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val value = materializeSingleton[A]
-                  Structure.Singleton(Type.of[A], parent, constantString[label], value.asExpr)
-
+                  Structure.Singleton(Type.of[A], constantString[label], value.asExpr)
                 case '{
                       $m: Mirror.Product {
                         type MirroredElemLabels = labels
                         type MirroredElemTypes = types
                       }
                     } =>
-                  def structures(parent: () => Structure) =
+                  val structures =
                     tupleTypeElements(TypeRepr.of[types]).map(tpe =>
-                      tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe](Lazy(parent))) }
+                      tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
                     )
                   val names = constStringTuple(TypeRepr.of[labels])
-
-                  @threadUnsafe 
-                  lazy val struct: Structure = Structure.Product(Type.of[A], parent, names.zip(structures(() => struct)).toMap)
-                  struct
-
+                  Structure.Product(Type.of[A], names.zip(structures).toMap)
                 case '{
                       $m: Mirror.Sum {
                         type MirroredElemLabels = labels
@@ -150,14 +120,12 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val names = constStringTuple(TypeRepr.of[labels])
-                  def structures(parent: () => Structure) =
+                  val structures =
                     tupleTypeElements(TypeRepr.of[types]).map(tpe =>
-                      tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe](Lazy(parent))) }
+                      tpe.asType match { case '[tpe] => Lazy(() => Structure.of[tpe]) }
                     )
-                  
-                  @threadUnsafe 
-                  lazy val struct: Structure = Structure.Coproduct(Type.of[A], parent, names.zip(structures(() => struct)).toMap)
-                  struct
+
+                  Structure.Coproduct(Type.of[A], names.zip(structures).toMap)
               }
           }
       }

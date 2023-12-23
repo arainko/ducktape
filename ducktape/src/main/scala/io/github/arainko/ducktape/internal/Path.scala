@@ -74,7 +74,7 @@ private[ducktape] object Path {
 
   enum Segment derives Debug {
     def tpe: Type[?]
-    
+
     final def narrow[A <: Segment](using tt: TypeTest[Segment, A]): Option[A] = tt.unapply(this)
 
     case Field(tpe: Type[?], name: String)
