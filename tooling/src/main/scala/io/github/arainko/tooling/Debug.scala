@@ -10,7 +10,7 @@ private[ducktape] trait Debug[-A] {
   extension (self: A) def show(using Quotes): String 
 }
 
-private[ducktape] object Debug {
+private[ducktape] object Debug extends LowPriorityDebug {
 
   def show[A](value: A)(using Debug[A], Quotes) = value.show
 
@@ -131,4 +131,9 @@ private[ducktape] object Debug {
     private def cyan: String = s"${Console.CYAN}$self${Console.RESET}"
     private def yellow: String = s"${Console.YELLOW}$self${Console.RESET}"
   }
+}
+
+private[ducktape] transparent trait LowPriorityDebug {
+  given Debug[Nothing => Any] with 
+    extension (self: Nothing => Any) def show(using Quotes): String = "Function(...)"
 }

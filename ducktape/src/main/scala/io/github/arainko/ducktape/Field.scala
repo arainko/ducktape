@@ -2,15 +2,6 @@ package io.github.arainko.ducktape
 
 import scala.annotation.compileTimeOnly
 
-sealed trait Regional
-
-object Regional {
-  extension [F[a, b] <: (Case[b, a] | Field[a, b]), A, B](self: F[A, B]) {
-    // @compileTimeOnly("woowow")
-    def regional[DestFieldTpe](selector: Selector ?=> B => DestFieldTpe): F[A, B] = ???
-  }
-}
-
 // Kept around for source compat with 0.1.x
 def Arg: Field.type = Field
 

@@ -5,9 +5,9 @@ private[ducktape] opaque type NonEmptyList[+A] = ::[A]
 private[ducktape] object NonEmptyList {
   import scala.collection.immutable.:: as Cons
 
-  private def unsafeCoerce[A](list: List[A]) = list.asInstanceOf[NonEmptyList[A]]
+  private def unsafeCoerce[A](list: List[A]): NonEmptyList[A] = list.asInstanceOf[NonEmptyList[A]]
 
-  private def unsafeCoerceK[F[_], A](wrapped: F[List[A]]) = wrapped.asInstanceOf[F[NonEmptyList[A]]]
+  private def unsafeCoerceK[F[_], A](wrapped: F[List[A]]): F[NonEmptyList[A]] = wrapped.asInstanceOf[F[NonEmptyList[A]]]
 
   private[ducktape] def fromCons[A](cons: ::[A]): NonEmptyList[A] = cons
 

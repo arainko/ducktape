@@ -18,7 +18,6 @@ object Playground extends App {
       )
 
   val cos = Field.useNones[Option[Int], Option[Int]].regional(_.element)
-  
 
   println(dest)
 }

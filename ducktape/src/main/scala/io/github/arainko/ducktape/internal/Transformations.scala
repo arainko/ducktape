@@ -99,7 +99,7 @@ private[ducktape] object Transformations {
   private def createTransformation[A: Type](
     value: Expr[A],
     plan: Plan[Plan.Error],
-    configs: List[Configuration.At]
+    configs: List[Configuration.Instruction]
   )(using Quotes) = {
     import quotes.reflect.*
 

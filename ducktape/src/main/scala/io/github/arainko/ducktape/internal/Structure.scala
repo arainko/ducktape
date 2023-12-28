@@ -43,7 +43,7 @@ private[ducktape] object Structure {
   case class ValueClass(tpe: Type[? <: AnyVal], paramTpe: Type[?], paramFieldName: String) extends Structure
 
   case class Lazy private (tpe: Type[?], private val deferredStruct: () => Structure) extends Structure {
-    lazy val struct = deferredStruct()
+    lazy val struct: Structure = deferredStruct()
   }
 
   object Lazy {

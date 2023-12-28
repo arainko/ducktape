@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.collection.immutable.ListMap
 import scala.quoted.*
+import scala.reflect.TypeTest
 
 private[ducktape] sealed trait Plan[+E <: Plan.Error] {
   import Plan.*
@@ -13,15 +14,13 @@ private[ducktape] sealed trait Plan[+E <: Plan.Error] {
 
   def dest: Structure
 
-  // final def sourceTpe: Type[?] = source.tpe
-
-  // final def destTpe: Type[?] = dest.tpe
-
   def sourceContext: Path
 
   def destContext: Path
 
-  final def configureAll(configs: List[Configuration.At])(using Quotes): Plan.Reconfigured = PlanConfigurer.run(this, configs)
+  final def narrow[A <: Plan[Plan.Error]](using tt: TypeTest[Plan[Plan.Error], A]): Option[A] = tt.unapply(this)
+
+  final def configureAll(configs: List[Configuration.Instruction])(using Quotes): Plan.Reconfigured = PlanConfigurer.run(this, configs)
 
   final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing]] = PlanRefiner.run(this)
 }
@@ -150,13 +149,24 @@ private[ducktape] object Plan {
       )
   }
 
+  object Configured {
+    def from(plan: Plan[Plan.Error], conf: Configuration): Plan.Configured =
+      Plan.Configured(
+        plan.source,
+        plan.dest,
+        plan.sourceContext,
+        plan.destContext,
+        conf
+      )
+  }
+
   def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.source.tpe, plan.dest.tpe)
 
   given debug[E <: Plan.Error]: Debug[Plan[E]] = Debug.derived
 
   final case class Reconfigured(
     errors: List[Plan.Error],
-    successes: List[Configuration.At.Successful],
+    successes: List[Configuration.Instruction.Static],
     result: Plan[Plan.Error]
   ) derives Debug
 }

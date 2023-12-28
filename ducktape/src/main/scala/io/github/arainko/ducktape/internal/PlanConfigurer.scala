@@ -1,24 +1,28 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.internal.Configuration.At
+import io.github.arainko.ducktape.internal.Configuration.Instruction
 
 import scala.collection.mutable.Builder
 import scala.quoted.*
+import io.github.arainko.ducktape.internal.Configuration.Traversal
 
 private[ducktape] object PlanConfigurer {
   import Plan.*
 
-  def run(plan: Plan[Plan.Error], configs: List[Configuration.At])(using Quotes): Plan.Reconfigured = {
+  def run(plan: Plan[Plan.Error], configs: List[Configuration.Instruction])(using Quotes): Plan.Reconfigured = {
     // Buffer of all errors that originate from a config
     val errors = List.newBuilder[Plan.Error]
-    val successful = List.newBuilder[Configuration.At.Successful]
+    val successful = List.newBuilder[Configuration.Instruction.Static]
 
-    def configureSingle(plan: Plan[Plan.Error], config: Configuration.At)(using Quotes): Plan[Plan.Error] = {
+    def configureSingle(plan: Plan[Plan.Error], config: Configuration.Instruction)(using Quotes): Plan[Plan.Error] = {
+      val trace = Vector.newBuilder[Plan[Plan.Error]]
 
       def recurse(
         current: Plan[Plan.Error],
         segments: List[Path.Segment]
       )(using Quotes): Plan[Plan.Error] = {
+        trace.addOne(current)
+
         segments match {
           case (segment @ Path.Segment.Field(_, fieldName)) :: tail =>
             current match {
@@ -74,7 +78,8 @@ private[ducktape] object PlanConfigurer {
               case other => invalidPathSegment(config, other, segment)
             }
 
-          case Nil => configurePlan(config, current, errors, successful)
+          case Nil =>
+            configurePlan(config, current, trace.result(), errors, successful)
         }
       }
 
@@ -86,42 +91,89 @@ private[ducktape] object PlanConfigurer {
   }
 
   private def configurePlan(
-    config: Configuration.At,
+    config: Configuration.Instruction,
     current: Plan[Error],
+    trace: => Vector[Plan[Plan.Error]],
     errors: Builder[Plan.Error, List[Plan.Error]],
-    successful: Builder[Configuration.At.Successful, List[Configuration.At.Successful]]
+    successful: Builder[Configuration.Instruction.Static, List[Configuration.Instruction.Static]]
   )(using Quotes) = {
     import scala.util.chaining.*
 
-    extension (currentPlan: Plan[?]) {
-      def isReplaceableBy(update: Configuration.At.Successful)(using Quotes) =
-        update.config.tpe.repr <:< currentPlan.destContext.currentTpe.repr
-    }
-
     config match {
-      case cfg @ Configuration.At.Successful(path, target, config, span) =>
-        if (current.isReplaceableBy(cfg)) {
-          successful.addOne(cfg)
-          Plan
-            .Configured(current.source, current.dest, current.sourceContext, current.destContext, config)
-        } else
-          Plan.Error
-            .from(
-              current,
-              ErrorMessage.InvalidConfiguration(config.tpe, current.destContext.currentTpe, target, span),
-              None
-            )
-            .tap(errors.addOne)
+      case cfg: (Configuration.Instruction.Static | Configuration.Instruction.Dynamic) =>
+        // dropRight(1) because 'current' is the last element of the trace
+        staticOrDynamic(cfg, current, Traversal(trace.dropRight(1), current), errors, successful)
 
-      case cfg @ Configuration.At.Regional(path, target, modifier, span) =>
+      case instruction: Configuration.Instruction.ContextualProduct =>
+        current
+          .narrow[Plan.BetweenProductFunction[Plan.Error] | Plan.BetweenProducts[Plan.Error]]
+          .map {
+            case func: Plan.BetweenProductFunction[Plan.Error] =>
+              val updatedArgPlans =
+                func.argPlans.transform { (name, plan) =>
+                  instruction.modifier(name, plan) match {
+                    case config: Configuration =>
+                      if plan.isReplaceableBy(config) then Plan.Configured.from(plan, config)
+                      else
+                        Plan.Error
+                          .from(
+                            current,
+                            ErrorMessage
+                              .InvalidConfiguration(
+                                config.tpe,
+                                current.destContext.currentTpe,
+                                instruction.target,
+                                instruction.span
+                              ),
+                            None
+                          )
+                    case p: plan.type => p
+                  }
+                }
+              func.copy(argPlans = updatedArgPlans)
+            case prod: Plan.BetweenProducts[Plan.Error] =>
+              val updatedFieldPlans =
+                prod.fieldPlans.transform { (name, plan) =>
+                  instruction.modifier(name, plan) match {
+                    case config: Configuration =>
+                      if plan.isReplaceableBy(config) then Plan.Configured.from(plan, config)
+                      else
+                        Plan.Error
+                          .from(
+                            current,
+                            ErrorMessage
+                              .InvalidConfiguration(
+                                config.tpe,
+                                current.destContext.currentTpe,
+                                instruction.target,
+                                instruction.span
+                              ),
+                            None
+                          )
+                    case p: plan.type => p
+                  }
+                }
+              prod.copy(fieldPlans = updatedFieldPlans)
+          }
+          .getOrElse {
+            val failed = new Configuration.Instruction.Failed(
+              instruction.path,
+              instruction.target,
+              "This config only works when targeting a function to product or product to product transformations",
+              instruction.span
+            )
+            Plan.Error.from(current, ErrorMessage.ConfigurationFailed(failed), None).tap(errors.addOne)
+          }
+
+      case cfg @ Configuration.Instruction.Regional(path, target, modifier, span) =>
         regional(current, modifier)
 
-      case cfg @ Configuration.At.Failed(path, target, message, span) =>
+      case cfg @ Configuration.Instruction.Failed(path, target, message, span) =>
         Plan.Error.from(current, ErrorMessage.ConfigurationFailed(cfg), None).tap(errors.addOne)
     }
   }
 
-  private def invalidPathSegment(config: Configuration.At, plan: Plan[Error], segment: Path.Segment): Plan.Error =
+  private def invalidPathSegment(config: Configuration.Instruction, plan: Plan[Error], segment: Path.Segment): Plan.Error =
     plan match {
       case suppressed: Plan.Error =>
         Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), Some(suppressed))
@@ -129,7 +181,62 @@ private[ducktape] object PlanConfigurer {
         Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), None)
     }
 
-  def regional(
+  private def staticOrDynamic(
+    instruction: Configuration.Instruction.Static | Configuration.Instruction.Dynamic,
+    current: Plan[Plan.Error],
+    traversal: => Traversal,
+    errors: Builder[Plan.Error, List[Plan.Error]],
+    successful: Builder[Configuration.Instruction.Static, List[Configuration.Instruction.Static]]
+  )(using Quotes) = {
+    import scala.util.chaining.*
+
+    instruction match {
+      case static: Configuration.Instruction.Static =>
+        if (current.isReplaceableBy(static.config)) {
+          successful.addOne(static)
+          Plan
+            .Configured(current.source, current.dest, current.sourceContext, current.destContext, static.config)
+        } else
+          Plan.Error
+            .from(
+              current,
+              ErrorMessage
+                .InvalidConfiguration(static.config.tpe, current.destContext.currentTpe, instruction.target, instruction.span),
+              None
+            )
+            .tap(errors.addOne)
+
+      case dynamic: Configuration.Instruction.Dynamic =>
+        dynamic.config(traversal) match {
+          case Right(config) =>
+            if (current.isReplaceableBy(config)) {
+              Plan
+                .Configured(current.source, current.dest, current.sourceContext, current.destContext, config)
+            } else
+              Plan.Error
+                .from(
+                  current,
+                  ErrorMessage
+                    .InvalidConfiguration(
+                      config.tpe,
+                      current.destContext.currentTpe,
+                      instruction.target,
+                      instruction.span
+                    ),
+                  None
+                )
+                .tap(errors.addOne)
+
+          case Left(errorMessage) =>
+            val failed = new Configuration.Instruction.Failed(dynamic.path, dynamic.target, errorMessage, dynamic.span)
+            Plan.Error.from(current, ErrorMessage.ConfigurationFailed(failed), None).tap(errors.addOne)
+        }
+
+    }
+
+  }
+
+  private def regional(
     plan: Plan[Plan.Error],
     modifier: Configuration.Modifier
   )(using Quotes): Plan[Plan.Error] =
@@ -166,13 +273,18 @@ private[ducktape] object PlanConfigurer {
       case plan: BetweenCollections[Plan.Error] =>
         plan.copy(plan = regional(plan.plan, modifier))
 
-      case plan: Error => 
+      case plan: Error =>
         modifier(plan) match {
           case config: Configuration =>
             Plan.Configured(plan.source, plan.dest, plan.sourceContext, plan.destContext, config)
-          case other: plan.type => 
+          case other: plan.type =>
             other
         }
     }
+
+  extension (currentPlan: Plan[?]) {
+    private def isReplaceableBy(update: Configuration)(using Quotes) =
+      update.tpe.repr <:< currentPlan.destContext.currentTpe.repr
+  }
 
 }
