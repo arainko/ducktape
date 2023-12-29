@@ -160,13 +160,11 @@ private[ducktape] object Plan {
       )
   }
 
-  def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.source.tpe, plan.dest.tpe)
-
-  given debug[E <: Plan.Error]: Debug[Plan[E]] = Debug.derived
+  given debug: Debug[Plan[Plan.Error]] = Debug.derived
 
   final case class Reconfigured(
     errors: List[Plan.Error],
-    successes: List[Configuration.Instruction.Static],
+    successes: List[(Path, Target)],
     result: Plan[Plan.Error]
   ) derives Debug
 }

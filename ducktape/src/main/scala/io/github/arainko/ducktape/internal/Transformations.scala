@@ -119,10 +119,10 @@ private[ducktape] object Transformations {
               ogError.message.target match
                 case Target.Source =>
                   reconfiguredPlan.successes
-                    .exists(succ => succ.target == Target.Source && succ.path.isAncestorOrSiblingOf(ogError.sourceContext))
+                    .exists((path, target) => target == Target.Source && path.isAncestorOrSiblingOf(ogError.sourceContext))
                 case Target.Dest =>
-                  reconfiguredPlan.successes.exists(succ =>
-                    succ.target == Target.Dest && succ.path.isAncestorOrSiblingOf(ogError.destContext)
+                  reconfiguredPlan.successes.exists((path, target) =>
+                    target == Target.Dest && path.isAncestorOrSiblingOf(ogError.destContext)
                   )
             )
 

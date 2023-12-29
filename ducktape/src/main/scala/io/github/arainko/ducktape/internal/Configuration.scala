@@ -15,22 +15,20 @@ private[ducktape] enum Configuration derives Debug {
 
 private[ducktape] object Configuration {
 
-  trait Modifier {
+  trait ErrorModifier {
     def apply(plan: Plan.Error)(using Quotes): Configuration | plan.type
   }
 
-  object Modifier {
-    given Debug[Modifier] = new:
-      extension (self: Modifier) def show(using Quotes): String = "Modifier(...)"
+  object ErrorModifier {
+    given Debug[ErrorModifier] = Debug.nonShowable
   }
 
-  trait ContextualModifier {
+  trait FieldModifier {
     def apply(field: String, plan: Plan[Plan.Error])(using Quotes): Configuration | plan.type
   }
 
-  object ContextualModifier {
-    given Debug[ContextualModifier] = new:
-      extension (self: ContextualModifier) def show(using Quotes): String = "ContextualModifier(...)"
+  object FieldModifier {
+    given Debug[FieldModifier] = Debug.nonShowable
   }
 
   case class Traversal(trace: Vector[Plan[Plan.Error]], destination: Plan[Plan.Error])
@@ -44,16 +42,23 @@ private[ducktape] object Configuration {
 
     case Dynamic(path: Path, target: Target, config: Traversal => Either[String, Configuration], span: Span)
 
-    case ContextualProduct(
+    case Bulk(
       path: Path,
       target: Target,
-      modifier: ContextualModifier,
+      modifier: FieldModifier,
       span: Span
     )
 
-    case Regional(path: Path, target: Target, modifier: Modifier, span: Span)
+    case Regional(path: Path, target: Target, modifier: ErrorModifier, span: Span)
 
     case Failed(path: Path, target: Target, message: String, span: Span)
+  }
+
+  object Instruction {
+    object Failed {
+      def from(instruction: Instruction, message: String): Instruction.Failed = 
+        Failed(instruction.path, instruction.target, message, instruction.span)
+    }
   }
 
   def parse[A: Type, B: Type](
@@ -123,34 +128,8 @@ private[ducktape] object Configuration {
               TypeApply(Select(IdentOfType('[Field.type]), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
               PathSelector(path) :: fieldSource :: Nil
             ) =>
-
-          Structure
-            .fromTypeRepr(fieldSource.tpe)
-            .narrow[Structure.Product]
-            .map { sourceStruct =>
-              val modifier = new ContextualModifier:
-                def apply(field: String, plan: Plan[Plan.Error])(using Quotes): Configuration | plan.type = 
-                  sourceStruct.fields.get(field).match {
-                    case Some(struct) if struct.tpe.repr <:< plan.dest.tpe.repr =>
-                      Configuration.FieldReplacement(fieldSource.asExpr, field, struct.tpe)
-                    case other => plan
-                  }
-
-              Configuration.Instruction.ContextualProduct(
-                path,
-                Target.Dest,
-                modifier,
-                Span.fromPosition(cfg.pos)
-              )
-            }
-            .getOrElse(
-              Configuration.Instruction.Failed(
-                path,
-                Target.Dest,
-                "Field source needs to be a product",
-                Span.fromPosition(cfg.pos)
-              )
-            ) :: Nil
+          parseAllMatching(fieldSource.asExpr, path, fieldSourceTpe.tpe, Span.fromPosition(cfg.pos))
+          
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Case.type]), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
@@ -177,7 +156,7 @@ private[ducktape] object Configuration {
               TypeApply(Select(IdentOfType('[Field.type]), "useNones"), a :: b :: destFieldTpe :: Nil),
               PathSelector(path) :: Nil
             ) =>
-          val modifier: Modifier = new:
+          val modifier: ErrorModifier = new:
             def apply(plan: Plan.Error)(using Quotes): Configuration | plan.type =
               plan.dest.tpe match {
                 case tpe @ '[Option[a]] => Configuration.Const('{ None }, tpe)
@@ -201,46 +180,37 @@ private[ducktape] object Configuration {
   private def parseAllMatching(using Quotes)(
     sourceExpr: Expr[Any],
     path: Path,
-    destFieldTpe: quotes.reflect.TypeRepr,
     fieldSourceTpe: quotes.reflect.TypeRepr,
     span: Span
   ) = {
-    val result =
-      Structure
-        .fromTypeRepr(destFieldTpe)
-        .narrow[Structure.Product | Structure.Function]
-        .zip(Structure.fromTypeRepr(fieldSourceTpe).narrow[Structure.Product])
-        .map { (destStruct, fieldSourceStruct) =>
-          val fields = destStruct match {
-            case p: Structure.Product  => p.fields
-            case f: Structure.Function => f.args
-          }
 
-          fields.collect {
-            case (fieldName @ fieldSourceStruct.fields(source), dest) if source.tpe.repr <:< dest.tpe.repr =>
-              Configuration.Instruction.Static(
-                path.appended(Path.Segment.Field(source.tpe, fieldName)),
-                Target.Dest,
-                Configuration.FieldReplacement(sourceExpr, fieldName, source.tpe),
-                span
-              )
-          }.toList
-        }
-        .getOrElse(
-          Configuration.Instruction
-            .Failed(
-              path,
-              Target.Dest,
-              "Field.allMatching only works when targeting a product or a function and supplying a product",
-              span
-            ) :: Nil
+    Structure
+      .fromTypeRepr(fieldSourceTpe)
+      .narrow[Structure.Product]
+      .map { sourceStruct =>
+        val modifier = new FieldModifier:
+          def apply(field: String, plan: Plan[Plan.Error])(using Quotes): Configuration | plan.type =
+            sourceStruct.fields.get(field).match {
+              case Some(struct) if struct.tpe.repr <:< plan.dest.tpe.repr =>
+                Configuration.FieldReplacement(sourceExpr, field, struct.tpe)
+              case other => plan
+            }
+
+        Configuration.Instruction.Bulk(
+          path,
+          Target.Dest,
+          modifier,
+          span
         )
-
-    result match {
-      case Nil =>
-        Configuration.Instruction.Failed(path, Target.Dest, "No matching fields found", span) :: Nil // TODO: Better error message
-      case configs => configs
-    }
+      }
+      .getOrElse(
+        Configuration.Instruction.Failed(
+          path,
+          Target.Dest,
+          "Field source needs to be a product",
+          span
+        )
+      ) :: Nil
   }
 
   object DeprecatedConfig {
@@ -275,7 +245,7 @@ private[ducktape] object Configuration {
           ) :: Nil
 
         case cfg @ '{ Field.allMatching[a, b, source]($fieldSource) } =>
-          parseAllMatching(fieldSource, Path.empty(Type.of[b]), TypeRepr.of[b], TypeRepr.of[source], Span.fromExpr(cfg))
+          parseAllMatching(fieldSource, Path.empty(Type.of[b]), TypeRepr.of[source], Span.fromExpr(cfg))
     }
   }
 
