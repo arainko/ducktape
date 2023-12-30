@@ -116,13 +116,13 @@ private[ducktape] object Transformations {
             .map(_.toList)
             .getOrElse(Nil)
             .filterNot(ogError => // filter out things that were successfully configured to not show these to the user
-              ogError.message.target match
-                case Target.Source =>
+              ogError.message.side match
+                case Side.Source =>
                   reconfiguredPlan.successes
-                    .exists((path, target) => target == Target.Source && path.isAncestorOrSiblingOf(ogError.sourceContext))
-                case Target.Dest =>
-                  reconfiguredPlan.successes.exists((path, target) =>
-                    target == Target.Dest && path.isAncestorOrSiblingOf(ogError.destContext)
+                    .exists((path, side) => side == Side.Source && path.isAncestorOrSiblingOf(ogError.sourceContext))
+                case Side.Dest =>
+                  reconfiguredPlan.successes.exists((path, side) =>
+                    side == Side.Dest && path.isAncestorOrSiblingOf(ogError.destContext)
                   )
             )
 
@@ -146,9 +146,9 @@ private[ducktape] object Transformations {
     private def render(using Quotes) = {
       def renderSingle(error: Plan.Error)(using Quotes) = {
         val renderedPath =
-          error.message.target match
-            case Target.Source => error.sourceContext.render
-            case Target.Dest   => error.destContext.render
+          error.message.side match
+            case Side.Source => error.sourceContext.render
+            case Side.Dest   => error.destContext.render
 
         s"${error.message.render} @ $renderedPath"
       }

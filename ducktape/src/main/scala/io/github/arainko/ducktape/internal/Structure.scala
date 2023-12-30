@@ -22,7 +22,16 @@ private[ducktape] sealed trait Structure derives Debug {
 }
 
 private[ducktape] object Structure {
-  case class Product(tpe: Type[?], fields: Map[String, Structure]) extends Structure
+  case class Product(tpe: Type[?], fields: Map[String, Structure]) extends Structure {
+    private var cachedDefaults: Map[String, Expr[Any]] = null
+
+    def defaults(using Quotes): Map[String, Expr[Any]] =
+      if cachedDefaults != null then cachedDefaults
+      else {
+        cachedDefaults = Defaults.of(this)
+        cachedDefaults
+      }
+  }
 
   case class Coproduct(tpe: Type[?], children: Map[String, Structure]) extends Structure
 
@@ -114,9 +123,7 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val structures =
-                    tupleTypeElements(TypeRepr.of[types]).map(tpe =>
-                      tpe.asType match { case '[tpe] => Lazy.of[tpe] }
-                    )
+                    tupleTypeElements(TypeRepr.of[types]).map(tpe => tpe.asType match { case '[tpe] => Lazy.of[tpe] })
                   val names = constStringTuple(TypeRepr.of[labels])
                   Structure.Product(Type.of[A], names.zip(structures).toMap)
                 case '{
@@ -127,9 +134,7 @@ private[ducktape] object Structure {
                     } =>
                   val names = constStringTuple(TypeRepr.of[labels])
                   val structures =
-                    tupleTypeElements(TypeRepr.of[types]).map(tpe =>
-                      tpe.asType match { case '[tpe] => Lazy.of[tpe] }
-                    )
+                    tupleTypeElements(TypeRepr.of[types]).map(tpe => tpe.asType match { case '[tpe] => Lazy.of[tpe] })
 
                   Structure.Coproduct(Type.of[A], names.zip(structures).toMap)
               }

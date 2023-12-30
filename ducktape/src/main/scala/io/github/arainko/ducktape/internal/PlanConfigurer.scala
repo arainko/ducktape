@@ -4,7 +4,6 @@ import io.github.arainko.ducktape.internal.Configuration.Instruction
 
 import scala.collection.mutable.Builder
 import scala.quoted.*
-import io.github.arainko.ducktape.internal.Configuration.Traversal
 
 private[ducktape] object PlanConfigurer {
   import Plan.*
@@ -13,15 +12,13 @@ private[ducktape] object PlanConfigurer {
     def configureSingle(
       plan: Plan[Plan.Error],
       config: Configuration.Instruction
-    )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Target)]): Plan[Plan.Error] = {
-      val trace = Vector.newBuilder[Plan[Plan.Error]]
+    )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)]): Plan[Plan.Error] = {
 
       def recurse(
         current: Plan[Plan.Error],
-        segments: List[Path.Segment]
+        segments: List[Path.Segment],
+        parent: Plan[Plan.Error] | None.type
       )(using Quotes): Plan[Plan.Error] = {
-        trace.addOne(current)
-
         segments match {
           case (segment @ Path.Segment.Field(_, fieldName)) :: tail =>
             current match {
@@ -29,7 +26,7 @@ private[ducktape] object PlanConfigurer {
                 val fieldPlan =
                   fieldPlans
                     .get(fieldName)
-                    .map(fieldPlan => recurse(fieldPlan, tail))
+                    .map(fieldPlan => recurse(fieldPlan, tail, plan))
                     .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidFieldAccessor(fieldName, config.span), None))
 
                 plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
@@ -38,7 +35,7 @@ private[ducktape] object PlanConfigurer {
                 val argPlan =
                   argPlans
                     .get(fieldName)
-                    .map(argPlan => recurse(argPlan, tail))
+                    .map(argPlan => recurse(argPlan, tail, plan))
                     .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidArgAccessor(fieldName, config.span), None))
 
                 plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
@@ -49,15 +46,15 @@ private[ducktape] object PlanConfigurer {
           case (segment @ Path.Segment.Case(tpe)) :: tail =>
             current match {
               // BetweenNonOptionOption keeps the same type as its source so we passthrough it when traversing source nodes
-              case plan: BetweenNonOptionOption[Plan.Error] if config.target.isSource =>
-                plan.copy(plan = recurse(plan.plan, segments))
+              case plan: BetweenNonOptionOption[Plan.Error] if config.side.isSource =>
+                plan.copy(plan = recurse(plan.plan, segments, plan))
 
               case plan @ BetweenCoproducts(sourceTpe, destTpe, sourceContext, destContext, casePlans) =>
-                def targetTpe(plan: Plan[Plan.Error]) = if (config.target.isSource) plan.source.tpe.repr else plan.dest.tpe.repr
+                def sideTpe(plan: Plan[Plan.Error]) = if (config.side.isSource) plan.source.tpe.repr else plan.dest.tpe.repr
 
                 casePlans.zipWithIndex
-                  .find((plan, _) => tpe.repr =:= targetTpe(plan))
-                  .map((casePlan, idx) => plan.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail))))
+                  .find((plan, _) => tpe.repr =:= sideTpe(plan))
+                  .map((casePlan, idx) => plan.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail, plan))))
                   .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidCaseAccessor(tpe, config.span), None))
 
               case other => invalidPathSegment(config, other, segment)
@@ -66,28 +63,28 @@ private[ducktape] object PlanConfigurer {
           case (segment @ Path.Segment.Element(tpe)) :: tail =>
             current match {
               case p @ BetweenCollections(_, _, _, _, _, plan) =>
-                p.copy(plan = recurse(plan, tail))
+                p.copy(plan = recurse(plan, tail, p))
 
               case p @ BetweenOptions(_, _, _, _, plan) =>
-                p.copy(plan = recurse(plan, tail))
+                p.copy(plan = recurse(plan, tail, p))
 
               case p @ BetweenNonOptionOption(_, _, _, _, plan) =>
-                p.copy(plan = recurse(plan, tail))
+                p.copy(plan = recurse(plan, tail, p))
 
               case other => invalidPathSegment(config, other, segment)
             }
 
           case Nil =>
-            configurePlan(config, current, trace.result())
+            configurePlan(config, current, parent)
         }
       }
 
-      recurse(plan, config.path.segments.toList)
+      recurse(plan, config.path.segments.toList, None)
     }
 
     val (errors, (successes, reconfiguredPlan)) =
       Accumulator.use[Plan.Error]:
-        Accumulator.use[(Path, Target)]:
+        Accumulator.use[(Path, Side)]:
           configs.foldLeft(plan)(configureSingle)
 
     Plan.Reconfigured(errors, successes, reconfiguredPlan)
@@ -96,20 +93,19 @@ private[ducktape] object PlanConfigurer {
   private def configurePlan(
     config: Configuration.Instruction,
     current: Plan[Error],
-    trace: => Vector[Plan[Plan.Error]]
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Target)]) = {
+    parent: Plan[Plan.Error] | None.type
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)]) = {
     config match {
       case cfg: (Configuration.Instruction.Static | Configuration.Instruction.Dynamic) =>
-        // dropRight(1) because 'current' is the last element of the trace
-        staticOrDynamic(cfg, current, Traversal(trace.dropRight(1), current))
+        staticOrDynamic(cfg, current, parent)
 
       case instruction: Configuration.Instruction.Bulk =>
         bulk(current, instruction)
 
-      case cfg @ Configuration.Instruction.Regional(path, target, modifier, span) =>
-        regional(current, cfg)
+      case cfg @ Configuration.Instruction.Regional(path, side, modifier, span) =>
+        regional(current, cfg, parent)
 
-      case cfg @ Configuration.Instruction.Failed(path, target, message, span) =>
+      case cfg @ Configuration.Instruction.Failed(path, side, message, span) =>
         Accumulator.append {
           Plan.Error.from(current, ErrorMessage.ConfigurationFailed(cfg), None)
         }
@@ -119,22 +115,22 @@ private[ducktape] object PlanConfigurer {
   private def invalidPathSegment(config: Configuration.Instruction, plan: Plan[Error], segment: Path.Segment): Plan.Error =
     plan match {
       case suppressed: Plan.Error =>
-        Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), Some(suppressed))
+        Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.side, config.span), Some(suppressed))
       case other =>
-        Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.target, config.span), None)
+        Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.side, config.span), None)
     }
 
   private def staticOrDynamic(
     instruction: Configuration.Instruction.Static | Configuration.Instruction.Dynamic,
     current: Plan[Plan.Error],
-    traversal: => Traversal
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Target)]) = {
+    parent: Plan[Plan.Error] | None.type
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)]) = {
     instruction match {
       case static: Configuration.Instruction.Static =>
         current.configureIfValid(static, static.config)
 
       case dynamic: Configuration.Instruction.Dynamic =>
-        dynamic.config(traversal) match {
+        dynamic.config(parent) match {
           case Right(config) => current.configureIfValid(dynamic, config)
           case Left(errorMessage) =>
             val failed = Configuration.Instruction.Failed.from(dynamic, errorMessage)
@@ -147,8 +143,9 @@ private[ducktape] object PlanConfigurer {
 
   private def regional(
     plan: Plan[Plan.Error],
-    modifier: Configuration.Instruction.Regional
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Target)]): Plan[Plan.Error] =
+    modifier: Configuration.Instruction.Regional,
+    parent: Plan[Plan.Error] | None.type
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)]): Plan[Plan.Error] =
     plan match {
       case plan: Upcast => plan
 
@@ -159,7 +156,7 @@ private[ducktape] object PlanConfigurer {
       case plan: Configured => plan
 
       case plan: BetweenProductFunction[Plan.Error] =>
-        plan.copy(argPlans = plan.argPlans.transform((_, plan) => regional(plan, modifier)))
+        plan.copy(argPlans = plan.argPlans.transform((_, argPlan) => regional(argPlan, modifier, plan)))
 
       case plan: BetweenUnwrappedWrapped => plan
 
@@ -168,22 +165,22 @@ private[ducktape] object PlanConfigurer {
       case plan: BetweenSingletons => plan
 
       case plan: BetweenProducts[Plan.Error] =>
-        plan.copy(fieldPlans = plan.fieldPlans.transform((_, plan) => regional(plan, modifier)))
+        plan.copy(fieldPlans = plan.fieldPlans.transform((_, fieldPlan) => regional(fieldPlan, modifier, plan)))
 
       case plan: BetweenCoproducts[Plan.Error] =>
-        plan.copy(casePlans = plan.casePlans.map(regional(_, modifier)))
+        plan.copy(casePlans = plan.casePlans.map(regional(_, modifier, plan)))
 
       case plan: BetweenOptions[Plan.Error] =>
-        plan.copy(plan = regional(plan.plan, modifier))
+        plan.copy(plan = regional(plan.plan, modifier, plan))
 
       case plan: BetweenNonOptionOption[Plan.Error] =>
-        plan.copy(plan = regional(plan.plan, modifier))
+        plan.copy(plan = regional(plan.plan, modifier, plan))
 
       case plan: BetweenCollections[Plan.Error] =>
-        plan.copy(plan = regional(plan.plan, modifier))
+        plan.copy(plan = regional(plan.plan, modifier, plan))
 
       case plan: Error =>
-        modifier.modifier(plan) match {
+        modifier.modifier(parent, plan) match {
           case config: Configuration => plan.configureIfValid(modifier, config)
           case other: plan.type      => other
         }
@@ -192,35 +189,49 @@ private[ducktape] object PlanConfigurer {
   private def bulk(
     current: Plan[Plan.Error],
     instruction: Configuration.Instruction.Bulk
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Target)]): Plan[Error] = {
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)]): Plan[Error] = {
 
-    def updatePlan(name: String, plan: Plan[Plan.Error])(using Quotes) = {
-      instruction.modifier(name, plan) match {
-        case config: Configuration => plan.configureIfValid(instruction, config)
-        case p: plan.type          => p
+    enum IsAnythingModified {
+      case Yes, No
+    }
+
+    var isAnythingModified = IsAnythingModified.No
+
+    def updatePlan(
+      parent: Plan.BetweenProducts[Plan.Error] | Plan.BetweenProductFunction[Plan.Error]
+    )(
+      name: String,
+      plan: Plan[Plan.Error]
+    )(using Quotes) = {
+      instruction.modifier(parent, name, plan) match {
+        case config: Configuration =>
+          isAnythingModified = IsAnythingModified.Yes
+          plan.configureIfValid(instruction, config)
+        case p: plan.type => p
       }
     }
 
     current
       .narrow[Plan.BetweenProductFunction[Plan.Error] | Plan.BetweenProducts[Plan.Error]]
+      .toRight("This config only works when sideing a function-to-product or a product-to-product transformations")
       .map {
         case func: Plan.BetweenProductFunction[Plan.Error] =>
-          val updatedArgPlans = func.argPlans.transform(updatePlan)
+          val updatedArgPlans = func.argPlans.transform(updatePlan(func))
           func.copy(argPlans = updatedArgPlans)
         case prod: Plan.BetweenProducts[Plan.Error] =>
-          val updatedFieldPlans = prod.fieldPlans.transform(updatePlan)
+          val updatedFieldPlans = prod.fieldPlans.transform(updatePlan(prod))
           prod.copy(fieldPlans = updatedFieldPlans)
       }
-      .getOrElse {
-        val failed =
-          Configuration.Instruction.Failed.from(
-            instruction,
-            "This config only works when targeting a function to product or product to product transformations"
-          )
-        Accumulator.append {
-          Plan.Error.from(current, ErrorMessage.ConfigurationFailed(failed), None)
-        }
-      }
+      .filterOrElse(_ => isAnythingModified == IsAnythingModified.Yes, "Config option is not doing anything")
+      .fold(
+        errorMessage => {
+          val failed = Configuration.Instruction.Failed.from(instruction, errorMessage)
+          Accumulator.append {
+            Plan.Error.from(current, ErrorMessage.ConfigurationFailed(failed), None)
+          }
+        },
+        identity
+      )
   }
 
   extension (currentPlan: Plan[Plan.Error]) {
@@ -228,12 +239,15 @@ private[ducktape] object PlanConfigurer {
     private def configureIfValid(
       instruction: Configuration.Instruction,
       config: Configuration
-    )(using quotes: Quotes, errors: Accumulator[Plan.Error], successes: Accumulator[(Path, Target)]) = {
+    )(using quotes: Quotes, errors: Accumulator[Plan.Error], successes: Accumulator[(Path, Side)]) = {
       def isReplaceableBy(update: Configuration)(using Quotes) =
         update.tpe.repr <:< currentPlan.destContext.currentTpe.repr
 
       if isReplaceableBy(config) then
-        Accumulator.append(currentPlan.destContext -> instruction.target) //TODO: Revise
+        Accumulator.append {
+          if instruction.side == Side.Dest then currentPlan.destContext -> instruction.side
+          else currentPlan.sourceContext -> instruction.side
+        }
         Plan.Configured.from(currentPlan, config)
       else
         Accumulator.append {
@@ -242,7 +256,7 @@ private[ducktape] object PlanConfigurer {
             ErrorMessage.InvalidConfiguration(
               config.tpe,
               currentPlan.destContext.currentTpe,
-              instruction.target,
+              instruction.side,
               instruction.span
             ),
             None

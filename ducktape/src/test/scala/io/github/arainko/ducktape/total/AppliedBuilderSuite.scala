@@ -148,7 +148,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
 
       initial.into[Dest].transform(Field.allMatching(fieldSource))
       """
-    }("No matching fields found @ Source")
+    }("Config option is not doing anything @ Dest")
   }: @nowarn("msg=unused")
 
   test("The last applied field config is the picked one") {

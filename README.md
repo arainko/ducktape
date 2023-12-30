@@ -89,7 +89,7 @@ val domainPerson = wirePerson.to[domain.Person]
 //     Card(
 //       name = "J. Doe",
 //       digits = 12345L,
-//       expires = 2023-12-18T15:00:25.065351Z
+//       expires = 2023-12-30T15:39:54.297957841Z
 //     )
 //   ),
 //   updatedAt = Some(value = 1970-01-01T00:00:00Z)
@@ -201,7 +201,7 @@ val domainPerson =
 //     Card(
 //       name = "CONST NAME",
 //       digits = 12345L,
-//       expires = 2023-12-18T15:00:25.078582Z
+//       expires = 2023-12-30T15:39:54.306592168Z
 //     )
 //   ),
 //   updatedAt = Some(value = 1970-01-01T00:00:00Z)

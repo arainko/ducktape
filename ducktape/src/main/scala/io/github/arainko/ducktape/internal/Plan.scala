@@ -164,7 +164,7 @@ private[ducktape] object Plan {
 
   final case class Reconfigured(
     errors: List[Plan.Error],
-    successes: List[(Path, Target)],
+    successes: List[(Path, Side)],
     result: Plan[Plan.Error]
   ) derives Debug
 }

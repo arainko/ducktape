@@ -16,7 +16,7 @@ private[ducktape] enum Configuration derives Debug {
 private[ducktape] object Configuration {
 
   trait ErrorModifier {
-    def apply(plan: Plan.Error)(using Quotes): Configuration | plan.type
+    def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type
   }
 
   object ErrorModifier {
@@ -24,46 +24,48 @@ private[ducktape] object Configuration {
   }
 
   trait FieldModifier {
-    def apply(field: String, plan: Plan[Plan.Error])(using Quotes): Configuration | plan.type
+    def apply(
+      parent: Plan.BetweenProductFunction[Plan.Error] | Plan.BetweenProducts[Plan.Error],
+      field: String,
+      plan: Plan[Plan.Error]
+    )(using Quotes): Configuration | plan.type
   }
 
   object FieldModifier {
     given Debug[FieldModifier] = Debug.nonShowable
   }
 
-  case class Traversal(trace: Vector[Plan[Plan.Error]], destination: Plan[Plan.Error])
-
   enum Instruction derives Debug {
     def path: Path
-    def target: Target
+    def side: Side
     def span: Span
 
-    case Static(path: Path, target: Target, config: Configuration, span: Span)
+    case Static(path: Path, side: Side, config: Configuration, span: Span)
 
-    case Dynamic(path: Path, target: Target, config: Traversal => Either[String, Configuration], span: Span)
+    case Dynamic(path: Path, side: Side, config: Plan[Plan.Error] | None.type => Either[String, Configuration], span: Span)
 
     case Bulk(
       path: Path,
-      target: Target,
+      side: Side,
       modifier: FieldModifier,
       span: Span
     )
 
-    case Regional(path: Path, target: Target, modifier: ErrorModifier, span: Span)
+    case Regional(path: Path, side: Side, modifier: ErrorModifier, span: Span)
 
-    case Failed(path: Path, target: Target, message: String, span: Span)
+    case Failed(path: Path, side: Side, message: String, span: Span)
   }
 
   object Instruction {
     object Failed {
-      def from(instruction: Instruction, message: String): Instruction.Failed = 
-        Failed(instruction.path, instruction.target, message, instruction.span)
+      def from(instruction: Instruction, message: String): Instruction.Failed =
+        Failed(instruction.path, instruction.side, message, instruction.span)
     }
   }
 
   def parse[A: Type, B: Type](
     configs: Expr[Seq[Field[A, B] | Case[A, B]]]
-  )(using Quotes) = {
+  )(using Quotes): List[Instruction] = {
     import quotes.reflect.*
 
     Varargs
@@ -71,32 +73,31 @@ private[ducktape] object Configuration {
       .get // TODO: Make it nicer
       .view
       .map(_.asTerm)
-      .flatMap {
+      .map {
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Field.type]), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
           Configuration.Instruction.Static(
             path,
-            Target.Dest,
+            Side.Dest,
             Configuration.Const(value.asExpr, value.tpe.widen.asType),
             Span.fromPosition(cfg.pos)
-          ) :: Nil
+          )
 
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Field.type]), "default"), a :: b :: destFieldTpe :: Nil),
               PathSelector(path) :: Nil
             ) =>
-          def default(traversal: Traversal) =
+          def default(parent: Plan[Plan.Error] | None.type) =
             for {
               selectedField <-
                 path.segments.lastOption
                   .flatMap(_.narrow[Path.Segment.Field])
                   .toRight("Selected path's length should be at least 1")
               defaults <-
-                traversal.trace.lastOption
-                  .flatMap(_.narrow[Plan.BetweenProducts[Plan.Error]])
-                  .map(plan => Defaults.of(plan.dest))
+                PartialFunction
+                  .condOpt(parent) { case parent: Plan.BetweenProducts[Plan.Error] => parent.dest.defaults }
                   .toRight("Selected field's parent is not a product")
               defaultValue <-
                 defaults
@@ -106,12 +107,7 @@ private[ducktape] object Configuration {
 
           val span = Span.fromPosition(cfg.pos)
 
-          Configuration.Instruction.Dynamic(
-            path,
-            Target.Dest,
-            default,
-            span
-          ) :: Nil
+          Configuration.Instruction.Dynamic(path, Side.Dest, default, span)
 
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Field.type]), "computed" | "renamed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
@@ -119,27 +115,27 @@ private[ducktape] object Configuration {
             ) =>
           Configuration.Instruction.Static(
             path,
-            Target.Dest,
+            Side.Dest,
             Configuration.FieldComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
-          ) :: Nil
+          )
 
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Field.type]), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
               PathSelector(path) :: fieldSource :: Nil
             ) =>
           parseAllMatching(fieldSource.asExpr, path, fieldSourceTpe.tpe, Span.fromPosition(cfg.pos))
-          
+
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Case.type]), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
           Configuration.Instruction.Static(
             path,
-            Target.Source,
+            Side.Source,
             Configuration.Const(value.asExpr, value.tpe.asType),
             Span.fromPosition(cfg.pos)
-          ) :: Nil
+          )
 
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Case.type]), "computed"), a :: b :: sourceTpe :: computedTpe :: Nil),
@@ -147,32 +143,32 @@ private[ducktape] object Configuration {
             ) =>
           Configuration.Instruction.Static(
             path,
-            Target.Source,
+            Side.Source,
             Configuration.CaseComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
-          ) :: Nil
+          )
 
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Field.type]), "useNones"), a :: b :: destFieldTpe :: Nil),
               PathSelector(path) :: Nil
             ) =>
           val modifier: ErrorModifier = new:
-            def apply(plan: Plan.Error)(using Quotes): Configuration | plan.type =
+            def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type =
               plan.dest.tpe match {
                 case tpe @ '[Option[a]] => Configuration.Const('{ None }, tpe)
                 case _                  => plan
               }
-          Configuration.Instruction.Regional(path, Target.Dest, modifier, Span.fromPosition(cfg.pos)) :: Nil
+          Configuration.Instruction.Regional(path, Side.Dest, modifier, Span.fromPosition(cfg.pos))
 
         case DeprecatedConfig(configs) => configs
 
         case oopsie =>
           Configuration.Instruction.Failed(
             Path.empty(Type.of[Nothing]),
-            Target.Dest,
+            Side.Dest,
             s"Unsupported config expression: ${oopsie.show}",
             Span.fromPosition(oopsie.pos)
-          ) :: Nil
+          )
       }
       .toList
   }
@@ -189,7 +185,11 @@ private[ducktape] object Configuration {
       .narrow[Structure.Product]
       .map { sourceStruct =>
         val modifier = new FieldModifier:
-          def apply(field: String, plan: Plan[Plan.Error])(using Quotes): Configuration | plan.type =
+          def apply(
+            parent: Plan.BetweenProductFunction[Plan.Error] | Plan.BetweenProducts[Plan.Error],
+            field: String,
+            plan: Plan[Plan.Error]
+          )(using Quotes): Configuration | plan.type =
             sourceStruct.fields.get(field).match {
               case Some(struct) if struct.tpe.repr <:< plan.dest.tpe.repr =>
                 Configuration.FieldReplacement(sourceExpr, field, struct.tpe)
@@ -198,7 +198,7 @@ private[ducktape] object Configuration {
 
         Configuration.Instruction.Bulk(
           path,
-          Target.Dest,
+          Side.Dest,
           modifier,
           span
         )
@@ -206,11 +206,11 @@ private[ducktape] object Configuration {
       .getOrElse(
         Configuration.Instruction.Failed(
           path,
-          Target.Dest,
+          Side.Dest,
           "Field source needs to be a product",
           span
         )
-      ) :: Nil
+      )
   }
 
   object DeprecatedConfig {
@@ -226,10 +226,10 @@ private[ducktape] object Configuration {
           val path = Path.empty(Type.of[src]).appended(Path.Segment.Case(Type.of[sourceSubtype]))
           Configuration.Instruction.Static(
             path,
-            Target.Source,
+            Side.Source,
             Configuration.Const(value, value.asTerm.tpe.asType),
             Span.fromExpr(cfg)
-          ) :: Nil
+          )
 
         case cfg @ '{
               type sourceSubtype
@@ -239,10 +239,10 @@ private[ducktape] object Configuration {
           val path = Path.empty(Type.of[src]).appended(Path.Segment.Case(Type.of[sourceSubtype]))
           Configuration.Instruction.Static(
             path,
-            Target.Source,
+            Side.Source,
             Configuration.CaseComputed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
             Span.fromExpr(cfg)
-          ) :: Nil
+          )
 
         case cfg @ '{ Field.allMatching[a, b, source]($fieldSource) } =>
           parseAllMatching(fieldSource, Path.empty(Type.of[b]), TypeRepr.of[source], Span.fromExpr(cfg))
