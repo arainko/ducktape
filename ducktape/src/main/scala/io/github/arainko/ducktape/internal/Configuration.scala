@@ -21,6 +21,27 @@ private[ducktape] object Configuration {
 
   object ErrorModifier {
     given Debug[ErrorModifier] = Debug.nonShowable
+
+    val substituteOptionsWithNone = new ErrorModifier:
+      def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type =
+        plan.dest.tpe match {
+          case tpe @ '[Option[a]] => Configuration.Const('{ None }, tpe)
+          case _                  => plan
+        }
+
+    val substituteWithDefaults = new ErrorModifier:
+      def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type =
+        PartialFunction
+          .condOpt(parent -> plan.destContext.segments.lastOption) {
+            case (Plan.BetweenProducts(_, dest, _, _, _), Some(Path.Segment.Field(_, fieldName))) =>
+              import quotes.reflect.*
+
+              dest.defaults
+                .get(fieldName)
+                .collect { case expr if expr.asTerm.tpe <:< plan.dest.tpe.repr => Configuration.Const(expr, plan.dest.tpe) }
+          }
+          .flatten
+          .getOrElse(plan)
   }
 
   trait FieldModifier {
@@ -149,16 +170,42 @@ private[ducktape] object Configuration {
           )
 
         case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "useNones"), a :: b :: destFieldTpe :: Nil),
+              TypeApply(Select(IdentOfType('[Field.type]), "fallbackToNone"), a :: b :: destFieldTpe :: Nil),
               PathSelector(path) :: Nil
             ) =>
-          val modifier: ErrorModifier = new:
-            def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type =
-              plan.dest.tpe match {
-                case tpe @ '[Option[a]] => Configuration.Const('{ None }, tpe)
-                case _                  => plan
-              }
-          Configuration.Instruction.Regional(path, Side.Dest, modifier, Span.fromPosition(cfg.pos))
+          Configuration.Instruction.Regional(path, Side.Dest, ErrorModifier.substituteOptionsWithNone, Span.fromPosition(cfg.pos))
+
+        case cfg @ AsExpr('{ Field.fallbackToNone[a, b] }) =>
+          Configuration.Instruction.Regional(
+            Path.empty(Type.of[b]),
+            Side.Dest,
+            ErrorModifier.substituteOptionsWithNone,
+            Span.fromPosition(cfg.pos)
+          )
+
+        case regionalCfg @ RegionalConfig(AsExpr('{ Field.fallbackToNone[a, b] }), path) =>
+          Configuration.Instruction.Regional(
+            path,
+            Side.Dest,
+            ErrorModifier.substituteOptionsWithNone,
+            Span.fromPosition(regionalCfg.pos)
+          )
+
+        case cfg @ AsExpr('{ Field.fallbackToDefault[a, b] }) =>
+          Configuration.Instruction.Regional(
+            Path.empty(Type.of[b]),
+            Side.Dest,
+            ErrorModifier.substituteWithDefaults,
+            Span.fromPosition(cfg.pos)
+          )
+
+        case cfg @ RegionalConfig(AsExpr('{ Field.fallbackToDefault[a, b] }), path) =>
+          Configuration.Instruction.Regional(
+            path,
+            Side.Dest,
+            ErrorModifier.substituteWithDefaults,
+            Span.fromPosition(cfg.pos)
+          )
 
         case DeprecatedConfig(configs) => configs
 
@@ -255,6 +302,31 @@ private[ducktape] object Configuration {
 
       PartialFunction.condOpt(term) {
         case ident: Ident => ident.tpe.asType
+      }
+    }
+  }
+
+  private object AsExpr {
+    def unapply(using Quotes)(term: quotes.reflect.Term): Some[Expr[Any]] = {
+      Some(term.asExpr)
+    }
+  }
+
+  private object RegionalConfig {
+    def unapply(using Quotes)(term: quotes.reflect.Term): Option[(quotes.reflect.Term, Path)] = {
+      import quotes.reflect.*
+      PartialFunction.condOpt(term) {
+        case Apply(
+              TypeApply(
+                Apply(
+                  TypeApply(Select(Ident("Regional"), "regional"), _),
+                  term :: Nil
+                ),
+                _
+              ),
+              PathSelector(path) :: Nil
+            ) =>
+          term -> path
       }
     }
   }

@@ -1,6 +1,6 @@
 package io.github.arainko.ducktape
 
-sealed trait Regional
+type Regional
 
 object Regional {
   extension [F[a, b] <: (Case[b, a] | Field[a, b]), A, B](self: F[A, B] & Regional) {

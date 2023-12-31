@@ -4,13 +4,14 @@ import io.github.arainko.ducktape.internal.Metainformation
 
 import scala.Ordering.Implicits.*
 import scala.quoted.*
+import scala.annotation.nowarn
 
 private[ducktape] object Logger {
 
   // Logger Config
   private[ducktape] transparent inline given level: Level = Level.Off
   private val output = Output.StdOut
-  private def filter(msg: String, meta: Metainformation) = true
+  @nowarn private def filter(msg: String, meta: Metainformation) = msg.contains("MATCHED")
 
   enum Level {
     case Off, Debug, Info
