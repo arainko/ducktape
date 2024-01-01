@@ -37,7 +37,7 @@ private[ducktape] object PlanInterpreter {
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             NamedArg(fieldName, recurse(plan, fieldValue).asTerm)
         }
-        Constructor(destTpe.tpe.repr).appliedToArgs(args.toList).asExpr
+        Constructor(dest.tpe.repr).appliedToArgs(args.toList).asExpr
 
       case Plan.BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
         val branches = casePlans.map { plan =>
@@ -57,7 +57,7 @@ private[ducktape] object PlanInterpreter {
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             recurse(plan, fieldValue).asTerm
         }
-        destTpe.function.appliedTo(args.toList)
+        dest.function.appliedTo(args.toList)
 
       case Plan.BetweenOptions(sourceTpe, destTpe, plan) =>
         (sourceTpe.paramStruct.tpe -> destTpe.paramStruct.tpe) match {
