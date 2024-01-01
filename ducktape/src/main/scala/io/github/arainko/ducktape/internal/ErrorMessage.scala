@@ -38,8 +38,7 @@ private[ducktape] object ErrorMessage {
     val side = Side.Source
   }
 
-  final case class InvalidConfiguration(configTpe: Type[?], expectedTpe: Type[?], side: Side, span: Span)
-      extends ErrorMessage {
+  final case class InvalidConfiguration(configTpe: Type[?], expectedTpe: Type[?], side: Side, span: Span) extends ErrorMessage {
 
     def render(using Quotes): String = {
       val renderedConfigTpe = configTpe.repr.show
@@ -73,7 +72,7 @@ private[ducktape] object ErrorMessage {
   }
 
   final case class ConfigurationFailed(config: Configuration.Instruction.Failed) extends ErrorMessage {
-    export config.{ span, side }
+    export config.{ side, span }
     def render(using Quotes): String = config.message
   }
 

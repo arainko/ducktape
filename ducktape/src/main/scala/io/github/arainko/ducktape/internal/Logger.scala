@@ -3,8 +3,8 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.internal.Metainformation
 
 import scala.Ordering.Implicits.*
-import scala.quoted.*
 import scala.annotation.nowarn
+import scala.quoted.*
 
 private[ducktape] object Logger {
 

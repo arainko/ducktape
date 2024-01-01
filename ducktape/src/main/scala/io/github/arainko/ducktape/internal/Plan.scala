@@ -20,7 +20,8 @@ private[ducktape] sealed trait Plan[+E <: Plan.Error] {
 
   final def narrow[A <: Plan[Plan.Error]](using tt: TypeTest[Plan[Plan.Error], A]): Option[A] = tt.unapply(this)
 
-  final def configureAll(configs: List[Configuration.Instruction])(using Quotes): Plan.Reconfigured = PlanConfigurer.run(this, configs)
+  final def configureAll(configs: List[Configuration.Instruction])(using Quotes): Plan.Reconfigured =
+    PlanConfigurer.run(this, configs)
 
   final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing]] = PlanRefiner.run(this)
 }

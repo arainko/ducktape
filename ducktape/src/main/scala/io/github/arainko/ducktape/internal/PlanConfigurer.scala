@@ -180,6 +180,7 @@ private[ducktape] object PlanConfigurer {
         plan.copy(plan = regional(plan.plan, modifier, plan))
 
       case plan: Error =>
+        // TODO: Detect when a regional config doesn't do anything and emit an error
         modifier.modifier(parent, plan) match {
           case config: Configuration => plan.configureIfValid(modifier, config)
           case other: plan.type      => other

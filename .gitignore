@@ -9,3 +9,5 @@ metals.sbt
 target/
 sbt-launch.jar
 ast_pretty_printed.*
+project/project/build.properties
+project/project/project/build.properties

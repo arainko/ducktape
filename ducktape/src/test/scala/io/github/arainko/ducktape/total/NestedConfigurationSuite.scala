@@ -643,4 +643,106 @@ class NestedConfigurationSuite extends DucktapeSuite {
     )(expected)
 
   }
+
+  test("Field.fallbackToNone works") {
+    final case class SourceToplevel(level1: SourceLevel1)
+    final case class SourceLevel1(str: String)
+
+    final case class DestToplevel(extra: Option[Int], level1: DestLevel1)
+    final case class DestLevel1(extra: Option[Int], str: String)
+
+    val source = SourceToplevel(SourceLevel1("str"))
+    val expected = DestToplevel(None, DestLevel1(None, "str"))
+
+    assertEachEquals(
+      source.into[DestToplevel].transform(Field.fallbackToNone),
+      source.intoVia(DestToplevel.apply).transform(Field.fallbackToNone),
+      Transformer.define[SourceToplevel, DestToplevel].build(Field.fallbackToNone).transform(source),
+      Transformer.defineVia[SourceToplevel](DestToplevel.apply).build(Field.fallbackToNone).transform(source)
+    )(expected)
+  }
+
+  test("Field.fallbackToNone.regional works") {
+    final case class SourceToplevel(level1: SourceLevel1)
+    final case class SourceLevel1(str: String)
+
+    final case class DestToplevel(extra: Option[Int], level1: DestLevel1)
+    final case class DestLevel1(extra: Option[Int], str: String)
+
+    val source = SourceToplevel(SourceLevel1("str"))
+    val expected = DestToplevel(Some(123), DestLevel1(None, "str"))
+
+    assertEachEquals(
+      source
+        .into[DestToplevel]
+        .transform(
+          Field.fallbackToNone.regional(_.level1),
+          Field.const(_.extra, Some(123))
+        ),
+      source
+        .intoVia(DestToplevel.apply)
+        .transform(
+          Field.fallbackToNone.regional(_.level1),
+          Field.const(_.extra, Some(123))
+        ),
+      Transformer
+        .define[SourceToplevel, DestToplevel]
+        .build(
+          Field.fallbackToNone.regional(_.level1),
+          Field.const(_.extra, Some(123))
+        )
+        .transform(source),
+      Transformer
+        .defineVia[SourceToplevel](DestToplevel.apply)
+        .build(
+          Field.fallbackToNone.regional(_.level1),
+          Field.const(_.extra, Some(123))
+        )
+        .transform(source)
+    )(expected)
+  }
+
+  test("Field.fallbackToDefault works") {
+    final case class SourceToplevel(level1: SourceLevel1)
+    final case class SourceLevel1(str: String)
+
+    final case class DestToplevel(extra: Int = 111, level1: DestLevel1)
+    final case class DestLevel1(extra: String = "level1", str: String)
+
+    val source = SourceToplevel(SourceLevel1("str"))
+    val expected = DestToplevel(111, DestLevel1("level1", "str"))
+
+    assertEachEquals(
+      source.into[DestToplevel].transform(Field.fallbackToDefault),
+      Transformer.define[SourceToplevel, DestToplevel].build(Field.fallbackToDefault).transform(source)
+    )(expected)
+  }
+
+  // TODO: More testing for this, eg. for a generic case class with a default for the generic field
+  test("Field.fallbackToDefault.regional works") {
+    final case class SourceToplevel(level1: SourceLevel1)
+    final case class SourceLevel1(str: String)
+
+    final case class DestToplevel(extra: Int = 111, level1: DestLevel1)
+    final case class DestLevel1(extra: String = "level1", str: String)
+
+    val source = SourceToplevel(SourceLevel1("str"))
+    val expected = DestToplevel(123, DestLevel1("level1", "str"))
+
+    assertEachEquals(
+      source
+        .into[DestToplevel]
+        .transform(
+          Field.fallbackToDefault.regional(_.level1),
+          Field.const(_.extra, 123)
+        ),
+      Transformer
+        .define[SourceToplevel, DestToplevel]
+        .build(
+          Field.fallbackToDefault.regional(_.level1),
+          Field.const(_.extra, 123)
+        )
+        .transform(source)
+    )(expected)
+  }
 }

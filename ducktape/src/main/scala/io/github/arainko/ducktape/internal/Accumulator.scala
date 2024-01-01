@@ -5,7 +5,7 @@ import scala.collection.mutable.Builder
 opaque type Accumulator[A] = Builder[A, List[A]]
 
 object Accumulator {
-  
+
   inline def use[A]: [B] => (f: Accumulator[A] ?=> B) => (List[A], B) =
     [B] =>
       (f: Accumulator[A] ?=> B) => {
