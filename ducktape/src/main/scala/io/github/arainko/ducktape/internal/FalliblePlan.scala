@@ -15,7 +15,7 @@ sealed trait FalliblePlan[+E <: FalliblePlan.Error] {
 object FalliblePlan {
 
   case class Total(plan: Plan[Nothing]) extends FalliblePlan[Nothing] {
-    export plan.{source, dest, sourceContext as sourcePath, destContext as destPath}
+    export plan.{source, dest, sourcePath as sourcePath, destPath as destPath}
   }
 
   case class UserDefined(
