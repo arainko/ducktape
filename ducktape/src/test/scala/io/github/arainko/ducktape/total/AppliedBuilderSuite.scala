@@ -137,21 +137,19 @@ class AppliedBuilderSuite extends DucktapeSuite {
   }
 
   test("Field.allMatching reports a compiletime failure when none of the fields match") {
-    @nowarn("msg=unused local definition")
-    final case class Source(int: Int, str: String, list: List[String])
-
-    @nowarn("msg=unused local definition")
-    final case class FieldSource(int: Long, str: CharSequence, list: Vector[String])
+    final case class Source(int: Int, str: String)
+    final case class FieldSource(field1: String, field2: String)
+    final case class Dest(int: Int, str: String)
 
     assertFailsToCompileWith {
       """
-      val source = Source(1, "str", List("list-str"))
-      val fieldSource = FieldSource(1L, "char-seq", Vector("vector-str"))
+      val initial = Source(1, "str")
+      val fieldSource = FieldSource("field1", "field2")
 
-      source.into[Source].transform(Field.allMatching(fieldSource))
+      initial.into[Dest].transform(Field.allMatching(fieldSource))
       """
-    }("No matching fields found @ Source")
-  }
+    }("Config option is not doing anything @ Dest")
+  }: @nowarn("msg=unused")
 
   test("The last applied field config is the picked one") {
     final case class FieldSource(additionalArg: String)

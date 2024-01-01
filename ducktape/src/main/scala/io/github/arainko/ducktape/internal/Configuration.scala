@@ -15,18 +15,78 @@ private[ducktape] enum Configuration derives Debug {
 
 private[ducktape] object Configuration {
 
-  enum At derives Debug {
+  trait ErrorModifier {
+    def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type
+  }
+
+  object ErrorModifier {
+    given Debug[ErrorModifier] = Debug.nonShowable
+
+    val substituteOptionsWithNone = new ErrorModifier:
+      def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type =
+        plan.dest.tpe match {
+          case tpe @ '[Option[a]] => Configuration.Const('{ None }, tpe)
+          case _                  => plan
+        }
+
+    val substituteWithDefaults = new ErrorModifier:
+      def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type =
+        PartialFunction
+          .condOpt(parent -> plan.destContext.segments.lastOption) {
+            case (Plan.BetweenProducts(_, dest, _, _, _), Some(Path.Segment.Field(_, fieldName))) =>
+              import quotes.reflect.*
+
+              dest.defaults
+                .get(fieldName)
+                .collect { case expr if expr.asTerm.tpe <:< plan.dest.tpe.repr => Configuration.Const(expr, plan.dest.tpe) }
+          }
+          .flatten
+          .getOrElse(plan)
+  }
+
+  trait FieldModifier {
+    def apply(
+      parent: Plan.BetweenProductFunction[Plan.Error] | Plan.BetweenProducts[Plan.Error],
+      field: String,
+      plan: Plan[Plan.Error]
+    )(using Quotes): Configuration | plan.type
+  }
+
+  object FieldModifier {
+    given Debug[FieldModifier] = Debug.nonShowable
+  }
+
+  enum Instruction derives Debug {
     def path: Path
-    def target: Target
+    def side: Side
     def span: Span
 
-    case Successful(path: Path, target: Target, config: Configuration, span: Span)
-    case Failed(path: Path, target: Target, message: String, span: Span)
+    case Static(path: Path, side: Side, config: Configuration, span: Span)
+
+    case Dynamic(path: Path, side: Side, config: Plan[Plan.Error] | None.type => Either[String, Configuration], span: Span)
+
+    case Bulk(
+      path: Path,
+      side: Side,
+      modifier: FieldModifier,
+      span: Span
+    )
+
+    case Regional(path: Path, side: Side, modifier: ErrorModifier, span: Span)
+
+    case Failed(path: Path, side: Side, message: String, span: Span)
+  }
+
+  object Instruction {
+    object Failed {
+      def from(instruction: Instruction, message: String): Instruction.Failed =
+        Failed(instruction.path, instruction.side, message, instruction.span)
+    }
   }
 
   def parse[A: Type, B: Type](
     configs: Expr[Seq[Field[A, B] | Case[A, B]]]
-  )(using Quotes) = {
+  )(using Quotes): List[Instruction] = {
     import quotes.reflect.*
 
     Varargs
@@ -34,101 +94,128 @@ private[ducktape] object Configuration {
       .get // TODO: Make it nicer
       .view
       .map(_.asTerm)
-      .flatMap {
+      .map {
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Field.type]), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
-          Configuration.At.Successful(
+          Configuration.Instruction.Static(
             path,
-            Target.Dest,
+            Side.Dest,
             Configuration.Const(value.asExpr, value.tpe.widen.asType),
             Span.fromPosition(cfg.pos)
-          ) :: Nil
+          )
 
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Field.type]), "default"), a :: b :: destFieldTpe :: Nil),
               PathSelector(path) :: Nil
             ) =>
-          val segments = path.toVector
-          val parentTpe =
-            segments
-              .lift(segments.length - 2) // next to last elem aka the parent of the selected field
-              .map(_.tpe)
-              .getOrElse(path.root)
-          val default =
+          def default(parent: Plan[Plan.Error] | None.type) =
             for {
               selectedField <-
                 path.segments.lastOption
                   .flatMap(_.narrow[Path.Segment.Field])
                   .toRight("Selected path's length should be at least 1")
-              structure <-
-                Structure
-                  .fromTypeRepr(parentTpe.repr)
-                  .narrow[Structure.Product]
+              defaults <-
+                PartialFunction
+                  .condOpt(parent) { case parent: Plan.BetweenProducts[Plan.Error] => parent.dest.defaults }
                   .toRight("Selected field's parent is not a product")
-              default <-
-                Defaults
-                  .of(structure)
+              defaultValue <-
+                defaults
                   .get(selectedField.name)
                   .toRight(s"The field '${selectedField.name}' doesn't have a default value")
-            } yield Configuration.At.Successful(
-              path,
-              Target.Dest,
-              Configuration.Const(default, default.asTerm.tpe.asType),
-              Span.fromPosition(cfg.pos)
-            )
+            } yield Configuration.Const(defaultValue, defaultValue.asTerm.tpe.asType)
 
-          default.left.map(error => Configuration.At.Failed(path, Target.Dest, error, Span.fromPosition(cfg.pos))).merge :: Nil
+          val span = Span.fromPosition(cfg.pos)
+
+          Configuration.Instruction.Dynamic(path, Side.Dest, default, span)
 
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Field.type]), "computed" | "renamed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
               PathSelector(path) :: function :: Nil
             ) =>
-          Configuration.At.Successful(
+          Configuration.Instruction.Static(
             path,
-            Target.Dest,
+            Side.Dest,
             Configuration.FieldComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
-          ) :: Nil
+          )
 
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Field.type]), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
               PathSelector(path) :: fieldSource :: Nil
             ) =>
-          parseAllMatching(fieldSource.asExpr, path, destFieldTpe.tpe, fieldSourceTpe.tpe, Span.fromPosition(cfg.pos))
+          parseAllMatching(fieldSource.asExpr, path, fieldSourceTpe.tpe, Span.fromPosition(cfg.pos))
 
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Case.type]), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
               PathSelector(path) :: value :: Nil
             ) =>
-          Configuration.At.Successful(
+          Configuration.Instruction.Static(
             path,
-            Target.Source,
+            Side.Source,
             Configuration.Const(value.asExpr, value.tpe.asType),
             Span.fromPosition(cfg.pos)
-          ) :: Nil
+          )
 
         case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Case.type]), "computed"), a :: b :: sourceTpe :: computedTpe :: Nil),
               PathSelector(path) :: function :: Nil
             ) =>
-          Configuration.At.Successful(
+          Configuration.Instruction.Static(
             path,
-            Target.Source,
+            Side.Source,
             Configuration.CaseComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
-          ) :: Nil
+          )
+
+        case cfg @ Apply(
+              TypeApply(Select(IdentOfType('[Field.type]), "fallbackToNone"), a :: b :: destFieldTpe :: Nil),
+              PathSelector(path) :: Nil
+            ) =>
+          Configuration.Instruction.Regional(path, Side.Dest, ErrorModifier.substituteOptionsWithNone, Span.fromPosition(cfg.pos))
+
+        case cfg @ AsExpr('{ Field.fallbackToNone[a, b] }) =>
+          Configuration.Instruction.Regional(
+            Path.empty(Type.of[b]),
+            Side.Dest,
+            ErrorModifier.substituteOptionsWithNone,
+            Span.fromPosition(cfg.pos)
+          )
+
+        case regionalCfg @ RegionalConfig(AsExpr('{ Field.fallbackToNone[a, b] }), path) =>
+          Configuration.Instruction.Regional(
+            path,
+            Side.Dest,
+            ErrorModifier.substituteOptionsWithNone,
+            Span.fromPosition(regionalCfg.pos)
+          )
+
+        case cfg @ AsExpr('{ Field.fallbackToDefault[a, b] }) =>
+          Configuration.Instruction.Regional(
+            Path.empty(Type.of[b]),
+            Side.Dest,
+            ErrorModifier.substituteWithDefaults,
+            Span.fromPosition(cfg.pos)
+          )
+
+        case cfg @ RegionalConfig(AsExpr('{ Field.fallbackToDefault[a, b] }), path) =>
+          Configuration.Instruction.Regional(
+            path,
+            Side.Dest,
+            ErrorModifier.substituteWithDefaults,
+            Span.fromPosition(cfg.pos)
+          )
 
         case DeprecatedConfig(configs) => configs
 
         case oopsie =>
-          Configuration.At.Failed(
+          Configuration.Instruction.Failed(
             Path.empty(Type.of[Nothing]),
-            Target.Dest,
+            Side.Dest,
             s"Unsupported config expression: ${oopsie.show}",
             Span.fromPosition(oopsie.pos)
-          ) :: Nil
+          )
       }
       .toList
   }
@@ -136,46 +223,41 @@ private[ducktape] object Configuration {
   private def parseAllMatching(using Quotes)(
     sourceExpr: Expr[Any],
     path: Path,
-    destFieldTpe: quotes.reflect.TypeRepr,
     fieldSourceTpe: quotes.reflect.TypeRepr,
     span: Span
   ) = {
-    val result =
-      Structure
-        .fromTypeRepr(destFieldTpe)
-        .narrow[Structure.Product | Structure.Function]
-        .zip(Structure.fromTypeRepr(fieldSourceTpe).narrow[Structure.Product])
-        .map { (destStruct, fieldSourceStruct) =>
-          val fields = destStruct match {
-            case p: Structure.Product  => p.fields
-            case f: Structure.Function => f.args
-          }
 
-          fields.collect {
-            case (fieldName @ fieldSourceStruct.fields(source), dest) if source.tpe.repr <:< dest.tpe.repr =>
-              Configuration.At.Successful(
-                path.appended(Path.Segment.Field(source.tpe, fieldName)),
-                Target.Dest,
-                Configuration.FieldReplacement(sourceExpr, fieldName, source.tpe),
-                span
-              )
-          }.toList
-        }
-        .getOrElse(
-          Configuration.At
-            .Failed(
-              path,
-              Target.Dest,
-              "Field.allMatching only works when targeting a product or a function and supplying a product",
-              span
-            ) :: Nil
+    Structure
+      .fromTypeRepr(fieldSourceTpe)
+      .narrow[Structure.Product]
+      .map { sourceStruct =>
+        val modifier = new FieldModifier:
+          def apply(
+            parent: Plan.BetweenProductFunction[Plan.Error] | Plan.BetweenProducts[Plan.Error],
+            field: String,
+            plan: Plan[Plan.Error]
+          )(using Quotes): Configuration | plan.type =
+            sourceStruct.fields.get(field).match {
+              case Some(struct) if struct.tpe.repr <:< plan.dest.tpe.repr =>
+                Configuration.FieldReplacement(sourceExpr, field, struct.tpe)
+              case other => plan
+            }
+
+        Configuration.Instruction.Bulk(
+          path,
+          Side.Dest,
+          modifier,
+          span
         )
-
-    result match {
-      case Nil =>
-        Configuration.At.Failed(path, Target.Dest, "No matching fields found", span) :: Nil // TODO: Better error message
-      case configs => configs
-    }
+      }
+      .getOrElse(
+        Configuration.Instruction.Failed(
+          path,
+          Side.Dest,
+          "Field source needs to be a product",
+          span
+        )
+      )
   }
 
   object DeprecatedConfig {
@@ -189,12 +271,12 @@ private[ducktape] object Configuration {
               Case.const[`sourceSubtype`].apply[`src`, dest]($value)
             } =>
           val path = Path.empty(Type.of[src]).appended(Path.Segment.Case(Type.of[sourceSubtype]))
-          Configuration.At.Successful(
+          Configuration.Instruction.Static(
             path,
-            Target.Source,
+            Side.Source,
             Configuration.Const(value, value.asTerm.tpe.asType),
             Span.fromExpr(cfg)
-          ) :: Nil
+          )
 
         case cfg @ '{
               type sourceSubtype
@@ -202,15 +284,15 @@ private[ducktape] object Configuration {
               Case.computed[`sourceSubtype`].apply[`src`, dest]($function)
             } =>
           val path = Path.empty(Type.of[src]).appended(Path.Segment.Case(Type.of[sourceSubtype]))
-          Configuration.At.Successful(
+          Configuration.Instruction.Static(
             path,
-            Target.Source,
+            Side.Source,
             Configuration.CaseComputed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
             Span.fromExpr(cfg)
-          ) :: Nil
+          )
 
         case cfg @ '{ Field.allMatching[a, b, source]($fieldSource) } =>
-          parseAllMatching(fieldSource, Path.empty(Type.of[b]), TypeRepr.of[b], TypeRepr.of[source], Span.fromExpr(cfg))
+          parseAllMatching(fieldSource, Path.empty(Type.of[b]), TypeRepr.of[source], Span.fromExpr(cfg))
     }
   }
 
@@ -220,6 +302,31 @@ private[ducktape] object Configuration {
 
       PartialFunction.condOpt(term) {
         case ident: Ident => ident.tpe.asType
+      }
+    }
+  }
+
+  private object AsExpr {
+    def unapply(using Quotes)(term: quotes.reflect.Term): Some[Expr[Any]] = {
+      Some(term.asExpr)
+    }
+  }
+
+  private object RegionalConfig {
+    def unapply(using Quotes)(term: quotes.reflect.Term): Option[(quotes.reflect.Term, Path)] = {
+      import quotes.reflect.*
+      PartialFunction.condOpt(term) {
+        case Apply(
+              TypeApply(
+                Apply(
+                  TypeApply(Select(Ident("Regional"), "regional"), _),
+                  term :: Nil
+                ),
+                _
+              ),
+              PathSelector(path) :: Nil
+            ) =>
+          term -> path
       }
     }
   }

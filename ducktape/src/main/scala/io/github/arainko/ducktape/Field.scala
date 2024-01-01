@@ -26,6 +26,12 @@ object Field {
   @compileTimeOnly("Field.default is only useable as a field configuration for transformations")
   def default[A, B, FieldType](selector: Selector ?=> B => FieldType): Field[A, B] = ???
 
+  @compileTimeOnly("Field.fallbackToNone is only useable as a field configuration for transformations")
+  def fallbackToNone[A, B]: Field[A, B] & Regional = ???
+
+  @compileTimeOnly("Field.fallbackToDefault is only useable as a field configuration for transformations")
+  def fallbackToDefault[A, B]: Field[A, B] & Regional = ???
+
   @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
   def allMatching[A, B, DestFieldTpe, ProductTpe](selector: Selector ?=> B => DestFieldTpe, product: ProductTpe): Field[A, B] =
     ???

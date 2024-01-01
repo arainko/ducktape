@@ -37,19 +37,19 @@ private[ducktape] object PlanInterpreter {
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             NamedArg(fieldName, recurse(plan, fieldValue).asTerm)
         }
-        Constructor(destTpe.repr).appliedToArgs(args.toList).asExpr
+        Constructor(destTpe.tpe.repr).appliedToArgs(args.toList).asExpr
 
       case Plan.BetweenCoproducts(sourceTpe, destTpe, _, _, casePlans) =>
         val branches = casePlans.map { plan =>
-          (plan.sourceTpe -> plan.destTpe) match {
+          (plan.source.tpe -> plan.dest.tpe) match {
             case '[src] -> '[dest] =>
               val sourceValue = '{ $value.asInstanceOf[src] }
-              IfBranch(IsInstanceOf(value, plan.sourceTpe), recurse(plan, sourceValue))
+              IfBranch(IsInstanceOf(value, plan.source.tpe), recurse(plan, sourceValue))
           }
         }.toList
         ifStatement(branches).asExpr
 
-      case Plan.BetweenProductFunction(sourceTpe, destTpe, _, _, argPlans, function) =>
+      case Plan.BetweenProductFunction(sourceTpe, destTpe, _, _, argPlans) =>
         val args = argPlans.map {
           case (fieldName, p: Plan.Configured) =>
             recurse(p, value).asTerm
@@ -57,10 +57,10 @@ private[ducktape] object PlanInterpreter {
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             recurse(plan, fieldValue).asTerm
         }
-        function.appliedTo(args.toList)
+        destTpe.function.appliedTo(args.toList)
 
       case Plan.BetweenOptions(sourceTpe, destTpe, _, _, plan) =>
-        (sourceTpe -> destTpe) match {
+        (sourceTpe.tpe -> destTpe.tpe) match {
           case '[src] -> '[dest] =>
             val optionValue = value.asExprOf[Option[src]]
             def transformation(value: Expr[src])(using Quotes): Expr[dest] = recurse(plan, value).asExprOf[dest]
@@ -68,7 +68,7 @@ private[ducktape] object PlanInterpreter {
         }
 
       case Plan.BetweenNonOptionOption(sourceTpe, destTpe, _, _, plan) =>
-        (sourceTpe -> destTpe) match {
+        (sourceTpe.tpe -> destTpe.tpe) match {
           case '[src] -> '[dest] =>
             val sourceValue = value.asExprOf[src]
             def transformation(value: Expr[src])(using Quotes): Expr[dest] = recurse(plan, value).asExprOf[dest]
@@ -76,7 +76,7 @@ private[ducktape] object PlanInterpreter {
         }
 
       case Plan.BetweenCollections(destCollectionTpe, sourceTpe, destTpe, _, _, plan) =>
-        (destCollectionTpe, sourceTpe, destTpe) match {
+        (destCollectionTpe, sourceTpe.tpe, destTpe.tpe) match {
           case ('[destCollTpe], '[srcElem], '[destElem]) =>
             val sourceValue = value.asExprOf[Iterable[srcElem]]
             // TODO: Make it nicer, move this into Planner since we cannot be sure that a facotry exists
@@ -85,13 +85,13 @@ private[ducktape] object PlanInterpreter {
             '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
         }
 
-      case Plan.BetweenSingletons(sourceTpe, destTpe, _, _, expr) => expr
+      case Plan.BetweenSingletons(sourceTpe, destTpe, _, _) => destTpe.value
 
       case Plan.BetweenWrappedUnwrapped(sourceTpe, destTpe, _, _, fieldName) =>
         value.accessFieldByName(fieldName).asExpr
 
       case Plan.BetweenUnwrappedWrapped(sourceTpe, destTpe, _, _) =>
-        Constructor(destTpe.repr).appliedTo(value.asTerm).asExpr
+        Constructor(destTpe.tpe.repr).appliedTo(value.asTerm).asExpr
 
       case Plan.UserDefined(source, dest, _, _, transformer) =>
         transformer match {

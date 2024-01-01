@@ -10,7 +10,10 @@ private[ducktape] trait Debug[-A] {
   extension (self: A) def show(using Quotes): String 
 }
 
-private[ducktape] object Debug {
+private[ducktape] object Debug extends LowPriorityDebug {
+
+  val nonShowable: Debug[Any] = new:
+    extension (self: Any) def show(using Quotes): String = ""
 
   def show[A](value: A)(using Debug[A], Quotes) = value.show
 
@@ -71,14 +74,7 @@ private[ducktape] object Debug {
     }
   }
 
-  given deferred: Debug[() => Any] with {
-    extension (value: () => Any) def show(using Quotes): String = 
-      s"Deferred(...)"
-  }
-
-  given function: Debug[Nothing => Any] with {
-    extension (self: Nothing => Any) def show(using Quotes): String = s"Function(...)"
-  }
+  given deferred: Debug[() => Any] = Debug.nonShowable
 
   given expr[A]: Debug[Expr[A]] with {
     extension (value: Expr[A]) def show(using Quotes): String = {
@@ -105,7 +101,9 @@ private[ducktape] object Debug {
           .productElementNames
           .zip(instances)
           .zip(prod.productIterator)
-          .map { case label -> debug -> value => s"${label.yellow} ${"=".yellow} ${debug.show(value)}"}
+          .collect { case label -> debug -> value if !(debug eq Debug.nonShowable) => 
+            s"${label.yellow} ${"=".yellow} ${debug.show(value)}"
+          }
           .mkString(s"$tpeName$startParen", ", ", endParen)
       }
     }
@@ -135,4 +133,8 @@ private[ducktape] object Debug {
     private def cyan: String = s"${Console.CYAN}$self${Console.RESET}"
     private def yellow: String = s"${Console.YELLOW}$self${Console.RESET}"
   }
+}
+
+private[ducktape] transparent trait LowPriorityDebug {
+  given Debug[Nothing => Any] = Debug.nonShowable
 }

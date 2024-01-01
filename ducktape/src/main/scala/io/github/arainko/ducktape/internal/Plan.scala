@@ -5,145 +5,144 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.collection.immutable.ListMap
 import scala.quoted.*
+import scala.reflect.TypeTest
 
-private[ducktape] type PlanError = Plan.Error
-
-private[ducktape] enum Plan[+E <: PlanError] {
+private[ducktape] sealed trait Plan[+E <: Plan.Error] {
   import Plan.*
 
-  def sourceTpe: Type[?]
+  def source: Structure
 
-  def destTpe: Type[?]
+  def dest: Structure
 
   def sourceContext: Path
 
   def destContext: Path
 
-  final def configureAll(configs: List[Configuration.At])(using Quotes): Plan.Reconfigured = PlanConfigurer.run(this, configs)
+  final def narrow[A <: Plan[Plan.Error]](using tt: TypeTest[Plan[Plan.Error], A]): Option[A] = tt.unapply(this)
+
+  final def configureAll(configs: List[Configuration.Instruction])(using Quotes): Plan.Reconfigured =
+    PlanConfigurer.run(this, configs)
 
   final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing]] = PlanRefiner.run(this)
+}
 
-  case Upcast(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+private[ducktape] object Plan {
+  case class Upcast(
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path
   ) extends Plan[Nothing]
 
-  case UserDefined(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class UserDefined(
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     transformer: Expr[Transformer[?, ?]]
   ) extends Plan[Nothing]
 
-  case Derived(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class Derived(
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     transformer: Expr[Transformer.Derived[?, ?]]
   ) extends Plan[Nothing]
 
-  case Configured(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class Configured(
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     config: Configuration
   ) extends Plan[Nothing]
 
-  case BetweenProductFunction(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class BetweenProductFunction[+E <: Plan.Error](
+    source: Structure.Product,
+    dest: Structure.Function,
     sourceContext: Path,
     destContext: Path,
-    argPlans: ListMap[String, Plan[E]],
-    function: Function
+    argPlans: ListMap[String, Plan[E]]
   ) extends Plan[E]
 
-  case BetweenUnwrappedWrapped(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class BetweenUnwrappedWrapped(
+    source: Structure,
+    dest: Structure.ValueClass,
     sourceContext: Path,
     destContext: Path
   ) extends Plan[Nothing]
 
-  case BetweenWrappedUnwrapped(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class BetweenWrappedUnwrapped(
+    source: Structure.ValueClass,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     fieldName: String
   ) extends Plan[Nothing]
 
-  case BetweenSingletons(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class BetweenSingletons(
+    source: Structure.Singleton,
+    dest: Structure.Singleton,
     sourceContext: Path,
-    destContext: Path,
-    expr: Expr[Any]
+    destContext: Path
   ) extends Plan[Nothing]
 
-  case BetweenProducts(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class BetweenProducts[+E <: Plan.Error](
+    source: Structure.Product,
+    dest: Structure.Product,
     sourceContext: Path,
     destContext: Path,
     fieldPlans: Map[String, Plan[E]]
   ) extends Plan[E]
 
-  case BetweenCoproducts(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class BetweenCoproducts[+E <: Plan.Error](
+    source: Structure.Coproduct,
+    dest: Structure.Coproduct,
     sourceContext: Path,
     destContext: Path,
     casePlans: Vector[Plan[E]]
   ) extends Plan[E]
 
-  case BetweenOptions(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class BetweenOptions[+E <: Plan.Error](
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     plan: Plan[E]
   ) extends Plan[E]
 
-  case BetweenNonOptionOption(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class BetweenNonOptionOption[+E <: Plan.Error](
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     plan: Plan[E]
   ) extends Plan[E]
 
-  case BetweenCollections(
+  case class BetweenCollections[+E <: Plan.Error](
     destCollectionTpe: Type[? <: Iterable[?]],
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     plan: Plan[E]
   ) extends Plan[E]
 
-  case Error(
-    sourceTpe: Type[?],
-    destTpe: Type[?],
+  case class Error(
+    source: Structure,
+    dest: Structure,
     sourceContext: Path,
     destContext: Path,
     message: ErrorMessage,
     suppressed: Option[Plan.Error]
   ) extends Plan[Plan.Error]
-}
-
-private[ducktape] object Plan {
 
   object Error {
     def from(plan: Plan[Plan.Error], message: ErrorMessage, suppressed: Option[Plan.Error]): Plan.Error =
       Plan.Error(
-        plan.sourceTpe,
-        plan.destTpe,
+        plan.source,
+        plan.dest,
         plan.sourceContext,
         plan.destContext,
         message,
@@ -151,13 +150,22 @@ private[ducktape] object Plan {
       )
   }
 
-  def unapply[E <: Plan.Error](plan: Plan[E]): (Type[?], Type[?]) = (plan.sourceTpe, plan.destTpe)
+  object Configured {
+    def from(plan: Plan[Plan.Error], conf: Configuration): Plan.Configured =
+      Plan.Configured(
+        plan.source,
+        plan.dest,
+        plan.sourceContext,
+        plan.destContext,
+        conf
+      )
+  }
 
-  given debug[E <: Plan.Error]: Debug[Plan[E]] = Debug.derived
+  given debug: Debug[Plan[Plan.Error]] = Debug.derived
 
   final case class Reconfigured(
     errors: List[Plan.Error],
-    successes: List[Configuration.At.Successful],
+    successes: List[(Path, Side)],
     result: Plan[Plan.Error]
   ) derives Debug
 }
