@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
 import io.github.arainko.ducktape.Mode
+import scala.annotation.nowarn
 
 object FalliblePlanInterpreter {
   def run[F[+x], A](
@@ -10,7 +11,7 @@ object FalliblePlanInterpreter {
     mode: Expr[Mode.Accumulating[F]]
   )(using Quotes): Expr[F[Any]] = ???
 
-  private def recurse[F[+x], A: Type](
+  @nowarn private def recurse[F[+x]: Type, A: Type](
     plan: Plan[Nothing],
     value: Expr[Any],
     F: Expr[Mode.Accumulating[F]]
