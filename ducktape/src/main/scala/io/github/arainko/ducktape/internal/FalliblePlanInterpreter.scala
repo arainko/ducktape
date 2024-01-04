@@ -17,17 +17,17 @@ object FalliblePlanInterpreter {
     F: Expr[Mode.Accumulating[F]]
   )(using toplevelValue: Expr[A])(using Quotes): Expr[F[Any]] = {
     plan match {
-      case Plan.Upcast(_, _, _, _) => '{ $F.pure($value) }
+      case Plan.Upcast(_, _) => '{ $F.pure($value) }
 
-      case Plan.Configured(_, _, _, _, config) => ???
+      case Plan.Configured(_, _,  config) => ???
 
-      case Plan.BetweenProducts(source, dest, _, _, fieldPlans) => ???
+      case Plan.BetweenProducts(source, dest, fieldPlans) => ???
 
-      case Plan.BetweenCoproducts(source, dest, _, _, casePlans) => ???
+      case Plan.BetweenCoproducts(source, dest, casePlans) => ???
 
-      case Plan.BetweenProductFunction(source, dest, _, _, argPlans) => ???
+      case Plan.BetweenProductFunction(source, dest, argPlans) => ???
 
-      case Plan.BetweenOptions(source, dest, _, _, plan) =>
+      case Plan.BetweenOptions(source, dest, plan) =>
         (source.paramStruct.tpe, dest.paramStruct.tpe) match {
           case '[src] -> '[dest] =>
             val source = value.asExprOf[Option[src]]
@@ -38,24 +38,24 @@ object FalliblePlanInterpreter {
             }
         }
 
-      case Plan.BetweenNonOptionOption(source, dest, _, _, plan) =>
+      case Plan.BetweenNonOptionOption(source, dest, plan) =>
         source.tpe match {
           case '[src] =>
             val source = value.asExprOf[src]
             '{ $F.map(${ recurse(plan, source, F) }, Some.apply) }
         }
 
-      case Plan.BetweenCollections(source, dest, _, _, plan) => ???
+      case Plan.BetweenCollections(source, dest, plan) => ???
 
-      case Plan.BetweenSingletons(source, dest, _, _) => '{ $F.pure(${ dest.value }) }
+      case Plan.BetweenSingletons(source, dest) => '{ $F.pure(${ dest.value }) }
 
-      case Plan.BetweenWrappedUnwrapped(source, dest, _, _, fieldName) => ???
+      case Plan.BetweenWrappedUnwrapped(source, dest, fieldName) => ???
 
-      case Plan.BetweenUnwrappedWrapped(source, dest, _, _) => ???
+      case Plan.BetweenUnwrappedWrapped(source, dest) => ???
 
-      case Plan.UserDefined(source, dest, _, _, transformer) => ???
+      case Plan.UserDefined(source, dest, transformer) => ???
 
-      case Plan.Derived(source, dest, _, _, transformer) => ???
+      case Plan.Derived(source, dest, transformer) => ???
     }
   }
 }

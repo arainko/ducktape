@@ -54,20 +54,20 @@ object Playground extends App {
   //   case io.github.arainko.ducktape.Plan.Error() =>
   //   case Fallible() =>
 
-  fallible match
-    case Plan2.Upcast() =>
-    case Plan2.Configured() =>
-    case Plan2.FallibleConfigured() =>
-    case Plan2.BetweenProducts(fields) =>
-    case Plan2.Error() =>
-    case Plan2.Fallible() =>
+  // fallible match
+  //   case Plan2.Upcast() =>
+  //   case Plan2.Configured() =>
+  //   case Plan2.FallibleConfigured() =>
+  //   case Plan2.BetweenProducts(fields) =>
+  //   case Plan2.Error() =>
+  //   case Plan2.Fallible() =>
 
-  erroneousNotFallible match
-    case Plan2.Upcast()     =>
-    case Plan2.Configured() =>
-    // case FallibleConfigured() =>
-    case Plan2.BetweenProducts(fields)            =>
-    case Plan2.Error() =>
-    // case Fallible() =>
+  // erroneousNotFallible match
+  //   case Plan2.Upcast()     =>
+  //   case Plan2.Configured() =>
+  //   // case FallibleConfigured() =>
+  //   case Plan2.BetweenProducts(fields)            =>
+  //   case Plan2.Error() =>
+  //   // case Fallible() =>
 
 }
