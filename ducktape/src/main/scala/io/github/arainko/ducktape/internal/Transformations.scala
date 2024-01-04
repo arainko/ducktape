@@ -19,7 +19,7 @@ private[ducktape] object Transformations {
     configs: Expr[Seq[Field[A, B] | Case[A, B]]]
   )(using Quotes): Expr[B] = {
     given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
-    val plan = Planner.between(Structure.of[A], Structure.of[B])
+    val plan = Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])))
     val config = Configuration.parse(configs)
     createTransformation(value, plan, config).asExprOf[B]
   }
@@ -46,7 +46,7 @@ private[ducktape] object Transformations {
   )(using Quotes) = {
     given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
 
-    val sourceStruct = Structure.of[A]
+    val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
 
     val plan =
       Function
@@ -55,9 +55,7 @@ private[ducktape] object Transformations {
         .getOrElse(
           Plan.Error(
             sourceStruct,
-            Structure.of[Any],
-            Path.empty(Type.of[A]),
-            Path.empty(Type.of[Any]),
+            Structure.of[Any](Path.empty(Type.of[Any])),
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
             None
           )
@@ -75,7 +73,7 @@ private[ducktape] object Transformations {
   )(using Quotes) = {
     given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
 
-    val sourceStruct = Structure.of[A]
+    val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
 
     val plan =
       Function
@@ -84,9 +82,7 @@ private[ducktape] object Transformations {
         .getOrElse(
           Plan.Error(
             sourceStruct,
-            Structure.of[Any],
-            Path.empty(Type.of[A]),
-            Path.empty(Type.of[Any]),
+            Structure.of[Any](Path.empty(Type.of[Any])),
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
             None
           )
@@ -119,10 +115,10 @@ private[ducktape] object Transformations {
               ogError.message.side match
                 case Side.Source =>
                   reconfiguredPlan.successes
-                    .exists((path, side) => side == Side.Source && path.isAncestorOrSiblingOf(ogError.sourceContext))
+                    .exists((path, side) => side == Side.Source && path.isAncestorOrSiblingOf(ogError.sourcePath))
                 case Side.Dest =>
                   reconfiguredPlan.successes.exists((path, side) =>
-                    side == Side.Dest && path.isAncestorOrSiblingOf(ogError.destContext)
+                    side == Side.Dest && path.isAncestorOrSiblingOf(ogError.destPath)
                   )
             )
 
@@ -147,8 +143,8 @@ private[ducktape] object Transformations {
       def renderSingle(error: Plan.Error)(using Quotes) = {
         val renderedPath =
           error.message.side match
-            case Side.Source => error.sourceContext.render
-            case Side.Dest   => error.destContext.render
+            case Side.Source => error.sourcePath.render
+            case Side.Dest   => error.destPath.render
 
         s"${error.message.render} @ $renderedPath"
       }

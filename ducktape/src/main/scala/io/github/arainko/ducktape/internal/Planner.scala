@@ -10,14 +10,12 @@ private[ducktape] object Planner {
 
   def between(source: Structure, dest: Structure)(using Quotes, TransformationSite) = {
     given Depth = Depth.zero
-    recurse(source, dest, Path.empty(source.tpe), Path.empty(dest.tpe))
+    recurse(source, dest)
   }
 
   private def recurse(
     source: Structure,
-    dest: Structure,
-    sourceContext: Path,
-    destContext: Path
+    dest: Structure
   )(using quotes: Quotes, depth: Depth, transformationSite: TransformationSite): Plan[Plan.Error] = {
     import quotes.reflect.*
     given Depth = Depth.incremented(using depth)
@@ -25,75 +23,60 @@ private[ducktape] object Planner {
     Logger.loggedDebug(s"Plan @ depth ${Depth.current}"):
       (source.force -> dest.force) match {
         case _ if Depth.current > 64 =>
-          Plan.Error(source, dest, sourceContext, destContext, ErrorMessage.RecursionSuspected, None)
+          Plan.Error(source, dest, ErrorMessage.RecursionSuspected, None)
 
         case (source: Product, dest: Function) =>
-          planProductFunctionTransformation(source, dest, sourceContext, destContext)
+          planProductFunctionTransformation(source, dest)
 
         case UserDefinedTransformation(transformer) =>
-          Plan.UserDefined(source, dest, sourceContext, destContext, transformer)
+          Plan.UserDefined(source, dest, transformer)
 
         case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
-          Plan.Upcast(source, dest, sourceContext, destContext)
+          Plan.Upcast(source, dest)
 
-        case Optional(_, srcParamStruct) -> Optional(_, destParamStruct) =>
-          val updatedSourceContext = sourceContext.appended(Path.Segment.Element(srcParamStruct.tpe))
-          val updatedDestContext = destContext.appended(Path.Segment.Element(destParamStruct.tpe))
-
+        case (source @ Optional(_, _, srcParamStruct)) -> (dest @ Optional(_, _, destParamStruct)) =>
           Plan.BetweenOptions(
-            srcParamStruct,
-            destParamStruct,
-            sourceContext,
-            destContext,
-            recurse(srcParamStruct, destParamStruct, updatedSourceContext, updatedDestContext)
+            source,
+            dest,
+            recurse(srcParamStruct, destParamStruct)
           )
 
-        case struct -> Optional(_, paramStruct) =>
+        case source -> (dest @ Optional(_, _, paramStruct)) =>
           Plan.BetweenNonOptionOption(
-            struct,
-            paramStruct,
-            sourceContext,
-            destContext,
-            recurse(struct, paramStruct, sourceContext, destContext.appended(Path.Segment.Element(paramStruct.tpe)))
+            source,
+            dest,
+            recurse(source, paramStruct)
           )
 
-        case Collection(_, srcParamStruct) -> Collection(destCollTpe, destParamStruct) =>
-          val updatedSourceContext = sourceContext.appended(Path.Segment.Element(srcParamStruct.tpe))
-          val updatedDestContext = destContext.appended(Path.Segment.Element(destParamStruct.tpe))
-
+        case (source @ Collection(_, _, srcParamStruct)) -> (dest @ Collection(_, _, destParamStruct)) =>
           Plan.BetweenCollections(
-            destCollTpe,
-            srcParamStruct,
-            destParamStruct,
-            sourceContext,
-            destContext,
-            recurse(srcParamStruct, destParamStruct, updatedSourceContext, updatedDestContext)
+            source,
+            dest,
+            recurse(srcParamStruct, destParamStruct)
           )
 
         case (source: Product, dest: Product) =>
-          planProductTransformation(source, dest, sourceContext, destContext)
+          planProductTransformation(source, dest)
 
         case (source: Coproduct, dest: Coproduct) =>
-          planCoproductTransformation(source, dest, sourceContext, destContext)
+          planCoproductTransformation(source, dest)
 
         case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
-          Plan.BetweenSingletons(source, dest, sourceContext, destContext)
+          Plan.BetweenSingletons(source, dest)
 
         case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
-          Plan.BetweenWrappedUnwrapped(source, dest, sourceContext, destContext, source.paramFieldName)
+          Plan.BetweenWrappedUnwrapped(source, dest, source.paramFieldName)
 
         case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr =>
-          Plan.BetweenUnwrappedWrapped(source, dest, sourceContext, destContext)
+          Plan.BetweenUnwrappedWrapped(source, dest)
 
         case DerivedTransformation(transformer) =>
-          Plan.Derived(source, dest, sourceContext, destContext, transformer)
+          Plan.Derived(source, dest, transformer)
 
         case (source, dest) =>
           Plan.Error(
             source,
             dest,
-            sourceContext,
-            destContext,
             ErrorMessage.CouldntBuildTransformation(source.tpe, dest.tpe),
             None
           )
@@ -102,91 +85,73 @@ private[ducktape] object Planner {
 
   private def planProductTransformation(
     source: Structure.Product,
-    dest: Structure.Product,
-    sourceContext: Path,
-    destContext: Path
+    dest: Structure.Product
   )(using Quotes, Depth, TransformationSite) = {
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-      val updatedDestContext = destContext.appended(Path.Segment.Field(destFieldStruct.tpe, destField))
       val plan =
         source.fields
           .get(destField)
           .map { sourceStruct =>
-            val updatedSourceContext = sourceContext.appended(Path.Segment.Field(sourceStruct.tpe, destField))
-            recurse(sourceStruct, destFieldStruct, updatedSourceContext, updatedDestContext)
+            recurse(sourceStruct, destFieldStruct)
           }
           .getOrElse(
             Plan.Error(
-              Structure.of[Nothing],
+              Structure.of[Nothing](source.path),
               destFieldStruct,
-              sourceContext, // TODO: Revise
-              updatedDestContext, // TODO: Revise
               ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
               None
             )
           )
       destField -> plan
     }
-    Plan.BetweenProducts(source, dest, sourceContext, destContext, fieldPlans)
+    Plan.BetweenProducts(source, dest, fieldPlans)
   }
 
   private def planProductFunctionTransformation(
     source: Structure.Product,
-    dest: Structure.Function,
-    sourceContext: Path,
-    destContext: Path
+    dest: Structure.Function
   )(using Quotes, Depth, TransformationSite) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
-      val updatedDestContext = destContext.appended(Path.Segment.Field(destFieldStruct.tpe, destField))
       val plan =
         source.fields
           .get(destField)
           .map { sourceStruct =>
-            val updatedSourceContext = sourceContext.appended(Path.Segment.Field(sourceStruct.tpe, destField))
-            recurse(sourceStruct, destFieldStruct, updatedSourceContext, updatedDestContext)
+            recurse(sourceStruct, destFieldStruct)
           }
           .getOrElse(
             Plan.Error(
-              Structure.of[Nothing],
+              Structure.of[Nothing](source.path),
               destFieldStruct,
-              sourceContext, // TODO: Revise
-              updatedDestContext, // TODO: Revise
               ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
               None
             )
           )
       destField -> plan
     }
-    Plan.BetweenProductFunction(source, dest, sourceContext, destContext, argPlans)
+    Plan.BetweenProductFunction(source, dest, argPlans)
   }
 
   private def planCoproductTransformation(
     source: Structure.Coproduct,
-    dest: Structure.Coproduct,
-    sourceContext: Path,
-    destContext: Path
+    dest: Structure.Coproduct
   )(using Quotes, Depth, TransformationSite) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
-      val updatedSourceContext = sourceContext.appended(Path.Segment.Case(sourceCaseStruct.tpe))
 
       dest.children
         .get(sourceName)
         .map { destCaseStruct =>
-          val updatedDestContext = destContext.appended(Path.Segment.Case(destCaseStruct.tpe))
-          recurse(sourceCaseStruct, destCaseStruct, updatedSourceContext, updatedDestContext)
+          recurse(sourceCaseStruct, destCaseStruct)
         }
         .getOrElse(
           Plan.Error(
             sourceCaseStruct,
-            Structure.of[Any],
-            updatedSourceContext, // TODO: Revise
-            destContext, // TODO: Revise
+            Structure.of[Any](dest.path),
             ErrorMessage.NoChildFound(sourceName, dest.tpe),
             None
           )
         )
     }
-    Plan.BetweenCoproducts(source, dest, sourceContext, destContext, casePlans.toVector)
+    Plan.BetweenCoproducts(source, dest, casePlans.toVector)
   }
 
   object UserDefinedTransformation {

@@ -14,9 +14,9 @@ private[ducktape] sealed trait Plan[+E <: Plan.Error] {
 
   def dest: Structure
 
-  def sourceContext: Path
+  final def sourcePath: Path = source.path
 
-  def destContext: Path
+  final def destPath: Path = dest.path
 
   final def narrow[A <: Plan[Plan.Error]](using tt: TypeTest[Plan[Plan.Error], A]): Option[A] = tt.unapply(this)
 
@@ -29,111 +29,82 @@ private[ducktape] sealed trait Plan[+E <: Plan.Error] {
 private[ducktape] object Plan {
   case class Upcast(
     source: Structure,
-    dest: Structure,
-    sourceContext: Path,
-    destContext: Path
+    dest: Structure
   ) extends Plan[Nothing]
 
   case class UserDefined(
     source: Structure,
     dest: Structure,
-    sourceContext: Path,
-    destContext: Path,
     transformer: Expr[Transformer[?, ?]]
   ) extends Plan[Nothing]
 
   case class Derived(
     source: Structure,
     dest: Structure,
-    sourceContext: Path,
-    destContext: Path,
     transformer: Expr[Transformer.Derived[?, ?]]
   ) extends Plan[Nothing]
 
   case class Configured(
     source: Structure,
     dest: Structure,
-    sourceContext: Path,
-    destContext: Path,
     config: Configuration
   ) extends Plan[Nothing]
 
   case class BetweenProductFunction[+E <: Plan.Error](
     source: Structure.Product,
     dest: Structure.Function,
-    sourceContext: Path,
-    destContext: Path,
     argPlans: ListMap[String, Plan[E]]
   ) extends Plan[E]
 
   case class BetweenUnwrappedWrapped(
     source: Structure,
-    dest: Structure.ValueClass,
-    sourceContext: Path,
-    destContext: Path
+    dest: Structure.ValueClass
   ) extends Plan[Nothing]
 
   case class BetweenWrappedUnwrapped(
     source: Structure.ValueClass,
     dest: Structure,
-    sourceContext: Path,
-    destContext: Path,
     fieldName: String
   ) extends Plan[Nothing]
 
   case class BetweenSingletons(
     source: Structure.Singleton,
-    dest: Structure.Singleton,
-    sourceContext: Path,
-    destContext: Path
+    dest: Structure.Singleton
   ) extends Plan[Nothing]
 
   case class BetweenProducts[+E <: Plan.Error](
     source: Structure.Product,
     dest: Structure.Product,
-    sourceContext: Path,
-    destContext: Path,
     fieldPlans: Map[String, Plan[E]]
   ) extends Plan[E]
 
   case class BetweenCoproducts[+E <: Plan.Error](
     source: Structure.Coproduct,
     dest: Structure.Coproduct,
-    sourceContext: Path,
-    destContext: Path,
     casePlans: Vector[Plan[E]]
   ) extends Plan[E]
 
   case class BetweenOptions[+E <: Plan.Error](
-    source: Structure,
-    dest: Structure,
-    sourceContext: Path,
-    destContext: Path,
+    source: Structure.Optional,
+    dest: Structure.Optional,
     plan: Plan[E]
   ) extends Plan[E]
 
   case class BetweenNonOptionOption[+E <: Plan.Error](
     source: Structure,
-    dest: Structure,
-    sourceContext: Path,
-    destContext: Path,
+    dest: Structure.Optional,
     plan: Plan[E]
   ) extends Plan[E]
 
   case class BetweenCollections[+E <: Plan.Error](
-    destCollectionTpe: Type[? <: Iterable[?]],
-    source: Structure,
-    dest: Structure,
-    sourceContext: Path,
-    destContext: Path,
+    source: Structure.Collection,
+    dest: Structure.Collection,
     plan: Plan[E]
   ) extends Plan[E]
 
   case class Error(
     source: Structure,
     dest: Structure,
-    sourceContext: Path,
-    destContext: Path,
     message: ErrorMessage,
     suppressed: Option[Plan.Error]
   ) extends Plan[Plan.Error]
@@ -143,8 +114,6 @@ private[ducktape] object Plan {
       Plan.Error(
         plan.source,
         plan.dest,
-        plan.sourceContext,
-        plan.destContext,
         message,
         suppressed
       )
@@ -155,8 +124,6 @@ private[ducktape] object Plan {
       Plan.Configured(
         plan.source,
         plan.dest,
-        plan.sourceContext,
-        plan.destContext,
         conf
       )
   }
