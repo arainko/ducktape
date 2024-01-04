@@ -12,6 +12,8 @@ import scala.reflect.TypeTest
 private[ducktape] sealed trait Structure derives Debug {
   def tpe: Type[?]
 
+  def path: Path
+
   final def force: Structure =
     this match {
       case lzy: Lazy => lzy.struct.force
@@ -22,7 +24,7 @@ private[ducktape] sealed trait Structure derives Debug {
 }
 
 private[ducktape] object Structure {
-  case class Product(tpe: Type[?], fields: Map[String, Structure]) extends Structure {
+  case class Product(tpe: Type[?], path: Path, fields: Map[String, Structure]) extends Structure {
     private var cachedDefaults: Map[String, Expr[Any]] = null
 
     def defaults(using Quotes): Map[String, Expr[Any]] =
@@ -33,70 +35,74 @@ private[ducktape] object Structure {
       }
   }
 
-  case class Coproduct(tpe: Type[?], children: Map[String, Structure]) extends Structure
+  case class Coproduct(tpe: Type[?], path: Path, children: Map[String, Structure]) extends Structure
 
   case class Function(
     tpe: Type[?],
+    path: Path,
     args: ListMap[String, Structure],
     function: io.github.arainko.ducktape.internal.Function
   ) extends Structure
 
-  case class Optional(tpe: Type[? <: Option[?]], paramStruct: Structure) extends Structure
+  case class Optional(tpe: Type[? <: Option[?]], path: Path, paramStruct: Structure) extends Structure
 
-  case class Collection(tpe: Type[? <: Iterable[?]], paramStruct: Structure) extends Structure
+  case class Collection(tpe: Type[? <: Iterable[?]], path: Path, paramStruct: Structure) extends Structure
 
-  case class Singleton(tpe: Type[?], name: String, value: Expr[Any]) extends Structure
+  case class Singleton(tpe: Type[?], path: Path, name: String, value: Expr[Any]) extends Structure
 
-  case class Ordinary(tpe: Type[?]) extends Structure
+  case class Ordinary(tpe: Type[?], path: Path) extends Structure
 
-  case class ValueClass(tpe: Type[? <: AnyVal], paramTpe: Type[?], paramFieldName: String) extends Structure
+  case class ValueClass(tpe: Type[? <: AnyVal], path: Path, paramTpe: Type[?], paramFieldName: String) extends Structure
 
-  case class Lazy private (tpe: Type[?], private val deferredStruct: () => Structure) extends Structure {
+  case class Lazy private (tpe: Type[?], path: Path, private val deferredStruct: () => Structure) extends Structure {
     lazy val struct: Structure = deferredStruct()
   }
 
   object Lazy {
-    def of[A: Type](using Quotes): Lazy = Lazy(Type.of[A], () => Structure.of[A])
+    def of[A: Type](path: Path)(using Quotes): Lazy = Lazy(Type.of[A], path, () => Structure.of[A](path))
   }
 
   def fromFunction(function: io.github.arainko.ducktape.internal.Function)(using Quotes): Structure.Function = {
     import quotes.reflect.*
+    val path = Path.empty(function.returnTpe)
 
     val args =
-      function.args.transform((name, tpe) => tpe match { case '[argTpe] => Lazy.of[argTpe] })
+      function.args.transform((name, tpe) =>
+        tpe match { case '[argTpe] => Lazy.of[argTpe](path.appended(Path.Segment.Field(tpe, name))) }
+      )
 
-    Structure.Function(function.returnTpe, args, function)
+    Structure.Function(function.returnTpe, path, args, function)
   }
 
-  def fromTypeRepr(using Quotes)(repr: quotes.reflect.TypeRepr): Structure =
+  def fromTypeRepr(using Quotes)(repr: quotes.reflect.TypeRepr, path: Path): Structure =
     repr.widen.asType match {
-      case '[tpe] => Structure.of[tpe]
+      case '[tpe] => Structure.of[tpe](path)
     }
 
-  def of[A: Type](using Quotes): Structure = {
+  def of[A: Type](path: Path)(using Quotes): Structure = {
     import quotes.reflect.*
 
     Logger.loggedInfo("Structure"):
       Type.of[A] match {
         case tpe @ '[Nothing] =>
-          Structure.Ordinary(tpe)
+          Structure.Ordinary(tpe, path)
 
         case tpe @ '[Option[param]] =>
-          Structure.Optional(tpe, Structure.of[param])
+          Structure.Optional(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))
 
         case tpe @ '[Iterable[param]] =>
-          Structure.Collection(tpe, Structure.of[param])
+          Structure.Collection(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))
 
         case tpe @ '[AnyVal] if tpe.repr.typeSymbol.flags.is(Flags.Case) =>
           val repr = tpe.repr
           val param = repr.typeSymbol.caseFields.head
           val paramTpe = repr.memberType(param)
-          Structure.ValueClass(tpe, paramTpe.asType, param.name)
+          Structure.ValueClass(tpe, path, paramTpe.asType, param.name)
 
         case _ =>
           Expr.summon[Mirror.Of[A]] match {
             case None =>
-              Structure.Ordinary(Type.of[A])
+              Structure.Ordinary(Type.of[A], path)
 
             case Some(value) =>
               value match {
@@ -107,7 +113,7 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val value = materializeSingleton[A]
-                  Structure.Singleton(Type.of[A], constantString[label], value.asExpr)
+                  Structure.Singleton(Type.of[A], path, constantString[label], value.asExpr)
                 case '{
                       type label <: String
                       $m: Mirror.SingletonProxy {
@@ -115,7 +121,7 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val value = materializeSingleton[A]
-                  Structure.Singleton(Type.of[A], constantString[label], value.asExpr)
+                  Structure.Singleton(Type.of[A], path, constantString[label], value.asExpr)
                 case '{
                       $m: Mirror.Product {
                         type MirroredElemLabels = labels
@@ -123,20 +129,30 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val structures =
-                    tupleTypeElements(TypeRepr.of[types]).map(tpe => tpe.asType match { case '[tpe] => Lazy.of[tpe] })
-                  val names = constStringTuple(TypeRepr.of[labels])
-                  Structure.Product(Type.of[A], names.zip(structures).toMap)
+                    tupleTypeElements(TypeRepr.of[types])
+                      .zip(constStringTuple(TypeRepr.of[labels]))
+                      .map((tpe, name) =>
+                        name -> (tpe.asType match {
+                          case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], name)))
+                        })
+                      )
+                      .toMap
+                  Structure.Product(Type.of[A], path, structures)
                 case '{
                       $m: Mirror.Sum {
                         type MirroredElemLabels = labels
                         type MirroredElemTypes = types
                       }
                     } =>
-                  val names = constStringTuple(TypeRepr.of[labels])
                   val structures =
-                    tupleTypeElements(TypeRepr.of[types]).map(tpe => tpe.asType match { case '[tpe] => Lazy.of[tpe] })
+                    tupleTypeElements(TypeRepr.of[types])
+                      .zip(constStringTuple(TypeRepr.of[labels]))
+                      .map((tpe, name) =>
+                        name -> (tpe.asType match { case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Case(Type.of[tpe]))) })
+                      )
+                      .toMap
 
-                  Structure.Coproduct(Type.of[A], names.zip(structures).toMap)
+                  Structure.Coproduct(Type.of[A], path, structures)
               }
           }
       }

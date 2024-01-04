@@ -32,8 +32,8 @@ private[ducktape] object Configuration {
     val substituteWithDefaults = new ErrorModifier:
       def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type =
         PartialFunction
-          .condOpt(parent -> plan.destContext.segments.lastOption) {
-            case (Plan.BetweenProducts(_, dest, _, _, _), Some(Path.Segment.Field(_, fieldName))) =>
+          .condOpt(parent -> plan.destPath.segments.lastOption) {
+            case (Plan.BetweenProducts(_, dest, _), Some(Path.Segment.Field(_, fieldName))) =>
               import quotes.reflect.*
 
               dest.defaults
@@ -228,7 +228,7 @@ private[ducktape] object Configuration {
   ) = {
 
     Structure
-      .fromTypeRepr(fieldSourceTpe)
+      .fromTypeRepr(fieldSourceTpe, Path.empty(fieldSourceTpe.asType))
       .narrow[Structure.Product]
       .map { sourceStruct =>
         val modifier = new FieldModifier:

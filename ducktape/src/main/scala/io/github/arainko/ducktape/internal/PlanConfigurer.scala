@@ -22,7 +22,7 @@ private[ducktape] object PlanConfigurer {
         segments match {
           case (segment @ Path.Segment.Field(_, fieldName)) :: tail =>
             current match {
-              case plan @ BetweenProducts(sourceTpe, destTpe, sourceContext, destContext, fieldPlans) =>
+              case plan @ BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
                 val fieldPlan =
                   fieldPlans
                     .get(fieldName)
@@ -31,7 +31,7 @@ private[ducktape] object PlanConfigurer {
 
                 plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
 
-              case plan @ BetweenProductFunction(sourceTpe, destTpe, sourceContext, destContext, argPlans) =>
+              case plan @ BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
                 val argPlan =
                   argPlans
                     .get(fieldName)
@@ -49,7 +49,7 @@ private[ducktape] object PlanConfigurer {
               case plan: BetweenNonOptionOption[Plan.Error] if config.side.isSource =>
                 plan.copy(plan = recurse(plan.plan, segments, plan))
 
-              case plan @ BetweenCoproducts(sourceTpe, destTpe, sourceContext, destContext, casePlans) =>
+              case plan @ BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
                 def sideTpe(plan: Plan[Plan.Error]) = if (config.side.isSource) plan.source.tpe.repr else plan.dest.tpe.repr
 
                 casePlans.zipWithIndex
@@ -62,13 +62,13 @@ private[ducktape] object PlanConfigurer {
 
           case (segment @ Path.Segment.Element(tpe)) :: tail =>
             current match {
-              case p @ BetweenCollections(_, _, _, _, _, plan) =>
+              case p @ BetweenCollections(_, _, plan) =>
                 p.copy(plan = recurse(plan, tail, p))
 
-              case p @ BetweenOptions(_, _, _, _, plan) =>
+              case p @ BetweenOptions(_, _, plan) =>
                 p.copy(plan = recurse(plan, tail, p))
 
-              case p @ BetweenNonOptionOption(_, _, _, _, plan) =>
+              case p @ BetweenNonOptionOption(_, _, plan) =>
                 p.copy(plan = recurse(plan, tail, p))
 
               case other => invalidPathSegment(config, other, segment)
@@ -242,12 +242,12 @@ private[ducktape] object PlanConfigurer {
       config: Configuration
     )(using quotes: Quotes, errors: Accumulator[Plan.Error], successes: Accumulator[(Path, Side)]) = {
       def isReplaceableBy(update: Configuration)(using Quotes) =
-        update.tpe.repr <:< currentPlan.destContext.currentTpe.repr
+        update.tpe.repr <:< currentPlan.destPath.currentTpe.repr
 
       if isReplaceableBy(config) then
         Accumulator.append {
-          if instruction.side == Side.Dest then currentPlan.destContext -> instruction.side
-          else currentPlan.sourceContext -> instruction.side
+          if instruction.side == Side.Dest then currentPlan.destPath -> instruction.side
+          else currentPlan.sourcePath -> instruction.side
         }
         Plan.Configured.from(currentPlan, config)
       else
@@ -256,7 +256,7 @@ private[ducktape] object PlanConfigurer {
             currentPlan,
             ErrorMessage.InvalidConfiguration(
               config.tpe,
-              currentPlan.destContext.currentTpe,
+              currentPlan.destPath.currentTpe,
               instruction.side,
               instruction.span
             ),
