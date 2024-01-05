@@ -3,10 +3,10 @@ package io.github.arainko.ducktape.internal
 import scala.annotation.tailrec
 
 private[ducktape] object PlanRefiner {
-  def run(plan: Plan[Plan.Error]): Either[NonEmptyList[Plan.Error], Plan[Nothing]] = {
+  def run[F <: Fallible](plan: Plan[Plan.Error, F]): Either[NonEmptyList[Plan.Error], Plan[Nothing, F]] = {
 
     @tailrec
-    def recurse(stack: List[Plan[Plan.Error]], errors: List[Plan.Error]): List[Plan.Error] =
+    def recurse(stack: List[Plan[Plan.Error, F]], errors: List[Plan.Error]): List[Plan.Error] =
       stack match {
         case head :: next =>
           head match {
@@ -23,7 +23,7 @@ private[ducktape] object PlanRefiner {
             case plan: Plan.BetweenSingletons            => recurse(next, errors)
             case plan: Plan.UserDefined                  => recurse(next, errors)
             case plan: Plan.Derived                      => recurse(next, errors)
-            case plan: Plan.Configured                   => recurse(next, errors)
+            case plan: Plan.Configured[F]                => recurse(next, errors)
             case plan: Plan.BetweenWrappedUnwrapped      => recurse(next, errors)
             case plan: Plan.BetweenUnwrappedWrapped      => recurse(next, errors)
             case error: Plan.Error                       => recurse(next, error :: errors)
@@ -32,6 +32,6 @@ private[ducktape] object PlanRefiner {
       }
     val errors = recurse(plan :: Nil, Nil)
     // if no errors were accumulated that means there are no Plan.Error nodes which means we operate on a Plan[Nothing]
-    NonEmptyList.fromList(errors).toLeft(plan.asInstanceOf[Plan[Nothing]])
+    NonEmptyList.fromList(errors).toLeft(plan.asInstanceOf[Plan[Nothing, F]])
   }
 }

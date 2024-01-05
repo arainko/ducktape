@@ -4,33 +4,41 @@ import io.github.arainko.ducktape.*
 
 import scala.quoted.*
 
-private[ducktape] enum Configuration derives Debug {
+private[ducktape] enum Configuration[+F <: Fallible] {
   def tpe: Type[?]
 
-  case Const(value: Expr[Any], tpe: Type[?])
-  case CaseComputed(tpe: Type[?], function: Expr[Any => Any])
-  case FieldComputed(tpe: Type[?], function: Expr[Any => Any])
-  case FieldReplacement(source: Expr[Any], name: String, tpe: Type[?])
+  case Const(value: Expr[Any], tpe: Type[?]) extends Configuration[Nothing]
+  case CaseComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Nothing]
+  case FieldComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Nothing]
+  case FieldReplacement(source: Expr[Any], name: String, tpe: Type[?]) extends Configuration[Nothing]
+  case FallibleConst(value: Expr[Any], tpe: Type[?]) extends Configuration[Fallible]
+  case FallibleComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Fallible]
 }
 
 private[ducktape] object Configuration {
 
+  given debug: Debug[Configuration[Fallible]] = Debug.derived
+
   trait ErrorModifier {
-    def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type
+    def apply(parent: Plan[Plan.Error, Fallible] | None.type, plan: Plan.Error)(using Quotes): Configuration[Nothing] | plan.type
   }
 
   object ErrorModifier {
     given Debug[ErrorModifier] = Debug.nonShowable
 
     val substituteOptionsWithNone = new ErrorModifier:
-      def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type =
+      def apply(parent: Plan[Plan.Error, Fallible] | None.type, plan: Plan.Error)(using
+        Quotes
+      ): Configuration[Nothing] | plan.type =
         plan.dest.tpe match {
           case tpe @ '[Option[a]] => Configuration.Const('{ None }, tpe)
           case _                  => plan
         }
 
     val substituteWithDefaults = new ErrorModifier:
-      def apply(parent: Plan[Plan.Error] | None.type, plan: Plan.Error)(using Quotes): Configuration | plan.type =
+      def apply(parent: Plan[Plan.Error, Fallible] | None.type, plan: Plan.Error)(using
+        Quotes
+      ): Configuration[Nothing] | plan.type =
         PartialFunction
           .condOpt(parent -> plan.destPath.segments.lastOption) {
             case (Plan.BetweenProducts(_, dest, _), Some(Path.Segment.Field(_, fieldName))) =>
@@ -46,47 +54,54 @@ private[ducktape] object Configuration {
 
   trait FieldModifier {
     def apply(
-      parent: Plan.BetweenProductFunction[Plan.Error] | Plan.BetweenProducts[Plan.Error],
+      parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible],
       field: String,
-      plan: Plan[Plan.Error]
-    )(using Quotes): Configuration | plan.type
+      plan: Plan[Plan.Error, Fallible]
+    )(using Quotes): Configuration[Nothing] | plan.type
   }
 
   object FieldModifier {
     given Debug[FieldModifier] = Debug.nonShowable
   }
 
-  enum Instruction derives Debug {
+  enum Instruction[+F <: Fallible] {
     def path: Path
     def side: Side
     def span: Span
 
-    case Static(path: Path, side: Side, config: Configuration, span: Span)
+    case Static(path: Path, side: Side, config: Configuration[F], span: Span) extends Instruction[F]
 
-    case Dynamic(path: Path, side: Side, config: Plan[Plan.Error] | None.type => Either[String, Configuration], span: Span)
+    case Dynamic(
+      path: Path,
+      side: Side,
+      config: Plan[Plan.Error, Fallible] | None.type => Either[String, Configuration[F]],
+      span: Span
+    ) extends Instruction[F]
 
     case Bulk(
       path: Path,
       side: Side,
       modifier: FieldModifier,
       span: Span
-    )
+    ) extends Instruction[Nothing]
 
-    case Regional(path: Path, side: Side, modifier: ErrorModifier, span: Span)
+    case Regional(path: Path, side: Side, modifier: ErrorModifier, span: Span) extends Instruction[Nothing]
 
-    case Failed(path: Path, side: Side, message: String, span: Span)
+    case Failed(path: Path, side: Side, message: String, span: Span) extends Instruction[Nothing]
   }
 
   object Instruction {
+    given debug: Debug[Instruction[Fallible]] = Debug.derived
+
     object Failed {
-      def from(instruction: Instruction, message: String): Instruction.Failed =
+      def from(instruction: Instruction[Fallible], message: String): Instruction.Failed =
         Failed(instruction.path, instruction.side, message, instruction.span)
     }
   }
 
   def parse[A: Type, B: Type](
     configs: Expr[Seq[Field[A, B] | Case[A, B]]]
-  )(using Quotes): List[Instruction] = {
+  )(using Quotes): List[Instruction[Nothing]] = {
     import quotes.reflect.*
 
     Varargs
@@ -110,7 +125,7 @@ private[ducktape] object Configuration {
               TypeApply(Select(IdentOfType('[Field.type]), "default"), a :: b :: destFieldTpe :: Nil),
               PathSelector(path) :: Nil
             ) =>
-          def default(parent: Plan[Plan.Error] | None.type) =
+          def default(parent: Plan[Plan.Error, Fallible] | None.type) =
             for {
               selectedField <-
                 path.segments.lastOption
@@ -118,7 +133,7 @@ private[ducktape] object Configuration {
                   .toRight("Selected path's length should be at least 1")
               defaults <-
                 PartialFunction
-                  .condOpt(parent) { case parent: Plan.BetweenProducts[Plan.Error] => parent.dest.defaults }
+                  .condOpt(parent) { case parent: Plan.BetweenProducts[Plan.Error, Fallible] => parent.dest.defaults }
                   .toRight("Selected field's parent is not a product")
               defaultValue <-
                 defaults
@@ -233,10 +248,10 @@ private[ducktape] object Configuration {
       .map { sourceStruct =>
         val modifier = new FieldModifier:
           def apply(
-            parent: Plan.BetweenProductFunction[Plan.Error] | Plan.BetweenProducts[Plan.Error],
+            parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible],
             field: String,
-            plan: Plan[Plan.Error]
-          )(using Quotes): Configuration | plan.type =
+            plan: Plan[Plan.Error, Fallible]
+          )(using Quotes): Configuration[Nothing] | plan.type =
             sourceStruct.fields.get(field).match {
               case Some(struct) if struct.tpe.repr <:< plan.dest.tpe.repr =>
                 Configuration.FieldReplacement(sourceExpr, field, struct.tpe)

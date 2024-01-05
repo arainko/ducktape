@@ -16,7 +16,7 @@ private[ducktape] object Planner {
   private def recurse(
     source: Structure,
     dest: Structure
-  )(using quotes: Quotes, depth: Depth, transformationSite: TransformationSite): Plan[Plan.Error] = {
+  )(using quotes: Quotes, depth: Depth, transformationSite: TransformationSite): Plan[Plan.Error, Nothing] = {
     import quotes.reflect.*
     given Depth = Depth.incremented(using depth)
 

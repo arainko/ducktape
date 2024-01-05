@@ -23,10 +23,10 @@ private[ducktape] sealed trait Plan[+E <: Plan.Error, +F <: Fallible] {
 
   final def narrow[A <: Plan[Plan.Error, Fallible]](using tt: TypeTest[Plan[Plan.Error, Fallible], A]): Option[A] = tt.unapply(this)
 
-  final def configureAll(configs: List[Configuration.Instruction])(using Quotes): Plan.Reconfigured =
+  final def configureAll[FF >: F <: Fallible](configs: List[Configuration.Instruction[FF]])(using Quotes): Plan.Reconfigured[FF] =
     PlanConfigurer.run(this, configs)
 
-  final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing, Nothing]] = PlanRefiner.run(this)
+  final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing, F]] = PlanRefiner.run(this)
 }
 
 private[ducktape] object Plan {
@@ -47,11 +47,11 @@ private[ducktape] object Plan {
     transformer: Expr[Transformer.Derived[?, ?]]
   ) extends Plan[Nothing, Nothing]
 
-  case class Configured(
+  case class Configured[+F <: Fallible](
     source: Structure,
     dest: Structure,
-    config: Configuration
-  ) extends Plan[Nothing, Nothing]
+    config: Configuration[F]
+  ) extends Plan[Nothing, F]
 
   case class BetweenProductFunction[+E <: Plan.Error, +F <: Fallible](
     source: Structure.Product,
@@ -123,7 +123,7 @@ private[ducktape] object Plan {
   }
 
   object Configured {
-    def from(plan: Plan[Plan.Error, Fallible], conf: Configuration): Plan.Configured =
+    def from[F <: Fallible](plan: Plan[Plan.Error, F], conf: Configuration[F]): Plan.Configured[F] =
       Plan.Configured(
         plan.source,
         plan.dest,
@@ -133,9 +133,13 @@ private[ducktape] object Plan {
 
   given debug: Debug[Plan[Plan.Error, Fallible]] = Debug.derived
 
-  final case class Reconfigured(
+  final case class Reconfigured[+F <: Fallible](
     errors: List[Plan.Error],
     successes: List[(Path, Side)],
-    result: Plan[Plan.Error, Nothing]
-  ) derives Debug
+    result: Plan[Plan.Error, F]
+  )
+
+  object Reconfigured {
+    given debug: Debug[Reconfigured[Fallible]] = Debug.derived
+  }
 }

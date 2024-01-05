@@ -94,8 +94,8 @@ private[ducktape] object Transformations {
 
   private def createTransformation[A: Type](
     value: Expr[A],
-    plan: Plan[Plan.Error],
-    configs: List[Configuration.Instruction]
+    plan: Plan[Plan.Error, Nothing],
+    configs: List[Configuration.Instruction[Nothing]]
   )(using Quotes) = {
     import quotes.reflect.*
 
