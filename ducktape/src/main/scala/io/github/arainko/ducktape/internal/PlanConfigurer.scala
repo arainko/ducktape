@@ -156,9 +156,9 @@ private[ducktape] object PlanConfigurer {
     plan match {
       case plan: Upcast => plan
 
-      case plan: UserDefined => plan
+      case plan: UserDefined[F] => plan
 
-      case plan: Derived => plan
+      case plan: Derived[F] => plan
 
       case plan: Configured[F] => plan
 

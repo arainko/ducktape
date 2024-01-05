@@ -35,17 +35,17 @@ private[ducktape] object Plan {
     dest: Structure
   ) extends Plan[Nothing, Nothing]
 
-  case class UserDefined(
+  case class UserDefined[+F <: Fallible](
     source: Structure,
     dest: Structure,
-    transformer: Expr[Transformer[?, ?]]
-  ) extends Plan[Nothing, Nothing]
+    transformer: Summoner.UserDefined[F]
+  ) extends Plan[Nothing, F]
 
-  case class Derived(
+  case class Derived[+F <: Fallible](
     source: Structure,
     dest: Structure,
-    transformer: Expr[Transformer.Derived[?, ?]]
-  ) extends Plan[Nothing, Nothing]
+    transformer: Summoner.Derived[F]
+  ) extends Plan[Nothing, F]
 
   case class Configured[+F <: Fallible](
     source: Structure,

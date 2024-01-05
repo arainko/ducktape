@@ -11,7 +11,9 @@ private[ducktape] object PlanInterpreter {
   def run[A: Type](plan: Plan[Nothing, Nothing], sourceValue: Expr[A])(using Quotes): Expr[Any] =
     recurse(plan, sourceValue)(using sourceValue)
 
-  private def recurse[A: Type](plan: Plan[Nothing, Nothing], value: Expr[Any])(using toplevelValue: Expr[A])(using Quotes): Expr[Any] = {
+  private def recurse[A: Type](plan: Plan[Nothing, Nothing], value: Expr[Any])(using
+    toplevelValue: Expr[A]
+  )(using Quotes): Expr[Any] = {
     import quotes.reflect.*
 
     plan match {
@@ -95,16 +97,22 @@ private[ducktape] object PlanInterpreter {
 
       case Plan.UserDefined(source, dest, transformer) =>
         transformer match {
-          case '{ $t: Transformer[src, dest] } =>
-            val sourceValue = value.asExprOf[src]
-            '{ $t.transform($sourceValue) }
+          case Summoner.UserDefined.TotalTransformer(transformer) =>
+            transformer match {
+              case '{ $t: Transformer[src, dest] } =>
+                val sourceValue = value.asExprOf[src]
+                '{ $t.transform($sourceValue) }
+            }
         }
 
       case Plan.Derived(source, dest, transformer) =>
         transformer match {
-          case '{ $t: Transformer.Derived[src, dest] } =>
-            val sourceValue = value.asExprOf[src]
-            '{ $t.transform($sourceValue) }
+          case Summoner.Derived.TotalTransformer(transformer) =>
+            transformer match {
+              case '{ $t: Transformer.Derived[src, dest] } =>
+                val sourceValue = value.asExprOf[src]
+                '{ $t.transform($sourceValue) }
+            }
         }
     }
   }

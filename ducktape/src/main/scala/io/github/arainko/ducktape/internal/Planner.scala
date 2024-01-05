@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
@@ -8,15 +7,15 @@ import scala.quoted.*
 private[ducktape] object Planner {
   import Structure.*
 
-  def between(source: Structure, dest: Structure)(using Quotes, TransformationSite) = {
+  def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, TransformationSite, Summoner[F]) = {
     given Depth = Depth.zero
     recurse(source, dest)
   }
 
-  private def recurse(
+  private def recurse[F <: Fallible](
     source: Structure,
     dest: Structure
-  )(using quotes: Quotes, depth: Depth, transformationSite: TransformationSite): Plan[Plan.Error, Nothing] = {
+  )(using quotes: Quotes, depth: Depth, transformationSite: TransformationSite, summoner: Summoner[F]): Plan[Plan.Error, F] = {
     import quotes.reflect.*
     given Depth = Depth.incremented(using depth)
 
@@ -83,10 +82,10 @@ private[ducktape] object Planner {
       }
   }
 
-  private def planProductTransformation(
+  private def planProductTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product
-  )(using Quotes, Depth, TransformationSite) = {
+  )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
       val plan =
         source.fields
@@ -107,10 +106,10 @@ private[ducktape] object Planner {
     Plan.BetweenProducts(source, dest, fieldPlans)
   }
 
-  private def planProductFunctionTransformation(
+  private def planProductFunctionTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function
-  )(using Quotes, Depth, TransformationSite) = {
+  )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
       val plan =
         source.fields
@@ -131,10 +130,10 @@ private[ducktape] object Planner {
     Plan.BetweenProductFunction(source, dest, argPlans)
   }
 
-  private def planCoproductTransformation(
+  private def planCoproductTransformation[F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct
-  )(using Quotes, Depth, TransformationSite) = {
+  )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
 
       dest.children
@@ -155,12 +154,12 @@ private[ducktape] object Planner {
   }
 
   object UserDefinedTransformation {
-    def unapply(structs: (Structure, Structure))(using Quotes, Depth, TransformationSite): Option[Expr[Transformer[?, ?]]] = {
+    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Depth, TransformationSite, Summoner[F]) = {
       val (src, dest) = structs
 
       def summonTransformer =
         (src.tpe -> dest.tpe) match {
-          case '[src] -> '[dest] => Expr.summon[Transformer[src, dest]]
+          case '[src] -> '[dest] => Summoner[F].summonUserDefined[src, dest]
         }
 
       // if current depth is lower or equal to 1 then that means we're most likely referring to ourselves
@@ -173,11 +172,11 @@ private[ducktape] object Planner {
   }
 
   object DerivedTransformation {
-    def unapply(structs: (Structure, Structure))(using Quotes): Option[Expr[Transformer.Derived[?, ?]]] = {
+    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Summoner[F]) = {
       val (src, dest) = structs
 
       (src.tpe -> dest.tpe) match {
-        case '[src] -> '[dest] => Expr.summon[Transformer.Derived[src, dest]]
+        case '[src] -> '[dest] => Summoner[F].summonDerived[src, dest]
       }
     }
   }
