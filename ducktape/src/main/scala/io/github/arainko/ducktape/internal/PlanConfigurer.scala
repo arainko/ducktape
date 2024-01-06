@@ -190,7 +190,7 @@ private[ducktape] object PlanConfigurer {
         // TODO: Detect when a regional config doesn't do anything and emit an error
         modifier.modifier(parent, plan) match {
           case config: Configuration[F] => plan.configureIfValid(modifier, config)
-          case other: plan.type      => other
+          case other: plan.type         => other
         }
     }
 
@@ -239,28 +239,6 @@ private[ducktape] object PlanConfigurer {
         },
         identity
       )
-
-    // current
-    //   .narrow[Plan.BetweenProductFunction[Plan.Error, F] | Plan.BetweenProducts[Plan.Error, F]]
-    //   .toRight("This config only works when sideing a function-to-product or a product-to-product transformations")
-    //   .map {
-    //     case func: Plan.BetweenProductFunction[Plan.Error, F] =>
-    //       val updatedArgPlans = func.argPlans.transform(updatePlan(func))
-    //       func.copy(argPlans = updatedArgPlans)
-    //     case prod: Plan.BetweenProducts[Plan.Error, F] =>
-    //       val updatedFieldPlans = prod.fieldPlans.transform(updatePlan(prod))
-    //       prod.copy(fieldPlans = updatedFieldPlans)
-    //   }
-    //   .filterOrElse(_ => isAnythingModified == IsAnythingModified.Yes, "Config option is not doing anything")
-    //   .fold(
-    //     errorMessage => {
-    //       val failed = Configuration.Instruction.Failed.from(instruction, errorMessage)
-    //       Accumulator.append {
-    //         Plan.Error.from(current, ErrorMessage.ConfigurationFailed(failed), None)
-    //       }
-    //     },
-    //     identity
-    //   )
   }
 
   extension [F <: Fallible](currentPlan: Plan[Plan.Error, F]) {

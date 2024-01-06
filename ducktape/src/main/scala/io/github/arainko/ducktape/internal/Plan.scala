@@ -21,7 +21,8 @@ private[ducktape] sealed trait Plan[+E <: Plan.Error, +F <: Fallible] {
 
   final def destPath: Path = dest.path
 
-  final def narrow[A <: Plan[Plan.Error, Fallible]](using tt: TypeTest[Plan[Plan.Error, Fallible], A]): Option[A] = tt.unapply(this)
+  final def narrow[A <: Plan[Plan.Error, Fallible]](using tt: TypeTest[Plan[Plan.Error, Fallible], A]): Option[A] =
+    tt.unapply(this)
 
   final def configureAll[FF >: F <: Fallible](configs: List[Configuration.Instruction[FF]])(using Quotes): Plan.Reconfigured[FF] =
     PlanConfigurer.run(this, configs)
@@ -81,7 +82,7 @@ private[ducktape] object Plan {
     fieldPlans: Map[String, Plan[E, F]]
   ) extends Plan[E, F]
 
-  case class BetweenCoproducts[+E <: Plan.Error,  +F <: Fallible](
+  case class BetweenCoproducts[+E <: Plan.Error, +F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct,
     casePlans: Vector[Plan[E, F]]
