@@ -8,10 +8,12 @@ import scala.quoted.*
 
 private[ducktape] object PlanInterpreter {
 
-  def run[A: Type](plan: Plan[Nothing], sourceValue: Expr[A])(using Quotes): Expr[Any] =
+  def run[A: Type](plan: Plan[Nothing, Nothing], sourceValue: Expr[A])(using Quotes): Expr[Any] =
     recurse(plan, sourceValue)(using sourceValue)
 
-  private def recurse[A: Type](plan: Plan[Nothing], value: Expr[Any])(using toplevelValue: Expr[A])(using Quotes): Expr[Any] = {
+  private def recurse[A: Type](plan: Plan[Nothing, Nothing], value: Expr[Any])(using
+    toplevelValue: Expr[A]
+  )(using Quotes): Expr[Any] = {
     import quotes.reflect.*
 
     plan match {
@@ -31,7 +33,7 @@ private[ducktape] object PlanInterpreter {
 
       case Plan.BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
         val args = fieldPlans.map {
-          case (fieldName, p: Plan.Configured) =>
+          case (fieldName, p: Plan.Configured[Nothing]) =>
             NamedArg(fieldName, recurse(p, value).asTerm)
           case (fieldName, plan) =>
             val fieldValue = value.accessFieldByName(fieldName).asExpr
@@ -51,7 +53,7 @@ private[ducktape] object PlanInterpreter {
 
       case Plan.BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
         val args = argPlans.map {
-          case (fieldName, p: Plan.Configured) =>
+          case (fieldName, p: Plan.Configured[Nothing]) =>
             recurse(p, value).asTerm
           case (fieldName, plan) =>
             val fieldValue = value.accessFieldByName(fieldName).asExpr
@@ -95,16 +97,22 @@ private[ducktape] object PlanInterpreter {
 
       case Plan.UserDefined(source, dest, transformer) =>
         transformer match {
-          case '{ $t: Transformer[src, dest] } =>
-            val sourceValue = value.asExprOf[src]
-            '{ $t.transform($sourceValue) }
+          case Summoner.UserDefined.TotalTransformer(transformer) =>
+            transformer match {
+              case '{ $t: Transformer[src, dest] } =>
+                val sourceValue = value.asExprOf[src]
+                '{ $t.transform($sourceValue) }
+            }
         }
 
       case Plan.Derived(source, dest, transformer) =>
         transformer match {
-          case '{ $t: Transformer.Derived[src, dest] } =>
-            val sourceValue = value.asExprOf[src]
-            '{ $t.transform($sourceValue) }
+          case Summoner.Derived.TotalTransformer(transformer) =>
+            transformer match {
+              case '{ $t: Transformer.Derived[src, dest] } =>
+                val sourceValue = value.asExprOf[src]
+                '{ $t.transform($sourceValue) }
+            }
         }
     }
   }
