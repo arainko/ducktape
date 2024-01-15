@@ -64,6 +64,18 @@ lazy val docs =
     )
     .dependsOn(ducktape.jvm)
 
+lazy val blogpost =
+  project
+    .in(file("blogpost"))
+    .enablePlugins(NoPublishPlugin, MdocPlugin)
+    .disablePlugins(MimaPlugin)
+    .settings(
+      mdocIn := file("blogpost/blogpost.md"),
+      mdocOut := file("blogpost/blogpost_rendered.md"),
+    )
+    .dependsOn(ducktape.jvm, docs)
+
+
 lazy val generateReadme = taskKey[Unit]("gen readme")
 
 generateReadme := Def.task {
