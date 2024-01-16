@@ -11,7 +11,7 @@ private[ducktape] object PlanInterpreter {
   def run[A: Type](plan: Plan[Nothing, Nothing], sourceValue: Expr[A])(using Quotes): Expr[Any] =
     recurse(plan, sourceValue)(using sourceValue)
 
-  private def recurse[A: Type](plan: Plan[Nothing, Nothing], value: Expr[Any])(using
+  def recurse[A: Type](plan: Plan[Nothing, Nothing], value: Expr[Any])(using
     toplevelValue: Expr[A]
   )(using Quotes): Expr[Any] = {
     import quotes.reflect.*

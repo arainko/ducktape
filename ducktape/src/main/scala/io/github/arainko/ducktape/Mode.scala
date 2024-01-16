@@ -13,10 +13,10 @@ private given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] =
 sealed trait Mode[F[+x]] {
   def pure[A](value: A): F[A]
   def map[A, B](fa: F[A], f: A => B): F[B]
-  def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
-    collection: AColl[A],
+  def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
+    collection: AColl,
     transformation: A => F[B]
-  )(using factory: Factory[B, BColl[B]]): F[BColl[B]]
+  )(using factory: Factory[B, BColl]): F[BColl]
 }
 
 object Mode {
@@ -25,17 +25,22 @@ object Mode {
   }
 
   object Accumulating {
+    class Either[E, Coll[x] <: Iterable[x]](using Factory[E, Coll[E]]) extends Mode.Accumulating[[A] =>> scala.Either[Coll[E], A]] {
+      export instance.*
+      private val instance = either[E, Coll]
+    }
+
     def either[E, Coll[x] <: Iterable[x]](using
       errorCollFactory: Factory[E, Coll[E]]
-    ): Mode.Accumulating[[A] =>> Either[Coll[E], A]] =
+    ): Mode.Accumulating[[A] =>> scala.Either[Coll[E], A]] =
       new {
-        override def pure[A](value: A): Either[Coll[E], A] = Right(value)
-        override def map[A, B](fa: Either[Coll[E], A], f: A => B): Either[Coll[E], B] = fa.map(f)
-        override def product[A, B](fa: Either[Coll[E], A], fb: Either[Coll[E], B]): Either[Coll[E], (A, B)] =
+        override def pure[A](value: A): scala.Either[Coll[E], A] = Right(value)
+        override def map[A, B](fa: scala.Either[Coll[E], A], f: A => B): scala.Either[Coll[E], B] = fa.map(f)
+        override def product[A, B](fa: scala.Either[Coll[E], A], fb: scala.Either[Coll[E], B]): scala.Either[Coll[E], (A, B)] =
           (fa, fb) match {
             case (Right(a), Right(b))      => Right(a -> b)
-            case (Right(_), err @ Left(_)) => err.asInstanceOf[Either[Coll[E], (A, B)]]
-            case (err @ Left(_), Right(_)) => err.asInstanceOf[Either[Coll[E], (A, B)]]
+            case (Right(_), err @ Left(_)) => err.asInstanceOf[scala.Either[Coll[E], (A, B)]]
+            case (err @ Left(_), Right(_)) => err.asInstanceOf[scala.Either[Coll[E], (A, B)]]
             case (Left(errorsA), Left(errorsB)) =>
               val builder = errorCollFactory.newBuilder
               val accumulated = builder ++= errorsA ++= errorsB
@@ -43,12 +48,12 @@ object Mode {
           }
 
         // Inspired by chimney's implementation: https://github.com/scalalandio/chimney/blob/53125c0a55479763157909ef920e11f5b487b182/chimney/src/main/scala/io/scalaland/chimney/TransformerFSupport.scala#L153
-        override def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
-          collection: AColl[A],
-          transformation: A => Either[Coll[E], B]
+        override def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
+          collection: AColl,
+          transformation: A => scala.Either[Coll[E], B]
         )(using
-          factory: Factory[B, BColl[B]]
-        ): Either[Coll[E], BColl[B]] = {
+          factory: Factory[B, BColl]
+        ): scala.Either[Coll[E], BColl] = {
           val accumulatedErrors = errorCollFactory.newBuilder
           val accumulatedSuccesses = factory.newBuilder
           var isErroredOut = false
@@ -78,38 +83,28 @@ object Mode {
   }
 
   object FailFast {
-    class Either[E] extends Mode.FailFast[[A] =>> scala.Either[E, A]] {
+    // class Either[E] extends Mode.FailFast[[A] =>> scala.Either[E, A]] {
+    //   val 
+     
 
-      override def pure[A](value: A): scala.Either[E, A] = ???
+    // }
 
-      override def map[A, B](fa: scala.Either[E, A], f: A => B): scala.Either[E, B] = ???
+    // class Option extends Mode.FailFast[scala.Option] {
 
-      override def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
-        collection: AColl[A],
-        transformation: A => scala.Either[E, B]
-      )(using factory: Factory[B, BColl[B]]): scala.Either[E, BColl[B]] =
-        ???
+    //   override final def pure[A](value: A): scala.Option[A] = ???
 
-      override def flatMap[A, B](fa: scala.Either[E, A], f: A => scala.Either[E, B]): scala.Either[E, B] = ???
+    //   override final def map[A, B](fa: scala.Option[A], f: A => B): scala.Option[B] = ???
 
-    }
+    //   override final def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
+    //     collection: AColl[A],
+    //     transformation: A => scala.Option[B]
+    //   )(using factory: Factory[B, BColl[B]]): scala.Option[BColl[B]] = ???
 
-    class Option extends Mode.FailFast[scala.Option] {
+    //   override final def flatMap[A, B](fa: scala.Option[A], f: A => scala.Option[B]): scala.Option[B] = ???
 
-      override final def pure[A](value: A): scala.Option[A] = ???
+    // }
 
-      override final def map[A, B](fa: scala.Option[A], f: A => B): scala.Option[B] = ???
-
-      override final def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
-        collection: AColl[A],
-        transformation: A => scala.Option[B]
-      )(using factory: Factory[B, BColl[B]]): scala.Option[BColl[B]] = ???
-
-      override final def flatMap[A, B](fa: scala.Option[A], f: A => scala.Option[B]): scala.Option[B] = ???
-
-    }
-
-    val option: Mode.FailFast.Option = new Option()
+    // val option: Mode.FailFast.Option = new Option()
     // new {
     //   def pure[A](value: A): Option[A] = Some(value)
     //   def map[A, B](fa: Option[A], f: A => B): Option[B] = fa.map(f)
