@@ -20,16 +20,7 @@ private[ducktape] object PlanInterpreter {
       case Plan.Upcast(_, _) => value
 
       case Plan.Configured(_, _, config) =>
-        config match {
-          case Configuration.Const(value, _) =>
-            value
-          case Configuration.CaseComputed(_, function) =>
-            '{ $function.apply($value) }
-          case Configuration.FieldComputed(_, function) =>
-            '{ $function.apply($toplevelValue) }
-          case Configuration.FieldReplacement(source, name, tpe) =>
-            source.accessFieldByName(name).asExpr
-        }
+        evaluateConfig(config, value)
 
       case Plan.BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
         val args = fieldPlans.map {
@@ -116,6 +107,18 @@ private[ducktape] object PlanInterpreter {
         }
     }
   }
+
+  def evaluateConfig[A: Type](config: Configuration[Nothing], value: Expr[Any])(using toplevelValue: Expr[A], quotes: Quotes) =
+    config match {
+      case Configuration.Const(value, _) =>
+        value
+      case Configuration.CaseComputed(_, function) =>
+        '{ $function.apply($value) }
+      case Configuration.FieldComputed(_, function) =>
+        '{ $function.apply($toplevelValue) }
+      case Configuration.FieldReplacement(source, name, tpe) =>
+        source.accessFieldByName(name).asExpr
+    }
 
   private def ifStatement(using Quotes)(branches: List[IfBranch]): quotes.reflect.Term = {
     import quotes.reflect.*
