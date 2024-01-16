@@ -31,16 +31,20 @@ object FalliblePlanInterpreter {
         plan match {
           case Plan.Upcast(_, _) => Value.Unwrapped(value)
 
-          case cfgPlan @ Plan.Configured(_, _, config) => ???
-            // config match
-              // case Configuration.Const(value, tpe) => 
-              //   Value.Unwrapped(PlanInterpreter.recurse(cfgPlan, value))
-              // case Configuration.CaseComputed(tpe, function) =>
-              // case Configuration.FieldComputed(tpe, function) =>
-              // case Configuration.FieldReplacement(source, name, tpe) =>
-              // case Configuration.FallibleConst(value, tpe) =>
-              // case Configuration.FallibleComputed(tpe, function) =>
-            
+          case Plan.Configured(_, _, config) =>
+            config match
+              case cfg @ Configuration.Const(_, _) =>
+                Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
+              case cfg @ Configuration.CaseComputed(tpe, function) =>
+                Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
+              case cfg @ Configuration.FieldComputed(tpe, function) =>
+                Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
+              case cfg @ Configuration.FieldReplacement(source, name, tpe) =>
+                Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
+              case Configuration.FallibleConst(value, tpe) =>
+                Value.Wrapped(value.asExprOf[F[Any]])
+              case Configuration.FallibleComputed(tpe, function) =>
+                Value.Wrapped('{ $function($value) }.asExprOf[F[Any]])
 
           case Plan.BetweenProducts(source, dest, fieldPlans) =>
             val (unwrapped, wrapped) =
@@ -75,7 +79,25 @@ object FalliblePlanInterpreter {
                   }
             }
 
-          case Plan.BetweenCoproducts(source, dest, casePlans) => ???
+          case Plan.BetweenCoproducts(source, dest, casePlans) =>
+            dest.tpe match {
+              case '[destSupertype] =>
+                val branches = casePlans.map { plan =>
+                  (plan.source.tpe -> plan.dest.tpe) match {
+                    case '[src] -> '[dest] =>
+                      val sourceValue = '{ $value.asInstanceOf[src] }
+                      IfExpression.Branch(IsInstanceOf(value, plan.source.tpe), recurse(plan, sourceValue, F).wrapped(F))
+                  }
+                }.toList
+
+                Value.Wrapped(
+                  IfExpression(
+                    branches,
+                    '{ throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.") }
+                  ).asExprOf[F[destSupertype]]
+                )
+            }
+
 
           case Plan.BetweenProductFunction(source, dest, argPlans) => ???
 

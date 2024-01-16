@@ -27,7 +27,7 @@ object FallibilityRefiner {
         case Derived(source, dest, transformer) =>
           transformer match
             case Summoner.Derived.TotalTransformer(value)    => ()
-            case Summoner.Derived.FallibleTransformer(value) => ()
+            case Summoner.Derived.FallibleTransformer(value) => boundary.break(None)
 
         case Configured(source, dest, config) =>
           config match
@@ -40,24 +40,33 @@ object FallibilityRefiner {
 
         case BetweenProductFunction(source, dest, argPlans) =>
           val iterator = argPlans.valuesIterator
-          while iterator.hasNext do recurse(iterator.next())
-          ()
+          while iterator.hasNext do
+            recurse(iterator.next()) match {
+              case None => boundary.break(None)
+              case ()   => ()
+            }
 
-        case BetweenUnwrappedWrapped(source, dest)            => ()
+        case BetweenUnwrappedWrapped(source, dest) => ()
 
         case BetweenWrappedUnwrapped(source, dest, fieldName) => ()
 
-        case BetweenSingletons(source, dest)                  => ()
+        case BetweenSingletons(source, dest) => ()
 
         case BetweenProducts(source, dest, fieldPlans) =>
           val iterator = fieldPlans.valuesIterator
-          while iterator.hasNext do recurse(iterator.next())
-          ()
+          while iterator.hasNext do
+            recurse(iterator.next()) match {
+              case None => boundary.break(None)
+              case ()   => ()
+            }
 
         case BetweenCoproducts(source, dest, casePlans) =>
           val iterator = casePlans.iterator
-          while iterator.hasNext do recurse(iterator.next())
-          ()
+          while iterator.hasNext do
+            recurse(iterator.next()) match {
+              case None => boundary.break(None)
+              case ()   => ()
+            }
 
         case BetweenOptions(source, dest, plan) =>
           recurse(plan)

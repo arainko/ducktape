@@ -2,8 +2,13 @@ package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
 
+private[ducktape] def IsInstanceOf(value: Expr[Any], tpe: Type[?])(using Quotes) =
+    tpe match {
+      case '[tpe] => '{ $value.isInstanceOf[tpe] }
+}
+
 private[ducktape] object IfExpression {
-  def apply(branches: List[Branch], orElse: Expr[Any])(using Quotes): quotes.reflect.Term = {
+  def apply(branches: List[Branch], orElse: Expr[Nothing])(using Quotes): quotes.reflect.Term = {
     import quotes.reflect.*
 
     branches match {
@@ -11,11 +16,6 @@ private[ducktape] object IfExpression {
       case Nil => orElse.asTerm
     }
   }
-
-  def IsInstanceOf(value: Expr[Any], tpe: Type[?])(using Quotes) =
-    tpe match {
-      case '[tpe] => '{ $value.isInstanceOf[tpe] }
-    }
 
   case class Branch(cond: Expr[Boolean], value: Expr[Any])
 }

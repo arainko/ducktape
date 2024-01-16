@@ -37,10 +37,10 @@ private[ducktape] object PlanInterpreter {
           (plan.source.tpe -> plan.dest.tpe) match {
             case '[src] -> '[dest] =>
               val sourceValue = '{ $value.asInstanceOf[src] }
-              IfBranch(IsInstanceOf(value, plan.source.tpe), recurse(plan, sourceValue))
+              IfExpression.Branch(IsInstanceOf(value, plan.source.tpe), recurse(plan, sourceValue))
           }
         }.toList
-        ifStatement(branches).asExpr
+        IfExpression(branches, '{ throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.") }).asExpr
 
       case Plan.BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
         val args = argPlans.map {
@@ -119,23 +119,4 @@ private[ducktape] object PlanInterpreter {
       case Configuration.FieldReplacement(source, name, tpe) =>
         source.accessFieldByName(name).asExpr
     }
-
-  private def ifStatement(using Quotes)(branches: List[IfBranch]): quotes.reflect.Term = {
-    import quotes.reflect.*
-
-    branches match {
-      case IfBranch(cond, value) :: xs =>
-        If(cond.asTerm, value.asTerm, ifStatement(xs))
-      case Nil =>
-        '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }.asTerm
-    }
-  }
-
-  private def IsInstanceOf(value: Expr[Any], tpe: Type[?])(using Quotes) =
-    tpe match {
-      case '[tpe] => '{ $value.isInstanceOf[tpe] }
-    }
-
-  private case class IfBranch(cond: Expr[Boolean], value: Expr[Any])
-
 }
