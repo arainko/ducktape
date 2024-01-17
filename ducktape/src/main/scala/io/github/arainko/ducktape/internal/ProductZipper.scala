@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal
 import scala.quoted.*
 import io.github.arainko.ducktape.Mode
 
-object ZippedProduct {
+object ProductZipper {
   case class Field(name: String, tpe: Type[?])
 
   object Field {
@@ -56,7 +56,7 @@ object ZippedProduct {
   )(using Quotes) = {
     import quotes.reflect.*
 
-    ZippedProduct.unzip(nestedPairs, wrappedFields) match {
+    ProductZipper.unzip(nestedPairs, wrappedFields) match {
       case (bind: Bind, unzippedFields) =>
         Match(
           nestedPairs.asTerm,

@@ -46,37 +46,10 @@ object FalliblePlanInterpreter {
               case Configuration.FallibleComputed(tpe, function) =>
                 Value.Wrapped('{ $function($value) }.asExprOf[F[Any]])
 
-          case Plan.BetweenProducts(source, dest, fieldPlans) =>
-            val (unwrapped, wrapped) =
-              fieldPlans.map {
-                case (fieldName, p: Plan.Configured[Fallible]) =>
-                  (fieldName, p.dest.tpe, recurse(p, value, F))
-                case (fieldName, plan) =>
-                  val fieldValue = value.accessFieldByName(fieldName).asExpr
-                  (fieldName, plan.dest.tpe, recurse(plan, fieldValue, F))
-              }.partitionMap {
-                case (fieldName, tpe, Value.Unwrapped(value)) =>
-                  Left(ZippedProduct.Field.Unwrapped(ZippedProduct.Field(fieldName, tpe), value))
-                case (fieldName, tpe, Value.Wrapped(value)) =>
-                  Right(ZippedProduct.Field.Wrapped(ZippedProduct.Field(fieldName, tpe), value))
-              }
-
-            dest.tpe match {
-              case '[dest] =>
-                NonEmptyList
-                  .fromList(wrapped.toList)
-                  .map { wrappeds =>
-                    Value.Wrapped {
-                      ZippedProduct.zipAndConstruct[F, dest](F, wrappeds, unwrapped.toList) { unwrapped =>
-                        val args = unwrapped.map(field => NamedArg(field.field.name, field.value.asTerm))
-                        Constructor(dest.tpe.repr).appliedToArgs(args).asExprOf[dest]
-                      }
-                    }
-                  }
-                  .getOrElse {
-                    val args = unwrapped.map(field => NamedArg(field.field.name, field.value.asTerm)).toList
-                    Value.Unwrapped(Constructor(dest.tpe.repr).appliedToArgs(args).asExprOf[dest])
-                  }
+          case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
+            productTransformation(plan, fieldPlans, value, F) { unwrapped =>
+              val args = unwrapped.map(field => NamedArg(field.field.name, field.value.asTerm))
+              Constructor(plan.dest.tpe.repr).appliedToArgs(args).asExpr
             }
 
           case Plan.BetweenCoproducts(source, dest, casePlans) =>
@@ -98,8 +71,12 @@ object FalliblePlanInterpreter {
                 )
             }
 
-
-          case Plan.BetweenProductFunction(source, dest, argPlans) => ???
+          case plan @ Plan.BetweenProductFunction(source, dest, argPlans) =>
+            productTransformation(plan, argPlans, value, F) { unwrapped =>
+              val fieldMap = unwrapped.map(f => f.field.name -> f.value).toMap
+              val args = argPlans.map((name, _) => fieldMap(name).asTerm).toList
+              dest.function.appliedTo(args)
+            }
 
           case Plan.BetweenOptions(source, dest, plan) =>
             (source.paramStruct.tpe, dest.paramStruct.tpe) match {
@@ -180,7 +157,6 @@ object FalliblePlanInterpreter {
                     Value.Wrapped('{ $transformer.transform($source) })
             }
         }
-    // }
   }
 
   private enum Value[F[+x]] {
@@ -191,5 +167,42 @@ object FalliblePlanInterpreter {
 
     case Unwrapped(value: Expr[Any])
     case Wrapped(value: Expr[F[Any]])
+  }
+
+  private def productTransformation[F[+x]: Type, A: Type](
+    plan: Plan[Nothing, Fallible],
+    fieldPlans: Map[String, Plan[Nothing, Fallible]],
+    value: Expr[Any],
+    F: Expr[Mode.Accumulating[F]]
+  )(construct: List[ProductZipper.Field.Unwrapped] => Expr[Any])(using quotes: Quotes, toplevelValue: Expr[A]) = {
+    import quotes.reflect.*
+
+    val (unwrapped, wrapped) =
+      fieldPlans.map {
+        case (fieldName, p: Plan.Configured[Fallible]) =>
+          (fieldName, p.dest.tpe, recurse(p, value, F))
+        case (fieldName, plan) =>
+          val fieldValue = value.accessFieldByName(fieldName).asExpr
+          (fieldName, plan.dest.tpe, recurse(plan, fieldValue, F))
+      }.partitionMap {
+        case (fieldName, tpe, Value.Unwrapped(value)) =>
+          Left(ProductZipper.Field.Unwrapped(ProductZipper.Field(fieldName, tpe), value))
+        case (fieldName, tpe, Value.Wrapped(value)) =>
+          Right(ProductZipper.Field.Wrapped(ProductZipper.Field(fieldName, tpe), value))
+      }
+
+    plan.dest.tpe match {
+      case '[dest] =>
+        NonEmptyList
+          .fromList(wrapped.toList)
+          .map { wrappeds =>
+            Value.Wrapped {
+              ProductZipper.zipAndConstruct[F, dest](F, wrappeds, unwrapped.toList) { unwrapped =>
+                construct(unwrapped).asExprOf[dest]
+              }
+            }
+          }
+          .getOrElse(Value.Unwrapped(construct(unwrapped.toList)))
+    }
   }
 }
