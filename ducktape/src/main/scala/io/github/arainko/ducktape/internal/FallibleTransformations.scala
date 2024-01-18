@@ -15,19 +15,17 @@ object FallibleTransformations {
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
     val destStruct = Structure.of[B](Path.empty(Type.of[B]))
+    val plan = Planner.between(sourceStruct, destStruct)
 
     TransformationMode
       .create(F)
-      .map { mode =>
-        val plan = Planner.between(sourceStruct, destStruct)
-        plan.refine match
-          case Left(value) =>
-            quotes.reflect.report.errorAndAbort("woops")
-          case Right(plan) =>
-            FalliblePlanInterpreter.run[F, A, B](plan, source, mode).asExprOf[F[B]]
+      .toRight(Plan.Error(sourceStruct, destStruct, ErrorMessage.UndeterminedTransformationMode(Span.fromExpr(F)), None))
+      .match {
+        case Left(error) => 
+          Transformations.createOrReportErrors(error, Nil)(_ => ???) //TODO: Fix this
+        case Right(mode) =>
+          Transformations.createOrReportErrors(plan, Nil)(totalPlan => FalliblePlanInterpreter.run[F, A, B](totalPlan, source, mode))
       }
-      .getOrElse(quotes.reflect.report.errorAndAbort("woops"))
-
-
+      .asExprOf[F[B]]
   }
 }

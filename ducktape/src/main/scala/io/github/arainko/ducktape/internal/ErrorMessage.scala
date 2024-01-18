@@ -82,4 +82,10 @@ private[ducktape] object ErrorMessage {
     val span: Span | None.type = None
     val side: Side = Side.Dest
   }
+
+  final case class UndeterminedTransformationMode(span: Span) extends ErrorMessage  {
+    def render(using Quotes): String = 
+      "Couldn't determine the transformation mode, make sure an instance of either Mode.FailFast[F] or Mode.Accumulating[F] is in implicit scope"
+    val side: Side = Side.Dest
+  }
 }

@@ -31,7 +31,7 @@ object Playground extends App {
     internal.CodePrinter.code:
       FallibleTransformations.between[[a] =>> Either[List[String], a], SourceEnum, DestEnum](srcEnum, mode)
 
-  println(res)
+  // println(res)
 
 //   println(res)
 }

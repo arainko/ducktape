@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
-import io.github.arainko.ducktape.Mode
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.TotalTransformer
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.FallibleTransformer
 import io.github.arainko.ducktape.Transformer

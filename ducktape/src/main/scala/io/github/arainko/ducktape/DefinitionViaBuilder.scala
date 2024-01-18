@@ -1,12 +1,12 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.Transformations
+import io.github.arainko.ducktape.internal.TotalTransformations
 
 final class DefinitionViaBuilder[Source, Dest, Func, Args <: FunctionArguments] private (function: Func) {
   transparent inline def build(inline config: Field[Source, Args] | Case[Source, Args]*): Transformer[Source, Dest] =
     new Transformer[Source, Dest] {
       def transform(value: Source): Dest =
-        Transformations.via[Source, Dest, Func, Args](value, function, "definition", config*)
+        TotalTransformations.via[Source, Dest, Func, Args](value, function, "definition", config*)
     }
 }
 
