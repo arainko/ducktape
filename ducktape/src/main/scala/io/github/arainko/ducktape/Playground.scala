@@ -23,9 +23,9 @@ object RefinedInt {
 }
 
 object Playground extends App {
-  val p = Person(0, None, List(0, 2, 3, 0), 2)
+  val p = Person(1, None, List(1, 2, 3, 1), 2)
   val srcEnum = SourceEnum.PersonCase(p)
-  given mode: Mode.Accumulating.Either[String, List] with {}
+  given mode: Mode.FailFast.Either[List[String]] with {}
 
   val res =
     internal.CodePrinter.code:

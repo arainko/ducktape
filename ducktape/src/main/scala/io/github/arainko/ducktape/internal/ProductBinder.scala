@@ -1,7 +1,5 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.Transformer
-
 import scala.annotation.*
 import scala.quoted.*
 import scala.util.chaining.*
@@ -11,11 +9,12 @@ private[ducktape] object ProductBinder {
 
   def nestFlatMapsAndConstruct[F[+x]: Type, Dest: Type](
     F: Expr[Mode.FailFast[F]],
-    fields: List[ProductZipper.Field.Wrapped[F] | ProductZipper.Field.Unwrapped],
+    unwrappedFields: List[ProductZipper.Field.Unwrapped],
+    wrappedFields: List[ProductZipper.Field.Wrapped[F]],
     construct: List[ProductZipper.Field.Unwrapped] => Expr[Dest]
   )(using Quotes): Expr[F[Dest]] = {
     def recurse(
-      leftoverFields: List[ProductZipper.Field.Wrapped[F] | ProductZipper.Field.Unwrapped],
+      leftoverFields: List[ProductZipper.Field.Wrapped[F]],
       collectedUnwrappedFields: List[ProductZipper.Field.Unwrapped]
     )(using Quotes): Expr[F[Dest]] =
       leftoverFields match {
@@ -53,15 +52,12 @@ private[ducktape] object ProductBinder {
               }
           }
 
-        case (f: ProductZipper.Field.Unwrapped) :: next =>
-          recurse(next, f :: collectedUnwrappedFields)
-
         case Nil =>
           val constructedValue = construct(collectedUnwrappedFields)
           '{ $F.pure[Dest]($constructedValue) }
       }
 
-    recurse(fields, Nil)
+    recurse(wrappedFields, unwrappedFields)
   }
 
   // this fixes a weird compiler crash where if I use the same name for each of the lambda args the compiler is not able to find a proxy for one of the invocations (?)

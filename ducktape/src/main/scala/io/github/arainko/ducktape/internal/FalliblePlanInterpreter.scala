@@ -11,16 +11,16 @@ object FalliblePlanInterpreter {
   def run[F[+x]: Type, A: Type, B: Type](
     plan: Plan[Nothing, Fallible],
     sourceValue: Expr[A],
-    mode: Expr[Mode.Accumulating[F]]
+    mode: TransformationMode[F]
   )(using Quotes): Expr[F[B]] =
     recurse(plan, sourceValue, mode)(using sourceValue) match
-      case Value.Unwrapped(value) => '{ $mode.pure(${ value.asExprOf[B] }) }
+      case Value.Unwrapped(value) => '{ ${ mode.value }.pure(${ value.asExprOf[B] }) }
       case Value.Wrapped(value)   => value.asExprOf[F[B]]
 
   private def recurse[F[+x]: Type, A: Type](
     plan: Plan[Nothing, Fallible],
     value: Expr[Any],
-    F: Expr[Mode.Accumulating[F]]
+    F: TransformationMode[F]
   )(using toplevelValue: Expr[A])(using Quotes): Value[F] = {
     import quotes.reflect.*
 
@@ -85,8 +85,8 @@ object FalliblePlanInterpreter {
                 Value.Wrapped(
                   '{
                     $source match
-                      case None        => $F.pure(None)
-                      case Some(value) => $F.map(${ recurse(plan, 'value, F).wrapped(F).asExprOf[F[dest]] }, Some.apply)
+                      case None        => ${ F.value }.pure(None)
+                      case Some(value) => ${ F.value }.map(${ recurse(plan, 'value, F).wrapped(F).asExprOf[F[dest]] }, Some.apply)
                   }
                 )
             }
@@ -95,7 +95,7 @@ object FalliblePlanInterpreter {
             source.tpe match {
               case '[src] =>
                 val source = value.asExprOf[src]
-                Value.Wrapped('{ $F.map(${ recurse(plan, source, F).wrapped(F) }, Some.apply) })
+                Value.Wrapped('{ ${ F.value }.map(${ recurse(plan, source, F).wrapped(F) }, Some.apply) })
             }
 
           case Plan.BetweenCollections(source, dest, plan) =>
@@ -113,7 +113,7 @@ object FalliblePlanInterpreter {
                     def transformation(value: Expr[srcElem])(using Quotes) =
                       recurse(plan, value, F).wrapped(F).asExprOf[F[destElem]]
                     Value.Wrapped('{
-                      $F.traverseCollection[srcElem, destElem, Iterable[srcElem], dest](
+                      ${ F.value }.traverseCollection[srcElem, destElem, Iterable[srcElem], dest](
                         $sourceValue,
                         a => ${ transformation('a) }
                       )(using $f)
@@ -160,9 +160,9 @@ object FalliblePlanInterpreter {
   }
 
   private enum Value[F[+x]] {
-    final def wrapped(F: Expr[Mode[F]])(using Quotes, Type[F]) =
+    final def wrapped(F: TransformationMode[F])(using Quotes, Type[F]) =
       this match
-        case Unwrapped(value) => '{ $F.pure($value) }
+        case Unwrapped(value) => '{ ${ F.value }.pure($value) }
         case Wrapped(value)   => value
 
     case Unwrapped(value: Expr[Any])
@@ -173,7 +173,7 @@ object FalliblePlanInterpreter {
     plan: Plan[Nothing, Fallible],
     fieldPlans: Map[String, Plan[Nothing, Fallible]],
     value: Expr[Any],
-    F: Expr[Mode.Accumulating[F]]
+    F: TransformationMode[F]
   )(construct: List[ProductZipper.Field.Unwrapped] => Expr[Any])(using quotes: Quotes, toplevelValue: Expr[A]) = {
     import quotes.reflect.*
 
@@ -193,16 +193,22 @@ object FalliblePlanInterpreter {
 
     plan.dest.tpe match {
       case '[dest] =>
-        NonEmptyList
-          .fromList(wrapped.toList)
-          .map { wrappeds =>
-            Value.Wrapped {
-              ProductZipper.zipAndConstruct[F, dest](F, wrappeds, unwrapped.toList) { unwrapped =>
-                construct(unwrapped).asExprOf[dest]
+        F match {
+          case TransformationMode.Accumulating(f) =>
+            NonEmptyList
+              .fromList(wrapped.toList)
+              .map { wrappeds =>
+                Value.Wrapped {
+                  ProductZipper.zipAndConstruct[F, dest](f, wrappeds, unwrapped.toList) { unwrapped =>
+                    construct(unwrapped).asExprOf[dest]
+                  }
+                }
               }
-            }
-          }
-          .getOrElse(Value.Unwrapped(construct(unwrapped.toList)))
+              .getOrElse(Value.Unwrapped(construct(unwrapped.toList)))
+          case TransformationMode.FailFast(f) =>
+            Value.Wrapped(ProductBinder.nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct.andThen(_.asExprOf[dest])))
+        }
+
     }
   }
 }

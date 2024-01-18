@@ -2,6 +2,7 @@ package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.DefinitionViaBuilder.PartiallyApplied
 import io.github.arainko.ducktape.internal.Transformations
+import io.github.arainko.ducktape.internal.FallibleTransformations
 
 trait Transformer[Source, Dest] extends Transformer.Derived[Source, Dest]
 
@@ -25,6 +26,10 @@ object Transformer {
   object Fallible {
     sealed trait Derived[F[+x], Source, Dest] {
       def transform(source: Source): F[Dest]
+    }
+
+    inline given derive[F[+x], Source, Dest](using F: Mode.Accumulating[F]): Transformer.Fallible.Derived[F, Source, Dest] = new {
+      def transform(source: Source): F[Dest] = FallibleTransformations.between[F, Source, Dest](source, F)
     }
   }
 }

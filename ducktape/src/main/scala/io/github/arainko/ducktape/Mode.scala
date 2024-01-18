@@ -72,6 +72,7 @@ object Mode {
         if (isErroredOut) Left(accumulatedErrors.result()) else Right(accumulatedSuccesses.result())
       }
     }
+    
     def either[E, Coll[x] <: Iterable[x]](using Factory[E, Coll[E]]): Mode.Accumulating.Either[E, Coll] =
       Accumulating.Either[E, Coll]
   }
@@ -81,80 +82,71 @@ object Mode {
   }
 
   object FailFast {
-    // class Either[E] extends Mode.FailFast[[A] =>> scala.Either[E, A]] {
-    //   val
+    class Either[E] extends Mode.FailFast[[A] =>> scala.Either[E, A]] {
+      final def pure[A](value: A): scala.Either[E, A] = Right(value)
 
-    // }
+      final def map[A, B](fa: scala.Either[E, A], f: A => B): scala.Either[E, B] = fa.map(f)
 
-    // class Option extends Mode.FailFast[scala.Option] {
+      final def flatMap[A, B](fa: scala.Either[E, A], f: A => scala.Either[E, B]): scala.Either[E, B] = fa.flatMap(f)
 
-    //   override final def pure[A](value: A): scala.Option[A] = ???
+      final def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
+        collection: AColl,
+        transformation: A => scala.Either[E, B]
+      )(using
+        factory: Factory[B, BColl]
+      ): scala.Either[E, BColl] = {
+        var error: Left[E, Nothing] = null
+        def isErroredOut = !(error eq null)
 
-    //   override final def map[A, B](fa: scala.Option[A], f: A => B): scala.Option[B] = ???
-
-    //   override final def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
-    //     collection: AColl[A],
-    //     transformation: A => scala.Option[B]
-    //   )(using factory: Factory[B, BColl[B]]): scala.Option[BColl[B]] = ???
-
-    //   override final def flatMap[A, B](fa: scala.Option[A], f: A => scala.Option[B]): scala.Option[B] = ???
-
-    // }
-
-    // val option: Mode.FailFast.Option = new Option()
-    // new {
-    //   def pure[A](value: A): Option[A] = Some(value)
-    //   def map[A, B](fa: Option[A], f: A => B): Option[B] = fa.map(f)
-    //   def flatMap[A, B](fa: Option[A], f: A => Option[B]): Option[B] = fa.flatMap(f)
-
-    //   def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](
-    //     collection: AColl[A]
-    //   )(using transformer: Transformer.Fallible.Derived[Option, A, B], factory: Factory[B, BColl[B]]): Option[BColl[B]] = {
-    //     var isErroredOut = false
-    //     val resultBuilder = factory.newBuilder
-    //     val iterator = collection.iterator
-    //     while (iterator.hasNext && !isErroredOut) {
-    //       transformer.transform(iterator.next()) match {
-    //         case None =>
-    //           isErroredOut = true
-    //           resultBuilder.clear()
-    //         case Some(value) =>
-    //           resultBuilder += value
-    //       }
-    //     }
-
-    //     if (isErroredOut) None else Some(resultBuilder.result())
-    //   }
-    // }
-
-    def either[E]: Mode.FailFast[[A] =>> Either[E, A]] =
-      new {
-        def pure[A](value: A): Either[E, A] = Right(value)
-        def map[A, B](fa: Either[E, A], f: A => B): Either[E, B] = fa.map(f)
-        def flatMap[A, B](fa: Either[E, A], f: A => Either[E, B]): Either[E, B] = fa.flatMap(f)
-        def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
-          collection: AColl,
-          transformation: A => Either[E, B]
-        )(using
-          factory: Factory[B, BColl]
-        ): Either[E, BColl] = {
-          var error: Left[E, Nothing] = null
-          def isErroredOut = !(error eq null)
-
-          val resultBuilder = factory.newBuilder
-          val iterator = collection.iterator
-          while (iterator.hasNext && !isErroredOut) {
-            transformation(iterator.next()) match {
-              case err @ Left(_) =>
-                error = err.asInstanceOf[Left[E, Nothing]]
-                resultBuilder.clear()
-              case Right(value) =>
-                resultBuilder += value
-            }
+        val resultBuilder = factory.newBuilder
+        val iterator = collection.iterator
+        while (iterator.hasNext && !isErroredOut) {
+          transformation(iterator.next()) match {
+            case err @ Left(_) =>
+              error = err.asInstanceOf[Left[E, Nothing]]
+              resultBuilder.clear()
+            case Right(value) =>
+              resultBuilder += value
           }
-
-          if (isErroredOut) error else Right(resultBuilder.result())
         }
+
+        if (isErroredOut) error else Right(resultBuilder.result())
       }
+
+    }
+
+    class Option extends Mode.FailFast[scala.Option] {
+
+      final def pure[A](value: A): scala.Option[A] = Some(value)
+
+      final def map[A, B](fa: scala.Option[A], f: A => B): scala.Option[B] = fa.map(f)
+
+      final def flatMap[A, B](fa: scala.Option[A], f: A => scala.Option[B]): scala.Option[B] = fa.flatMap(f)
+
+      final def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
+        collection: AColl,
+        transformation: A => scala.Option[B]
+      )(using factory: Factory[B, BColl]): scala.Option[BColl] = {
+        var isErroredOut = false
+        val resultBuilder = factory.newBuilder
+        val iterator = collection.iterator
+        while (iterator.hasNext && !isErroredOut) {
+          transformation(iterator.next()) match {
+            case None =>
+              isErroredOut = true
+              resultBuilder.clear()
+            case Some(value) =>
+              resultBuilder += value
+          }
+        }
+
+        if (isErroredOut) None else Some(resultBuilder.result())
+      }
+
+    }
+
+    val option: Mode.FailFast.Option = new Option()
+
+    def either[E]: Mode.FailFast.Either[E] = Either[E]
   }
 }
