@@ -145,8 +145,8 @@ object Mode {
 
     }
 
-    val option: Mode.FailFast.Option = new Option()
+    val option: Mode.FailFast.Option = Mode.FailFast.Option()
 
-    def either[E]: Mode.FailFast.Either[E] = Either[E]
+    def either[E]: Mode.FailFast.Either[E] = Mode.FailFast.Either[E]
   }
 }

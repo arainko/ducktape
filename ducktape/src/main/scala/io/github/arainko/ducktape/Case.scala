@@ -2,9 +2,11 @@ package io.github.arainko.ducktape
 
 import scala.annotation.compileTimeOnly
 
-opaque type Case[A, B] = Unit
+opaque type Case[A, B] <: Case.Fallible[Nothing, A, B] = Case.Fallible[Nothing, A, B]
 
 object Case {
+  opaque type Fallible[+F[+x], A, B] = Unit 
+
   @compileTimeOnly("Case.const is only useable as a case configuration for transformations")
   def const[A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, value: DestTpe): Case[A, B] = ???
 

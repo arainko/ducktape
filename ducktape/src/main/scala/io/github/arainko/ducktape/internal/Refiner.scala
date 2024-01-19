@@ -3,13 +3,11 @@ package io.github.arainko.ducktape.internal
 import scala.quoted.*
 import scala.quoted.runtime.StopMacroExpansion
 
-private[ducktape] object Transformations {
+private[ducktape] object Refiner {
 
-  def createOrReportErrors[F <: Fallible](
+  def refineOrReportErrorsAndAbort[F <: Fallible](
     plan: Plan[Plan.Error, F],
     configs: List[Configuration.Instruction[F]]
-  )(
-    create: Plan[Nothing, F] => Expr[Any]
   )(using Quotes) = {
     import quotes.reflect.*
 
@@ -36,20 +34,26 @@ private[ducktape] object Transformations {
                   )
             )
 
+        
         val allErrors = errors ::: reconfiguredPlan.errors ::: ogErrors
-        val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
-        allErrors.groupBy {
-          _.message.span match
-            case None       => spanForAccumulatedErrors
-            case span: Span => span
-        }
-          .transform((_, errors) => errors.map(_.render).toList.distinct.mkString(System.lineSeparator))
-          .foreach { (span, errorMessafe) => report.error(errorMessafe, span.toPosition) }
-
-        throw new StopMacroExpansion
-      case Right(totalPlan) => create(totalPlan)
+        reportErrorsAndAbort(allErrors, configs)
+      case Right(totalPlan) => totalPlan
     }
   }
+
+  def reportErrorsAndAbort(errors: NonEmptyList[Plan.Error], configs: List[Configuration.Instruction[?]])(using Quotes) = {
+    val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
+    errors.groupBy {
+      _.message.span match
+        case None       => spanForAccumulatedErrors
+        case span: Span => span
+    }
+      .transform((_, errors) => errors.map(_.render).toList.distinct.mkString(System.lineSeparator))
+      .foreach { (span, errorMessafe) => quotes.reflect.report.error(errorMessafe, span.toPosition) }
+
+    throw new StopMacroExpansion
+  }
+
 
   extension (self: Plan.Error)
     private def render(using Quotes) = {

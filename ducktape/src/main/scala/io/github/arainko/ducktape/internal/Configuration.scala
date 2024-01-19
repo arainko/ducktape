@@ -99,139 +99,24 @@ private[ducktape] object Configuration {
     }
   }
 
-  def parse[A: Type, B: Type](
-    configs: Expr[Seq[Field[A, B] | Case[A, B]]]
-  )(using Quotes): List[Instruction[Nothing]] = {
+  def parse[G[+x], A: Type, B: Type, F <: Fallible](
+    configs: Expr[Seq[Field.Fallible[G, A, B] | Case.Fallible[G, A, B]]],
+    parsers: NonEmptyList[ConfigParser[F]]
+  )(using Quotes): List[Instruction[F]] = {
     import quotes.reflect.*
+    def fallback(term: quotes.reflect.Term) =
+      Configuration.Instruction.Failed(
+        Path.empty(Type.of[Nothing]),
+        Side.Dest,
+        s"Unsupported config expression: ${term.show}",
+        Span.fromPosition(term.pos)
+      )
+    val parser = ConfigParser.combine(parsers)
 
     Varargs
       .unapply(configs)
       .get // TODO: Make it nicer
-      .view
-      .map(_.asTerm)
-      .map {
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
-              PathSelector(path) :: value :: Nil
-            ) =>
-          Configuration.Instruction.Static(
-            path,
-            Side.Dest,
-            Configuration.Const(value.asExpr, value.tpe.widen.asType),
-            Span.fromPosition(cfg.pos)
-          )
-
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "default"), a :: b :: destFieldTpe :: Nil),
-              PathSelector(path) :: Nil
-            ) =>
-          def default(parent: Plan[Plan.Error, Fallible] | None.type) =
-            for {
-              selectedField <-
-                path.segments.lastOption
-                  .flatMap(_.narrow[Path.Segment.Field])
-                  .toRight("Selected path's length should be at least 1")
-              defaults <-
-                PartialFunction
-                  .condOpt(parent) { case parent: Plan.BetweenProducts[Plan.Error, Fallible] => parent.dest.defaults }
-                  .toRight("Selected field's parent is not a product")
-              defaultValue <-
-                defaults
-                  .get(selectedField.name)
-                  .toRight(s"The field '${selectedField.name}' doesn't have a default value")
-            } yield Configuration.Const(defaultValue, defaultValue.asTerm.tpe.asType)
-
-          val span = Span.fromPosition(cfg.pos)
-
-          Configuration.Instruction.Dynamic(path, Side.Dest, default, span)
-
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "computed" | "renamed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
-              PathSelector(path) :: function :: Nil
-            ) =>
-          Configuration.Instruction.Static(
-            path,
-            Side.Dest,
-            Configuration.FieldComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
-            Span.fromPosition(cfg.pos)
-          )
-
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
-              PathSelector(path) :: fieldSource :: Nil
-            ) =>
-          parseAllMatching(fieldSource.asExpr, path, fieldSourceTpe.tpe, Span.fromPosition(cfg.pos))
-
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Case.type]), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
-              PathSelector(path) :: value :: Nil
-            ) =>
-          Configuration.Instruction.Static(
-            path,
-            Side.Source,
-            Configuration.Const(value.asExpr, value.tpe.asType),
-            Span.fromPosition(cfg.pos)
-          )
-
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Case.type]), "computed"), a :: b :: sourceTpe :: computedTpe :: Nil),
-              PathSelector(path) :: function :: Nil
-            ) =>
-          Configuration.Instruction.Static(
-            path,
-            Side.Source,
-            Configuration.CaseComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
-            Span.fromPosition(cfg.pos)
-          )
-
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "fallbackToNone"), a :: b :: destFieldTpe :: Nil),
-              PathSelector(path) :: Nil
-            ) =>
-          Configuration.Instruction.Regional(path, Side.Dest, ErrorModifier.substituteOptionsWithNone, Span.fromPosition(cfg.pos))
-
-        case cfg @ AsExpr('{ Field.fallbackToNone[a, b] }) =>
-          Configuration.Instruction.Regional(
-            Path.empty(Type.of[b]),
-            Side.Dest,
-            ErrorModifier.substituteOptionsWithNone,
-            Span.fromPosition(cfg.pos)
-          )
-
-        case regionalCfg @ RegionalConfig(AsExpr('{ Field.fallbackToNone[a, b] }), path) =>
-          Configuration.Instruction.Regional(
-            path,
-            Side.Dest,
-            ErrorModifier.substituteOptionsWithNone,
-            Span.fromPosition(regionalCfg.pos)
-          )
-
-        case cfg @ AsExpr('{ Field.fallbackToDefault[a, b] }) =>
-          Configuration.Instruction.Regional(
-            Path.empty(Type.of[b]),
-            Side.Dest,
-            ErrorModifier.substituteWithDefaults,
-            Span.fromPosition(cfg.pos)
-          )
-
-        case cfg @ RegionalConfig(AsExpr('{ Field.fallbackToDefault[a, b] }), path) =>
-          Configuration.Instruction.Regional(
-            path,
-            Side.Dest,
-            ErrorModifier.substituteWithDefaults,
-            Span.fromPosition(cfg.pos)
-          )
-
-        case DeprecatedConfig(configs) => configs
-
-        case oopsie =>
-          Configuration.Instruction.Failed(
-            Path.empty(Type.of[Nothing]),
-            Side.Dest,
-            s"Unsupported config expression: ${oopsie.show}",
-            Span.fromPosition(oopsie.pos)
-          )
-      }
+      .map(expr => parser.applyOrElse(expr.asTerm, fallback))
       .toList
   }
 

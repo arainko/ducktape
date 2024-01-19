@@ -19,7 +19,7 @@ private[ducktape] object NonEmptyList {
   private[ducktape] given [A: Debug]: Debug[NonEmptyList[A]] = Debug.collection[A, List]
 
   extension [A](self: NonEmptyList[A]) {
-    export toList.{ reduceLeft, head, tail, exists, filter, collect }
+    export toList.{ foldLeft, reduceLeft, head, tail, exists, filter, collect }
 
     private[ducktape] def toList: ::[A] = self
 

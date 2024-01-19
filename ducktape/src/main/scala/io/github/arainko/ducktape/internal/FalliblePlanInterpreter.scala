@@ -43,7 +43,10 @@ object FalliblePlanInterpreter {
               case Configuration.FallibleConst(value, tpe) =>
                 Value.Wrapped(value.asExprOf[F[Any]])
               case Configuration.FallibleComputed(tpe, function) =>
-                Value.Wrapped('{ $function($value) }.asExprOf[F[Any]])
+                tpe match {
+                  case '[tpe] =>
+                    Value.Wrapped('{ $function($toplevelValue).asInstanceOf[F[tpe]] }.asExprOf[F[tpe]])
+                }
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
             productTransformation(plan, fieldPlans, value, F) { unwrapped =>

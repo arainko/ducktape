@@ -21,8 +21,9 @@ private[ducktape] object TotalTransformations {
     given Summoner[Nothing] = Summoner.Total
 
     val plan = Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])))
-    val config = Configuration.parse(configs)
-    Transformations.createOrReportErrors(plan, config)(totalPlan => PlanInterpreter.run[A](totalPlan, value)).asExprOf[B]
+    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total))
+    val totalPlan = Refiner.refineOrReportErrorsAndAbort(plan, config)
+    PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
   }
 
   inline def via[A, B, Func, Args <: FunctionArguments](
@@ -63,8 +64,9 @@ private[ducktape] object TotalTransformations {
           )
         )
 
-    val config = Configuration.parse(configs)
-    Transformations.createOrReportErrors(plan, config)(totalPlan => PlanInterpreter.run[A](totalPlan, value))
+    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total))
+    val totalPlan = Refiner.refineOrReportErrorsAndAbort(plan, config)
+    PlanInterpreter.run[A](totalPlan, value)
   }
 
   private def createTransformationVia[A: Type, B: Type, Func: Type, Args <: FunctionArguments: Type](
@@ -91,8 +93,8 @@ private[ducktape] object TotalTransformations {
           )
         )
 
-    val config = Configuration.parse(configs)
-
-    Transformations.createOrReportErrors(plan, config)(totalPlan => PlanInterpreter.run[A](totalPlan, value)).asExprOf[B]
+    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total))
+    val totalPlan = Refiner.refineOrReportErrorsAndAbort(plan, config)
+    PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
   }
 }

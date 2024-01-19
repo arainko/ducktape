@@ -5,9 +5,22 @@ import scala.annotation.compileTimeOnly
 // Kept around for source compat with 0.1.x
 def Arg: Field.type = Field
 
-opaque type Field[A, B] = Unit
+opaque type Field[A, B] <: Field.Fallible[Nothing, A, B] = Field.Fallible[Nothing, A, B]
 
 object Field {
+  opaque type Fallible[+F[+x], A, B] = Unit
+
+  def fallibleConst[F[+x], A, B, DestFieldTpe, ConstTpe](
+    selector: Selector ?=> B => DestFieldTpe,
+    value: F[ConstTpe]
+  ): Field.Fallible[F, A, B] = ???
+
+  //TODO: figure out why this needs <: DestFieldTpe, it infers Any without it - this won;t work when configuring cases?
+  def fallibleComputed[F[+x], A, B, DestFieldTpe, ComputedTpe]( 
+    selector: Selector ?=> B => DestFieldTpe,
+    function: A => F[ComputedTpe]
+  ): Field.Fallible[F, A, B] = ???
+
   @compileTimeOnly("Field.const is only useable as a field configuration for transformations")
   def const[A, B, DestFieldTpe, ConstTpe](selector: Selector ?=> B => DestFieldTpe, value: ConstTpe): Field[A, B] = ???
 

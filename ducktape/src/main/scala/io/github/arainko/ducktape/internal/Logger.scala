@@ -9,9 +9,9 @@ import scala.quoted.*
 private[ducktape] object Logger {
 
   // Logger Config
-  private[ducktape] transparent inline given level: Level = Level.Info
+  private[ducktape] transparent inline given level: Level = Level.Off
   private val output = Output.StdOut
-  @nowarn private def filter(msg: String, meta: Metainformation) = msg.contains("fallible")
+  @nowarn private def filter(msg: String, meta: Metainformation) = true
 
   enum Level {
     case Off, Debug, Info

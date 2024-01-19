@@ -3,7 +3,7 @@ package io.github.arainko.ducktape
 import io.github.arainko.ducktape.internal.FallibleTransformations
 
 case class Person(int: Int, opt: Option[Int], list: List[Int], normal: Int)
-case class Person2(int: RefinedInt, opt: Option[RefinedInt], list: Vector[RefinedInt], normal: Int)
+case class Person2(int: RefinedInt, opt: Option[RefinedInt], list: Vector[RefinedInt], normal: Int, extra: Option[RefinedInt])
 
 case class RefinedInt(value: Int)
 
@@ -28,10 +28,16 @@ object Playground extends App {
   given mode: Mode.FailFast.Either[List[String]] with {}
 
   val res =
-    internal.CodePrinter.code:
-      FallibleTransformations.between[[a] =>> Either[List[String], a], SourceEnum, DestEnum](srcEnum, mode)
+    // internal.CodePrinter.code:
+      FallibleTransformations.between[[a] =>> Either[List[String], a], SourceEnum, DestEnum](
+        srcEnum,
+        mode, 
+        // Field.fallibleConst(_.at[DestEnum.PersonCase].p.extra, RefinedInt.transformer.transform(0)),
+        Field.fallibleComputed(_.at[DestEnum.PersonCase], a => Left(":" :: Nil))
+      )
 
-  // println(res)
+
+  println(res)
 
 //   println(res)
 }
