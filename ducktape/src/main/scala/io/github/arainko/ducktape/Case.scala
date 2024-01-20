@@ -7,6 +7,10 @@ opaque type Case[A, B] <: Case.Fallible[Nothing, A, B] = Case.Fallible[Nothing, 
 object Case {
   opaque type Fallible[+F[+x], A, B] = Unit 
 
+  def fallibleConst[F[+x], A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, value: F[DestTpe]): Case.Fallible[F, A, B] = ???
+
+  def fallibleComputed[F[+x], A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, function: SourceTpe => F[DestTpe]): Case.Fallible[F, A, B] = ???
+
   @compileTimeOnly("Case.const is only useable as a case configuration for transformations")
   def const[A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, value: DestTpe): Case[A, B] = ???
 

@@ -9,9 +9,11 @@ sealed trait ConfigParser[+F <: Fallible] {
 }
 
 object ConfigParser {
-  def combine[F <: Fallible](parsers: NonEmptyList[ConfigParser[F]])(using Quotes):  PartialFunction[quotes.reflect.Term, Instruction[F]] =
+  def combine[F <: Fallible](parsers: NonEmptyList[ConfigParser[F]])(using
+    Quotes
+  ): PartialFunction[quotes.reflect.Term, Instruction[F]] =
     parsers.map(_.apply).reduceLeft(_ orElse _)
-    
+
   object Total extends ConfigParser[Nothing] {
     def apply(using Quotes): PartialFunction[quotes.reflect.Term, Instruction[Nothing]] = {
       import quotes.reflect.*
@@ -133,29 +135,57 @@ object ConfigParser {
     }
   }
 
-  object Fallible extends ConfigParser[Fallible] {
+  class PossiblyFallible[F[+x]: Type] extends ConfigParser[Fallible] {
     def apply(using Quotes): PartialFunction[quotes.reflect.Term, Instruction[Fallible]] = {
       import quotes.reflect.*
       {
         case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "fallibleConst"), f :: a :: b :: destFieldTpe :: constTpe :: Nil),
-              PathSelector(path) :: value :: Nil
+              TypeApply(Select(IdentOfType('[Field.type]), "fallibleConst"), f :: a :: b :: destFieldTpe :: Nil),
+              PathSelector(path) :: AsExpr('{ $value: F[const] }) :: Nil
             ) =>
-        Configuration.Instruction.Static(
-          path,
-          Side.Dest,
-          Configuration.FallibleConst(value.asExpr, constTpe.tpe.asType),
-          Span.fromPosition(cfg.pos)
-        )
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "fallibleComputed"), f :: a :: b :: destFieldTpe :: computedTpe :: Nil),
-              PathSelector(path) :: function :: Nil
-            ) =>
-            println(computedTpe.tpe.show)
+          
           Configuration.Instruction.Static(
             path,
             Side.Dest,
-            Configuration.FallibleComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
+            Configuration.FallibleConst(value, Type.of[const]),
+            Span.fromPosition(cfg.pos)
+          )
+        case cfg @ Apply(
+              TypeApply(
+                Select(IdentOfType('[Field.type]), "fallibleComputed"),
+                f :: a :: b :: destFieldTpe:: Nil
+              ),
+              PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
+            ) =>
+
+          Configuration.Instruction.Static(
+            path,
+            Side.Dest,
+            Configuration.FallibleFieldComputed(Type.of[computed], function.asInstanceOf[Expr[Any => Any]]),
+            Span.fromPosition(cfg.pos)
+          )
+
+      case cfg @ Apply(
+              TypeApply(Select(IdentOfType('[Case.type]), "fallibleConst"), f :: a :: b :: sourceTpe :: constTpe :: Nil),
+              PathSelector(path) :: value :: Nil
+            ) =>
+
+            println(value.tpe.show)
+          Configuration.Instruction.Static(
+            path,
+            Side.Source,
+            Configuration.FallibleConst(value.asExpr, constTpe.tpe.asType),
+            Span.fromPosition(cfg.pos)
+          )
+
+        case cfg @ Apply(
+              TypeApply(Select(IdentOfType('[Case.type]), "fallibleComputed"),f :: a :: b :: sourceTpe :: computedTpe :: Nil),
+              PathSelector(path) :: function :: Nil
+            ) =>
+          Configuration.Instruction.Static(
+            path,
+            Side.Source,
+            Configuration.FallibleCaseComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
           )
       }

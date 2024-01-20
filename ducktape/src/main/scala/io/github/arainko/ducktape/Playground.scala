@@ -22,22 +22,43 @@ object RefinedInt {
   }
 }
 
+class Costam[F[+x], M <: Mode[F]](using F: M) {
+  inline def transform[A, B](value: A, inline config: Field.Fallible[F, A, B] | Case.Fallible[F, A, B]*): F[B] =
+    FallibleTransformations.between[F, A, B](value, F, config*)
+}
+
+
 object Playground extends App {
   val p = Person(1, None, List(1, 2, 3, 1), 2)
   val srcEnum = SourceEnum.PersonCase(p)
-  given mode: Mode.FailFast.Either[List[String]] with {}
+  given Mode.FailFast.Either[List[String]] with {}
 
-  val res =
-    // internal.CodePrinter.code:
-      FallibleTransformations.between[[a] =>> Either[List[String], a], SourceEnum, DestEnum](
-        srcEnum,
-        mode, 
-        // Field.fallibleConst(_.at[DestEnum.PersonCase].p.extra, RefinedInt.transformer.transform(0)),
-        Field.fallibleComputed(_.at[DestEnum.PersonCase], a => Left(":" :: Nil))
-      )
+  val costam = new Costam
+
+  costam.transform[SourceEnum, DestEnum](
+    srcEnum,
+    Case.fallibleConst(_.at[SourceEnum.PersonCase], Right(???))
+  )
 
 
-  println(res)
+
+  summon[Left[List[String], Nothing] <:< Either[List[String], DestEnum]]
+
+  def left[A](value: A): Left[A, Nothing] = Left(value)
+
+  // val left = Left("" :: Nil)
+
+  // val res =
+  //   // internal.CodePrinter.code:
+  //     FallibleTransformations.between[[a] =>> Either[List[String], a], SourceEnum, DestEnum](
+  //       srcEnum,
+  //       mode, 
+  //       // Field.fallibleConst(_.at[DestEnum.PersonCase].p.extra, RefinedInt.transformer.transform(0)),
+  //       Field.fallibleComputed(_.at[DestEnum.PersonCase], a => Right(???) : Either[Nothing, Nothing])
+  //     )
+
+
+  // println(res)
 
 //   println(res)
 }

@@ -10,15 +10,14 @@ opaque type Field[A, B] <: Field.Fallible[Nothing, A, B] = Field.Fallible[Nothin
 object Field {
   opaque type Fallible[+F[+x], A, B] = Unit
 
-  def fallibleConst[F[+x], A, B, DestFieldTpe, ConstTpe](
+  def fallibleConst[F[+x], A, B, DestFieldTpe](
     selector: Selector ?=> B => DestFieldTpe,
-    value: F[ConstTpe]
+    value: F[DestFieldTpe]
   ): Field.Fallible[F, A, B] = ???
 
-  //TODO: figure out why this needs <: DestFieldTpe, it infers Any without it - this won;t work when configuring cases?
-  def fallibleComputed[F[+x], A, B, DestFieldTpe, ComputedTpe]( 
+  def fallibleComputed[F[+x], A, B, DestFieldTpe]( 
     selector: Selector ?=> B => DestFieldTpe,
-    function: A => F[ComputedTpe]
+    function: A => F[DestFieldTpe]
   ): Field.Fallible[F, A, B] = ???
 
   @compileTimeOnly("Field.const is only useable as a field configuration for transformations")

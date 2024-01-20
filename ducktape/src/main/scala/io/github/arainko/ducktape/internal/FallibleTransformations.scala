@@ -21,7 +21,7 @@ object FallibleTransformations {
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
     val destStruct = Structure.of[B](Path.empty(Type.of[B]))
     val plan = Planner.between(sourceStruct, destStruct)
-    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total, ConfigParser.Fallible))
+    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total, ConfigParser.PossiblyFallible[F]))
 
     TransformationMode
       .create(F)

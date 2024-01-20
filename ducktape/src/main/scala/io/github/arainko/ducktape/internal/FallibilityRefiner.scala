@@ -31,12 +31,13 @@ object FallibilityRefiner {
 
         case Configured(source, dest, config) =>
           config match
-            case Configuration.Const(value, tpe)                   => ()
-            case Configuration.CaseComputed(tpe, function)         => ()
-            case Configuration.FieldComputed(tpe, function)        => ()
-            case Configuration.FieldReplacement(source, name, tpe) => ()
-            case Configuration.FallibleConst(value, tpe)           => boundary.break(None)
-            case Configuration.FallibleComputed(tpe, function)     => boundary.break(None)
+            case Configuration.Const(value, tpe)                    => ()
+            case Configuration.CaseComputed(tpe, function)          => ()
+            case Configuration.FieldComputed(tpe, function)         => ()
+            case Configuration.FieldReplacement(source, name, tpe)  => ()
+            case Configuration.FallibleConst(value, tpe)            => boundary.break(None)
+            case Configuration.FallibleFieldComputed(tpe, function) => boundary.break(None)
+            case Configuration.FallibleCaseComputed(tpe, function)  => boundary.break(None)
 
         case BetweenProductFunction(source, dest, argPlans) =>
           val iterator = argPlans.valuesIterator
