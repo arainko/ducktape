@@ -167,25 +167,25 @@ object ConfigParser {
 
       case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Case.type]), "fallibleConst"), f :: a :: b :: sourceTpe :: constTpe :: Nil),
-              PathSelector(path) :: value :: Nil
+              PathSelector(path) :: AsExpr('{ $value: F[const] }) :: Nil
             ) =>
 
-            println(value.tpe.show)
           Configuration.Instruction.Static(
             path,
             Side.Source,
-            Configuration.FallibleConst(value.asExpr, constTpe.tpe.asType),
+            Configuration.FallibleConst(value, Type.of[const]),
             Span.fromPosition(cfg.pos)
           )
 
         case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Case.type]), "fallibleComputed"),f :: a :: b :: sourceTpe :: computedTpe :: Nil),
-              PathSelector(path) :: function :: Nil
+              TypeApply(Select(IdentOfType('[Case.type]), "fallibleComputed"), f :: a :: b :: sourceTpe :: computedTpe :: Nil),
+              PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
             ) =>
+
           Configuration.Instruction.Static(
             path,
             Side.Source,
-            Configuration.FallibleCaseComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
+            Configuration.FallibleCaseComputed(Type.of[computed], function.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
           )
       }

@@ -6,7 +6,7 @@ import scala.quoted.*
 
 private[ducktape] enum Configuration[+F <: Fallible] {
   def tpe: Type[?]
-
+    
   case Const(value: Expr[Any], tpe: Type[?]) extends Configuration[Nothing]
   case CaseComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Nothing]
   case FieldComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Nothing]
@@ -121,114 +121,24 @@ private[ducktape] object Configuration {
       .toList
   }
 
-  private def parseAllMatching(using Quotes)(
-    sourceExpr: Expr[Any],
-    path: Path,
-    fieldSourceTpe: quotes.reflect.TypeRepr,
-    span: Span
-  ) = {
-
-    Structure
-      .fromTypeRepr(fieldSourceTpe, Path.empty(fieldSourceTpe.asType))
-      .narrow[Structure.Product]
-      .map { sourceStruct =>
-        val modifier = new FieldModifier:
-          def apply(
-            parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible],
-            field: String,
-            plan: Plan[Plan.Error, Fallible]
-          )(using Quotes): Configuration[Nothing] | plan.type =
-            sourceStruct.fields.get(field).match {
-              case Some(struct) if struct.tpe.repr <:< plan.dest.tpe.repr =>
-                Configuration.FieldReplacement(sourceExpr, field, struct.tpe)
-              case other => plan
-            }
-
-        Configuration.Instruction.Bulk(
-          path,
-          Side.Dest,
-          modifier,
-          span
-        )
-      }
-      .getOrElse(
-        Configuration.Instruction.Failed(
-          path,
-          Side.Dest,
-          "Field source needs to be a product",
-          span
-        )
+  def parseTotal[A: Type, B: Type](
+    configs: Expr[Seq[Field[A, B] | Case[A, B]]],
+    parsers: NonEmptyList[ConfigParser[Nothing]]
+  )(using Quotes): List[Instruction[Nothing]] = {
+    import quotes.reflect.*
+    def fallback(term: quotes.reflect.Term) =
+      Configuration.Instruction.Failed(
+        Path.empty(Type.of[Nothing]),
+        Side.Dest,
+        s"Unsupported config expression: ${term.show}",
+        Span.fromPosition(term.pos)
       )
-  }
+    val parser = ConfigParser.combine(parsers)
 
-  object DeprecatedConfig {
-    def unapply(using Quotes)(term: quotes.reflect.Term) = {
-      import quotes.reflect.*
-
-      PartialFunction.condOpt(term.asExpr):
-        case cfg @ '{
-              type sourceSubtype
-              type src >: `sourceSubtype`
-              Case.const[`sourceSubtype`].apply[`src`, dest]($value)
-            } =>
-          val path = Path.empty(Type.of[src]).appended(Path.Segment.Case(Type.of[sourceSubtype]))
-          Configuration.Instruction.Static(
-            path,
-            Side.Source,
-            Configuration.Const(value, value.asTerm.tpe.asType),
-            Span.fromExpr(cfg)
-          )
-
-        case cfg @ '{
-              type sourceSubtype
-              type src >: `sourceSubtype`
-              Case.computed[`sourceSubtype`].apply[`src`, dest]($function)
-            } =>
-          val path = Path.empty(Type.of[src]).appended(Path.Segment.Case(Type.of[sourceSubtype]))
-          Configuration.Instruction.Static(
-            path,
-            Side.Source,
-            Configuration.CaseComputed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
-            Span.fromExpr(cfg)
-          )
-
-        case cfg @ '{ Field.allMatching[a, b, source]($fieldSource) } =>
-          parseAllMatching(fieldSource, Path.empty(Type.of[b]), TypeRepr.of[source], Span.fromExpr(cfg))
-    }
-  }
-
-  private object IdentOfType {
-    def unapply(using Quotes)(term: quotes.reflect.Term): Option[Type[?]] = {
-      import quotes.reflect.*
-
-      PartialFunction.condOpt(term) {
-        case ident: Ident => ident.tpe.asType
-      }
-    }
-  }
-
-  private object AsExpr {
-    def unapply(using Quotes)(term: quotes.reflect.Term): Some[Expr[Any]] = {
-      Some(term.asExpr)
-    }
-  }
-
-  private object RegionalConfig {
-    def unapply(using Quotes)(term: quotes.reflect.Term): Option[(quotes.reflect.Term, Path)] = {
-      import quotes.reflect.*
-      PartialFunction.condOpt(term) {
-        case Apply(
-              TypeApply(
-                Apply(
-                  TypeApply(Select(Ident("Regional"), "regional"), _),
-                  term :: Nil
-                ),
-                _
-              ),
-              PathSelector(path) :: Nil
-            ) =>
-          term -> path
-      }
-    }
+    Varargs
+      .unapply(configs)
+      .get // TODO: Make it nicer
+      .map(expr => parser.applyOrElse(expr.asTerm, fallback))
+      .toList
   }
 }

@@ -35,17 +35,6 @@ object Playground extends App {
 
   val costam = new Costam
 
-  costam.transform[SourceEnum, DestEnum](
-    srcEnum,
-    Case.fallibleConst(_.at[SourceEnum.PersonCase], Right(???))
-  )
-
-
-
-  summon[Left[List[String], Nothing] <:< Either[List[String], DestEnum]]
-
-  def left[A](value: A): Left[A, Nothing] = Left(value)
-
   // val left = Left("" :: Nil)
 
   // val res =
