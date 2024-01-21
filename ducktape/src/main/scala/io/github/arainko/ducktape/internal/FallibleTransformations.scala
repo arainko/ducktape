@@ -28,9 +28,9 @@ object FallibleTransformations {
       .toRight(Plan.Error(sourceStruct, destStruct, ErrorMessage.UndeterminedTransformationMode(Span.fromExpr(F)), None))
       .match {
         case Left(error) =>
-          Refiner.reportErrorsAndAbort(NonEmptyList(error), Nil)
+          Backend.reportErrorsAndAbort(NonEmptyList(error), Nil)
         case Right(mode) =>
-          val totalPlan = Refiner.refineOrReportErrorsAndAbort(plan, config)
+          val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
           FalliblePlanInterpreter.run[F, A, B](totalPlan, source, mode).asExprOf[F[B]]
       }
   }

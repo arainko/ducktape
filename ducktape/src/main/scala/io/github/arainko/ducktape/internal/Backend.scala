@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal
 import scala.quoted.*
 import scala.quoted.runtime.StopMacroExpansion
 
-private[ducktape] object Refiner {
+private[ducktape] object Backend {
 
   def refineOrReportErrorsAndAbort[F <: Fallible](
     plan: Plan[Plan.Error, F],

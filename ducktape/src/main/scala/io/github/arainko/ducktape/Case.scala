@@ -2,10 +2,10 @@ package io.github.arainko.ducktape
 
 import scala.annotation.compileTimeOnly
 
-opaque type Case[A, B] = Unit
+opaque type Case[A, B] <: Case.Fallible[Nothing, A, B] = Case.Fallible[Nothing, A, B]
 
 object Case {
-  opaque type Fallible[F[x], A, B] = Unit 
+  opaque type Fallible[+F[x], A, B] = Unit
 
   def fallibleConst[F[+x], A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, value: F[DestTpe]): Case.Fallible[F, A, B] = ???
 

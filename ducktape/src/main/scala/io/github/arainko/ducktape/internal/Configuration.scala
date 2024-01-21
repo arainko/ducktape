@@ -120,25 +120,4 @@ private[ducktape] object Configuration {
       .map(expr => parser.applyOrElse(expr.asTerm, fallback))
       .toList
   }
-
-  def parseTotal[A: Type, B: Type](
-    configs: Expr[Seq[Field[A, B] | Case[A, B]]],
-    parsers: NonEmptyList[ConfigParser[Nothing]]
-  )(using Quotes): List[Instruction[Nothing]] = {
-    import quotes.reflect.*
-    def fallback(term: quotes.reflect.Term) =
-      Configuration.Instruction.Failed(
-        Path.empty(Type.of[Nothing]),
-        Side.Dest,
-        s"Unsupported config expression: ${term.show}",
-        Span.fromPosition(term.pos)
-      )
-    val parser = ConfigParser.combine(parsers)
-
-    Varargs
-      .unapply(configs)
-      .get // TODO: Make it nicer
-      .map(expr => parser.applyOrElse(expr.asTerm, fallback))
-      .toList
-  }
 }

@@ -34,20 +34,4 @@ object Playground extends App {
   given Mode.FailFast.Either[List[String]] with {}
 
   val costam = new Costam
-
-  // val left = Left("" :: Nil)
-
-  // val res =
-  //   // internal.CodePrinter.code:
-  //     FallibleTransformations.between[[a] =>> Either[List[String], a], SourceEnum, DestEnum](
-  //       srcEnum,
-  //       mode, 
-  //       // Field.fallibleConst(_.at[DestEnum.PersonCase].p.extra, RefinedInt.transformer.transform(0)),
-  //       Field.fallibleComputed(_.at[DestEnum.PersonCase], a => Right(???) : Either[Nothing, Nothing])
-  //     )
-
-
-  // println(res)
-
-//   println(res)
 }

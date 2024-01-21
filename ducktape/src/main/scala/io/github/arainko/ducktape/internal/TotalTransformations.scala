@@ -21,8 +21,8 @@ private[ducktape] object TotalTransformations {
     given Summoner[Nothing] = Summoner.Total
 
     val plan = Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])))
-    val config = Configuration.parseTotal(configs, NonEmptyList(ConfigParser.Total))
-    val totalPlan = Refiner.refineOrReportErrorsAndAbort(plan, config)
+    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total))
+    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
     PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
   }
 
@@ -64,8 +64,8 @@ private[ducktape] object TotalTransformations {
           )
         )
 
-    val config = Configuration.parseTotal(configs, NonEmptyList(ConfigParser.Total))
-    val totalPlan = Refiner.refineOrReportErrorsAndAbort(plan, config)
+    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total))
+    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
     PlanInterpreter.run[A](totalPlan, value)
   }
 
@@ -93,8 +93,8 @@ private[ducktape] object TotalTransformations {
           )
         )
 
-    val config = Configuration.parseTotal(configs, NonEmptyList(ConfigParser.Total))
-    val totalPlan = Refiner.refineOrReportErrorsAndAbort(plan, config)
+    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total))
+    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
     PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
   }
 }
