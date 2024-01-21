@@ -104,4 +104,14 @@ the library has been through 2 phases already.
 
 The first of which is documented in [this blogpost](https://scalac.io/blog/inline-your-boilerplate-harnessing-scala3-metaprogramming-without-macros/) and can be summarized as match type abuse (the `0.0.x` line of releases).
 
-The second one being the `0.1.x` line of releases which pretty much scrapped all traces of its predecessor and replaced it with those pesky macros and developed an overreliance on automatic typeclass derivation which then had to be unpacked in a process I can only call 'beta-reduction at home' to not generate unnecessary `Transformer` (the typeclass being automatically derived) instances at runtime
+The second one being the `0.1.x` line of releases which pretty much scrapped all traces of its predecessor and replaced it with those pesky macros and developed an overreliance on automatic typeclass derivation which then had to be unpacked in a process I can only call 'beta-reduction at home' (TODO: Add GH permalink to `LiftTransformation.scala`) to not generate unnecessary `Transformer` (the typeclass being automatically derived) instances at runtime. All in all, a pretty fun piece of code.
+
+The third and newest iteration is the `0.2.x` line or releases (sitting at a `Milestone 2` release at the time of writing) - this time I took a more thought-through approach to structuring the library than constantly telling the compiler to derive that good good.
+
+The main motivation was being able to support stuff like nested configuration of fields and cases (which IMO were the worst offenders to usability of the library itself since even if your transformation was aaaaalmost there but a single field was missing in a nested case class you were done for and had to create a new `Transformer` instance and put it in implicit scope) and being able to show the user all of the failures that occurred all at once in addition to being more actionable than just `Yeah, the field 'chips' is missing in Diner`.
+
+### Reifying all the stuff
+
+Most of the issues of `0.1.x` came from relying on automatic derivation of `Transformers` to do basically everything, which resulted in the library not really being in control of anything below the very first level of the transformation since the compiler is pretty much a magic blackbox that does stuff for you, so to be able to do all of the things listed above I had to find a way of introspecting and somehow transforming the transformations.
+
+Reifying (being a synonym of shoving stuff into data structures instead of immediately taking action on it to then 'interpret' them at the very end) 
