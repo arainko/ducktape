@@ -12,6 +12,8 @@ The last part of that sentence also shines some light on why the name is so dumb
 
 However, the idea of joining two words that end and start with the same letter wouldn't let me sleep, so I went with what I considered an absolute kino of a name at the time - `ducktape`, but I digress.
 
+![ducktape-logo-32](https://user-images.githubusercontent.com/46346508/236060869-3b118075-f660-44c9-9d0d-d40fba5c8db0.svg)
+
 ### Motivating example
 
 For the purposes of showing what the library is capable of, let's consider two nearly identical models, a `wire` model:
@@ -104,7 +106,7 @@ the library has been through 2 phases already.
 
 The first of which is documented in [this blogpost](https://scalac.io/blog/inline-your-boilerplate-harnessing-scala3-metaprogramming-without-macros/) and can be summarized as match type abuse (the `0.0.x` line of releases).
 
-The second one being the `0.1.x` line of releases which pretty much scrapped all traces of its predecessor and replaced it with those pesky macros and developed an overreliance on automatic typeclass derivation which then had to be unpacked in a process I can only call 'beta-reduction at home' (TODO: Add GH permalink to `LiftTransformation.scala`) to not generate unnecessary `Transformer` (the typeclass being automatically derived) instances at runtime. All in all, a pretty fun piece of code.
+The second one being the `0.1.x` line of releases which pretty much scrapped all traces of its predecessor and replaced it with those pesky macros and developed an overreliance on automatic typeclass derivation which then had to be unpacked in a process I can only call ['beta-reduction at home'](https://github.com/arainko/ducktape/blob/5d266a7c9076037e6512c0a740b2065e4f077828/ducktape/src/main/scala/io/github/arainko/ducktape/internal/macros/LiftTransformation.scala#L113)  to not generate unnecessary `Transformer` (the typeclass being automatically derived) instances at runtime. All in all, a pretty fun piece of code.
 
 The third and newest iteration is the `0.2.x` line or releases (sitting at a `Milestone 2` release at the time of writing) - this time I took a more thought-through approach to structuring the library than constantly telling the compiler to derive that good good.
 
@@ -112,6 +114,46 @@ The main motivation was being able to support stuff like nested configuration of
 
 ### Reifying all the stuff
 
-Most of the issues of `0.1.x` came from relying on automatic derivation of `Transformers` to do basically everything, which resulted in the library not really being in control of anything below the very first level of the transformation since the compiler is pretty much a magic blackbox that does stuff for you, so to be able to do all of the things listed above I had to find a way of introspecting and somehow transforming the transformations.
+Most of the issues of `0.1.x` came from relying on automatic derivation of `Transformers` to do basically everything, which resulted in the library not really being in control of anything since it gave away control to the compiler right after pulling out of the driveway, so to be able to do all of the things listed above I had to find a way of introspecting and somehow transforming the transformations, which basically came down to data-fying each and every step. 
+Let's take a look at a highlevel overview of the new architecture:
 
-Reifying (being a synonym of shoving stuff into data structures instead of immediately taking action on it to then 'interpret' them at the very end) 
+<pre class="mermaid">
+  flowchart TD
+    Input1["Type.of[Source]"] -->|Structure.of| SourceStruct("Structure[Source]") 
+    Input2["Type.of[Dest]"] -->|Structure.of| DestStruct("Structure[Dest]")
+    InputExpr["Expr[Source]"]
+    SourceStruct -->|Planner.create| InitialPlan("Plan[Plan.Error]")
+    DestStruct -->|Planner.create| InitialPlan
+    InputConfig["Field[Source, Dest] | Case[Source, Dest]*"] -->|Configuration.parse| Instructions("List[Configuration.Instruction]")
+    InitialPlan -->|PlanConfigurer.run| ConfiguredPlan("Plan[Plan.Error]")
+    Instructions -->|PlanConfigurer.run| ConfiguredPlan
+    ConfiguredPlan -->|PlanRefiner.run| RefinedPlan("Either[NonEmptyList[Plan.Error], Plan[Nothing]]")
+    RefinedPlan -->|Transformations.createTransformation| NonErroneousPlan("Plan[Nothing]")
+    NonErroneousPlan -->|PlanInterpreter.run| ExpressionOfDest("Expr[Dest]")
+    InputExpr -->|PlanInterpreter.run| ExpressionOfDest
+</pre>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+</script>
+
+So, what is all this stuff you may ask and am I even showing you this... Let's try to peel it back layer by layer starting from the topmost-left piece of the graph, i.e:
+
+<pre class="mermaid">
+  flowchart TD
+    Input1["Type.of[Source]"] -->|Structure.of| SourceStruct("Structure[Source]") 
+    Input2["Type.of[Dest]"] -->|Structure.of| DestStruct("Structure[Dest]")
+    SourceStruct -->|Planner.create| InitialPlan("Plan[Plan.Error]")
+    DestStruct -->|Planner.create| InitialPlan
+</pre>
+
+### The structure of a `Structure`
+
+A `Structure` is meant to capture stuff like fields of a case class (their names and `Structures` that correspond to them) , children of an enum/sealed trait and some more specialized stuff like `Optional` types, `Collections`, `Value Classes`, `Singletons` etc. ([the implementation itself looks like this](https://github.com/arainko/ducktape/blob/1cdf94d497f071a4f42269a80a2bf999eb27815b/ducktape/src/main/scala/io/github/arainko/ducktape/internal/Structure.scala)), so going back to our [Motivating Example](#motivating-example), a `Structure` of `wire.Person` looks like this:
+
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printStructure[wire.Person]
+```
+So uhhh, that doesn't tell us anything since most of that stuff is `Lazy`, but it's lazy for a reason not because it doesn't want to do anything, that reason being recursive types which are suspiciously prevalent in our day to day life, looking no further than Scala's `List`. See, if it wasn't for those `Lazy` nodes we'd be sending the compiler on a trip it wouldn't be coming back from, but if we encode the notion of laziness we can expand those calls later on when we'll be taking special care to not overflow the stack.

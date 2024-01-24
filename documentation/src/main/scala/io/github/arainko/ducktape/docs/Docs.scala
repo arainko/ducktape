@@ -4,10 +4,11 @@ import org.scalafmt.dynamic.ConsoleScalafmtReporter
 import org.scalafmt.interfaces.Scalafmt
 
 import java.io.{ OutputStream, PrintStream }
-import java.nio.file.Path
+import java.nio.file.Path as JPath
 import scala.quoted.*
 import scala.util.chaining.*
 import java.time.Instant
+import io.github.arainko.ducktape.internal.*
 
 /**
  * Sometimes the code printed with `Printer.TreeShortCode` is not fully legal (at least in scalafmt terms)
@@ -17,7 +18,17 @@ object SilentReporter extends ConsoleScalafmtReporter(PrintStream(OutputStream.n
 
 object Docs {
   val scalafmt = Scalafmt.create(this.getClass.getClassLoader()).withReporter(SilentReporter)
-  val config = Path.of(".scalafmt.conf")
+  val config = JPath.of(".scalafmt.conf")
+
+  inline def printStructure[A]: Unit = ${ printStructureMacro[A] }
+
+  def printStructureMacro[A: Type](using Quotes) = {
+    val struct = Structure.of[A](Path.empty(Type.of[A]))
+    val markdown =  format(stripColors(Debug.show(struct)))
+    '{
+      println(${ Expr(markdown) })
+    }
+  }
 
   inline def printCode[A](inline value: A): A = ${ printCodeMacro[A]('value) }
 
@@ -37,26 +48,44 @@ object Docs {
 
     val struct = fixTypeLambdas(Printer.TreeShortCode.show(value.asTerm))
 
+    '{
+      println(${ Expr(format(struct)) })
+      $value
+    }
+  }
+
+  private def format(code: String) = {
     // we need to enclose it inside a class/object, otherwise scalafmt doesn't run
     val enclosedCode =
       s"""object Code {
-      |  $struct
+      |  $code
       |}""".stripMargin
 
-    val formatted =
-      scalafmt
-        .format(config, Path.of("Code.scala"), enclosedCode)
-        .linesWithSeparators
-        .toVector
-        .drop(1) // strip 'object Code {'
-        .dropRight(1) // strip the block-closing '}'
-        .prepended("``` scala \n") // enclose it in a Scala markdown block
-        .appended("```")
-        .mkString
+    scalafmt
+      .format(config, JPath.of("Code.scala"), enclosedCode)
+      .linesWithSeparators
+      .toVector
+      .drop(1) // strip 'object Code {'
+      .dropRight(1) // strip the block-closing '}'
+      .prepended("``` scala \n") // enclose it in a Scala markdown block
+      .appended("```")
+      .mkString
+  }
 
-    '{
-      println(${ Expr(formatted) })
-      $value
-    }
+  private def stripColors(string: String) = {
+    // private def bold: String = s"${Console.BOLD}$self${Console.RESET}"
+    // private def underlined: String = s"${Console.UNDERLINED}$self${Console.RESET}"
+    // private def red: String = s"${Console.RED}$self${Console.RESET}"
+    // private def magenta: String = s"${Console.MAGENTA}$self${Console.RESET}"
+    // private def cyan: String = s"${Console.CYAN}$self${Console.RESET}"
+    // private def yellow: String = s"${Console.YELLOW}$self${Console.RESET}"
+    string
+      .replace(Console.BOLD, "")
+      .replace(Console.UNDERLINED, "")
+      .replace(Console.RED, "")
+      .replace(Console.MAGENTA, "")
+      .replace(Console.CYAN, "")
+      .replace(Console.YELLOW, "")
+      .replace(Console.RESET, "")
   }
 }
