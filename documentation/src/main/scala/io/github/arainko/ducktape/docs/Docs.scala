@@ -17,8 +17,31 @@ import io.github.arainko.ducktape.internal.*
 object SilentReporter extends ConsoleScalafmtReporter(PrintStream(OutputStream.nullOutputStream()))
 
 object Docs {
-  val scalafmt = Scalafmt.create(this.getClass.getClassLoader()).withReporter(SilentReporter)
+  val scalafmt = Scalafmt.create(this.getClass.getClassLoader())//.withReporter(SilentReporter)
   val config = JPath.of(".scalafmt.conf")
+
+  inline def printPlan[A, B]: Unit = ${ printPlanMacro[A, B] }
+
+  def printPlanMacro[A: Type, B: Type](using Quotes) = {
+    given Debug[Structure] with {
+      extension (self: Structure) def show(using Quotes): String = {
+        import quotes.reflect.*
+        s"Structure.of[${self.tpe.repr.show(using Printer.TypeReprShortCode)}]"
+      }
+    }
+    given customizedPlanDebug: Debug[Plan[Plan.Error]] = 
+      Debug.derived[Plan[Plan.Error]]
+
+    val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
+    val destStruct = Structure.of[B](Path.empty(Type.of[B]))
+
+    given TransformationSite = TransformationSite.Transformation
+    val plan = Planner.between(sourceStruct, destStruct)
+    val printed = format(stripColors(customizedPlanDebug.show(plan)))
+    '{
+      println(${ Expr(printed) })
+    }
+  }
 
   inline def printStructure[A]: Unit = ${ printStructureMacro[A] }
 
@@ -54,10 +77,11 @@ object Docs {
     }
   }
 
-  private def format(code: String) = {
+  private def format(code: String, maxColumn: Int = 80) = {
     // we need to enclose it inside a class/object, otherwise scalafmt doesn't run
     val enclosedCode =
-      s"""object Code {
+      s"""|// scalafmt: { maxColumn = $maxColumn }
+      |object Code {
       |  $code
       |}""".stripMargin
 
@@ -65,7 +89,7 @@ object Docs {
       .format(config, JPath.of("Code.scala"), enclosedCode)
       .linesWithSeparators
       .toVector
-      .drop(1) // strip 'object Code {'
+      .drop(2) // strip 'object Code {'
       .dropRight(1) // strip the block-closing '}'
       .prepended("``` scala \n") // enclose it in a Scala markdown block
       .appended("```")
@@ -73,12 +97,6 @@ object Docs {
   }
 
   private def stripColors(string: String) = {
-    // private def bold: String = s"${Console.BOLD}$self${Console.RESET}"
-    // private def underlined: String = s"${Console.UNDERLINED}$self${Console.RESET}"
-    // private def red: String = s"${Console.RED}$self${Console.RESET}"
-    // private def magenta: String = s"${Console.MAGENTA}$self${Console.RESET}"
-    // private def cyan: String = s"${Console.CYAN}$self${Console.RESET}"
-    // private def yellow: String = s"${Console.YELLOW}$self${Console.RESET}"
     string
       .replace(Console.BOLD, "")
       .replace(Console.UNDERLINED, "")

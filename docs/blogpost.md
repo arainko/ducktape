@@ -149,11 +149,159 @@ So, what is all this stuff you may ask and am I even showing you this... Let's t
 
 ### The structure of a `Structure`
 
-A `Structure` is meant to capture stuff like fields of a case class (their names and `Structures` that correspond to them) , children of an enum/sealed trait and some more specialized stuff like `Optional` types, `Collections`, `Value Classes`, `Singletons` etc. ([the implementation itself looks like this](https://github.com/arainko/ducktape/blob/1cdf94d497f071a4f42269a80a2bf999eb27815b/ducktape/src/main/scala/io/github/arainko/ducktape/internal/Structure.scala)), so going back to our [Motivating Example](#motivating-example), a `Structure` of `wire.Person` looks like this:
+A `Structure` is meant to capture stuff like fields of a case class (their names and `Structures` that correspond to them), children of an enum/sealed trait and some more specialized stuff like `Optional` types, `Collections`, `Value Classes`, `Singletons` etc. ([the implementation itself looks like this](https://github.com/arainko/ducktape/blob/1cdf94d497f071a4f42269a80a2bf999eb27815b/ducktape/src/main/scala/io/github/arainko/ducktape/internal/Structure.scala)), so going back to our [Motivating Example](#motivating-example), a `Structure` of `wire.Person` looks like this:
 
 ```scala mdoc:passthrough
 import io.github.arainko.ducktape.docs.*
 
 Docs.printStructure[wire.Person]
 ```
-So uhhh, that doesn't tell us anything since most of that stuff is `Lazy`, but it's lazy for a reason not because it doesn't want to do anything, that reason being recursive types which are suspiciously prevalent in our day to day life, looking no further than Scala's `List`. See, if it wasn't for those `Lazy` nodes we'd be sending the compiler on a trip it wouldn't be coming back from, but if we encode the notion of laziness we can expand those calls later on when we'll be taking special care to not overflow the stack.
+So uhhh, that doesn't tell us everything since most of that stuff is `Lazy`, but it's lazy for a reason not because it doesn't want to do anything, that reason being recursive types which are suspiciously prevalent in our day to day life, looking no further than Scala's `List`.   
+See, if it wasn't for those `Lazy` nodes we'd be sending the compiler on a trip it wouldn't be coming back from every time we encounter a recursive type, but if we encode the notion of laziness we can expand those calls later on when we'll be taking special care to not overflow the stack.   
+You might be asking yourself, how is a `Structure` actually constructed - the answer to that, and most other things, is a big pattern match! [Here's a link to the full implementation](https://github.com/arainko/ducktape/blob/6698dc187775e0a55c815212f228e518cf9cd749/ducktape/src/main/scala/io/github/arainko/ducktape/internal/Structure.scala#L82) or if your attention span doesn't allow you to click on links to other sites:
+
+<details>
+  <summary>click here here to see it in all of its glory</summary>
+
+```scala
+object Structure {
+  def of[A: Type](path: Path)(using Quotes): Structure = {
+    import quotes.reflect.*
+
+    Type.of[A] match {
+      case tpe @ '[Nothing] =>
+        Structure.Ordinary(tpe, path)
+
+      case tpe @ '[Option[param]] =>
+        Structure.Optional(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))
+
+      case tpe @ '[Iterable[param]] =>
+        Structure.Collection(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))
+
+      case tpe @ '[AnyVal] if tpe.repr.typeSymbol.flags.is(Flags.Case) =>
+        val repr = tpe.repr
+        val param = repr.typeSymbol.caseFields.head
+        val paramTpe = repr.memberType(param)
+        Structure.ValueClass(tpe, path, paramTpe.asType, param.name)
+
+      case _ =>
+        Expr.summon[Mirror.Of[A]] match {
+          case None =>
+            Structure.Ordinary(Type.of[A], path)
+
+          case Some(value) =>
+            value match {
+              case '{
+                    type label <: String
+                    $m: Mirror.Singleton {
+                      type MirroredLabel = `label`
+                    }
+                  } =>
+                val value = materializeSingleton[A]
+                Structure.Singleton(Type.of[A], path, constantString[label], value.asExpr)
+              case '{
+                    type label <: String
+                    $m: Mirror.SingletonProxy {
+                      type MirroredLabel = `label`
+                    }
+                  } =>
+                val value = materializeSingleton[A]
+                Structure.Singleton(Type.of[A], path, constantString[label], value.asExpr)
+              case '{
+                    $m: Mirror.Product {
+                      type MirroredElemLabels = labels
+                      type MirroredElemTypes = types
+                    }
+                  } =>
+                val structures =
+                  tupleTypeElements(TypeRepr.of[types])
+                    .zip(constStringTuple(TypeRepr.of[labels]))
+                    .map((tpe, name) =>
+                      name -> (tpe.asType match {
+                        case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], name)))
+                      })
+                    )
+                    .toMap
+                Structure.Product(Type.of[A], path, structures)
+              case '{
+                    $m: Mirror.Sum {
+                      type MirroredElemLabels = labels
+                      type MirroredElemTypes = types
+                    }
+                  } =>
+                val structures =
+                  tupleTypeElements(TypeRepr.of[types])
+                    .zip(constStringTuple(TypeRepr.of[labels]))
+                    .map((tpe, name) =>
+                      name -> (tpe.asType match { case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Case(Type.of[tpe]))) })
+                    )
+                    .toMap
+
+                Structure.Coproduct(Type.of[A], path, structures)
+            }
+        }
+    }
+  }
+}
+```
+</details>
+
+---
+#### Digression
+A potentially interesting thing that's going on there is the way `Mirrors` are used to reflect on the type structure:
+
+```scala
+Expr.summon[Mirror.Of[A]] match {
+  case None =>
+    Structure.Ordinary(Type.of[A], path)
+
+  case Some(value) =>
+    value match {
+      case '{
+            $m: Mirror.Product {
+              type MirroredElemLabels = labels
+              type MirroredElemTypes = types
+            }
+          } =>
+        val structures =
+          tupleTypeElements(TypeRepr.of[types])
+            .zip(constStringTuple(TypeRepr.of[labels]))
+            .map((tpe, name) =>
+              name -> (tpe.asType match {
+                case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], name)))
+              })
+            )
+            .toMap
+        Structure.Product(Type.of[A], path, structures)
+    }
+}
+```
+
+i.e. the fact that you can bind to types in quoted blocks, I didn't know that until very recently - hopefully it comes in handy to someone.
+
+---
+
+In short, it matches on a type given to it in the type parameter of `Structure.of[A]`, gets the first few special cases out of the way:
+* `Nothing` since it's a subtype of all other types,
+* `Option[param]`,
+* `Iterable[param]`,
+* `AnyVal` that's also a case class (also known as a value class)
+
+and then proceeds to roll up its sleeves by trying to summon an instance of a `Mirror` and matches on its subtypes:
+* `Mirror.Singleton` for Scala 3 singletons,
+* `Mirror.SingletonProxy` for Scala 2 singletons,
+* `Mirror.Product` for case classes,
+* `Mirror.Sum` for sealed traits/enums
+
+to recursively derive `Structures` for fields/known subtypes. This gives us just enough information to be able to collate two `Structures` together in order to create a transformation plan.
+
+### The makings of a `Plan`
+
+When I said that it's just enough information to create a transformation plan I meant that literally, the next step in the diagram is creating a `Plan[Plan.Error]`.    
+Before diving into it let's first see how does the final product look like for a transfomation plan between `wire.PaymentMethod` and `domain.Payment`:
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+  Docs.printPlan[wire.PaymentMethod, domain.Payment]
+``` 
