@@ -131,6 +131,17 @@ Let's take a look at a highlevel overview of the new architecture:
     RefinedPlan -->|Transformations.createTransformation| NonErroneousPlan("Plan[Nothing]")
     NonErroneousPlan -->|PlanInterpreter.run| ExpressionOfDest("Expr[Dest]")
     InputExpr -->|PlanInterpreter.run| ExpressionOfDest
+  subgraph Transformation
+    Input1
+    Input2
+    SourceStruct
+    DestStruct
+    InitialPlan
+  end
+  subgraph Configuration
+    InputConfig
+    Instructions
+  end
 </pre>
 
 <script type="module">
@@ -298,10 +309,113 @@ to recursively derive `Structures` for fields/known subtypes. This gives us just
 ### The makings of a `Plan`
 
 When I said that it's just enough information to create a transformation plan I meant that literally, the next step in the diagram is creating a `Plan[Plan.Error]`.    
-Before diving into it let's first see how does the final product look like for a transfomation plan between `wire.PaymentMethod` and `domain.Payment`:
+Before diving into it let's first see how does the final product look like for a transfomation between `wire.PaymentMethod` and `domain.Payment`:
 
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
   Docs.printPlan[wire.PaymentMethod, domain.Payment]
 ``` 
+
+The above can be rougly read as 'this a transformation between coproducts (source being `wire.PaymentMethod` and the destination `domain.Payment`), for which the transformations between the cases of that coproduct is as follows: 
+  * `wire.PaymentMethod.Card` maps to `domain.Payment.Card` which itself is a product transformation for fields:
+    * "name" which is just an upcast from the source field,
+    * "digits" which is just an upcast from the source field,
+    * "expires" which is just an upcast from the source field
+  * `wire.PaymentMethod.PayPal` maps to `domain.Payment.PayPal` which itself is a product transformation for fields:
+    * "name" which is just an upcast from the source field
+  * `wire.PaymentMethod.Cash` maps to `domain.Payment.Cash` which is a singleton transformation (i.e. the value of the destination singleton is just inserted)'.
+
+`Plans` are meant to represent a higher level representation of a transformation specifically tailored to be modifiable in a variety of ways, eg. by changing one of the nodes to a constant value. Its declaration roughly cut down to only nodes visible in the example looks like this ([for the real deal take a look here](https://github.com/arainko/ducktape/blob/6698dc187775e0a55c815212f228e518cf9cd749/ducktape/src/main/scala/io/github/arainko/ducktape/internal/Plan.scala#L13)):
+
+```scala
+sealed trait Plan[+E <: Plan.Error]
+
+object Plan {
+  case class Upcast(
+    source: Structure,
+    dest: Structure
+  ) extends Plan[Nothing]
+
+  case class BetweenSingletons(
+    source: Structure.Singleton,
+    dest: Structure.Singleton
+  ) extends Plan[Nothing]
+
+  case class BetweenProducts[+E <: Plan.Error](
+    source: Structure.Product,
+    dest: Structure.Product,
+    fieldPlans: Map[String, Plan[E]]
+  ) extends Plan[E]
+
+  case class BetweenCoproducts[+E <: Plan.Error](
+    source: Structure.Coproduct,
+    dest: Structure.Coproduct,
+    casePlans: Vector[Plan[E]]
+  ) extends Plan[E]
+
+  case class Error(
+    source: Structure,
+    dest: Structure,
+    message: ErrorMessage,
+    suppressed: Option[Plan.Error]
+  ) extends Plan[Plan.Error]
+
+  //... more cases elided for readability
+}
+```
+There isn't that much going on here, besides that weird `+E <: Plan.Error` - why is it there exactly?
+As an another example let's examine what actually happens when we try to create a transformation plan between case classes that don't fit each other:
+```scala mdoc
+case class Car(brand: String, age: Int, noOfSeats: Long)
+
+case class Plane(brand: String, noOfSeats: Long, age: Int, wingColor: String)
+```
+
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printPlan[Car, Plane]
+```
+
+We can see that in case something doesn't fully line up a `Plan` is still created but with a `Plan.Error` node somewhere inside, this is what the `E` type parameter of `Plan` i.e. the possibility of being erroneous, as for why is it declared as covariant, it's due to one of Scala 3's new features.   
+
+That feature being a proper support for GADTs in pattern matching, in layman's terms this means that for an enum declared as such:
+
+```scala mdoc
+enum Data[+E <: Throwable] {
+  case NonFallible extends Data[Nothing]
+  case SomeOtherStuff(value: String) extends Data[Nothing]
+  case Error(error: Throwable) extends Data[Throwable]
+}
+```
+
+...if we end up with a value of `Data[Nothing]` and pattern match on it the compiler will yell at us when we try to put `Data.Error` as one of the cases:
+```scala mdoc:warn
+val dataNonFallible: Data[Nothing] = Data.NonFallible
+
+dataNonFallible match {
+  case Data.NonFallible => "non fallible"
+  case Data.SomeOtherStuff(value) => value
+  case Data.Error(error) => "a warning will be issued on this line"
+  // ^ Unreachable case 
+}
+```
+
+But if we end up with a value of `Data[Throwable]` we will be forced to pattern match on all of the cases:
+```scala mdoc:warn
+val dataFallible: Data[Throwable] = Data.Error(Exception("woops"))
+
+dataFallible match {
+  case Data.NonFallible => "non fallible"
+  case Data.SomeOtherStuff(value) => value
+// ^ match may not be exhaustive.
+// It would fail on pattern case: Data.Error(_, _)
+}
+```
+
+Which brings us back to the usage of `+E <: Plan.Error` as way to keep track of possibly erroneous plans at compiletime (later on we will find out that to interpert a `Plan` into an actual transformation we need to feed the interpeter a `Plan[Nothing]` that is, a `Plan` without any `Plan.Error` nodes).
+
+
+Now onto how a `Plan` is actually constructed, the very first two things you need are two `Structures` which are then plopped into a method called `Planner.create` which then does a big pattern match on those two `Structures` trying to extract information by matching on its subtypes and constructing plans accordingly. For example, given two `Structure.Products` a `Plan.BetweenProducts` will be constructed unless a user supplied instance of a `Transformer` is defined in the current implicit scope, in which case it takes precedence over any automatically constructed transformations.
+(TODO: Add `Planner.create` call with explanations or at the very least a link)
