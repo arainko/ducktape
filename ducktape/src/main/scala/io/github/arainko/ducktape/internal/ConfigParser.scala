@@ -188,6 +188,8 @@ object ConfigParser {
             Configuration.FallibleCaseComputed(Type.of[computed], function.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
           )
+        
+        case DeprecatedFallibleConfig(cfg) => cfg
       }
     }
   }
@@ -232,7 +234,7 @@ object ConfigParser {
       )
   }
 
-  object DeprecatedConfig {
+  private object DeprecatedConfig {
     def unapply(using Quotes)(term: quotes.reflect.Term) = {
       import quotes.reflect.*
 
@@ -268,6 +270,32 @@ object ConfigParser {
     }
   }
 
+  private object DeprecatedFallibleConfig {
+    def unapply[F[+x]: Type](using Quotes)(expr: quotes.reflect.Term) = {
+      import quotes.reflect.*
+
+      PartialFunction.condOpt(expr.asExpr) {
+        case cfg @ '{ Case.fallibleComputed[srcSubtype].apply[F, source, dest]($function) } => 
+          val path = Path.empty(Type.of[source]).appended(Path.Segment.Case(Type.of[srcSubtype]))
+          Configuration.Instruction.Static(
+            path,
+            Side.Source,
+            Configuration.FallibleCaseComputed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
+            Span.fromExpr(cfg)
+          )
+
+        case cfg @ '{ Case.fallibleConst[srcSubtype].apply[F, source, dest]($value) } => 
+          val path = Path.empty(Type.of[source]).appended(Path.Segment.Case(Type.of[srcSubtype]))
+          Configuration.Instruction.Static(
+            path,
+            Side.Source,
+            Configuration.FallibleConst(value, Type.of[dest]),
+            Span.fromExpr(cfg)
+          )
+      }
+    }
+  }
+
   private object IdentOfType {
     def unapply(using Quotes)(term: quotes.reflect.Term): Option[Type[?]] = {
       import quotes.reflect.*
@@ -298,7 +326,7 @@ object ConfigParser {
               ),
               PathSelector(path) :: Nil
             ) =>
-          term -> path
+          term -> path 
       }
     }
   }

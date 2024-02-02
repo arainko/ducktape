@@ -644,6 +644,51 @@ class NestedConfigurationSuite extends DucktapeSuite {
 
   }
 
+  test("Fails when a Case config doesn't end with an 'at' segment") {
+    enum SourceToplevel1 {
+      case Level1(level2: SourceLevel2)
+    }
+
+    enum SourceLevel2 {
+      case Level2(level3: SourceLevel3)
+    }
+
+    enum SourceLevel3 {
+      case One(int: Int)
+      case Two(str: String)
+      case Extra(int: Int)
+    }
+
+    enum DestToplevel1 {
+      case Level1(level2: DestLevel2)
+    }
+
+    enum DestLevel2 {
+      case Level2(level3: DestLevel3)
+    }
+
+    enum DestLevel3 {
+      case One(int: Int)
+      case Two(str: String)
+    }
+
+    assertFailsToCompileWith(
+      """
+      val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.Extra(1)))
+
+      source
+        .into[DestToplevel1]
+        .transform(
+          Case.computed(_.at[SourceToplevel1.Level1].level2, _ => ???)
+        )
+      """
+    )(
+      "No child named 'Extra' found in DestLevel3 @ SourceToplevel1.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra]",
+      "Case config's path should always end with an `.at` segment @ SourceToplevel1"
+    )
+
+  }
+
   test("Field.fallbackToNone works") {
     final case class SourceToplevel(level1: SourceLevel1)
     final case class SourceLevel1(str: String)

@@ -24,6 +24,10 @@ private[ducktape] sealed trait Structure derives Debug {
 }
 
 private[ducktape] object Structure {
+  def toplevelAny(using Quotes) = Structure.Ordinary(Type.of[Any], Path.empty(Type.of[Any]))
+
+  def toplevelNothing(using Quotes) = Structure.Ordinary(Type.of[Nothing], Path.empty(Type.of[Nothing]))
+
   case class Product(tpe: Type[?], path: Path, fields: Map[String, Structure]) extends Structure {
     private var cachedDefaults: Map[String, Expr[Any]] = null
 

@@ -3,7 +3,7 @@ package io.github.arainko.ducktape
 import io.github.arainko.ducktape.internal.FallibleTransformations
 
 case class Person(int: Int, opt: Option[Int], list: List[Int], normal: Int)
-case class Person2(int: RefinedInt, opt: Option[RefinedInt], list: Vector[RefinedInt], normal: Int, extra: Option[RefinedInt])
+case class Person2(int: RefinedInt, opt: Option[RefinedInt], list: Vector[RefinedInt], normal: Int)
 
 case class RefinedInt(value: Int)
 
@@ -22,16 +22,31 @@ object RefinedInt {
   }
 }
 
-class Costam[F[+x], M <: Mode[F]](using F: M) {
-  inline def transform[A, B](value: A, inline config: Field.Fallible[F, A, B] | Case.Fallible[F, A, B]*): F[B] =
-    FallibleTransformations.between[F, A, B](value, F, config*)
-}
-
 
 object Playground extends App {
   val p = Person(1, None, List(1, 2, 3, 1), 2)
   val srcEnum = SourceEnum.PersonCase(p)
-  given Mode.FailFast.Either[List[String]] with {}
+  given Mode.Accumulating.Either[String, List] with {}
 
-  val costam = new Costam
+  val cos = 
+    internal.CodePrinter.code:
+      p.fallibleVia(Person2.apply)
+
+  val a = 
+    srcEnum
+      .into[DestEnum]
+      .fallible
+      .transform(
+        Case.const(_.at[SourceEnum.PersonCase], ???),
+      )
+
+  // internal.CodePrinter.code:
+  //   costam.transform[SourceEnum, DestEnum](
+  //     srcEnum,
+  //     // Case.fallibleConst[SourceEnum.PersonCase](Left("" :: Nil)),
+
+
+
+  //     Case.const(_.at[SourceEnum.PersonCase], ???),
+  //   )
 }

@@ -7,9 +7,15 @@ opaque type Case[A, B] <: Case.Fallible[Nothing, A, B] = Case.Fallible[Nothing, 
 object Case {
   opaque type Fallible[+F[x], A, B] = Unit
 
-  def fallibleConst[F[+x], A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, value: F[DestTpe]): Case.Fallible[F, A, B] = ???
+  def fallibleConst[F[+x], A, B, SourceTpe, DestTpe](
+    selector: Selector ?=> A => SourceTpe,
+    value: F[DestTpe]
+  ): Case.Fallible[F, A, B] = ???
 
-  def fallibleComputed[F[+x], A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, function: SourceTpe => F[DestTpe]): Case.Fallible[F, A, B] = ???
+  def fallibleComputed[F[+x], A, B, SourceTpe, DestTpe](
+    selector: Selector ?=> A => SourceTpe,
+    function: SourceTpe => F[DestTpe]
+  ): Case.Fallible[F, A, B] = ???
 
   @compileTimeOnly("Case.const is only useable as a case configuration for transformations")
   def const[A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, value: DestTpe): Case[A, B] = ???
@@ -48,6 +54,32 @@ object Case {
 
       @compileTimeOnly("'Case.computed' needs to be erased from the AST with a macro.")
       def apply[Source >: SourceSubtype, Dest](f: SourceSubtype => Dest): Case[Source, Dest] = ???
+    }
+  }
+
+  @compileTimeOnly("'Case.fallibleConst' needs to be erased from the AST with a macro.")
+  def fallibleConst[SourceSubtype]: Case.FallibleConst[SourceSubtype] = ???
+
+  opaque type FallibleConst[SourceSubtype] = Unit
+
+  object FallibleConst {
+    extension [SourceSubtype](inst: FallibleConst[SourceSubtype]) {
+
+      @compileTimeOnly("'Case.fallibleConst' needs to be erased from the AST with a macro.")
+      def apply[F[+x], Source, Dest](const: F[Dest]): Case.Fallible[F, Source, Dest] = ???
+    }
+  }
+
+  @compileTimeOnly("'Case.fallibleComputed' needs to be erased from the AST with a macro.")
+  def fallibleComputed[SourceSubtype]: Case.FallibleComputed[SourceSubtype] = ???
+
+  opaque type FallibleComputed[SourceSubtype] = Unit
+
+  object FallibleComputed {
+    extension [SourceSubtype](inst: FallibleComputed[SourceSubtype]) {
+
+      @compileTimeOnly("'Case.fallibleComputed' needs to be erased from the AST with a macro.")
+      def apply[F[+x], Source, Dest](const: SourceSubtype => F[Dest]): Case.Fallible[F, Source, Dest] = ???
     }
   }
 }

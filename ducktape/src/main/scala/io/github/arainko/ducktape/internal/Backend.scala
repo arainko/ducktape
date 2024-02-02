@@ -41,7 +41,7 @@ private[ducktape] object Backend {
     }
   }
 
-  def reportErrorsAndAbort(errors: NonEmptyList[Plan.Error], configs: List[Configuration.Instruction[?]])(using Quotes) = {
+  def reportErrorsAndAbort(errors: NonEmptyList[Plan.Error], configs: List[Configuration.Instruction[Fallible]])(using Quotes) = {
     val spanForAccumulatedErrors = Span.minimalAvailable(configs.map(_.span))
     errors.groupBy {
       _.message.span match

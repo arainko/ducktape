@@ -88,4 +88,10 @@ private[ducktape] object ErrorMessage {
       "Couldn't determine the transformation mode, make sure an instance of either Mode.FailFast[F] or Mode.Accumulating[F] is in implicit scope"
     val side: Side = Side.Dest
   }
+
+  final case class SourceConfigDoesntEndWithCaseSegment(span: Span) extends ErrorMessage {
+    def render(using Quotes): String = 
+      "Case config's path should always end with an `.at` segment"
+    val side: Side = Side.Source
+  }
 }

@@ -8,9 +8,10 @@ import scala.quoted.*
 private[ducktape] object PlanConfigurer {
   import Plan.*
 
-  def run[F <: Fallible](plan: Plan[Plan.Error, F], configs: List[Configuration.Instruction[F]])(using
-    Quotes
-  ): Plan.Reconfigured[F] = {
+  def run[F <: Fallible](
+    plan: Plan[Plan.Error, F],
+    configs: List[Configuration.Instruction[F]]
+  )(using Quotes): Plan.Reconfigured[F] = {
     def configureSingle(
       plan: Plan[Plan.Error, F],
       config: Configuration.Instruction[F]
@@ -82,7 +83,11 @@ private[ducktape] object PlanConfigurer {
         }
       }
 
-      recurse(plan, config.path.segments.toList, None)
+      // check if a Case config ends with a `.at` segment, otherwise weird things happen
+      if config.side.isSource && config.path.segments.lastOption.exists(!_.isInstanceOf[Path.Segment.Case]) then
+        Plan.Error.from(plan, ErrorMessage.SourceConfigDoesntEndWithCaseSegment(config.span), None)
+      else 
+        recurse(plan, config.path.segments.toList, None)
     }
 
     val (errors, (successes, reconfiguredPlan)) =

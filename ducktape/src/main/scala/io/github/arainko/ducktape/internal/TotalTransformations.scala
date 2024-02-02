@@ -33,20 +33,14 @@ private[ducktape] object TotalTransformations {
     inline configs: Field[A, Args] | Case[A, Args]*
   ): B = ${ createTransformationVia[A, B, Func, Args]('value, 'function, 'transformationSite, 'configs) }
 
-  transparent inline def viaInferred[A, Func, Args <: FunctionArguments](
-    value: A,
-    inline transformationSite: "transformation" | "definition",
-    inline function: Func,
-    inline configs: Field[A, Args] | Case[A, Args]*
-  ): Any = ${ createTransformationViaInferred('value, 'function, 'transformationSite, 'configs) }
+  transparent inline def viaInferred[A, Func](value: A, inline function: Func): Any =
+    ${ createTransformationViaInferred('value, 'function) }
 
-  private def createTransformationViaInferred[A: Type, Func: Type, Args <: FunctionArguments: Type](
+  private def createTransformationViaInferred[A: Type, Func: Type](
     value: Expr[A],
     function: Expr[Func],
-    transformationSite: Expr["transformation" | "definition"],
-    configs: Expr[Seq[Field[A, Args] | Case[A, Args]]]
   )(using Quotes) = {
-    given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
+    given TransformationSite = TransformationSite.Transformation
     given Summoner[Nothing] = Summoner.Total
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
@@ -64,8 +58,7 @@ private[ducktape] object TotalTransformations {
           )
         )
 
-    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total))
-    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
+    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, Nil)
     PlanInterpreter.run[A](totalPlan, value)
   }
 
@@ -87,7 +80,7 @@ private[ducktape] object TotalTransformations {
         .getOrElse(
           Plan.Error(
             sourceStruct,
-            Structure.of[Any](Path.empty(Type.of[Any])),
+            Structure.toplevelAny,
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
             None
           )
