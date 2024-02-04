@@ -11,6 +11,10 @@ object ProductZipper {
     final case class Unwrapped(field: Field, value: Expr[Any])
   }
 
+  trait UnwrappedConstructor[A] {
+    def apply(using Quotes)(fields: List[Field.Unwrapped]): Expr[A]
+  }
+
   import Field.*
 
   /**
@@ -25,7 +29,7 @@ object ProductZipper {
     F: Expr[Mode.Accumulating[F]],
     wrappedFields: NonEmptyList[Field.Wrapped[F]],
     unwrappedFields: List[Field.Unwrapped]
-  )(construct: List[Field.Unwrapped] => Expr[Dest])(using Quotes): Expr[F[Dest]] = {
+  )(construct: UnwrappedConstructor[Dest])(using Quotes): Expr[F[Dest]] = {
     zipFields[F](F, wrappedFields) match {
       case '{ $zipped: F[a] } =>
         '{
@@ -52,7 +56,7 @@ object ProductZipper {
     wrappedFields: NonEmptyList[Field.Wrapped[?]],
     unwrappedFields: List[Field.Unwrapped],
     nestedPairs: Expr[Any],
-    construct: List[Field.Unwrapped] => Expr[Dest]
+    construct: UnwrappedConstructor[Dest]
   )(using Quotes) = {
     import quotes.reflect.*
 

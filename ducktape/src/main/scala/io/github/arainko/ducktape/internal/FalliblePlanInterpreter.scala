@@ -56,11 +56,15 @@ object FalliblePlanInterpreter {
                 }
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
-            productTransformation(plan, fieldPlans, value, F) { unwrapped =>
-              val args = unwrapped.map(field => NamedArg(field.field.name, field.value.asTerm))
-              Constructor(plan.dest.tpe.repr).appliedToArgs(args).asExpr
+            val constructor = new ProductZipper.UnwrappedConstructor[Any] {
+              def apply(using Quotes)(unwrapped: List[ProductZipper.Field.Unwrapped]): Expr[Any] = {
+                import quotes.reflect.*
+                val args = unwrapped.map(field => NamedArg(field.field.name, field.value.asTerm))
+                Constructor(plan.dest.tpe.repr).appliedToArgs(args).asExpr
+              }
             }
 
+            productTransformation(plan, fieldPlans, value, F)(constructor)
           case Plan.BetweenCoproducts(source, dest, casePlans) =>
             dest.tpe match {
               case '[destSupertype] =>
@@ -81,13 +85,16 @@ object FalliblePlanInterpreter {
             }
 
           case plan @ Plan.BetweenProductFunction(source, dest, argPlans) =>
-            productTransformation(plan, argPlans, value, F) { unwrapped =>
-              val fieldMap = unwrapped.map(f => f.field.name -> f.value).toMap
-              val args = argPlans.map((name, _) => fieldMap(name).asTerm).toList
-              val call = dest.function.appliedTo(args)
-              fixer.transformTree(call.asTerm)(Symbol.spliceOwner).asExpr
-            
+            val constructor = new ProductZipper.UnwrappedConstructor[Any] {
+              def apply(using Quotes)(unwrapped: List[ProductZipper.Field.Unwrapped]): Expr[Any] = {
+                import quotes.reflect.*
+                val fieldMap = unwrapped.map(f => f.field.name -> f.value).toMap
+                val args = argPlans.map((name, _) => fieldMap(name).asTerm).toList
+                val call = dest.function.appliedTo(args)
+                call.asExpr
+              }
             }
+            productTransformation(plan, argPlans, value, F)(constructor)
 
           case Plan.BetweenOptions(source, dest, plan) =>
             (source.paramStruct.tpe, dest.paramStruct.tpe) match {
@@ -185,7 +192,7 @@ object FalliblePlanInterpreter {
     fieldPlans: Map[String, Plan[Nothing, Fallible]],
     value: Expr[Any],
     F: TransformationMode[F]
-  )(construct: List[ProductZipper.Field.Unwrapped] => Expr[Any])(using quotes: Quotes, toplevelValue: Expr[A]) = {
+  )(construct: ProductZipper.UnwrappedConstructor[Any])(using quotes: Quotes, toplevelValue: Expr[A]) = {
     import quotes.reflect.*
 
     val (unwrapped, wrapped) =
@@ -217,21 +224,24 @@ object FalliblePlanInterpreter {
               }
               .getOrElse(Value.Unwrapped(construct(unwrapped.toList)))
           case TransformationMode.FailFast(f) =>
-            Value.Wrapped(ProductBinder.nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct.andThen(_.asExprOf[dest])))
+            Value.Wrapped(
+              ProductBinder
+                .nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct.andThen(_.asExprOf[dest]))
+            )
         }
-
-      
 
     }
   }
 
-  def fixer(using Quotes) = {
+  def fixer(using Quotes)(sym: quotes.reflect.Symbol) = {
     import quotes.reflect.*
     new TreeMap {
-      override def transformTerm(tree: Term)(owner: Symbol): Term = 
-        println(s"Changing owner of ${tree.show(using Printer.TreeShortCode)}")
 
-        super.transformTerm(tree.changeOwner(Symbol.spliceOwner))(owner)
+      override def transformTerm(tree: Term)(owner: Symbol): Term =
+        // println(s"Changing owner of ${tree.show(using Printer.TreeShortCode)} to ${sym.fullName}")
+        println(s"Changing the owner of ${tree.show(using Printer.TreeShortCode)} is ${tree.symbol.maybeOwner.fullName}")
+
+        super.transformTerm(tree)(owner)
     }
     // quotes.reflect.
   }
