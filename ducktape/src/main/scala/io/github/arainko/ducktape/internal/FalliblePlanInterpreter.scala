@@ -5,7 +5,6 @@ import io.github.arainko.ducktape.internal.Summoner.UserDefined.TotalTransformer
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.FallibleTransformer
 import io.github.arainko.ducktape.Transformer
 import scala.collection.Factory
-import scala.quoted.ExprMap
 
 object FalliblePlanInterpreter {
   def run[F[+x]: Type, A: Type, B: Type](
@@ -56,15 +55,8 @@ object FalliblePlanInterpreter {
                 }
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
-            val constructor = new ProductZipper.UnwrappedConstructor {
-              def apply(using Quotes)(unwrapped: List[ProductZipper.Field.Unwrapped]): Expr[Any] = {
-                import quotes.reflect.*
-                val args = unwrapped.map(field => NamedArg(field.field.name, field.value.asTerm))
-                Constructor(plan.dest.tpe.repr).appliedToArgs(args).asExpr
-              }
-            }
 
-            productTransformation(plan, fieldPlans, value, F)(constructor)
+            productTransformation(plan, fieldPlans, value, F)(ProductConstructor.Primary(dest))
           case Plan.BetweenCoproducts(source, dest, casePlans) =>
             dest.tpe match {
               case '[destSupertype] =>
@@ -85,16 +77,7 @@ object FalliblePlanInterpreter {
             }
 
           case plan @ Plan.BetweenProductFunction(source, dest, argPlans) =>
-            val constructor = new ProductZipper.UnwrappedConstructor {
-              def apply(using Quotes)(unwrapped: List[ProductZipper.Field.Unwrapped]): Expr[Any] = {
-                import quotes.reflect.*
-                val fieldMap = unwrapped.map(f => f.field.name -> f.value).toMap
-                val args = argPlans.map((name, _) => fieldMap(name).asTerm).toList
-                val call = dest.function.appliedTo(args)
-                call
-              }
-            }
-            productTransformation(plan, argPlans, value, F)(constructor)
+            productTransformation(plan, argPlans, value, F)(ProductConstructor.Func(dest.function))
 
           case Plan.BetweenOptions(source, dest, plan) =>
             (source.paramStruct.tpe, dest.paramStruct.tpe) match {
@@ -130,6 +113,7 @@ object FalliblePlanInterpreter {
 
                     def transformation(value: Expr[srcElem])(using Quotes) =
                       recurse(plan, value, F).wrapped(F).asExprOf[F[destElem]]
+                      
                     Value.Wrapped('{
                       ${ F.value }.traverseCollection[srcElem, destElem, Iterable[srcElem], dest](
                         $sourceValue,
@@ -192,7 +176,7 @@ object FalliblePlanInterpreter {
     fieldPlans: Map[String, Plan[Nothing, Fallible]],
     value: Expr[Any],
     F: TransformationMode[F]
-  )(construct: ProductZipper.UnwrappedConstructor)(using quotes: Quotes, toplevelValue: Expr[A]) = {
+  )(construct: ProductConstructor)(using quotes: Quotes, toplevelValue: Expr[A]) = {
     import quotes.reflect.*
 
     val (unwrapped, wrapped) =
@@ -220,28 +204,18 @@ object FalliblePlanInterpreter {
                   ProductZipper.zipAndConstruct[F, dest](f, wrappeds, unwrapped.toList)(construct)
                 }
               }
-              .getOrElse(Value.Unwrapped(construct(unwrapped.toList)))
+              .getOrElse { 
+                val fields = unwrapped.map(field => field.field.name -> field.value).toMap
+                Value.Unwrapped(construct(fields))
+              }
           case TransformationMode.FailFast(f) =>
             Value.Wrapped(
               ProductBinder
-                .nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct.apply(_).asExprOf[dest])
+                .nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct)
               )
             
         }
 
     }
-  }
-
-  def fixer(using Quotes)(sym: quotes.reflect.Symbol) = {
-    import quotes.reflect.*
-    new TreeMap {
-
-      override def transformTerm(tree: Term)(owner: Symbol): Term =
-        // println(s"Changing owner of ${tree.show(using Printer.TreeShortCode)} to ${sym.fullName}")
-        println(s"Changing the owner of ${tree.show(using Printer.TreeShortCode)} is ${tree.symbol.maybeOwner.fullName}")
-
-        super.transformTerm(tree)(owner)
-    }
-    // quotes.reflect.
   }
 }

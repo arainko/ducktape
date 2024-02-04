@@ -11,10 +11,6 @@ object ProductZipper {
     final case class Unwrapped(field: Field, value: Expr[Any])
   }
 
-  trait UnwrappedConstructor {
-    def apply(using Quotes)(fields: List[Field.Unwrapped]): Expr[Any]
-  }
-
   import Field.*
 
   /**
@@ -29,7 +25,7 @@ object ProductZipper {
     F: Expr[Mode.Accumulating[F]],
     wrappedFields: NonEmptyList[Field.Wrapped[F]],
     unwrappedFields: List[Field.Unwrapped]
-  )(construct: UnwrappedConstructor)(using Quotes): Expr[F[Dest]] = {
+  )(construct: ProductConstructor)(using Quotes): Expr[F[Dest]] = {
     zipFields[F](F, wrappedFields) match {
       case '{ $zipped: F[a] } =>
         '{
@@ -56,18 +52,19 @@ object ProductZipper {
     wrappedFields: NonEmptyList[Field.Wrapped[?]],
     unwrappedFields: List[Field.Unwrapped],
     nestedPairs: Expr[Any],
-    construct: UnwrappedConstructor
+    construct: ProductConstructor
   )(using Quotes) = {
     import quotes.reflect.*
 
     ProductZipper.unzip(nestedPairs, wrappedFields) match {
       case (bind: Bind, unzippedFields) =>
+        val fields = (unzippedFields ::: unwrappedFields).map(field => field.field.name -> field.value).toMap
         Match(
           nestedPairs.asTerm,
           CaseDef(
             bind,
             None,
-            construct(unzippedFields ::: unwrappedFields).asTerm
+            construct(fields).asTerm
           ) :: Nil
         ).asExprOf[Dest]
 
@@ -77,13 +74,14 @@ object ProductZipper {
         val wronglyMatchedReference = Ref(matchErrorBind).asExpr
         val matchErrorCase =
           CaseDef(Bind(matchErrorBind, Wildcard()), None, '{ throw new MatchError($wronglyMatchedReference) }.asTerm)
+        val fields = (unzippedFields ::: unwrappedFields).map(field => field.field.name -> field.value).toMap
 
         Match(
           nestedPairs.asTerm,
           CaseDef(
             pattern,
             None,
-            construct(unzippedFields ::: unwrappedFields).asTerm
+            construct(fields).asTerm
           ) :: matchErrorCase :: Nil
         ).asExprOf[Dest]
     }

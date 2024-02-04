@@ -2,8 +2,8 @@ package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape.internal.FallibleTransformations
 
-case class Person(int: Int,/*, opt: Option[Int], list: List[Int],*/ normal: Int)
-case class Person2(int: RefinedInt,/*, opt: Option[RefinedInt], list: Vector[RefinedInt],*/ normal: Int)
+case class Person(int: Int, opt: Option[Int], list: List[Int], normal: Int)
+case class Person2(int: RefinedInt, opt: Option[RefinedInt], list: Vector[RefinedInt], normal: Int)
 
 case class RefinedInt(value: Int)
 
@@ -24,9 +24,9 @@ object RefinedInt {
 
 
 object Playground extends App {
-  val p = Person(1, 2)
+  val p = Person(1,None, Nil, 2)
   val srcEnum = SourceEnum.PersonCase(p)
-  given Mode.Accumulating.Either[String, List] with {}
+  given Mode.FailFast.Either[List[String]] with {}
 
   val cos = 
     internal.CodePrinter.code:

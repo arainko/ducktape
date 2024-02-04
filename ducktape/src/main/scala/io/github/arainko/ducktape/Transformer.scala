@@ -42,4 +42,5 @@ object Transformer {
     inline given derive[F[+x], Source, Dest](using F: Mode[F]): Transformer.Fallible.Derived[F, Source, Dest] =
       Derived.FromFunction(source => FallibleTransformations.between[F, Source, Dest](source, F, "definition"))
   }
+
 }
