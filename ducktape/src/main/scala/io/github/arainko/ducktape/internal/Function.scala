@@ -9,7 +9,9 @@ private[ducktape] final case class Function(args: ListMap[String, Type[?]], retu
 
   def appliedTo(using Quotes)(terms: List[quotes.reflect.Term]): Expr[Any] = {
     import quotes.reflect.*
-    Expr.betaReduce(Select.unique(expr.asTerm, "apply").appliedToArgs(terms).asExpr)
+    Expr.betaReduce(
+      Select.unique(expr.asTerm, "apply").appliedToArgs(terms).asExpr
+    )
   }
 
   // TODO: This should probably not live here

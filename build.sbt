@@ -12,6 +12,7 @@ ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
 ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / scalaVersion := "3.3.1"
+ThisBuild / outputStrategy := Some(StdoutOutput)
 
 ThisBuild / semanticdbEnabled := true
 ThisBuild / semanticdbVersion := scalafixSemanticdb.revision

@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.internal.Summoner.UserDefined.TotalTransformer
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.FallibleTransformer
 import io.github.arainko.ducktape.Transformer
 import scala.collection.Factory
+import scala.quoted.ExprMap
 
 object FalliblePlanInterpreter {
   def run[F[+x]: Type, A: Type, B: Type](
@@ -83,7 +84,9 @@ object FalliblePlanInterpreter {
             productTransformation(plan, argPlans, value, F) { unwrapped =>
               val fieldMap = unwrapped.map(f => f.field.name -> f.value).toMap
               val args = argPlans.map((name, _) => fieldMap(name).asTerm).toList
-              dest.function.appliedTo(args)
+              val call = dest.function.appliedTo(args)
+              fixer.transformTree(call.asTerm)(Symbol.spliceOwner).asExpr
+            
             }
 
           case Plan.BetweenOptions(source, dest, plan) =>
@@ -217,6 +220,19 @@ object FalliblePlanInterpreter {
             Value.Wrapped(ProductBinder.nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct.andThen(_.asExprOf[dest])))
         }
 
+      
+
     }
+  }
+
+  def fixer(using Quotes) = {
+    import quotes.reflect.*
+    new TreeMap {
+      override def transformTerm(tree: Term)(owner: Symbol): Term = 
+        println(s"Changing owner of ${tree.show(using Printer.TreeShortCode)}")
+
+        super.transformTerm(tree.changeOwner(Symbol.spliceOwner))(owner)
+    }
+    // quotes.reflect.
   }
 }

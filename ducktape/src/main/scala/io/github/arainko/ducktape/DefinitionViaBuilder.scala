@@ -9,8 +9,8 @@ final class DefinitionViaBuilder[Source, Dest, Func, Args <: FunctionArguments] 
       TotalTransformations.via[Source, Dest, Func, Args](value, function, "definition", config*)
     )
 
-  def fallible[F[+x], M <: Mode[F]](using M): DefinitionViaBuilder.Fallible[F, M, Source, Dest, Func, ArgSelector] =
-    DefinitionViaBuilder.Fallible[F, M, Source, Dest, Func, ArgSelector](function)
+  def fallible[F[+x], M <: Mode[F]](using M): DefinitionViaBuilder.Fallible[F, M, Source, Dest, Func, Args] =
+    DefinitionViaBuilder.Fallible[F, M, Source, Dest, Func, Args](function)
 }
 
 object DefinitionViaBuilder {

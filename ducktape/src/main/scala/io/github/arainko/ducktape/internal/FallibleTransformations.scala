@@ -91,6 +91,8 @@ object FallibleTransformations {
     function: Expr[Func],
     F: Expr[Mode[F]]
   )(using Quotes): Expr[F[Any]] = {
+    import quotes.reflect.*
+
     given Summoner[Fallible] = Summoner.PossiblyFallible[F]
     given TransformationSite = TransformationSite.Transformation
 
