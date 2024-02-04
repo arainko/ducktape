@@ -56,7 +56,7 @@ object FalliblePlanInterpreter {
                 }
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
-            val constructor = new ProductZipper.UnwrappedConstructor[Any] {
+            val constructor = new ProductZipper.UnwrappedConstructor {
               def apply(using Quotes)(unwrapped: List[ProductZipper.Field.Unwrapped]): Expr[Any] = {
                 import quotes.reflect.*
                 val args = unwrapped.map(field => NamedArg(field.field.name, field.value.asTerm))
@@ -85,13 +85,13 @@ object FalliblePlanInterpreter {
             }
 
           case plan @ Plan.BetweenProductFunction(source, dest, argPlans) =>
-            val constructor = new ProductZipper.UnwrappedConstructor[Any] {
+            val constructor = new ProductZipper.UnwrappedConstructor {
               def apply(using Quotes)(unwrapped: List[ProductZipper.Field.Unwrapped]): Expr[Any] = {
                 import quotes.reflect.*
                 val fieldMap = unwrapped.map(f => f.field.name -> f.value).toMap
                 val args = argPlans.map((name, _) => fieldMap(name).asTerm).toList
                 val call = dest.function.appliedTo(args)
-                call.asExpr
+                call
               }
             }
             productTransformation(plan, argPlans, value, F)(constructor)
@@ -192,7 +192,7 @@ object FalliblePlanInterpreter {
     fieldPlans: Map[String, Plan[Nothing, Fallible]],
     value: Expr[Any],
     F: TransformationMode[F]
-  )(construct: ProductZipper.UnwrappedConstructor[Any])(using quotes: Quotes, toplevelValue: Expr[A]) = {
+  )(construct: ProductZipper.UnwrappedConstructor)(using quotes: Quotes, toplevelValue: Expr[A]) = {
     import quotes.reflect.*
 
     val (unwrapped, wrapped) =
@@ -217,17 +217,16 @@ object FalliblePlanInterpreter {
               .fromList(wrapped.toList)
               .map { wrappeds =>
                 Value.Wrapped {
-                  ProductZipper.zipAndConstruct[F, dest](f, wrappeds, unwrapped.toList) { unwrapped =>
-                    construct(unwrapped).asExprOf[dest]
-                  }
+                  ProductZipper.zipAndConstruct[F, dest](f, wrappeds, unwrapped.toList)(construct)
                 }
               }
               .getOrElse(Value.Unwrapped(construct(unwrapped.toList)))
           case TransformationMode.FailFast(f) =>
             Value.Wrapped(
               ProductBinder
-                .nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct.andThen(_.asExprOf[dest]))
-            )
+                .nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct.apply(_).asExprOf[dest])
+              )
+            
         }
 
     }
