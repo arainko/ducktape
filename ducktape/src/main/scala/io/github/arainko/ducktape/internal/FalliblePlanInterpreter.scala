@@ -13,7 +13,7 @@ object FalliblePlanInterpreter {
     mode: TransformationMode[F]
   )(using Quotes): Expr[F[B]] =
     recurse(plan, sourceValue, mode)(using sourceValue) match
-      case Value.Unwrapped(value) => '{ ${ mode.value }.pure(${ value.asExprOf[B] }) }
+      case Value.Unwrapped(value) => '{ ${ mode.value }.pure[B](${ value.asExprOf[B] }) }
       case Value.Wrapped(value)   => value.asExprOf[F[B]]
 
   private def recurse[F[+x]: Type, A: Type](
@@ -41,7 +41,10 @@ object FalliblePlanInterpreter {
               case cfg @ Configuration.FieldReplacement(source, name, tpe) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
               case Configuration.FallibleConst(value, tpe) =>
-                Value.Wrapped(value.asExprOf[F[Any]])
+                tpe match {
+                  case '[dest] =>
+                    Value.Wrapped(value.asExprOf[F[dest]])
+                }
               case Configuration.FallibleFieldComputed(tpe, function) =>
                 tpe match {
                   case '[tpe] =>
@@ -55,7 +58,6 @@ object FalliblePlanInterpreter {
                 }
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
-
             productTransformation(plan, fieldPlans, value, F)(ProductConstructor.Primary(dest))
           case Plan.BetweenCoproducts(source, dest, casePlans) =>
             dest.tpe match {
@@ -64,7 +66,10 @@ object FalliblePlanInterpreter {
                   (plan.source.tpe -> plan.dest.tpe) match {
                     case '[src] -> '[dest] =>
                       val sourceValue = '{ $value.asInstanceOf[src] }
-                      IfExpression.Branch(IsInstanceOf(value, plan.source.tpe), recurse(plan, sourceValue, F).wrapped(F))
+                      IfExpression.Branch(
+                        IsInstanceOf(value, plan.source.tpe),
+                        recurse(plan, sourceValue, F).wrapped(F, Type.of[dest])
+                      )
                   }
                 }.toList
 
@@ -87,16 +92,16 @@ object FalliblePlanInterpreter {
                   '{
                     $source match
                       case None        => ${ F.value }.pure(None)
-                      case Some(value) => ${ F.value }.map(${ recurse(plan, 'value, F).wrapped(F).asExprOf[F[dest]] }, Some.apply)
+                      case Some(value) => ${ F.value }.map(${ recurse(plan, 'value, F).wrapped(F, Type.of[dest]) }, Some.apply)
                   }
                 )
             }
 
           case Plan.BetweenNonOptionOption(source, dest, plan) =>
-            source.tpe match {
-              case '[src] =>
+            (source.tpe -> dest.paramStruct.tpe) match {
+              case '[src] -> '[dest] =>
                 val source = value.asExprOf[src]
-                Value.Wrapped('{ ${ F.value }.map(${ recurse(plan, source, F).wrapped(F) }, Some.apply) })
+                Value.Wrapped('{ ${ F.value }.map(${ recurse(plan, source, F).wrapped(F, Type.of[dest]) }, Some.apply) })
             }
 
           case Plan.BetweenCollections(source, dest, plan) =>
@@ -112,8 +117,8 @@ object FalliblePlanInterpreter {
                     val sourceValue = value.asExprOf[Iterable[srcElem]]
 
                     def transformation(value: Expr[srcElem])(using Quotes) =
-                      recurse(plan, value, F).wrapped(F).asExprOf[F[destElem]]
-                      
+                      recurse(plan, value, F).wrapped(F, Type.of[destElem])
+
                     Value.Wrapped('{
                       ${ F.value }.traverseCollection[srcElem, destElem, Iterable[srcElem], dest](
                         $sourceValue,
@@ -162,10 +167,14 @@ object FalliblePlanInterpreter {
   }
 
   private enum Value[F[+x]] {
-    final def wrapped(F: TransformationMode[F])(using Quotes, Type[F]) =
+    final def wrapped[A](F: TransformationMode[F], tpe: Type[A])(using Quotes, Type[F]): Expr[F[A]] =
+      given Type[A] = tpe
+
       this match
-        case Unwrapped(value) => '{ ${ F.value }.pure($value) }
-        case Wrapped(value)   => value
+        case Unwrapped(value) =>
+          '{ ${ F.value }.pure[A](${ value.asExprOf[A] }) }
+
+        case Wrapped(value) => value.asExprOf[F[A]]
 
     case Unwrapped(value: Expr[Any])
     case Wrapped(value: Expr[F[Any]])
@@ -204,7 +213,7 @@ object FalliblePlanInterpreter {
                   ProductZipper.zipAndConstruct[F, dest](f, wrappeds, unwrapped.toList)(construct)
                 }
               }
-              .getOrElse { 
+              .getOrElse {
                 val fields = unwrapped.map(field => field.field.name -> field.value).toMap
                 Value.Unwrapped(construct(fields))
               }
@@ -212,8 +221,8 @@ object FalliblePlanInterpreter {
             Value.Wrapped(
               ProductBinder
                 .nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct)
-              )
-            
+            )
+
         }
 
     }

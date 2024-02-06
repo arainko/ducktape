@@ -6,6 +6,9 @@ import io.github.arainko.ducktape.internal.FallibleTransformations
 final class DefinitionBuilder[Source, Dest] private[ducktape] {
   inline def build(inline config: Field[Source, Dest] | Case[Source, Dest]*): Transformer[Source, Dest] =
     Transformer.Derived.FromFunction(source => TotalTransformations.between[Source, Dest](source, "definition", config*))
+
+  def fallible[F[+x], M <: Mode[F]](using M): DefinitionBuilder.Fallible[F, M, Source, Dest] =
+    DefinitionBuilder.Fallible[F, M, Source, Dest]
 }
 
 object DefinitionBuilder {

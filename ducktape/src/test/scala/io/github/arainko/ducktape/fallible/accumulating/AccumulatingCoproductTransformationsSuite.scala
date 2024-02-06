@@ -4,17 +4,20 @@ import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.fallible.FallibleTransformer
 
 class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
-  type ErrorsOrResult = [X] =>> Either[List[String], X]
+  type F[X] = Either[List[String], X]
 
-  given Transformer.Mode.Accumulating[ErrorsOrResult] =
+  given Transformer.Mode.Accumulating[F] =
     Transformer.Mode.Accumulating.either[String, List]
 
   given deriveMandatoryOptionTransformer[A, B](using
-    transformer: FallibleTransformer[ErrorsOrResult, A, B]
-  ): FallibleTransformer[ErrorsOrResult, Option[A], B] = {
-    case Some(a) => transformer.transform(a)
-    case None    => Left(List("Missing required field"))
-  }
+    transformer: FallibleTransformer.Derived[F, A, B]
+  ): FallibleTransformer[F, Option[A], B] =
+    new FallibleTransformer[F, Option[A], B] {
+      def transform(source: Option[A]): F[B] = 
+        source match
+          case Some(a) => transformer.transform(a)
+          case None    => Left(List("Missing required field"))
+    }
 
   test("Derive sum of products") {
     sealed trait From
@@ -29,7 +32,7 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
       case class Product2(field: Int) extends To
     }
 
-    val transformer = FallibleTransformer.betweenCoproductsAccumulating[ErrorsOrResult, From, To]
+    val transformer = FallibleTransformer.derive[F, From, To]
 
     assert(transformer.transform(From.Product(Some(1))) == Right(To.Product(1)))
     assert(transformer.transform(From.Product(None)) == Left(List("Missing required field")))
@@ -49,7 +52,7 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
       case object Singleton2 extends To
     }
 
-    val transformer = FallibleTransformer.betweenCoproductsAccumulating[ErrorsOrResult, From, To]
+    val transformer = FallibleTransformer.derive[F, From, To]
 
     assert(transformer.transform(From.Singleton) == Right(To.Singleton))
     assert(transformer.transform(From.Singleton2) == Right(To.Singleton2))
@@ -68,7 +71,7 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
       case object Singleton extends To
     }
 
-    val transformer = FallibleTransformer.betweenCoproductsAccumulating[ErrorsOrResult, From, To]
+    val transformer = FallibleTransformer.derive[F, From, To]
 
     assert(transformer.transform(From.Singleton) == Right(To.Singleton))
     assert(transformer.transform(From.Product(Some(5))) == Right(To.Product(5)))
@@ -90,7 +93,7 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
       case class Product(field: Field) extends To
     }
 
-    val transformer = FallibleTransformer.betweenCoproductsAccumulating[ErrorsOrResult, From, To]
+    val transformer = FallibleTransformer.derive[F, From, To]
 
     assert(transformer.transform(From.Product(5)) == Right(To.Product(10)))
   }
@@ -106,7 +109,7 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
       case class Product(field1: Int, field2: String) extends To
     }
 
-    val transformer = FallibleTransformer.betweenCoproductsAccumulating[ErrorsOrResult, From, To]
+    val transformer = FallibleTransformer.derive[F, From, To]
 
     assert(transformer.transform(From.Product(None, None)) == Left(List("Missing required field", "Missing required field")))
     assert(transformer.transform(From.Product(Some(1), None)) == Left(List("Missing required field")))
@@ -126,7 +129,7 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
     }
 
     assertFailsToCompileWith {
-      "FallibleTransformer.betweenCoproductsAccumulating[ErrorsOrResult, From, To]"
+      "FallibleTransformer.betweenCoproductsAccumulating[F, From, To]"
     }("No child named 'Product' found in To")
   }
 
@@ -142,9 +145,9 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
     }
 
     assertFailsToCompileWith {
-      "FallibleTransformer.betweenCoproductsAccumulating[ErrorsOrResult, From, To]"
+      "FallibleTransformer.betweenCoproductsAccumulating[F, From, To]"
     }(
-      "Neither an instance of Transformer.Fallible[ErrorsOrResult, From.Product, To.Product] was found\nnor are 'Product' 'Product' singletons with the same name"
+      "Neither an instance of Transformer.Fallible[F, From.Product, To.Product] was found\nnor are 'Product' 'Product' singletons with the same name"
     )
   }
 
@@ -205,8 +208,9 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
         .into[To]
         .fallible
         .transform(
-          Case.const[From.Extra.type](To.Product(1, "asd"))
+          Case.const(_.at[From.Extra.type], To.Product(1, "asd"))
         )
+        
 
     def mappingComputed(from: From.Extra.type): To = To.Product(1, "asd")
 
