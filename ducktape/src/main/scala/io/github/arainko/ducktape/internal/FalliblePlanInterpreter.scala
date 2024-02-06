@@ -59,6 +59,7 @@ object FalliblePlanInterpreter {
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
             productTransformation(plan, fieldPlans, value, F)(ProductConstructor.Primary(dest))
+
           case Plan.BetweenCoproducts(source, dest, casePlans) =>
             dest.tpe match {
               case '[destSupertype] =>

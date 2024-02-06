@@ -260,7 +260,7 @@ private[ducktape] object PlanConfigurer {
           if instruction.side == Side.Dest then currentPlan.destPath -> instruction.side
           else currentPlan.sourcePath -> instruction.side
         }
-        Plan.Configured.from(currentPlan, config)
+        Plan.Configured.from(currentPlan, config, instruction.side)
       else
         Accumulator.append {
           Plan.Error.from(

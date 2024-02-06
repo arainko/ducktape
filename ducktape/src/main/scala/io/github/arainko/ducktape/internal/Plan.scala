@@ -48,7 +48,7 @@ private[ducktape] object Plan {
     transformer: Summoner.Derived[F]
   ) extends Plan[Nothing, F]
 
-  case class Configured[+F <: Fallible](
+  case class Configured[+F <: Fallible] private (
     source: Structure,
     dest: Structure,
     config: Configuration[F]
@@ -124,12 +124,13 @@ private[ducktape] object Plan {
   }
 
   object Configured {
-    def from[F <: Fallible](plan: Plan[Plan.Error, F], conf: Configuration[F]): Plan.Configured[F] =
-      Plan.Configured(
-        plan.source,
-        plan.dest,
-        conf
-      )
+    def from[F <: Fallible](plan: Plan[Plan.Error, F], conf: Configuration[F], side: Side)(using Quotes): Plan.Configured[F] =
+      (plan.source.tpe, plan.dest.tpe, conf.tpe) match {
+        case ('[src], '[dest], '[confTpe]) =>
+          val source = if side.isDest then Structure.Lazy.of[confTpe](plan.source.path) else plan.source
+          val dest = if side.isSource then Structure.Lazy.of[confTpe](plan.dest.path) else plan.dest
+          Plan.Configured(source, dest, conf)
+      }
   }
 
   given debug: Debug[Plan[Plan.Error, Fallible]] = Debug.derived
