@@ -129,8 +129,8 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
     }
 
     assertFailsToCompileWith {
-      "FallibleTransformer.betweenCoproductsAccumulating[F, From, To]"
-    }("No child named 'Product' found in To")
+      "FallibleTransformer.derive[F, From, To]"
+    }("No child named 'Product' found in To @ From.at[From.Product]")
   }
 
   test("Derivation fails if a case can't be transformed") {
@@ -145,9 +145,9 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
     }
 
     assertFailsToCompileWith {
-      "FallibleTransformer.betweenCoproductsAccumulating[F, From, To]"
+      "FallibleTransformer.derive[F, From, To]"
     }(
-      "Neither an instance of Transformer.Fallible[F, From.Product, To.Product] was found\nnor are 'Product' 'Product' singletons with the same name"
+      "No field 'y' found in From.Product @ To.at[To.Product].y"
     )
   }
 

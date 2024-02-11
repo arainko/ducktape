@@ -6,44 +6,44 @@ import io.github.arainko.ducktape.fallible.model.basic.CreateTalk
 
 class DerivedInstanceSuite extends DucktapeSuite {
 
-  private given Transformer.Mode.FailFast[[A] =>> Either[List[String], A]] =
-    Transformer.Mode.FailFast.either[List[String]]
+  private given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] =
+    Transformer.Mode.Accumulating.either
 
-  // successfulTransformationTest("fallibleTo")(
-  //   _.fallibleTo[Talk]
-  // )
+  successfulTransformationTest("fallibleTo")(
+    _.fallibleTo[Talk]
+  )
 
-  // successfulTransformationTest("fallibleVia")(
-  //   _.fallibleVia(Talk.apply)
-  // )
+  successfulTransformationTest("fallibleVia")(
+    _.fallibleVia(Talk.apply)
+  )
 
-  // successfulTransformationTest("into.fallible")(
-  //   _.into[Talk].fallible.transform()
-  // )
+  successfulTransformationTest("into.fallible")(
+    _.into[Talk].fallible.transform()
+  )
 
-  // successfulTransformationTest("Transformer.define.fallible")(
-  //   Transformer.define[basic.CreateTalk, Talk].fallible.build().transform
-  // )
+  successfulTransformationTest("Transformer.define.fallible")(
+    Transformer.define[basic.CreateTalk, Talk].fallible.build().transform
+  )
 
-  // successfulTransformationTest("Transformer.define.fallible")(
-  //   Transformer.defineVia[basic.CreateTalk](Talk.apply).fallible.build().transform
-  // )
+  successfulTransformationTest("Transformer.define.fallible")(
+    Transformer.defineVia[basic.CreateTalk](Talk.apply).fallible.build().transform
+  )
 
-  // failingTransformationTest("fallibleTo")(
-  //   _.fallibleTo[Talk]
-  // )
+  failingTransformationTest("fallibleTo")(
+    _.fallibleTo[Talk]
+  )
 
-  // failingTransformationTest("fallibleVia")(
-  //   _.fallibleVia(Talk.apply)
-  // )
+  failingTransformationTest("fallibleVia")(
+    _.fallibleVia(Talk.apply)
+  )
 
-  // failingTransformationTest("into.fallible")(
-  //   _.into[Talk].fallible.transform()
-  // )
+  failingTransformationTest("into.fallible")(
+    _.into[Talk].fallible.transform()
+  )
 
-  // failingTransformationTest("Transformer.defineVia.fallible")(
-  //   Transformer.define[basic.CreateTalk, Talk].fallible.build().transform
-  // )
+  failingTransformationTest("Transformer.defineVia.fallible")(
+    Transformer.define[basic.CreateTalk, Talk].fallible.build().transform
+  )
 
   private def successfulTransformationTest(name: String)(transformation: basic.CreateTalk => Either[List[String], Talk]) =
     test(s"CreateTalk transform into Talk using - $name") {

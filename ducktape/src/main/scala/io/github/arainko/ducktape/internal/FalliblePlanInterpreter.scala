@@ -25,6 +25,7 @@ object FalliblePlanInterpreter {
 
     FallibilityRefiner.run(plan) match
       case plan: Plan[Nothing, Nothing] =>
+        //TODO: Running with '-Xcheck-macros' exposes an issue with owners of lambdas (like in BetweenOptions), try to fix it later on
         Value.Unwrapped(PlanInterpreter.recurse[A](plan, value))
       case None =>
         plan match {
