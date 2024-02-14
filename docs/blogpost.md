@@ -417,5 +417,154 @@ dataFallible match {
 Which brings us back to the usage of `+E <: Plan.Error` as way to keep track of possibly erroneous plans at compiletime (later on we will find out that to interpert a `Plan` into an actual transformation we need to feed the interpeter a `Plan[Nothing]` that is, a `Plan` without any `Plan.Error` nodes).
 
 
-Now onto how a `Plan` is actually constructed, the very first two things you need are two `Structures` which are then plopped into a method called `Planner.create` which then does a big pattern match on those two `Structures` trying to extract information by matching on its subtypes and constructing plans accordingly. For example, given two `Structure.Products` a `Plan.BetweenProducts` will be constructed unless a user supplied instance of a `Transformer` is defined in the current implicit scope, in which case it takes precedence over any automatically constructed transformations.
-(TODO: Add `Planner.create` call with explanations or at the very least a link)
+Now onto how a `Plan` is actually constructed, the very first two things you need are two `Structures` which are then plopped into a method called `Planner.create` which then does a big pattern match on those two `Structures` trying to extract information by matching on its subtypes and constructing plans accordingly. 
+For example, given two `Structure.Products` a `Plan.BetweenProducts` will be constructed unless a user supplied instance of a `Transformer` is defined in the current implicit scope, in which case it takes precedence over any automatically constructed transformations.
+
+<details>
+  <summary>Click here here to see it in all of its glory</summary>
+
+```scala
+object Planner {
+  import Structure.*
+
+  def between(source: Structure, dest: Structure)(using Quotes, TransformationSite) = {
+    given Depth = Depth.zero
+    recurse(source, dest)
+  }
+
+  private def recurse(
+    source: Structure,
+    dest: Structure
+  )(using quotes: Quotes, depth: Depth, transformationSite: TransformationSite): Plan[Plan.Error] = {
+    import quotes.reflect.*
+    given Depth = Depth.incremented(using depth)
+
+    (source.force -> dest.force) match {
+      case _ if Depth.current > 64 =>
+        Plan.Error(source, dest, ErrorMessage.RecursionSuspected, None)
+
+      case (source: Product, dest: Function) =>
+        planProductFunctionTransformation(source, dest)
+
+      case UserDefinedTransformation(transformer) =>
+        Plan.UserDefined(source, dest, transformer)
+
+      case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
+        Plan.Upcast(source, dest)
+
+      case (source @ Optional(_, _, srcParamStruct)) -> (dest @ Optional(_, _, destParamStruct)) =>
+        Plan.BetweenOptions(
+          source,
+          dest,
+          recurse(srcParamStruct, destParamStruct)
+        )
+
+      case source -> (dest @ Optional(_, _, paramStruct)) =>
+        Plan.BetweenNonOptionOption(
+          source,
+          dest,
+          recurse(source, paramStruct)
+        )
+
+      case (source @ Collection(_, _, srcParamStruct)) -> (dest @ Collection(_, _, destParamStruct)) =>
+        Plan.BetweenCollections(
+          source,
+          dest,
+          recurse(srcParamStruct, destParamStruct)
+        )
+
+      case (source: Product, dest: Product) =>
+        planProductTransformation(source, dest)
+
+      case (source: Coproduct, dest: Coproduct) =>
+        planCoproductTransformation(source, dest)
+
+      case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
+        Plan.BetweenSingletons(source, dest)
+
+      case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
+        Plan.BetweenWrappedUnwrapped(source, dest, source.paramFieldName)
+
+      case (source, dest: ValueClass) if source.tpe.repr <:< dest.paramTpe.repr =>
+        Plan.BetweenUnwrappedWrapped(source, dest)
+
+      case DerivedTransformation(transformer) =>
+        Plan.Derived(source, dest, transformer)
+
+      case (source, dest) =>
+        Plan.Error(
+          source,
+          dest,
+          ErrorMessage.CouldntBuildTransformation(source.tpe, dest.tpe),
+          None
+        )
+    }
+  }
+}
+```
+See? I told you everything is just a big pattern match. If you require even more context head on over to [here](https://github.com/arainko/ducktape/blob/f12332ba907308c1a53ccafdc6a20b444665b11d/ducktape/src/main/scala/io/github/arainko/ducktape/internal/Planner.scala#L11) to see the code in an even nittier and grittier detail.
+</details>
+
+### Fixing what's broken
+
+TODO: MAYBE ADD CONFIGURATION STUFF HERE BUT MAYBE NOT
+
+### The rest of the owl
+
+Going back to my previous tangent about `Plans` being possibly erroneous, having `Plan.Error` nodes inside our transformation `Plan` is a big no-no from the translate-to-actual-Scala-code point of view. What can you even do with an error node? Put a `???` in its place? Throw an exception? There's no good answer besides aborting the compilation but that would disallow us from reporting all of the errors at once.
+The solution to that problem is refining a possibly erroneous `Plan[Plan.Error]` into a `Plan[Nothing]` (that enforces no `Plan.Error` nodes at compiletime!) while also collecting all of the `Plan.Error` nodes to report to the user.
+
+The whole implementation comes down to recursively diving into the `Plan` tree and accumulating `Plan.Error` nodes we've encountered. At the very end if there aren't any error nodes we employ some dirty tricks and cast the input `Plan` to `Plan[Nothing]` (since the `E` param of `Plan` is effectively a phantom type).
+<details>
+  <summary>Click here if you're curious</summary>
+
+```scala
+object PlanRefiner {
+  def run(plan: Plan[Plan.Error]): Either[NonEmptyList[Plan.Error], Plan[Nothing]] = {
+
+    @tailrec
+    def recurse(stack: List[Plan[Plan.Error]], errors: List[Plan.Error]): List[Plan.Error] =
+      stack match {
+        case head :: next =>
+          head match {
+            case plan: Plan.Upcast => 
+              recurse(next, errors)
+            case Plan.BetweenProducts(_, _, fieldPlans) =>
+              recurse(fieldPlans.values.toList ::: next, errors)
+            case Plan.BetweenCoproducts(_, _, casePlans) =>
+              recurse(casePlans.toList ::: next, errors)
+            case Plan.BetweenProductFunction(_, _, argPlans) =>
+              recurse(argPlans.values.toList ::: next, errors)
+            case Plan.BetweenOptions(_, _, plan)         => 
+              recurse(plan :: next, errors)
+            case Plan.BetweenNonOptionOption(_, _, plan) => 
+              recurse(plan :: next, errors)
+            case Plan.BetweenCollections(_, _, plan)     => 
+              recurse(plan :: next, errors)
+            case plan: Plan.BetweenSingletons            => 
+              recurse(next, errors)
+            case plan: Plan.UserDefined                  => 
+              recurse(next, errors)
+            case plan: Plan.Derived                      => 
+              recurse(next, errors)
+            case plan: Plan.Configured                   => 
+              recurse(next, errors)
+            case plan: Plan.BetweenWrappedUnwrapped      => 
+              recurse(next, errors)
+            case plan: Plan.BetweenUnwrappedWrapped      => 
+              recurse(next, errors)
+            case error: Plan.Error                       => 
+              recurse(next, error :: errors)
+          }
+        case Nil => errors
+      }
+    val errors = recurse(plan :: Nil, Nil)
+    // if no errors were accumulated that means there are no Plan.Error nodes which means we operate on a Plan[Nothing]
+    NonEmptyList.fromList(errors).toLeft(plan.asInstanceOf[Plan[Nothing]])
+  }
+}
+
+```
+</details>
+
+After the refinement is done we find ourselves with an `Either[NonEmptyList[Plan.Error], Plan[Nothing]]` in hand, we eliminate the left side by doing 🪄 magical 🪄 things with the errors (like lining up their positions, deduping, reporting and all that good stuff, very boring tho) - after that's done we're left with a `Plan[Nothing]` which means it's time to turn that plan into reality with a `PlanInterpreter`
