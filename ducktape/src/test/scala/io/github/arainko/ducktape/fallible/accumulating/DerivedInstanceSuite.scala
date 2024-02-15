@@ -82,8 +82,6 @@ class DerivedInstanceSuite extends DucktapeSuite {
             Nil
         )
       
-      createTalk.fallibleTo[Talk]
-
       assertEquals(transformation(createTalk), expected)
     }
 

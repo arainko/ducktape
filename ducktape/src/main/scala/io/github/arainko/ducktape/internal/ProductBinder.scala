@@ -13,14 +13,16 @@ private[ducktape] object ProductBinder {
     wrappedFields: List[ProductZipper.Field.Wrapped[F]],
     construct: ProductConstructor
   )(using Quotes): Expr[F[Dest]] = {
+    
     def recurse(
       leftoverFields: List[ProductZipper.Field.Wrapped[F]],
       collectedUnwrappedFields: List[ProductZipper.Field.Unwrapped]
     )(using Quotes): Expr[F[Dest]] =
       leftoverFields match {
-        case ProductZipper.Field.Wrapped(field, value) :: Nil =>
-          value match {
-            case '{ $value: F[destField] } =>
+        case ProductZipper.Field.Wrapped(field, wrappedValue) :: Nil =>
+          field.tpe match {
+            case '[destField] =>
+              val value = wrappedValue.asExprOf[F[destField]]
               '{
                 $F.map[`destField`, Dest](
                   $value,
@@ -37,9 +39,10 @@ private[ducktape] object ProductBinder {
               }
           }
 
-        case ProductZipper.Field.Wrapped(field, value) :: next =>
-          value match {
-            case '{ $value: F[destField] } =>
+        case ProductZipper.Field.Wrapped(field, wrappedValue) :: next =>
+          field.tpe match {
+            case '[destField] =>
+              val value = wrappedValue.asExprOf[F[destField]]
               '{
                 $F.flatMap[`destField`, Dest](
                   $value,
@@ -56,7 +59,7 @@ private[ducktape] object ProductBinder {
 
         case Nil =>
           val fields = collectedUnwrappedFields.map(f => f.field.name -> f.value).toMap
-          val constructedValue = construct(fields).asExprOf[Dest]
+          def constructedValue(using Quotes) = construct(fields).asExprOf[Dest]
           '{ $F.pure[Dest]($constructedValue) }
       }
 
