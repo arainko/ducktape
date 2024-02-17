@@ -7,7 +7,7 @@ import scala.annotation.nowarn
 import io.github.arainko.ducktape.fallible.model.Positive
 
 class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
-  private given Mode.Accumulating.Either[String, List] with {}
+  private given F: Mode.Accumulating.Either[String, List] with {}
 
   def fallibleComputation(value: Int) = Positive.accTransformer.transform(value)
 
@@ -42,7 +42,7 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
         .fallible
         .build(Field.fallibleConst(_.level1.level2.extra, fallibleComputation(2137)))
         .transform(source)
-    )(Right(expected))
+    )(F.pure(expected))
   }
 
   test("nested product fields inside nested coproduct cases can be configured") {
@@ -80,7 +80,7 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
         .fallible
         .build(Field.fallibleConst(_.level1.at[DestLevel1.Level1].level2.extra, fallibleComputation(2137)))
         .transform(source)
-    )(Right(expected))
+    )(F.pure(expected))
   }
 
   test("nested product fields can be overriden") {
@@ -108,359 +108,413 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
         .fallible
         .build(Field.fallibleConst(_.level1.level2.int, fallibleComputation(50)))
         .transform(source)
-    )(Right(expected))
+    )(F.pure(expected))
   }
 
-//   test("nested product fields can be configured by overriding the transformation that is a level above") {
-//     final case class SourceToplevel1(level1: SourceLevel1)
-//     final case class SourceLevel1(level2: SourceLevel2)
-//     final case class SourceLevel2(int: Int)
+  test("nested product fields can be configured by overriding the transformation that is a level above") {
+    final case class SourceToplevel1(level1: SourceLevel1)
+    final case class SourceLevel1(level2: SourceLevel2)
+    final case class SourceLevel2(int: Int)
 
-//     final case class DestToplevel1(level1: DestLevel1)
-//     final case class DestLevel1(level2: DestLevel2)
-//     final case class DestLevel2(int: Int, extra: String)
+    final case class DestToplevel1(level1: DestLevel1)
+    final case class DestLevel1(level2: DestLevel2)
+    final case class DestLevel2(int: Positive, extra: Positive)
 
-//     val source = SourceToplevel1(SourceLevel1(SourceLevel2(1)))
-//     val expected = DestToplevel1(DestLevel1(DestLevel2(50, "CONFIGURED")))
+    val source = SourceToplevel1(SourceLevel1(SourceLevel2(1)))
+    val expected = DestToplevel1(DestLevel1(DestLevel2(Positive(50), Positive(50))))
 
-//     assertEachEquals(
-//       source.into[DestToplevel1].transform(Field.const(_.level1.level2, DestLevel2(50, "CONFIGURED"))),
-//       source.intoVia(DestToplevel1.apply).transform(Field.const(_.level1.level2, DestLevel2(50, "CONFIGURED"))),
-//       Transformer
-//         .define[SourceToplevel1, DestToplevel1]
-//         .build(Field.const(_.level1.level2, DestLevel2(50, "CONFIGURED")))
-//         .transform(source),
-//       Transformer
-//         .defineVia[SourceToplevel1](DestToplevel1.apply)
-//         .build(Field.const(_.level1.level2, DestLevel2(50, "CONFIGURED")))
-//         .transform(source)
-//     )(expected)
-//   }
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .fallible
+        .transform(Field.fallibleConst(_.level1.level2, F.map(fallibleComputation(50), pos => DestLevel2(pos, pos)))),
+      source
+        .intoVia(DestToplevel1.apply)
+        .fallible
+        .transform(Field.fallibleConst(_.level1.level2, F.map(fallibleComputation(50), pos => DestLevel2(pos, pos)))),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .fallible
+        .build(Field.fallibleConst(_.level1.level2, F.map(fallibleComputation(50), pos => DestLevel2(pos, pos))))
+        .transform(source),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .fallible
+        .build(Field.fallibleConst(_.level1.level2, F.map(fallibleComputation(50), pos => DestLevel2(pos, pos))))
+        .transform(source)
+    )(F.pure(expected))
+  }
 
-//   test("nested product configuration fails if the types do not line up") {
-//     final case class SourceToplevel1(level1: SourceLevel1)
-//     final case class SourceLevel1(level2: SourceLevel2)
-//     final case class SourceLevel2(int: Int)
+  test("nested product configuration fails if the types do not line up") {
+    final case class SourceToplevel1(level1: SourceLevel1)
+    final case class SourceLevel1(level2: SourceLevel2)
+    final case class SourceLevel2(int: Int)
 
-//     final case class DestToplevel1(level1: DestLevel1)
-//     final case class DestLevel1(level2: DestLevel2)
-//     final case class DestLevel2(int: Int, extra: String)
+    final case class DestToplevel1(level1: DestLevel1)
+    final case class DestLevel1(level2: DestLevel2)
+    final case class DestLevel2(int: Positive, extra: Positive)
 
-//     val source = SourceToplevel1(SourceLevel1(SourceLevel2(1)))
+    val source = SourceToplevel1(SourceLevel1(SourceLevel2(1)))
 
-//     assertFailsToCompileWith {
-//       """
-//       source.into[DestToplevel1].transform(Field.const(_.level1.level2.extra, 123))
-//       """
-//     }(
-//       "Configuration is not valid since the provided type (scala.Int) is not a subtype of java.lang.String @ DestToplevel1.level1.level2.extra",
-//       "No field 'extra' found in SourceLevel2 @ DestToplevel1.level1.level2.extra"
-//     )
-//   }: @nowarn("msg=unused local definition")
+    assertFailsToCompileWith {
+      """
+      source.into[DestToplevel1].fallible.transform(Field.fallibleConst(_.level1.level2.extra, F.pure("waaa")))
+      """
+    }(
+      "Configuration is not valid since the provided type (java.lang.String) is not a subtype of io.github.arainko.ducktape.fallible.model.Positive @ DestToplevel1.level1.level2.extra",
+      "No field 'extra' found in SourceLevel2 @ DestToplevel1.level1.level2.extra"
+    )
+  }: @nowarn("msg=unused local definition")
 
-//   test("Field.computed works for nested fields") {
-//     final case class SourceToplevel1(level1: SourceLevel1)
-//     final case class SourceLevel1(level2: SourceLevel2)
-//     final case class SourceLevel2(int: Int)
+  test("Field.computed works for nested fields") {
+    final case class SourceToplevel1(level1: SourceLevel1)
+    final case class SourceLevel1(level2: SourceLevel2)
+    final case class SourceLevel2(int: Int)
 
-//     final case class DestToplevel1(level1: DestLevel1)
-//     final case class DestLevel1(level2: DestLevel2)
-//     final case class DestLevel2(int: Int, extra: String)
+    final case class DestToplevel1(level1: DestLevel1)
+    final case class DestLevel1(level2: DestLevel2)
+    final case class DestLevel2(int: Positive, extra: Positive)
 
-//     val source = SourceToplevel1(SourceLevel1(SourceLevel2(1)))
-//     val expected = DestToplevel1(DestLevel1(DestLevel2(1, "1CONF")))
+    val source = SourceToplevel1(SourceLevel1(SourceLevel2(1)))
+    val expected = DestToplevel1(DestLevel1(DestLevel2(Positive(1), Positive(2137))))
 
-//     assertEachEquals(
-//       source
-//         .into[DestToplevel1]
-//         .transform(
-//           Field.computed(_.level1.level2.extra, a => a.level1.level2.int.toString() + "CONF")
-//         ),
-//       source
-//         .intoVia(DestToplevel1.apply)
-//         .transform(Field.computed(_.level1.level2.extra, a => a.level1.level2.int.toString() + "CONF")),
-//       Transformer
-//         .define[SourceToplevel1, DestToplevel1]
-//         .build(Field.computed(_.level1.level2.extra, a => a.level1.level2.int.toString() + "CONF"))
-//         .transform(source),
-//       Transformer
-//         .defineVia[SourceToplevel1](DestToplevel1.apply)
-//         .build(Field.computed(_.level1.level2.extra, a => a.level1.level2.int.toString() + "CONF"))
-//         .transform(source)
-//     )(expected)
-//   }
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .fallible
+        .transform(
+          Field.fallibleComputed(_.level1.level2.extra, a => fallibleComputation(a.level1.level2.int + 2136))
+        ),
+      source
+        .intoVia(DestToplevel1.apply)
+        .fallible
+        .transform(Field.fallibleComputed(_.level1.level2.extra, a => fallibleComputation(a.level1.level2.int + 2136))),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .fallible
+        .build(Field.fallibleComputed(_.level1.level2.extra, a => fallibleComputation(a.level1.level2.int + 2136)))
+        .transform(source),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .fallible
+        .build(Field.fallibleComputed(_.level1.level2.extra, a => fallibleComputation(a.level1.level2.int + 2136)))
+        .transform(source)
+    )(F.pure(expected))
+  }
 
-//   test("nested product fields with collection and option elements can be configured") {
-//     final case class SourceToplevel1(level1: List[SourceLevel1])
-//     final case class SourceLevel1(level2: Option[SourceLevel2])
-//     final case class SourceLevel2(level3: SourceLevel3)
-//     final case class SourceLevel3(int: Int)
+  test("nested product fields with collection and option elements can be configured") {
+    final case class SourceToplevel1(level1: List[SourceLevel1])
+    final case class SourceLevel1(level2: Option[SourceLevel2])
+    final case class SourceLevel2(level3: SourceLevel3)
+    final case class SourceLevel3(int: Int)
 
-//     final case class DestToplevel1(level1: Vector[DestLevel1])
-//     final case class DestLevel1(level2: Option[DestLevel2])
-//     final case class DestLevel2(level3: Option[DestLevel3])
-//     final case class DestLevel3(int: Int, extra: String)
+    final case class DestToplevel1(level1: Vector[DestLevel1])
+    final case class DestLevel1(level2: Option[DestLevel2])
+    final case class DestLevel2(level3: Option[DestLevel3])
+    final case class DestLevel3(int: Positive, extra: Positive)
 
-//     val source = SourceToplevel1(List(SourceLevel1(Some(SourceLevel2(SourceLevel3(1))))))
-//     val expected = DestToplevel1(Vector(DestLevel1(Some(DestLevel2(Some(DestLevel3(1, "CONFIGURED")))))))
+    val source = SourceToplevel1(List(SourceLevel1(Some(SourceLevel2(SourceLevel3(1))))))
+    val expected = DestToplevel1(Vector(DestLevel1(Some(DestLevel2(Some(DestLevel3(Positive(1), Positive(2137))))))))
 
-//     assertEachEquals(
-//       source
-//         .into[DestToplevel1]
-//         .transform(
-//           Field.const(_.level1.element.level2.element.level3.element.extra, "CONFIGURED")
-//         ),
-//       source
-//         .intoVia(DestToplevel1.apply)
-//         .transform(
-//           Field.const(_.level1.element.level2.element.level3.element.extra, "CONFIGURED")
-//         ),
-//       Transformer
-//         .define[SourceToplevel1, DestToplevel1]
-//         .build(Field.const(_.level1.element.level2.element.level3.element.extra, "CONFIGURED"))
-//         .transform(source),
-//       Transformer
-//         .defineVia[SourceToplevel1](DestToplevel1.apply)
-//         .build(Field.const(_.level1.element.level2.element.level3.element.extra, "CONFIGURED"))
-//         .transform(source)
-//     )(expected)
-//   }
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .fallible
+        .transform(
+          Field.fallibleConst(_.level1.element.level2.element.level3.element.extra, fallibleComputation(2137))
+        ),
 
-//   test("nested product fields with collection and option elements can be overridden") {
-//     final case class SourceToplevel1(level1: List[SourceLevel1])
-//     final case class SourceLevel1(level2: Option[SourceLevel2])
-//     final case class SourceLevel2(level3: SourceLevel3)
-//     final case class SourceLevel3(int: Int)
+      // TODO: compiler crashes here :( minimize and report to dotty
+      // source
+      //   .intoVia(DestToplevel1.apply)
+      //   .fallible
+      //   .transform(
+      //     Field.fallibleConst(_.level1.element.level2.element.level3.element.extra, fallibleComputation(2137))
+      //   ),
 
-//     final case class DestToplevel1(level1: Vector[DestLevel1])
-//     final case class DestLevel1(level2: Option[DestLevel2])
-//     final case class DestLevel2(level3: Option[DestLevel3])
-//     final case class DestLevel3(int: Int, extra: String)
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .fallible
+        .build(Field.fallibleConst(_.level1.element.level2.element.level3.element.extra, fallibleComputation(2137)))
+        .transform(source),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .fallible
+        .build(Field.fallibleConst(_.level1.element.level2.element.level3.element.extra, fallibleComputation(2137)))
+        .transform(source)
+    )(F.pure(expected))
+  }
 
-//     val source = SourceToplevel1(List(SourceLevel1(Some(SourceLevel2(SourceLevel3(1))))))
-//     val expected = DestToplevel1(Vector(DestLevel1(Some(DestLevel2(Some(DestLevel3(2, "overridden")))))))
+  test("nested product fields with collection and option elements can be overridden") {
+    final case class SourceToplevel1(level1: List[SourceLevel1])
+    final case class SourceLevel1(level2: Option[SourceLevel2])
+    final case class SourceLevel2(level3: SourceLevel3)
+    final case class SourceLevel3(int: Int)
 
-//     assertEachEquals(
-//       source
-//         .into[DestToplevel1]
-//         .transform(
-//           Field.const(_.level1.element.level2.element.level3.element, DestLevel3(2, "overridden"))
-//         ),
-//       source
-//         .intoVia(DestToplevel1.apply)
-//         .transform(
-//           Field.const(_.level1.element.level2.element.level3.element, DestLevel3(2, "overridden"))
-//         ),
-//       Transformer
-//         .define[SourceToplevel1, DestToplevel1]
-//         .build(Field.const(_.level1.element.level2.element.level3.element, DestLevel3(2, "overridden")))
-//         .transform(source),
-//       Transformer
-//         .defineVia[SourceToplevel1](DestToplevel1.apply)
-//         .build(Field.const(_.level1.element.level2.element.level3.element, DestLevel3(2, "overridden")))
-//         .transform(source)
-//     )(expected)
-//   }
+    final case class DestToplevel1(level1: Vector[DestLevel1])
+    final case class DestLevel1(level2: Option[DestLevel2])
+    final case class DestLevel2(level3: Option[DestLevel3])
+    final case class DestLevel3(int: Positive, extra: Positive)
 
-//   test("nested coproduct cases can be configured") {
-//     enum SourceToplevel1 {
-//       case Level1(level2: SourceLevel2)
-//     }
+    val source = SourceToplevel1(List(SourceLevel1(Some(SourceLevel2(SourceLevel3(1))))))
+    val expected = DestToplevel1(Vector(DestLevel1(Some(DestLevel2(Some(DestLevel3(Positive(2), Positive(2))))))))
 
-//     enum SourceLevel2 {
-//       case Level2(level3: SourceLevel3)
-//     }
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .fallible
+        .transform(
+          Field.fallibleConst(
+            _.level1.element.level2.element.level3.element,
+            F.map(fallibleComputation(2), pos => DestLevel3(pos, pos))
+          )
+        ),
+      // TODO: Compiler crash here as well :(
+      // source
+      //   .intoVia(DestToplevel1.apply)
+      //   .fallible
+      //   .transform(
+      //     Field.fallibleConst(
+      //       _.level1.element.level2.element.level3.element,
+      //       F.map(fallibleComputation(2), pos => DestLevel3(pos, pos))
+      //     )
+      //   ),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .fallible
+        .build(
+          Field.fallibleConst(
+            _.level1.element.level2.element.level3.element,
+            F.map(fallibleComputation(2), pos => DestLevel3(pos, pos))
+          )
+        )
+        .transform(source),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .fallible
+        .build(
+          Field.fallibleConst(
+            _.level1.element.level2.element.level3.element,
+            F.map(fallibleComputation(2), pos => DestLevel3(pos, pos))
+          )
+        )
+        .transform(source)
+    )(F.pure(expected))
+  }
 
-//     enum SourceLevel3 {
-//       case One
-//       case Two
-//       case Extra
-//     }
+  test("nested coproduct cases can be configured") {
+    enum SourceToplevel1 {
+      case Level1(level2: SourceLevel2)
+    }
 
-//     enum DestToplevel1 {
-//       case Level1(level2: DestLevel2)
-//     }
+    enum SourceLevel2 {
+      case Level2(level3: SourceLevel3)
+    }
 
-//     enum DestLevel2 {
-//       case Level2(level3: DestLevel3)
-//     }
+    enum SourceLevel3 {
+      case One
+      case Two
+      case Extra
+    }
 
-//     enum DestLevel3 {
-//       case One
-//       case Two
-//     }
+    enum DestToplevel1 {
+      case Level1(level2: DestLevel2)
+    }
 
-//     val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.Extra))
-//     val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One))
+    enum DestLevel2 {
+      case Level2(level3: DestLevel3)
+    }
 
-//     // scalafmt: { maxColumn = 150 }
-//     assertEachEquals(
-//       source
-//         .into[DestToplevel1]
-//         .transform(
-//           Case.const(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], DestLevel3.One)
-//         ),
-//       Transformer
-//         .define[SourceToplevel1, DestToplevel1]
-//         .build(
-//           Case.const(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], DestLevel3.One)
-//         )
-//         .transform(source)
-//     )(expected)
-//   }
+    enum DestLevel3 {
+      case One
+      case Two
+    }
 
-//   test("nested coproduct cases inside nested fields can be configured") {
-//     final case class SourceToplevel1(level1: SourceLevel1)
+    val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.Extra))
+    val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One))
 
-//     enum SourceLevel1 {
-//       case Level1(level2: SourceLevel2)
-//     }
+    // scalafmt: { maxColumn = 150 }
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .fallible
+        .transform(
+          Case.fallibleConst(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], F.pure(DestLevel3.One))
+        ),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .fallible
+        .build(
+          Case.fallibleConst(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], F.pure(DestLevel3.One))
+        )
+        .transform(source)
+    )(F.pure(expected))
+  }
 
-//     enum SourceLevel2 {
-//       case Level2(level3: SourceLevel3)
-//     }
+  test("nested coproduct cases inside nested fields can be configured") {
+    final case class SourceToplevel1(level1: SourceLevel1)
 
-//     enum SourceLevel3 {
-//       case One
-//       case Two
-//       case Extra
-//     }
+    enum SourceLevel1 {
+      case Level1(level2: SourceLevel2)
+    }
 
-//     final case class DestToplevel1(level1: DestLevel1)
+    enum SourceLevel2 {
+      case Level2(level3: SourceLevel3)
+    }
 
-//     enum DestLevel1 {
-//       case Level1(level2: DestLevel2)
-//     }
+    enum SourceLevel3 {
+      case One
+      case Two
+      case Extra
+    }
 
-//     enum DestLevel2 {
-//       case Level2(level3: DestLevel3)
-//     }
+    final case class DestToplevel1(level1: DestLevel1)
 
-//     enum DestLevel3 {
-//       case One
-//       case Two
-//     }
+    enum DestLevel1 {
+      case Level1(level2: DestLevel2)
+    }
 
-//     val source = SourceToplevel1(SourceLevel1.Level1(SourceLevel2.Level2(SourceLevel3.Extra)))
-//     val expected = DestToplevel1(DestLevel1.Level1(DestLevel2.Level2(DestLevel3.One)))
+    enum DestLevel2 {
+      case Level2(level3: DestLevel3)
+    }
 
-//     assertEachEquals(
-//       source
-//         .into[DestToplevel1]
-//         .transform(
-//           Case.const(_.level1.at[SourceLevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], DestLevel3.One)
-//         ),
-//       source
-//         .intoVia(DestToplevel1.apply)
-//         .transform(
-//           Case.const(_.level1.at[SourceLevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], DestLevel3.One)
-//         ),
-//       Transformer
-//         .define[SourceToplevel1, DestToplevel1]
-//         .build(
-//           Case.const(_.level1.at[SourceLevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], DestLevel3.One)
-//         )
-//         .transform(source),
-//       Transformer
-//         .defineVia[SourceToplevel1](DestToplevel1.apply)
-//         .build(
-//           Case.const(_.level1.at[SourceLevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], DestLevel3.One)
-//         )
-//         .transform(source)
-//     )(expected)
-//   }
+    enum DestLevel3 {
+      case One
+      case Two
+    }
 
-//   test("nested coproduct cases can be overridden") {
-//     enum SourceToplevel1 {
-//       case Level1(level2: SourceLevel2)
-//     }
+    val source = SourceToplevel1(SourceLevel1.Level1(SourceLevel2.Level2(SourceLevel3.Extra)))
+    val expected = DestToplevel1(DestLevel1.Level1(DestLevel2.Level2(DestLevel3.One)))
 
-//     enum SourceLevel2 {
-//       case Level2(level3: SourceLevel3)
-//     }
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .fallible
+        .transform(
+          Case
+            .fallibleConst(_.level1.at[SourceLevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], F.pure(DestLevel3.One))
+        ),
+      source
+        .intoVia(DestToplevel1.apply)
+        .fallible
+        .transform(
+          Case
+            .fallibleConst(_.level1.at[SourceLevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], F.pure(DestLevel3.One))
+        ),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .fallible
+        .build(
+          Case
+            .fallibleConst(_.level1.at[SourceLevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], F.pure(DestLevel3.One))
+        )
+        .transform(source),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .fallible
+        .build(
+          Case
+            .fallibleConst(_.level1.at[SourceLevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra.type], F.pure(DestLevel3.One))
+        )
+        .transform(source)
+    )(F.pure(expected))
+  }
 
-//     enum SourceLevel3 {
-//       case One
-//       case Two
-//     }
+  test("nested coproduct cases can be overridden") {
+    enum SourceToplevel1 {
+      case Level1(level2: SourceLevel2)
+    }
 
-//     enum DestToplevel1 {
-//       case Level1(level2: DestLevel2)
-//     }
+    enum SourceLevel2 {
+      case Level2(level3: SourceLevel3)
+    }
 
-//     enum DestLevel2 {
-//       case Level2(level3: DestLevel3)
-//     }
+    enum SourceLevel3 {
+      case One
+      case Two
+    }
 
-//     enum DestLevel3 {
-//       case One
-//       case Two
-//     }
+    enum DestToplevel1 {
+      case Level1(level2: DestLevel2)
+    }
 
-//     val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.One))
-//     val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.Two))
+    enum DestLevel2 {
+      case Level2(level3: DestLevel3)
+    }
 
-//     // scalafmt: { maxColumn = 150 }
-//     assertEachEquals(
-//       source
-//         .into[DestToplevel1]
-//         .transform(
-//           Case.const(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.One.type], DestLevel3.Two)
-//         ),
-//       Transformer
-//         .define[SourceToplevel1, DestToplevel1]
-//         .build(
-//           Case.const(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.One.type], DestLevel3.Two)
-//         )
-//         .transform(source)
-//     )(expected)
-//   }
+    enum DestLevel3 {
+      case One
+      case Two
+    }
 
-//   test("nested coproduct cases can be configured by configuring the case that is a level above") {
-//     enum SourceToplevel1 {
-//       case Level1(level2: SourceLevel2)
-//     }
+    val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.One))
+    val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.Two))
 
-//     enum SourceLevel2 {
-//       case Level2(level3: SourceLevel3)
-//     }
+    // scalafmt: { maxColumn = 150 }
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .fallible
+        .transform(
+          Case.fallibleConst(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.One.type], F.pure(DestLevel3.Two))
+        ),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .fallible
+        .build(
+          Case.fallibleConst(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.One.type], F.pure(DestLevel3.Two))
+        )
+        .transform(source)
+    )(F.pure(expected))
+  }
 
-//     enum SourceLevel3 {
-//       case One
-//       case Two
-//       case Extra
-//     }
+  test("nested coproduct cases can be configured by configuring the case that is a level above") {
+    enum SourceToplevel1 {
+      case Level1(level2: SourceLevel2)
+    }
 
-//     enum DestToplevel1 {
-//       case Level1(level2: DestLevel2)
-//     }
+    enum SourceLevel2 {
+      case Level2(level3: SourceLevel3)
+    }
 
-//     enum DestLevel2 {
-//       case Level2(level3: DestLevel3)
-//     }
+    enum SourceLevel3 {
+      case One
+      case Two
+      case Extra
+    }
 
-//     enum DestLevel3 {
-//       case One
-//       case Two
-//     }
+    enum DestToplevel1 {
+      case Level1(level2: DestLevel2)
+    }
 
-//     val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.Extra))
-//     val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One))
+    enum DestLevel2 {
+      case Level2(level3: DestLevel3)
+    }
 
-//     assertEachEquals(
-//       source
-//         .into[DestToplevel1]
-//         .transform(
-//           Case.const(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2], DestLevel2.Level2(DestLevel3.One))
-//         ),
-//       Transformer
-//         .define[SourceToplevel1, DestToplevel1]
-//         .build(
-//           Case.const(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2], DestLevel2.Level2(DestLevel3.One))
-//         )
-//         .transform(source)
-//     )(expected)
-//   }
+    enum DestLevel3 {
+      case One
+      case Two
+    }
+
+    val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.Extra))
+    val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One))
+
+    assertEachEquals(
+      source
+        .into[DestToplevel1]
+        .fallible
+        .transform(
+          Case.fallibleConst(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2], F.pure(DestLevel2.Level2(DestLevel3.One)))
+        ),
+      Transformer
+        .define[SourceToplevel1, DestToplevel1]
+        .fallible
+        .build(
+          Case.fallibleConst(_.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2], F.pure(DestLevel2.Level2(DestLevel3.One)))
+        )
+        .transform(source)
+    )(F.pure(expected))
+  }
 
 //   test("nested coproduct configuration fails if the types do not line up") {
 //     enum SourceToplevel1 {
@@ -712,105 +766,111 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
 
 //   }
 
-//   test("Field.fallbackToNone works") {
-//     final case class SourceToplevel(level1: SourceLevel1)
-//     final case class SourceLevel1(str: String)
+  test("Field.fallbackToNone works") {
+    final case class SourceToplevel(level1: SourceLevel1)
+    final case class SourceLevel1(str: String, int: Int)
 
-//     final case class DestToplevel(extra: Option[Int], level1: DestLevel1)
-//     final case class DestLevel1(extra: Option[Int], str: String)
+    final case class DestToplevel(extra: Option[Positive], level1: DestLevel1)
+    final case class DestLevel1(extra: Option[Positive], str: String, int: Positive)
 
-//     val source = SourceToplevel(SourceLevel1("str"))
-//     val expected = DestToplevel(None, DestLevel1(None, "str"))
+    val source = SourceToplevel(SourceLevel1("str", 1))
+    val expected = DestToplevel(None, DestLevel1(None, "str", Positive(1)))
 
-//     assertEachEquals(
-//       source.into[DestToplevel].transform(Field.fallbackToNone),
-//       source.intoVia(DestToplevel.apply).transform(Field.fallbackToNone),
-//       Transformer.define[SourceToplevel, DestToplevel].build(Field.fallbackToNone).transform(source),
-//       Transformer.defineVia[SourceToplevel](DestToplevel.apply).build(Field.fallbackToNone).transform(source)
-//     )(expected)
-//   }
+    assertEachEquals(
+      source.into[DestToplevel].fallible.transform(Field.fallbackToNone),
+      source.intoVia(DestToplevel.apply).fallible.transform(Field.fallbackToNone),
+      Transformer.define[SourceToplevel, DestToplevel].fallible.build(Field.fallbackToNone).transform(source),
+      Transformer.defineVia[SourceToplevel](DestToplevel.apply).fallible.build(Field.fallbackToNone).transform(source)
+    )(F.pure(expected))
+  }
 
-//   test("Field.fallbackToNone.regional works") {
-//     final case class SourceToplevel(level1: SourceLevel1)
-//     final case class SourceLevel1(str: String)
+  test("Field.fallbackToNone.regional works") {
+    final case class SourceToplevel(level1: SourceLevel1)
+    final case class SourceLevel1(str: String, int: Int)
 
-//     final case class DestToplevel(extra: Option[Int], level1: DestLevel1)
-//     final case class DestLevel1(extra: Option[Int], str: String)
+    final case class DestToplevel(extra: Option[Positive], level1: DestLevel1)
+    final case class DestLevel1(extra: Option[Positive], str: String, int: Positive)
 
-//     val source = SourceToplevel(SourceLevel1("str"))
-//     val expected = DestToplevel(Some(123), DestLevel1(None, "str"))
+    val source = SourceToplevel(SourceLevel1("str", 1))
+    val expected = DestToplevel(Some(Positive(123)), DestLevel1(None, "str", Positive(1)))
 
-//     assertEachEquals(
-//       source
-//         .into[DestToplevel]
-//         .transform(
-//           Field.fallbackToNone.regional(_.level1),
-//           Field.const(_.extra, Some(123))
-//         ),
-//       source
-//         .intoVia(DestToplevel.apply)
-//         .transform(
-//           Field.fallbackToNone.regional(_.level1),
-//           Field.const(_.extra, Some(123))
-//         ),
-//       Transformer
-//         .define[SourceToplevel, DestToplevel]
-//         .build(
-//           Field.fallbackToNone.regional(_.level1),
-//           Field.const(_.extra, Some(123))
-//         )
-//         .transform(source),
-//       Transformer
-//         .defineVia[SourceToplevel](DestToplevel.apply)
-//         .build(
-//           Field.fallbackToNone.regional(_.level1),
-//           Field.const(_.extra, Some(123))
-//         )
-//         .transform(source)
-//     )(expected)
-//   }
+    assertEachEquals(
+      source
+        .into[DestToplevel]
+        .fallible
+        .transform(
+          Field.fallbackToNone.regional(_.level1),
+          Field.fallibleConst(_.extra, F.map(fallibleComputation(123), pos => Some(pos)))
+        ),
+      source
+        .intoVia(DestToplevel.apply)
+        .fallible
+        .transform(
+          Field.fallbackToNone.regional(_.level1),
+          Field.fallibleConst(_.extra, F.map(fallibleComputation(123), pos => Some(pos)))
+        ),
+      Transformer
+        .define[SourceToplevel, DestToplevel]
+        .fallible
+        .build(
+          Field.fallbackToNone.regional(_.level1),
+          Field.fallibleConst(_.extra, F.map(fallibleComputation(123), pos => Some(pos)))
+        )
+        .transform(source),
+      Transformer
+        .defineVia[SourceToplevel](DestToplevel.apply)
+        .fallible
+        .build(
+          Field.fallbackToNone.regional(_.level1),
+          Field.fallibleConst(_.extra, F.map(fallibleComputation(123), pos => Some(pos)))
+        )
+        .transform(source)
+    )(F.pure(expected))
+  }
 
-//   test("Field.fallbackToDefault works") {
-//     final case class SourceToplevel(level1: SourceLevel1)
-//     final case class SourceLevel1(str: String)
+  test("Field.fallbackToDefault works") {
+    final case class SourceToplevel(level1: SourceLevel1)
+    final case class SourceLevel1(str: String, int: Int)
 
-//     final case class DestToplevel(extra: Int = 111, level1: DestLevel1)
-//     final case class DestLevel1(extra: String = "level1", str: String)
+    final case class DestToplevel(extra: Positive = Positive(111), level1: DestLevel1)
+    final case class DestLevel1(extra: Positive = Positive(123), str: String, int: Positive)
 
-//     val source = SourceToplevel(SourceLevel1("str"))
-//     val expected = DestToplevel(111, DestLevel1("level1", "str"))
+    val source = SourceToplevel(SourceLevel1("str", 1))
+    val expected = DestToplevel(Positive(111), DestLevel1(Positive(123), "str", Positive(1)))
 
-//     assertEachEquals(
-//       source.into[DestToplevel].transform(Field.fallbackToDefault),
-//       Transformer.define[SourceToplevel, DestToplevel].build(Field.fallbackToDefault).transform(source)
-//     )(expected)
-//   }
+    assertEachEquals(
+      source.into[DestToplevel].fallible.transform(Field.fallbackToDefault),
+      Transformer.define[SourceToplevel, DestToplevel].fallible.build(Field.fallbackToDefault).transform(source)
+    )(F.pure(expected))
+  }
 
 //   // TODO: More testing for this, eg. for a generic case class with a default for the generic field
-//   test("Field.fallbackToDefault.regional works") {
-//     final case class SourceToplevel(level1: SourceLevel1)
-//     final case class SourceLevel1(str: String)
+  test("Field.fallbackToDefault.regional works") {
+    final case class SourceToplevel(level1: SourceLevel1)
+    final case class SourceLevel1(str: String, int: Int)
 
-//     final case class DestToplevel(extra: Int = 111, level1: DestLevel1)
-//     final case class DestLevel1(extra: String = "level1", str: String)
+    final case class DestToplevel(extra: Positive = Positive(111), level1: DestLevel1)
+    final case class DestLevel1(extra: Positive = Positive(123), str: String, int: Positive)
 
-//     val source = SourceToplevel(SourceLevel1("str"))
-//     val expected = DestToplevel(123, DestLevel1("level1", "str"))
+    val source = SourceToplevel(SourceLevel1("str", 1))
+    val expected = DestToplevel(Positive(123), DestLevel1(Positive(123), "str", Positive(1)))
 
-//     assertEachEquals(
-//       source
-//         .into[DestToplevel]
-//         .transform(
-//           Field.fallbackToDefault.regional(_.level1),
-//           Field.const(_.extra, 123)
-//         ),
-//       Transformer
-//         .define[SourceToplevel, DestToplevel]
-//         .build(
-//           Field.fallbackToDefault.regional(_.level1),
-//           Field.const(_.extra, 123)
-//         )
-//         .transform(source)
-//     )(expected)
-//   }
+    assertEachEquals(
+      source
+        .into[DestToplevel]
+        .fallible
+        .transform(
+          Field.fallbackToDefault.regional(_.level1),
+          Field.fallibleConst(_.extra, fallibleComputation(123))
+        ),
+      Transformer
+        .define[SourceToplevel, DestToplevel]
+        .fallible
+        .build(
+          Field.fallbackToDefault.regional(_.level1),
+          Field.fallibleConst(_.extra, fallibleComputation(123))
+        )
+        .transform(source)
+    )(F.pure(expected))
+  }
 }
