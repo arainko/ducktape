@@ -1,13 +1,15 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.Transformations
+import io.github.arainko.ducktape.internal.{ FallibleTransformations, TotalTransformations }
 
 final class DefinitionViaBuilder[Source, Dest, Func, Args <: FunctionArguments] private (function: Func) {
-  transparent inline def build(inline config: Field[Source, Args] | Case[Source, Args]*): Transformer[Source, Dest] =
-    new Transformer[Source, Dest] {
-      def transform(value: Source): Dest =
-        Transformations.via[Source, Dest, Func, Args](value, function, "definition", config*)
-    }
+  inline def build(inline config: Field[Source, Args] | Case[Source, Args]*): Transformer[Source, Dest] =
+    Transformer.Derived.FromFunction(value =>
+      TotalTransformations.via[Source, Dest, Func, Args](value, function, "definition", config*)
+    )
+
+  def fallible[F[+x], M <: Mode[F]](using M): DefinitionViaBuilder.Fallible[F, M, Source, Dest, Func, Args] =
+    DefinitionViaBuilder.Fallible[F, M, Source, Dest, Func, Args](function)
 }
 
 object DefinitionViaBuilder {
@@ -28,5 +30,18 @@ object DefinitionViaBuilder {
         )
       }
     }
+  }
+
+  final class Fallible[F[+x], M <: Mode[F], Source, Dest, Func, ArgSelector <: FunctionArguments] private[ducktape] (
+    function: Func
+  )(using F: M) {
+
+    inline def build(
+      inline config: Field.Fallible[F, Source, ArgSelector] | Case.Fallible[F, Source, ArgSelector]*
+    ): Transformer.Fallible[F, Source, Dest] =
+      Transformer.Fallible.Derived.FromFunction(value =>
+        FallibleTransformations.via[F, Source, Dest, Func, ArgSelector](value, function, F, "definition", config*)
+      )
+
   }
 }

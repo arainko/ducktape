@@ -5,9 +5,23 @@ import scala.annotation.compileTimeOnly
 // Kept around for source compat with 0.1.x
 def Arg: Field.type = Field
 
-opaque type Field[A, B] = Unit
+opaque type Field[A, B] <: Field.Fallible[Nothing, A, B] = Field.Fallible[Nothing, A, B]
 
 object Field {
+  opaque type Fallible[+F[+x], A, B] = Unit
+
+  @compileTimeOnly("Field.fallibleConst is only useable as a field configuration for transformations")
+  def fallibleConst[F[+x], A, B, DestFieldTpe](
+    selector: Selector ?=> B => DestFieldTpe,
+    value: F[DestFieldTpe]
+  ): Field.Fallible[F, A, B] = ???
+
+  @compileTimeOnly("Field.fallibleComputed is only useable as a field configuration for transformations")
+  def fallibleComputed[F[+x], A, B, DestFieldTpe](
+    selector: Selector ?=> B => DestFieldTpe,
+    function: A => F[DestFieldTpe]
+  ): Field.Fallible[F, A, B] = ???
+
   @compileTimeOnly("Field.const is only useable as a field configuration for transformations")
   def const[A, B, DestFieldTpe, ConstTpe](selector: Selector ?=> B => DestFieldTpe, value: ConstTpe): Field[A, B] = ???
 

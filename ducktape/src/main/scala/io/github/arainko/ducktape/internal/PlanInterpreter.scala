@@ -11,7 +11,7 @@ private[ducktape] object PlanInterpreter {
   def run[A: Type](plan: Plan[Nothing, Nothing], sourceValue: Expr[A])(using Quotes): Expr[Any] =
     recurse(plan, sourceValue)(using sourceValue)
 
-  private def recurse[A: Type](plan: Plan[Nothing, Nothing], value: Expr[Any])(using
+  def recurse[A: Type](plan: Plan[Nothing, Nothing], value: Expr[Any])(using
     toplevelValue: Expr[A]
   )(using Quotes): Expr[Any] = {
     import quotes.reflect.*
@@ -20,16 +20,7 @@ private[ducktape] object PlanInterpreter {
       case Plan.Upcast(_, _) => value
 
       case Plan.Configured(_, _, config) =>
-        config match {
-          case Configuration.Const(value, _) =>
-            value
-          case Configuration.CaseComputed(_, function) =>
-            '{ $function.apply($value) }
-          case Configuration.FieldComputed(_, function) =>
-            '{ $function.apply($toplevelValue) }
-          case Configuration.FieldReplacement(source, name, tpe) =>
-            source.accessFieldByName(name).asExpr
-        }
+        evaluateConfig(config, value)
 
       case Plan.BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
         val args = fieldPlans.map {
@@ -46,10 +37,10 @@ private[ducktape] object PlanInterpreter {
           (plan.source.tpe -> plan.dest.tpe) match {
             case '[src] -> '[dest] =>
               val sourceValue = '{ $value.asInstanceOf[src] }
-              IfBranch(IsInstanceOf(value, plan.source.tpe), recurse(plan, sourceValue))
+              IfExpression.Branch(IsInstanceOf(value, plan.source.tpe), recurse(plan, sourceValue))
           }
         }.toList
-        ifStatement(branches).asExpr
+        IfExpression(branches, '{ throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.") }).asExpr
 
       case Plan.BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
         val args = argPlans.map {
@@ -117,22 +108,15 @@ private[ducktape] object PlanInterpreter {
     }
   }
 
-  private def ifStatement(using Quotes)(branches: List[IfBranch]): quotes.reflect.Term = {
-    import quotes.reflect.*
-
-    branches match {
-      case IfBranch(cond, value) :: xs =>
-        If(cond.asTerm, value.asTerm, ifStatement(xs))
-      case Nil =>
-        '{ throw RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation") }.asTerm
+  def evaluateConfig[A: Type](config: Configuration[Nothing], value: Expr[Any])(using toplevelValue: Expr[A], quotes: Quotes) =
+    config match {
+      case Configuration.Const(value, _) =>
+        value
+      case Configuration.CaseComputed(_, function) =>
+        '{ $function.apply($value) }
+      case Configuration.FieldComputed(_, function) =>
+        '{ $function.apply($toplevelValue) }
+      case Configuration.FieldReplacement(source, name, tpe) =>
+        source.accessFieldByName(name).asExpr
     }
-  }
-
-  private def IsInstanceOf(value: Expr[Any], tpe: Type[?])(using Quotes) =
-    tpe match {
-      case '[tpe] => '{ $value.isInstanceOf[tpe] }
-    }
-
-  private case class IfBranch(cond: Expr[Boolean], value: Expr[Any])
-
 }
