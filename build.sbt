@@ -45,14 +45,6 @@ lazy val ducktape =
       Test / scalacOptions --= List("-deprecation"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0-M10" % Test
     )
-    .dependsOn(tooling)
-
-lazy val tooling =
-  crossProject(JVMPlatform, JSPlatform, NativePlatform)
-    .crossType(CrossType.Pure)
-    .disablePlugins(MimaPlugin)
-    .enablePlugins(NoPublishPlugin)
-    .in(file("tooling"))
 
 lazy val docs =
   project
