@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape.internal
 
-
 import scala.Ordering.Implicits.*
 import scala.quoted.*
 

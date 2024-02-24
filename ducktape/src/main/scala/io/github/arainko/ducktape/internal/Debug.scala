@@ -1,8 +1,8 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
 import scala.compiletime.*
 import scala.deriving.Mirror
+import scala.quoted.*
 import scala.reflect.ClassTag
 
 private[ducktape] trait Debug[-A] {
