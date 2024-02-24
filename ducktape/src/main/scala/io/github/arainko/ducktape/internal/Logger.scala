@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.internal.Metainformation
 
 import scala.Ordering.Implicits.*
 import scala.quoted.*
@@ -10,7 +9,7 @@ private[ducktape] object Logger {
   // Logger Config
   private[ducktape] transparent inline given level: Level = Level.Off
   private val output = Output.StdOut
-  private def filter(msg: String, meta: Metainformation) = true
+  private def filter(msg: String) = true
 
   enum Level {
     case Off, Debug, Info
@@ -23,54 +22,52 @@ private[ducktape] object Logger {
   enum Output {
     case StdOut, Report
 
-    final def print(msg: String, level: Level, meta: Metainformation)(using Quotes) = {
+    final def print(msg: String, level: Level)(using Quotes) = {
       def colored(color: String & Singleton)(msg: String) = s"$color$msg${Console.RESET}"
-      def blue(msg: String) = colored(Console.BLUE)(msg)
       def green(msg: String) = colored(Console.GREEN)(msg)
-      val formatted = s"${green(s"[${level.toString().toUpperCase()}]")} $msg ${blue(s"[$meta]")}"
+      val formatted = s"${green(s"[${level.toString().toUpperCase()}]")} $msg"
       this match {
-        case StdOut => if (filter(msg, meta)) println(formatted)
-        case Report => if (filter(msg, meta)) quotes.reflect.report.info(formatted)
+        case StdOut => if (filter(msg)) println(formatted)
+        case Report => if (filter(msg)) quotes.reflect.report.info(formatted)
       }
     }
   }
 
-  inline def loggedInfo[A](using Metainformation, Quotes)(
+  inline def loggedInfo[A](using Quotes)(
     inline msg: String
   )(value: A)(using Debug[A]) = {
     info(msg, value)
     value
   }
 
-  inline def info(inline msg: String)(using name: Metainformation, quotes: Quotes): Unit =
+  inline def info(inline msg: String)(using quotes: Quotes): Unit =
     inline level match {
-      case Level.Debug => if (level <= Level.Info) output.print(msg, Level.Info, name)
-      case Level.Info  => if (level <= Level.Info) output.print(msg, Level.Info, name)
+      case Level.Debug => if (level <= Level.Info) output.print(msg, Level.Info)
+      case Level.Info  => if (level <= Level.Info) output.print(msg, Level.Info)
       case Level.Off   => ()
     }
 
   inline def info[A](
     inline msg: String,
     value: A
-  )(using Metainformation, Debug[A], Quotes): Unit =
+  )(using Debug[A], Quotes): Unit =
     info(s"$msg: ${Debug.show(value)}")
 
-  inline def loggedDebug[A](using Metainformation, Quotes)(
+  inline def loggedDebug[A](using Quotes)(
     inline msg: String
   )(value: A)(using Debug[A]) = {
     debug(msg, value)
     value
   }
 
-  inline def debug(inline msg: String)(using name: Metainformation, quotes: Quotes): Unit =
+  inline def debug(inline msg: String)(using quotes: Quotes): Unit =
     inline level match {
-      case Level.Debug => if (level <= Level.Debug) output.print(msg, Level.Debug, name)
-      case Level.Info  => if (level <= Level.Debug) output.print(msg, Level.Debug, name)
+      case Level.Debug => if (level <= Level.Debug) output.print(msg, Level.Debug)
+      case Level.Info  => if (level <= Level.Debug) output.print(msg, Level.Debug)
       case Level.Off   => ()
     }
 
   inline def debug[A](inline msg: String, value: A)(using
-    name: Metainformation,
     _debug: Debug[A],
     quotes: Quotes
   ): Unit =
