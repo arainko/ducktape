@@ -18,11 +18,10 @@ enum DestEnum {
 
 object RefinedInt {
   given transformer: Transformer.Fallible[[A] =>> Either[List[String], A], Int, RefinedInt] with {
-    def transform(source: Int): Either[List[String], RefinedInt] = 
+    def transform(source: Int): Either[List[String], RefinedInt] =
       if (source == 0) Left("dupal" :: Nil) else Right(RefinedInt(source))
   }
 }
-
 
 object Playground extends App {
   type F[X] = Either[List[String], X]
@@ -34,7 +33,7 @@ object Playground extends App {
     transformer: Transformer.Fallible.Derived[F, A, B]
   ): Transformer.Fallible[F, Option[A], B] =
     new {
-      def transform(source: Option[A]): F[B] = 
+      def transform(source: Option[A]): F[B] =
         source match
           case Some(a) => transformer.transform(a)
           case None    => Left(List("Missing required field"))
@@ -54,24 +53,23 @@ object Playground extends App {
 
   val src: io.github.arainko.ducktape.Playground.From = From.Product(None)
 
-
   summon[Transformer.Fallible[F, Option[Int], Int]]
 
   val transformer = Transformer.Fallible.derive[F, From, To]
 
-    // assert(transformer.transform(From.Product(Some(1))) == Right(To.Product(1)))
-    // assert(transformer.transform(From.Product(None)) == Left(List("Missing required field")))
-    // assert(transformer.transform(From.Product2(Some(2))) == Right(To.Product2(2)))
-  
+  // assert(transformer.transform(From.Product(Some(1))) == Right(To.Product(1)))
+  // assert(transformer.transform(From.Product(None)) == Left(List("Missing required field")))
+  // assert(transformer.transform(From.Product2(Some(2))) == Right(To.Product2(2)))
+
 //   val p = Person(1,None, Nil, 2)
 //   val srcEnum = SourceEnum.PersonCase(p)
 //   given Mode.FailFast.Either[List[String]] with {}
 
-//   val cos = 
+//   val cos =
 //     internal.CodePrinter.code:
 //       p.fallibleVia(Person2.apply)
 
-  // val a = 
+  // val a =
   //   srcEnum
   //     .into[DestEnum]
   //     .fallible
@@ -83,8 +81,6 @@ object Playground extends App {
   //   costam.transform[SourceEnum, DestEnum](
   //     srcEnum,
   //     // Case.fallibleConst[SourceEnum.PersonCase](Left("" :: Nil)),
-
-
 
   //     Case.const(_.at[SourceEnum.PersonCase], ???),
   //   )

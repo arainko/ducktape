@@ -34,7 +34,6 @@ private[ducktape] object Backend {
                   )
             )
 
-        
         val allErrors = errors ::: reconfiguredPlan.errors ::: ogErrors
         reportErrorsAndAbort(allErrors, configs)
       case Right(totalPlan) => totalPlan
@@ -53,7 +52,6 @@ private[ducktape] object Backend {
 
     throw new StopMacroExpansion
   }
-
 
   extension (self: Plan.Error)
     private def render(using Quotes) = {

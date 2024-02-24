@@ -1,7 +1,9 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
 import io.github.arainko.ducktape.*
+
+import scala.quoted.*
+
 import Configuration.*
 
 sealed trait ConfigParser[+F <: Fallible] {
@@ -143,7 +145,6 @@ object ConfigParser {
               TypeApply(Select(IdentOfType('[Field.type]), "fallibleConst"), f :: a :: b :: destFieldTpe :: Nil),
               PathSelector(path) :: AsExpr('{ $value: F[const] }) :: Nil
             ) =>
-          
           Configuration.Instruction.Static(
             path,
             Side.Dest,
@@ -153,11 +154,10 @@ object ConfigParser {
         case cfg @ Apply(
               TypeApply(
                 Select(IdentOfType('[Field.type]), "fallibleComputed"),
-                f :: a :: b :: destFieldTpe:: Nil
+                f :: a :: b :: destFieldTpe :: Nil
               ),
               PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
             ) =>
-
           Configuration.Instruction.Static(
             path,
             Side.Dest,
@@ -165,11 +165,10 @@ object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-      case cfg @ Apply(
+        case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Case.type]), "fallibleConst"), f :: a :: b :: sourceTpe :: constTpe :: Nil),
               PathSelector(path) :: AsExpr('{ $value: F[const] }) :: Nil
             ) =>
-
           Configuration.Instruction.Static(
             path,
             Side.Source,
@@ -181,14 +180,13 @@ object ConfigParser {
               TypeApply(Select(IdentOfType('[Case.type]), "fallibleComputed"), f :: a :: b :: sourceTpe :: computedTpe :: Nil),
               PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
             ) =>
-
           Configuration.Instruction.Static(
             path,
             Side.Source,
             Configuration.FallibleCaseComputed(Type.of[computed], function.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
           )
-        
+
         case DeprecatedFallibleConfig(cfg) => cfg
       }
     }
@@ -275,7 +273,7 @@ object ConfigParser {
       import quotes.reflect.*
 
       PartialFunction.condOpt(expr.asExpr) {
-        case cfg @ '{ Case.fallibleComputed[srcSubtype].apply[F, source, dest]($function) } => 
+        case cfg @ '{ Case.fallibleComputed[srcSubtype].apply[F, source, dest]($function) } =>
           val path = Path.empty(Type.of[source]).appended(Path.Segment.Case(Type.of[srcSubtype]))
           Configuration.Instruction.Static(
             path,
@@ -284,7 +282,7 @@ object ConfigParser {
             Span.fromExpr(cfg)
           )
 
-        case cfg @ '{ Case.fallibleConst[srcSubtype].apply[F, source, dest]($value) } => 
+        case cfg @ '{ Case.fallibleConst[srcSubtype].apply[F, source, dest]($value) } =>
           val path = Path.empty(Type.of[source]).appended(Path.Segment.Case(Type.of[srcSubtype]))
           Configuration.Instruction.Static(
             path,
@@ -326,7 +324,7 @@ object ConfigParser {
               ),
               PathSelector(path) :: Nil
             ) =>
-          term -> path 
+          term -> path
       }
     }
   }

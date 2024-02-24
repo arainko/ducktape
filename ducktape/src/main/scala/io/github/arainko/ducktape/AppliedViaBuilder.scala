@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.TotalTransformations
-import io.github.arainko.ducktape.internal.FallibleTransformations
+import io.github.arainko.ducktape.internal.{ FallibleTransformations, TotalTransformations }
 
 final class AppliedViaBuilder[Source, Dest, Func, Args <: FunctionArguments] private (value: Source, function: Func) {
   inline def transform(inline config: Field[Source, Args] | Case[Source, Args]*): Dest =
@@ -29,6 +28,6 @@ object AppliedViaBuilder {
     inline def transform(
       inline config: Field.Fallible[F, Source, Args] | Case.Fallible[F, Source, Args]*
     ): F[Dest] = FallibleTransformations.via[F, Source, Dest, Func, Args](source, function, F, "transformation", config*)
-      
+
   }
 }

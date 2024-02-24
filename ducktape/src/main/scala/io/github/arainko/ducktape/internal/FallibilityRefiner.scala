@@ -1,12 +1,11 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.internal.Plan.*
+import io.github.arainko.ducktape.internal.Summoner.Derived.{ FallibleTransformer, TotalTransformer }
+import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
+
 import scala.util.boundary
 import scala.util.boundary.Label
-import io.github.arainko.ducktape.internal.Plan.*
-import io.github.arainko.ducktape.internal.Summoner.UserDefined.TotalTransformer
-import io.github.arainko.ducktape.internal.Summoner.UserDefined.FallibleTransformer
-import io.github.arainko.ducktape.internal.Summoner.Derived.TotalTransformer
-import io.github.arainko.ducktape.internal.Summoner.Derived.FallibleTransformer
 
 object FallibilityRefiner {
   def run[E <: Plan.Error](plan: Plan[E, Fallible]): Plan[E, Nothing] | None.type =

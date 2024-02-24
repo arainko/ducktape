@@ -72,7 +72,7 @@ object Mode {
         if (isErroredOut) Left(accumulatedErrors.result()) else Right(accumulatedSuccesses.result())
       }
     }
-    
+
     def either[E, Coll[x] <: Iterable[x]](using Factory[E, Coll[E]]): Mode.Accumulating.Either[E, Coll] =
       Accumulating.Either[E, Coll]
   }

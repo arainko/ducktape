@@ -6,7 +6,7 @@ import scala.quoted.*
 
 private[ducktape] enum Configuration[+F <: Fallible] {
   def tpe: Type[?]
-    
+
   case Const(value: Expr[Any], tpe: Type[?]) extends Configuration[Nothing]
   case CaseComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Nothing]
   case FieldComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Nothing]

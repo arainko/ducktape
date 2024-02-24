@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.TotalTransformations
-import io.github.arainko.ducktape.internal.FallibleTransformations
+import io.github.arainko.ducktape.internal.{ FallibleTransformations, TotalTransformations }
 
 extension [Source](source: Source) {
   inline def to[Dest]: Dest = TotalTransformations.between[Source, Dest](source, "transformation")

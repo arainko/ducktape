@@ -1,7 +1,8 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
 import io.github.arainko.ducktape.Mode
+
+import scala.quoted.*
 
 object ProductZipper {
   case class Field(name: String, tpe: Type[?])

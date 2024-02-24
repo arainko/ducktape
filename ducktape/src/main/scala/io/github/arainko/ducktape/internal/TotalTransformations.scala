@@ -38,7 +38,7 @@ private[ducktape] object TotalTransformations {
 
   private def createTransformationViaInferred[A: Type, Func: Type](
     value: Expr[A],
-    function: Expr[Func],
+    function: Expr[Func]
   )(using Quotes) = {
     given TransformationSite = TransformationSite.Transformation
     given Summoner[Nothing] = Summoner.Total

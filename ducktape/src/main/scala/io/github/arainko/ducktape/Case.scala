@@ -7,11 +7,13 @@ opaque type Case[A, B] <: Case.Fallible[Nothing, A, B] = Case.Fallible[Nothing, 
 object Case {
   opaque type Fallible[+F[x], A, B] = Unit
 
+  @compileTimeOnly("Case.fallibleConst is only useable as a case configuration for transformations")
   def fallibleConst[F[+x], A, B, SourceTpe, DestTpe](
     selector: Selector ?=> A => SourceTpe,
     value: F[DestTpe]
   ): Case.Fallible[F, A, B] = ???
 
+  @compileTimeOnly("Case.fallibleConst is only useable as a case configuration for transformations")
   def fallibleComputed[F[+x], A, B, SourceTpe, DestTpe](
     selector: Selector ?=> A => SourceTpe,
     function: SourceTpe => F[DestTpe]
@@ -44,7 +46,7 @@ object Case {
     message = "Use the variant that accepts a path selector instead (Case.computed(_.at[SourceSubtype], ...))",
     since = "0.2.0-M1"
   )
-  @compileTimeOnly("'Case.computed' needs to be erased from the AST with a macro.")
+  @compileTimeOnly("Case.computed is only useable as a case configuration for transformations")
   def computed[SourceSubtype]: Case.Computed[SourceSubtype] = ???
 
   opaque type Computed[SourceSubtype] = Unit
@@ -52,12 +54,16 @@ object Case {
   object Computed {
     extension [SourceSubtype](inst: Computed[SourceSubtype]) {
 
-      @compileTimeOnly("'Case.computed' needs to be erased from the AST with a macro.")
+      @compileTimeOnly("Case.computed is only useable as a case configuration for transformations")
       def apply[Source >: SourceSubtype, Dest](f: SourceSubtype => Dest): Case[Source, Dest] = ???
     }
   }
 
-  @compileTimeOnly("'Case.fallibleConst' needs to be erased from the AST with a macro.")
+  @deprecated(
+    message = "Use the variant that accepts a path selector instead (Case.fallibleConst(_.at[SourceSubtype], ...))",
+    since = "0.2.0-M3"
+  )
+  @compileTimeOnly("Case.fallibleConst is only useable as a case configuration for transformations")
   def fallibleConst[SourceSubtype]: Case.FallibleConst[SourceSubtype] = ???
 
   opaque type FallibleConst[SourceSubtype] = Unit
@@ -70,7 +76,11 @@ object Case {
     }
   }
 
-  @compileTimeOnly("'Case.fallibleComputed' needs to be erased from the AST with a macro.")
+  @deprecated(
+    message = "Use the variant that accepts a path selector instead (Case.fallibleComputed(_.at[SourceSubtype], ...))",
+    since = "0.2.0-M3"
+  )
+  @compileTimeOnly("Case.fallibleComputed is only useable as a case configuration for transformations")
   def fallibleComputed[SourceSubtype]: Case.FallibleComputed[SourceSubtype] = ???
 
   opaque type FallibleComputed[SourceSubtype] = Unit
@@ -78,7 +88,7 @@ object Case {
   object FallibleComputed {
     extension [SourceSubtype](inst: FallibleComputed[SourceSubtype]) {
 
-      @compileTimeOnly("'Case.fallibleComputed' needs to be erased from the AST with a macro.")
+      @compileTimeOnly("Case.fallibleComputed is only useable as a case configuration for transformations")
       def apply[F[+x], Source, Dest](const: SourceSubtype => F[Dest]): Case.Fallible[F, Source, Dest] = ???
     }
   }

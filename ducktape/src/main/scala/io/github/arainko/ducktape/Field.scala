@@ -10,12 +10,14 @@ opaque type Field[A, B] <: Field.Fallible[Nothing, A, B] = Field.Fallible[Nothin
 object Field {
   opaque type Fallible[+F[+x], A, B] = Unit
 
+  @compileTimeOnly("Field.fallibleConst is only useable as a field configuration for transformations")
   def fallibleConst[F[+x], A, B, DestFieldTpe](
     selector: Selector ?=> B => DestFieldTpe,
     value: F[DestFieldTpe]
   ): Field.Fallible[F, A, B] = ???
 
-  def fallibleComputed[F[+x], A, B, DestFieldTpe]( 
+  @compileTimeOnly("Field.fallibleComputed is only useable as a field configuration for transformations")
+  def fallibleComputed[F[+x], A, B, DestFieldTpe](
     selector: Selector ?=> B => DestFieldTpe,
     function: A => F[DestFieldTpe]
   ): Field.Fallible[F, A, B] = ???

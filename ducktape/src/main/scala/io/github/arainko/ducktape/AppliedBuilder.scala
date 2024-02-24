@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.TotalTransformations
-import io.github.arainko.ducktape.internal.FallibleTransformations
+import io.github.arainko.ducktape.internal.{ FallibleTransformations, TotalTransformations }
 
 final class AppliedBuilder[Source, Dest] private[ducktape] (value: Source) {
   inline def transform(inline config: Field[Source, Dest] | Case[Source, Dest]*): Dest =

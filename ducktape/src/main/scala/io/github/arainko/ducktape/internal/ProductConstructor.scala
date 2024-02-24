@@ -8,7 +8,7 @@ sealed trait ProductConstructor {
 
 object ProductConstructor {
   final class Primary(structure: Structure.Product) extends ProductConstructor {
-    def apply(fields: Map[String, Expr[Any]])(using Quotes): Expr[Any] =  {
+    def apply(fields: Map[String, Expr[Any]])(using Quotes): Expr[Any] = {
       import quotes.reflect.*
 
       Constructor(structure.tpe.repr)

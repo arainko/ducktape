@@ -1,9 +1,10 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.Mode
+
 import scala.annotation.*
 import scala.quoted.*
 import scala.util.chaining.*
-import io.github.arainko.ducktape.Mode
 
 private[ducktape] object ProductBinder {
 
@@ -13,7 +14,7 @@ private[ducktape] object ProductBinder {
     wrappedFields: List[ProductZipper.Field.Wrapped[F]],
     construct: ProductConstructor
   )(using Quotes): Expr[F[Dest]] = {
-    
+
     def recurse(
       leftoverFields: List[ProductZipper.Field.Wrapped[F]],
       collectedUnwrappedFields: List[ProductZipper.Field.Unwrapped]

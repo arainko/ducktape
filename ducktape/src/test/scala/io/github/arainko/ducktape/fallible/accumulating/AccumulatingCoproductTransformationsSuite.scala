@@ -13,7 +13,7 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
     transformer: FallibleTransformer.Derived[F, A, B]
   ): FallibleTransformer[F, Option[A], B] =
     new FallibleTransformer[F, Option[A], B] {
-      def transform(source: Option[A]): F[B] = 
+      def transform(source: Option[A]): F[B] =
         source match
           case Some(a) => transformer.transform(a)
           case None    => Left(List("Missing required field"))
@@ -210,7 +210,6 @@ class AccumulatingCoproductTransformationsSuite extends DucktapeSuite {
         .transform(
           Case.const(_.at[From.Extra.type], To.Product(1, "asd"))
         )
-        
 
     def mappingComputed(from: From.Extra.type): To = To.Product(1, "asd")
 

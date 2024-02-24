@@ -81,7 +81,7 @@ class DerivedInstanceSuite extends DucktapeSuite {
             "Invalid Presenter.Bio" ::
             Nil
         )
-      
+
       assertEquals(transformation(createTalk), expected)
     }
 

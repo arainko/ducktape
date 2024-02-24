@@ -1,10 +1,10 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
-import io.github.arainko.ducktape.internal.Summoner.UserDefined.TotalTransformer
-import io.github.arainko.ducktape.internal.Summoner.UserDefined.FallibleTransformer
 import io.github.arainko.ducktape.Transformer
+import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
+
 import scala.collection.Factory
+import scala.quoted.*
 
 object FalliblePlanInterpreter {
   def run[F[+x]: Type, A: Type, B: Type](
@@ -25,7 +25,7 @@ object FalliblePlanInterpreter {
 
     FallibilityRefiner.run(plan) match
       case plan: Plan[Nothing, Nothing] =>
-        //TODO: Running with '-Xcheck-macros' exposes an issue with owners of lambdas (like in BetweenOptions), try to fix it later on
+        // TODO: Running with '-Xcheck-macros' exposes an issue with owners of lambdas (like in BetweenOptions), try to fix it later on
         Value.Unwrapped(PlanInterpreter.recurse[A](plan, value))
       case None =>
         plan match {

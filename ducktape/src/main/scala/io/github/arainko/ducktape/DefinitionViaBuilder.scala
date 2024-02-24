@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape
 
-import io.github.arainko.ducktape.internal.TotalTransformations
-import io.github.arainko.ducktape.internal.FallibleTransformations
+import io.github.arainko.ducktape.internal.{ FallibleTransformations, TotalTransformations }
 
 final class DefinitionViaBuilder[Source, Dest, Func, Args <: FunctionArguments] private (function: Func) {
   inline def build(inline config: Field[Source, Args] | Case[Source, Args]*): Transformer[Source, Dest] =
