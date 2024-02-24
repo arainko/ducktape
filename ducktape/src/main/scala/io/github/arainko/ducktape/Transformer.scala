@@ -40,11 +40,13 @@ object Transformer {
       }
     }
 
-    inline given derive[F[+x], Source, Dest](using F: Mode[F]): Transformer.Fallible.Derived[F, Source, Dest] =
+    inline given derive[F[+x], Source, Dest](using F: ducktape.Mode[F]): Transformer.Fallible.Derived[F, Source, Dest] =
       Derived.FromFunction(source => FallibleTransformations.between[F, Source, Dest](source, F, "definition"))
   }
 
-  // @deprecated
+  @deprecated(message = "Use io.github.arainko.ducktape.Mode instead", since = "ducktape 0.2.0-M3")
   type Mode[F[+x]] = io.github.arainko.ducktape.Mode[F]
+
+  @deprecated(message = "Use io.github.arainko.ducktape.Mode instead", since = "ducktape 0.2.0-M3")
   val Mode = io.github.arainko.ducktape.Mode
 }

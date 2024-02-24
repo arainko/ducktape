@@ -27,7 +27,7 @@ object Case {
 
   @deprecated(
     message = "Use the variant that accepts a path selector instead (Case.const(_.at[SourceSubtype], ...))",
-    since = "0.2.0-M1"
+    since = "ducktape 0.2.0-M1"
   )
   @compileTimeOnly("'Case.const' needs to be erased from the AST with a macro.")
   def const[SourceSubtype]: Case.Const[SourceSubtype] = ???
@@ -44,7 +44,7 @@ object Case {
 
   @deprecated(
     message = "Use the variant that accepts a path selector instead (Case.computed(_.at[SourceSubtype], ...))",
-    since = "0.2.0-M1"
+    since = "ducktape 0.2.0-M1"
   )
   @compileTimeOnly("Case.computed is only useable as a case configuration for transformations")
   def computed[SourceSubtype]: Case.Computed[SourceSubtype] = ???
@@ -61,7 +61,7 @@ object Case {
 
   @deprecated(
     message = "Use the variant that accepts a path selector instead (Case.fallibleConst(_.at[SourceSubtype], ...))",
-    since = "0.2.0-M3"
+    since = "ducktape 0.2.0-M3"
   )
   @compileTimeOnly("Case.fallibleConst is only useable as a case configuration for transformations")
   def fallibleConst[SourceSubtype]: Case.FallibleConst[SourceSubtype] = ???
@@ -78,7 +78,7 @@ object Case {
 
   @deprecated(
     message = "Use the variant that accepts a path selector instead (Case.fallibleComputed(_.at[SourceSubtype], ...))",
-    since = "0.2.0-M3"
+    since = "ducktape 0.2.0-M3"
   )
   @compileTimeOnly("Case.fallibleComputed is only useable as a case configuration for transformations")
   def fallibleComputed[SourceSubtype]: Case.FallibleComputed[SourceSubtype] = ???

@@ -4,10 +4,9 @@ import scala.annotation.implicitNotFound
 import scala.collection.Factory
 
 @implicitNotFound(
-  """ducktape needs an instance of either Transformer.Mode.Accumulating[F] or Transformer.Mode.FailFast[F] in implicit scope to infer the wrapper type F and determine the mode of fallible transformations.
+  """ducktape needs an instance of either Mode.Accumulating[F] or Mode.FailFast[F] in implicit scope to infer the wrapper type F and determine the mode of fallible transformations.
 For example, if you want your fallible transformations to accumulate errors and to return an Either[List[String], A] for some type A you can do this:
-private given Transformer.Mode.Accumulating[[A] =>> Either[List[String], A]] = 
-  Transformer.Mode.Accumulating.either[String, List]
+private given Transformer.Mode.Either[String, List] with {}
 """
 )
 sealed trait Mode[F[+x]] {
