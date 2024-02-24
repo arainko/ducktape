@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.DefinitionViaBuilder.PartiallyApplied
 import io.github.arainko.ducktape.Transformer.Derived.FromFunction
 import io.github.arainko.ducktape.internal.{ FallibleTransformations, TotalTransformations }
 
+@FunctionalInterface
 trait Transformer[Source, Dest] extends Transformer.Derived[Source, Dest]
 
 object Transformer {
@@ -27,6 +28,7 @@ object Transformer {
     }
   }
 
+  @FunctionalInterface
   trait Fallible[F[+x], Source, Dest] extends Fallible.Derived[F, Source, Dest]
 
   object Fallible {
