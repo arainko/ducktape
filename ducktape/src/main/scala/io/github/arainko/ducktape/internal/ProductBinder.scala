@@ -31,10 +31,12 @@ private[ducktape] object ProductBinder {
                     generateLambda[[A] =>> A, destField, Dest](
                       field,
                       unwrappedValue =>
-                        //TODO: Come back to this at some point, owners of the collected unwrapped defs need to be aligned to Symbol.spliceOwner
+                        // TODO: Come back to this at some point, owners of the collected unwrapped defs need to be aligned to Symbol.spliceOwner
                         // so there are Exprs being constructed in a wrong way somewhere (this only occurts when falling back to the non-fallible PlanInterpreter)
                         val fields =
-                          ((field.name -> unwrappedValue) :: collectedUnwrappedFields.map(f => f.field.name -> alignOwner(f.value))).toMap
+                          ((field.name -> unwrappedValue) :: collectedUnwrappedFields.map(f =>
+                            f.field.name -> alignOwner(f.value)
+                          )).toMap
                         construct(fields).asExprOf[Dest]
                     )
                   }
@@ -52,8 +54,9 @@ private[ducktape] object ProductBinder {
                   ${
                     generateLambda[F, destField, Dest](
                       field,
-                      q ?=> unwrappedValue =>
-                        recurse(next, ProductZipper.Field.Unwrapped(field, unwrappedValue) :: collectedUnwrappedFields)(using q)
+                      q ?=>
+                        unwrappedValue =>
+                          recurse(next, ProductZipper.Field.Unwrapped(field, unwrappedValue) :: collectedUnwrappedFields)(using q)
                     )
                   }
                 )

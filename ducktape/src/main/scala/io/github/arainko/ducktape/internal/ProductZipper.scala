@@ -59,7 +59,9 @@ object ProductZipper {
 
     ProductZipper.unzip(nestedPairs, wrappedFields) match {
       case (bind: Bind, unzippedFields) =>
-        val fields = (unzippedFields ::: unwrappedFields).map(field => field.field.name -> field.value).toMap
+        // TODO: Come back to this at some point, owners of the collected unwrapped defs need to be aligned to Symbol.spliceOwner
+        // so there are Exprs being constructed in a wrong way somewhere (this only occurts when falling back to the non-fallible PlanInterpreter)
+        val fields = (unzippedFields ::: unwrappedFields).map(field => field.field.name -> alignOwner(field.value)).toMap
         Match(
           nestedPairs.asTerm,
           CaseDef(
@@ -75,7 +77,10 @@ object ProductZipper {
         val wronglyMatchedReference = Ref(matchErrorBind).asExpr
         val matchErrorCase =
           CaseDef(Bind(matchErrorBind, Wildcard()), None, '{ throw new MatchError($wronglyMatchedReference) }.asTerm)
-        val fields = (unzippedFields ::: unwrappedFields).map(field => field.field.name -> field.value).toMap
+
+        // TODO: Come back to this at some point, owners of the collected unwrapped defs need to be aligned to Symbol.spliceOwner
+        // so there are Exprs being constructed in a wrong way somewhere (this only occurts when falling back to the non-fallible PlanInterpreter)
+        val fields = (unzippedFields ::: unwrappedFields).map(field => field.field.name -> alignOwner(field.value)).toMap
 
         Match(
           nestedPairs.asTerm,
@@ -86,6 +91,11 @@ object ProductZipper {
           ) :: matchErrorCase :: Nil
         ).asExprOf[Dest]
     }
+  }
+
+  private def alignOwner(expr: Expr[Any])(using Quotes) = {
+    import quotes.reflect.*
+    expr.asTerm.changeOwner(Symbol.spliceOwner).asExpr
   }
 
   /**
