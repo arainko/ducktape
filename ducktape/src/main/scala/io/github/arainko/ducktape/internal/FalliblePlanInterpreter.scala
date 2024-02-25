@@ -12,9 +12,7 @@ object FalliblePlanInterpreter {
     sourceValue: Expr[A],
     mode: TransformationMode[F]
   )(using Quotes): Expr[F[B]] =
-    recurse(plan, sourceValue, mode)(using sourceValue) match
-      case Value.Unwrapped(value) => '{ ${ mode.value }.pure[B](${ value.asExprOf[B] }) }
-      case Value.Wrapped(value)   => value.asExprOf[F[B]]
+    recurse(plan, sourceValue, mode)(using sourceValue).wrapped(mode, Type.of[B])
 
   private def recurse[F[+x]: Type, A: Type](
     plan: Plan[Nothing, Fallible],
@@ -107,29 +105,33 @@ object FalliblePlanInterpreter {
             }
 
           case Plan.BetweenCollections(source, dest, plan) =>
-            (dest.tpe, source.paramStruct.tpe, dest.paramStruct.tpe) match {
-              case ('[destCollTpe], '[srcElem], '[destElem]) =>
-                // TODO: Make it nicer, move this into Planner since we cannot be sure that a factory exists
-                val factory = Expr.summon[Factory[destElem, destCollTpe]].get
-                factory match {
-                  case '{
-                        type dest <: Iterable[`destElem`]
-                        $f: Factory[`destElem`, `dest`]
-                      } =>
-                    val sourceValue = value.asExprOf[Iterable[srcElem]]
+            // FallibilityRefiner.run(p) match
+            //   case p: Plan[Nothing, Nothing] =>
+            //     Value.Unwrapped(nonFallible[F](p.asInstanceOf[Plan.BetweenCollections[Nothing, Nothing]], value))
+            //   case None =>
+                (dest.tpe, source.paramStruct.tpe, dest.paramStruct.tpe) match {
+                  case ('[destCollTpe], '[srcElem], '[destElem]) =>
+                    // TODO: Make it nicer, move this into Planner since we cannot be sure that a factory exists
+                    val factory = Expr.summon[Factory[destElem, destCollTpe]].get
+                    factory match {
+                      case '{
+                            type dest <: Iterable[`destElem`]
+                            $f: Factory[`destElem`, `dest`]
+                          } =>
+                        val sourceValue = value.asExprOf[Iterable[srcElem]]
 
-                    def transformation(value: Expr[srcElem])(using Quotes) =
-                      recurse(plan, value, F).wrapped(F, Type.of[destElem])
+                        def transformation(value: Expr[srcElem])(using Quotes) =
+                          recurse(plan, value, F).wrapped(F, Type.of[destElem])
 
-                    Value.Wrapped('{
-                      ${ F.value }.traverseCollection[srcElem, destElem, Iterable[srcElem], dest](
-                        $sourceValue,
-                        a => ${ transformation('a) }
-                      )(using $f)
-                    })
+                        Value.Wrapped('{
+                          ${ F.value }.traverseCollection[srcElem, destElem, Iterable[srcElem], dest](
+                            $sourceValue,
+                            a => ${ transformation('a) }
+                          )(using $f)
+                        })
+                    }
+
                 }
-
-            }
 
           case Plan.BetweenSingletons(source, dest) =>
             Value.Unwrapped(dest.value)
@@ -227,6 +229,23 @@ object FalliblePlanInterpreter {
 
         }
 
+    }
+  }
+
+  private def nonFallible[F[+x]: Type](p: Plan.BetweenCollections[Nothing, Nothing], _value: Expr[Any])(using q: Quotes) = {
+    val castedPlan @ Plan.BetweenCollections(source, dest, plan: Plan.Upcast) = p
+    (dest.tpe, source.paramStruct.tpe, dest.paramStruct.tpe) match {
+      case ('[destCollTpe], '[srcElem], '[destElem]) =>
+        given Quotes = q.reflect.Symbol.spliceOwner.asQuotes
+        import quotes.reflect.*
+
+        val value = _value.asTerm.changeOwner(Symbol.spliceOwner).asExpr
+
+        def sourceValue(using Quotes) = value.asExprOf[Iterable[srcElem]]
+        // TODO: Make it nicer, move this into Planner since we cannot be sure that a facotry exists
+        def factory(using Quotes) = Expr.summon[Factory[destElem, destCollTpe]].get
+        def transformation(value: Expr[srcElem])(using Quotes): Expr[destElem] = value.asExprOf[destElem]
+        '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
     }
   }
 }
