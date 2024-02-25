@@ -12,9 +12,7 @@ object FalliblePlanInterpreter {
     sourceValue: Expr[A],
     mode: TransformationMode[F]
   )(using Quotes): Expr[F[B]] =
-    recurse(plan, sourceValue, mode)(using sourceValue) match
-      case Value.Unwrapped(value) => '{ ${ mode.value }.pure[B](${ value.asExprOf[B] }) }
-      case Value.Wrapped(value)   => value.asExprOf[F[B]]
+    recurse(plan, sourceValue, mode)(using sourceValue).wrapped(mode, Type.of[B])
 
   private def recurse[F[+x]: Type, A: Type](
     plan: Plan[Nothing, Fallible],
