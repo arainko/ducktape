@@ -45,7 +45,7 @@ object ProductZipper {
     wrappedFields.map(_.value).reduceLeft { (accumulated, current) =>
       (accumulated -> current) match {
         case '{ $accumulated: F[a] } -> '{ $current: F[b] } =>
-          '{ $F.product[`a`, `b`]($accumulated, $current) }
+          '{ $F.product[`b`, `a`]($current, $accumulated) }
       }
     }
 
@@ -55,42 +55,9 @@ object ProductZipper {
     nestedPairs: Expr[Any],
     construct: ProductConstructor
   )(using Quotes) = {
-    import quotes.reflect.*
-
-    ProductZipper.unzip(nestedPairs, wrappedFields) match {
-      case (bind: Bind, unzippedFields) =>
-        // TODO: Come back to this at some point, owners of the collected unwrapped defs need to be aligned to Symbol.spliceOwner
-        // so there are Exprs being constructed in a wrong way somewhere (this only occurts when falling back to the non-fallible PlanInterpreter)
-        val fields = (unzippedFields ::: unwrappedFields).map(field => field.field.name -> alignOwner(field.value)).toMap
-        Match(
-          nestedPairs.asTerm,
-          CaseDef(
-            bind,
-            None,
-            construct(fields).asTerm
-          ) :: Nil
-        ).asExprOf[Dest]
-
-      case (pattern: Unapply, unzippedFields) =>
-        // workaround for https://github.com/lampepfl/dotty/issues/16784
-        val matchErrorBind = Symbol.newBind(Symbol.spliceOwner, "x", Flags.EmptyFlags, TypeRepr.of[Any])
-        val wronglyMatchedReference = Ref(matchErrorBind).asExpr
-        val matchErrorCase =
-          CaseDef(Bind(matchErrorBind, Wildcard()), None, '{ throw new MatchError($wronglyMatchedReference) }.asTerm)
-
-        // TODO: Come back to this at some point, owners of the collected unwrapped defs need to be aligned to Symbol.spliceOwner
-        // so there are Exprs being constructed in a wrong way somewhere (this only occurts when falling back to the non-fallible PlanInterpreter)
-        val fields = (unzippedFields ::: unwrappedFields).map(field => field.field.name -> alignOwner(field.value)).toMap
-
-        Match(
-          nestedPairs.asTerm,
-          CaseDef(
-            pattern,
-            None,
-            construct(fields).asTerm
-          ) :: matchErrorCase :: Nil
-        ).asExprOf[Dest]
-    }
+    val unzippedFields = ProductZipper.unzip(nestedPairs, wrappedFields)
+    val fields = (unzippedFields ::: unwrappedFields).map(field => field.field.name -> alignOwner(field.value)).toMap
+    construct(fields).asExprOf[Dest]
   }
 
   private def alignOwner(expr: Expr[Any])(using Quotes) = {
@@ -98,78 +65,38 @@ object ProductZipper {
     expr.asTerm.changeOwner(Symbol.spliceOwner).asExpr
   }
 
-  /**
-   * Imagine you have a value of type: Tuple2[Tuple2[Tuple2[Int, Double], Float], String], eg.
-   *     val whatever: Tuple2[Tuple2[Tuple2[Int, Double], Float], String] = 1 -> 1d -> 1f -> "4"
-   *
-   * and fields that were 'zipped' into this shape with `PartialTransformer.Accumulating.Support#product`
-   * by applying this operation left to right eg.
-   *     (field1: Int).product(field2: Double).product(field3: Float)
-   *
-   * The fields need to be provided in THE EXACT SAME ORDER they were zipped so for the operation above we'd expect
-   *    List(field1, field2, field3, field4).
-   *
-   * This method will generate a tree that unpacks such an associated tuple, eg. for the example above we'd get a tree that corresponds to
-   * a pattern match:
-   *      case Tuple2(Tuple2(Tuple(field1, field2), field3), field4)
-   *
-   * and a list of unwrapped fields that allow you to operate on the bound values of the pattern match.
-   */
   private def unzip(
     nestedPairs: Expr[Any],
-    fields: NonEmptyList[Field.Wrapped[?]]
+    _fields: NonEmptyList[Field.Wrapped[?]]
   )(using Quotes) = {
-    import quotes.reflect.*
+    val fields = _fields.toList.toVector
+    val size = fields.size
 
-    def recurse(
-      tpe: Type[?],
-      leftoverFields: List[Field.Wrapped[?]]
-    )(using Quotes): (quotes.reflect.Unapply | quotes.reflect.Bind, List[Field.Unwrapped]) = {
-      import quotes.reflect.*
+    if size == 1 then {
+      Field.Unwrapped(fields.head.field, nestedPairs) :: Nil
+    } else {
+      fields.indices.map { idx =>
+        // fields: int1: Positive, int2: Positive2, int3: Positive3, int4: Positive4
+        // after zipping will become:
+        // scala.Tuple2[Positive4, scala.Tuple2[Positive3, scala.Tuple2[Positive2, Positive]]]
 
-      (tpe -> leftoverFields) match {
-        case ('[Tuple2[first, second]], Field.Wrapped(firstField, _) :: Field.Wrapped(secondField, _) :: Nil) =>
-          val firstTpe = TypeRepr.of[second]
-          val secondTpe = TypeRepr.of[first]
-          val firstBind = Symbol.newBind(Symbol.spliceOwner, firstField.name, Flags.Case, firstTpe)
-          val secondBind = Symbol.newBind(Symbol.spliceOwner, secondField.name, Flags.Case, secondTpe)
-          val fields =
-            List(Field.Unwrapped(secondField, Ref(secondBind).asExpr), Field.Unwrapped(firstField, Ref(firstBind).asExpr))
-          val extractor =
-            Unapply(Tuple2Extractor(secondTpe, firstTpe), Nil, Bind(secondBind, Wildcard()) :: Bind(firstBind, Wildcard()) :: Nil)
-          extractor -> fields
-
-        case ('[tpe], Field.Wrapped(field, _) :: Nil) =>
-          val tpe = TypeRepr.of(using field.tpe)
-          val bind = Symbol.newBind(Symbol.spliceOwner, field.name, Flags.Case, tpe)
-          Bind(bind, Wildcard()) -> (Field.Unwrapped(field, Ref(bind).asExpr) :: Nil)
-
-        case ('[Tuple2[rest, current]], Field.Wrapped(field, _) :: tail) =>
-          val restTpe = TypeRepr.of[rest]
-          val currentTpe = TypeRepr.of[current]
-          val pairExtractor = Tuple2Extractor(restTpe, currentTpe)
-          val bind = Symbol.newBind(Symbol.spliceOwner, field.name, Flags.Case, currentTpe)
-          val (pattern, unzippedFields) = recurse(summon[Type[rest]], tail)
-          val extractor = Unapply(pairExtractor, Nil, pattern :: Bind(bind, Wildcard()) :: Nil)
-          val fields = Field.Unwrapped(field, Ref(bind).asExpr) :: unzippedFields
-          extractor -> fields
-
-        case (tpe, fields) =>
-          val printedType = TypeRepr.of(using tpe).show
-          report.errorAndAbort(s"Unexpected state reached while unzipping a product, tpe: $printedType, fields: ${fields}")
-
-      }
+        if idx == 0 then Field.Unwrapped(fields(idx).field, unpackRight(nestedPairs, size - 1).asExpr)
+        else Field.Unwrapped(fields(idx).field, unpackLeft(unpackRight(nestedPairs, size - 1 - idx).asExpr).asExpr)
+      }.toList
     }
 
-    recurse(nestedPairs.asTerm.tpe.asType, fields.reverse.toList)
   }
 
-  private def Tuple2Extractor(using Quotes)(A: quotes.reflect.TypeRepr, B: quotes.reflect.TypeRepr) = {
+  private def unpackRight(expr: Expr[Any], times: Int)(using Quotes): quotes.reflect.Term = {
     import quotes.reflect.*
 
-    Select
-      .unique('{ Tuple2 }.asTerm, "unapply")
-      .appliedToTypes(A :: B :: Nil)
+    if (times == 0) expr.asTerm
+    else Select.unique(unpackRight(expr, times - 1), "_2")
+  }
+
+  private def unpackLeft(expr: Expr[Any])(using Quotes): quotes.reflect.Term = {
+    import quotes.reflect.*
+    Select.unique(expr.asTerm, "_1")
   }
 
 }
