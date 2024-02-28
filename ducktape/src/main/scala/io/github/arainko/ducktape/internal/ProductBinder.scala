@@ -10,17 +10,17 @@ private[ducktape] object ProductBinder {
 
   def nestFlatMapsAndConstruct[F[+x]: Type, Dest: Type](
     F: Expr[Mode.FailFast[F]],
-    unwrappedFields: List[ProductZipper.Field.Unwrapped],
-    wrappedFields: List[ProductZipper.Field.Wrapped[F]],
+    unwrappedFields: List[FieldValue.Unwrapped],
+    wrappedFields: List[FieldValue.Wrapped[F]],
     construct: ProductConstructor
   )(using Quotes): Expr[F[Dest]] = {
 
     def recurse(
-      leftoverFields: List[ProductZipper.Field.Wrapped[F]],
-      collectedUnwrappedFields: List[ProductZipper.Field.Unwrapped]
+      leftoverFields: List[FieldValue.Wrapped[F]],
+      collectedUnwrappedFields: List[FieldValue.Unwrapped]
     )(using Quotes): Expr[F[Dest]] =
       leftoverFields match {
-        case ProductZipper.Field.Wrapped(field, wrappedValue) :: Nil =>
+        case (field @ FieldValue.Wrapped(_, _, wrappedValue)) :: Nil =>
           field.tpe match {
             case '[destField] =>
               val value = wrappedValue.asExprOf[F[destField]]
@@ -35,7 +35,7 @@ private[ducktape] object ProductBinder {
                         // so there are Exprs being constructed in a wrong way somewhere (this only occurts when falling back to the non-fallible PlanInterpreter)
                         val fields =
                           ((field.name -> unwrappedValue) :: collectedUnwrappedFields.map(f =>
-                            f.field.name -> alignOwner(f.value)
+                            f.name -> alignOwner(f.value)
                           )).toMap
                         construct(fields).asExprOf[Dest]
                     )
@@ -44,7 +44,7 @@ private[ducktape] object ProductBinder {
               }
           }
 
-        case ProductZipper.Field.Wrapped(field, wrappedValue) :: next =>
+        case (field @ FieldValue.Wrapped(_, _, wrappedValue)) :: next =>
           field.tpe match {
             case '[destField] =>
               val value = wrappedValue.asExprOf[F[destField]]
@@ -54,9 +54,7 @@ private[ducktape] object ProductBinder {
                   ${
                     generateLambda[F, destField, Dest](
                       field,
-                      q ?=>
-                        unwrappedValue =>
-                          recurse(next, ProductZipper.Field.Unwrapped(field, unwrappedValue) :: collectedUnwrappedFields)(using q)
+                      q ?=> unwrappedValue => recurse(next, field.unwrapped(unwrappedValue) :: collectedUnwrappedFields)(using q)
                     )
                   }
                 )
@@ -64,7 +62,7 @@ private[ducktape] object ProductBinder {
           }
 
         case Nil =>
-          val fields = collectedUnwrappedFields.map(f => f.field.name -> f.value).toMap
+          val fields = collectedUnwrappedFields.map(f => f.name -> f.value).toMap
           def constructedValue(using Quotes) = construct(fields).asExprOf[Dest]
           '{ $F.pure[Dest]($constructedValue) }
       }
@@ -81,7 +79,7 @@ private[ducktape] object ProductBinder {
   // this probably warrants a crash report?
   @nowarn // todo: use @unchecked?
   private def generateLambda[F[+x]: Type, A: Type, B: Type](
-    field: ProductZipper.Field,
+    field: FieldValue,
     f: (Quotes) ?=> Expr[A] => Expr[F[B]]
   )(using Quotes) = {
     import quotes.reflect.*
