@@ -167,14 +167,21 @@ object FalliblePlanInterpreter {
   }
 
   private enum Value[F[+x]] {
-    final def wrapped[A](F: TransformationMode[F], tpe: Type[A])(using Quotes, Type[F]): Expr[F[A]] =
+    final def wrapped[A](F: TransformationMode[F], tpe: Type[A])(using Quotes, Type[F]): Expr[F[A]] = {
       given Type[A] = tpe
 
       this match
         case Unwrapped(value) =>
           '{ ${ F.value }.pure[A](${ value.asExprOf[A] }) }
+        case Wrapped(value) =>
+          value.asExprOf[F[A]]
+    }
 
-        case Wrapped(value) => value.asExprOf[F[A]]
+    final def asFieldValue(name: String, tpe: Type[?]): Either[FieldValue.Unwrapped, FieldValue.Wrapped[F]] =
+      this match {
+        case unw: Unwrapped[F]   => Left(new FieldValue.Unwrapped(name, tpe, unw.value))
+        case wrapped: Wrapped[F] => Right(new FieldValue.Wrapped(name, tpe, wrapped.value))
+      }
 
     case Unwrapped(value: Expr[Any])
     case Wrapped(value: Expr[F[Any]])
@@ -189,17 +196,12 @@ object FalliblePlanInterpreter {
     import quotes.reflect.*
 
     val (unwrapped, wrapped) =
-      fieldPlans.map {
+      fieldPlans.partitionMap {
         case (fieldName, p: Plan.Configured[Fallible]) =>
-          (fieldName, p.dest.tpe, recurse(p, value, F))
+          recurse(p, value, F).asFieldValue(fieldName, p.dest.tpe)
         case (fieldName, plan) =>
           val fieldValue = value.accessFieldByName(fieldName).asExpr
-          (fieldName, plan.dest.tpe, recurse(plan, fieldValue, F))
-      }.partitionMap {
-        case (fieldName, tpe, Value.Unwrapped(value)) =>
-          Left(ProductZipper.Field.Unwrapped(ProductZipper.Field(fieldName, tpe), value))
-        case (fieldName, tpe, Value.Wrapped(value)) =>
-          Right(ProductZipper.Field.Wrapped(ProductZipper.Field(fieldName, tpe), value))
+          recurse(plan, fieldValue, F).asFieldValue(fieldName, plan.dest.tpe)
       }
 
     plan.dest.tpe match {
@@ -214,7 +216,7 @@ object FalliblePlanInterpreter {
                 }
               }
               .getOrElse {
-                val fields = unwrapped.map(field => field.field.name -> field.value).toMap
+                val fields = unwrapped.map(field => field.name -> field.value).toMap
                 Value.Unwrapped(construct(fields))
               }
           case TransformationMode.FailFast(f) =>

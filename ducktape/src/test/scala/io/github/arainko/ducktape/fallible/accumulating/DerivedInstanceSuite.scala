@@ -75,10 +75,10 @@ class DerivedInstanceSuite extends DucktapeSuite {
 
       val expected =
         Left(
-          "Invalid Presenter.Bio" ::
-            "Invalid Presenter.Name" ::
+          "Invalid Talk.Name" ::
             "Invalid Talk.ElevatorPitch" ::
-            "Invalid Talk.Name" ::
+            "Invalid Presenter.Name" ::
+            "Invalid Presenter.Bio" ::
             Nil
         )
 

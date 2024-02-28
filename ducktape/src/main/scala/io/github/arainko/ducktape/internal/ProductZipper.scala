@@ -4,18 +4,10 @@ import io.github.arainko.ducktape.Mode
 
 import scala.quoted.*
 
-object ProductZipper {
-  case class Field(name: String, tpe: Type[?])
-
-  object Field {
-    final case class Wrapped[F[+x]](field: Field, value: Expr[F[Any]])
-    final case class Unwrapped(field: Field, value: Expr[Any])
-  }
-
-  import Field.*
+private[ducktape] object ProductZipper {
 
   /**
-   * 'Zips' a product using Transformer.Accumulating.Support[F]#product into a nested Tuple2 then
+   * 'Zips' a product using Mode.Accumulating[F]#product into a nested Tuple2 then
    * unpacks that said tuple and allows the caller to use the unpacked fields to construct a tree of type Dest.
    *
    * @param wrappedFields fields wrapped in F
@@ -24,15 +16,18 @@ object ProductZipper {
    */
   def zipAndConstruct[F[+x]: Type, Dest: Type](
     F: Expr[Mode.Accumulating[F]],
-    wrappedFields: NonEmptyList[Field.Wrapped[F]],
-    unwrappedFields: List[Field.Unwrapped]
+    wrappedFields: NonEmptyList[FieldValue.Wrapped[F]],
+    unwrappedFields: List[FieldValue.Unwrapped]
   )(construct: ProductConstructor)(using Quotes): Expr[F[Dest]] = {
-    zipFields[F](F, wrappedFields) match {
+    // ducktape 0.2.x changed the zipping and unzipping algorithm, to emulate the 0.1 runtime behavior we need to zip those fields in reverse
+    val reorderedFields = wrappedFields.reverse
+
+    zipFields[F](F, reorderedFields) match {
       case '{ $zipped: F[a] } =>
         '{
           $F.map(
             $zipped,
-            value => ${ unzipAndConstruct[Dest](wrappedFields, unwrappedFields, 'value, construct) }
+            value => ${ unzipAndConstruct[Dest](reorderedFields, unwrappedFields, 'value, construct) }
           )
         }
     }
@@ -40,7 +35,7 @@ object ProductZipper {
 
   private def zipFields[F[+x]: Type](
     F: Expr[Mode.Accumulating[F]],
-    wrappedFields: NonEmptyList[Field.Wrapped[F]]
+    wrappedFields: NonEmptyList[FieldValue.Wrapped[F]]
   )(using Quotes): Expr[F[Any]] =
     wrappedFields.map(_.value).reduceLeft { (accumulated, current) =>
       (accumulated -> current) match {
@@ -50,13 +45,13 @@ object ProductZipper {
     }
 
   private def unzipAndConstruct[Dest: Type](
-    wrappedFields: NonEmptyList[Field.Wrapped[?]],
-    unwrappedFields: List[Field.Unwrapped],
+    wrappedFields: NonEmptyList[FieldValue.Wrapped[?]],
+    unwrappedFields: List[FieldValue.Unwrapped],
     nestedPairs: Expr[Any],
     construct: ProductConstructor
   )(using Quotes) = {
     val unzippedFields = ProductZipper.unzip(nestedPairs, wrappedFields)
-    val fields = (unzippedFields ::: unwrappedFields).map(field => field.field.name -> alignOwner(field.value)).toMap
+    val fields = (unzippedFields ::: unwrappedFields).map(field => field.name -> alignOwner(field.value)).toMap
     construct(fields).asExprOf[Dest]
   }
 
@@ -67,21 +62,17 @@ object ProductZipper {
 
   private def unzip(
     nestedPairs: Expr[Any],
-    _fields: NonEmptyList[Field.Wrapped[?]]
+    _fields: NonEmptyList[FieldValue.Wrapped[?]]
   )(using Quotes) = {
-    val fields = _fields.toList.toVector
+    val fields = _fields.toVector
     val size = fields.size
 
     if size == 1 then {
-      Field.Unwrapped(fields.head.field, nestedPairs) :: Nil
+      fields.head.unwrapped(nestedPairs) :: Nil
     } else {
       fields.indices.map { idx =>
-        // fields: int1: Positive, int2: Positive2, int3: Positive3, int4: Positive4
-        // after zipping will become:
-        // scala.Tuple2[Positive4, scala.Tuple2[Positive3, scala.Tuple2[Positive2, Positive]]]
-
-        if idx == 0 then Field.Unwrapped(fields(idx).field, unpackRight(nestedPairs, size - 1).asExpr)
-        else Field.Unwrapped(fields(idx).field, unpackLeft(unpackRight(nestedPairs, size - 1 - idx).asExpr).asExpr)
+        if idx == 0 then fields(idx).unwrapped(unpackRight(nestedPairs, size - 1).asExpr)
+        else fields(idx).unwrapped(unpackLeft(unpackRight(nestedPairs, size - 1 - idx).asExpr).asExpr)
       }.toList
     }
 
@@ -98,5 +89,4 @@ object ProductZipper {
     import quotes.reflect.*
     Select.unique(expr.asTerm, "_1")
   }
-
 }
