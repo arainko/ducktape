@@ -8,6 +8,8 @@ import java.nio.file.Path
 import scala.quoted.*
 import scala.util.chaining.*
 import java.time.Instant
+import java.nio.file.Files
+import java.util.stream.Collectors
 
 /**
  * Sometimes the code printed with `Printer.TreeShortCode` is not fully legal (at least in scalafmt terms)
@@ -59,4 +61,63 @@ object Docs {
       $value
     }
   }
+
+  def generateTableOfContents() = {
+    def headerName(string: String) =
+      "#" +
+        string
+          .replace("#", "")
+          .trim
+          .replace(' ', '-')
+          .filter(char => char.isLetterOrDigit || char == '-')
+          .toLowerCase
+
+    val tableOfContents =
+      Files
+        .lines(Path.of("docs", "readme.md"))
+        .filter(line => line.startsWith("## "))
+        .map(line => s"[${line.drop(3)}](${headerName(line)})")
+        .skip(1) // drop the first entry i.e. 'Table of contents' itself
+        .collect(Collectors.joining(System.lineSeparator() + "* ", "* ", ""))
+
+    println(tableOfContents)
+  }
+
+  inline def members[A] = ${ membersOf[A] }
+
+  private def membersOf[A: Type](using Quotes) = {
+    import quotes.reflect.*
+
+
+
+    val members = 
+      TypeRepr
+        .of[A]
+        .typeSymbol
+        .declaredMethods
+        .map(meth => TypeRepr.of[A].memberType(meth))
+        .map { 
+          case MethodType(params, tpes, ret) => s"params -> $params, argTypes -> ${tpes.map(_.show)}, ret -> ${ret.show}" 
+          case PolyType(names, bounds, MethodType(params, tpes, ret)) =>  s"params -> $params, argTypes -> ${tpes.map(_.show)}, ret -> ${ret.show}"
+          case other => other.show(using Printer.TypeReprStructure)
+        }
+        
+
+    report.info(members.mkString("\n"))
+    '{}
+  }
+  
+  /*
+  params -> List(), argTypes -> List(), ret -> scala.AnyRef
+params -> List(selector, value), argTypes -> List(scala.ContextFunction1[io.github.arainko.ducktape.Selector, scala.Function1[B, DestFieldTpe]], F[DestFieldTpe]), ret -> io.github.arainko.ducktape.Field$package.Field.Fallible[F, A, B]
+params -> List(selector, function), argTypes -> List(scala.ContextFunction1[io.github.arainko.ducktape.Selector, scala.Function1[B, DestFieldTpe]], scala.Function1[A, F[DestFieldTpe]]), ret -> io.github.arainko.ducktape.Field$package.Field.Fallible[F, A, B]
+params -> List(selector, value), argTypes -> List(scala.ContextFunction1[io.github.arainko.ducktape.Selector, scala.Function1[B, DestFieldTpe]], ConstTpe), ret -> io.github.arainko.ducktape.Field$package.Field[A, B]
+params -> List(selector, function), argTypes -> List(scala.ContextFunction1[io.github.arainko.ducktape.Selector, scala.Function1[B, DestFieldTpe]], scala.Function1[A, ComputedTpe]), ret -> io.github.arainko.ducktape.Field$package.Field[A, B]
+params -> List(destSelector, sourceSelector), argTypes -> List(scala.ContextFunction1[io.github.arainko.ducktape.Selector, scala.Function1[B, DestFieldTpe]], scala.Function1[A, SourceFieldTpe]), ret -> io.github.arainko.ducktape.Field$package.Field[A, B]
+params -> List(selector), argTypes -> List(scala.ContextFunction1[io.github.arainko.ducktape.Selector, scala.Function1[B, FieldType]]), ret -> io.github.arainko.ducktape.Field$package.Field[A, B]
+PolyType(List(A, B), List(TypeBounds(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Nothing"), TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Any")), TypeBounds(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Nothing"), TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Any"))), AndType(AppliedType(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "ducktape")), "Field$package"), "Field"), List(ParamRef(binder, 0), ParamRef(binder, 1))), TypeRef(TermRef(TermRef(ThisType(TypeRef(NoPrefix(), "arainko")), "ducktape"), "Regional$package"), "Regional")))
+PolyType(List(A, B), List(TypeBounds(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Nothing"), TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Any")), TypeBounds(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Nothing"), TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Any"))), AndType(AppliedType(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "ducktape")), "Field$package"), "Field"), List(ParamRef(binder, 0), ParamRef(binder, 1))), TypeRef(TermRef(TermRef(ThisType(TypeRef(NoPrefix(), "arainko")), "ducktape"), "Regional$package"), "Regional")))
+params -> List(selector, product), argTypes -> List(scala.ContextFunction1[io.github.arainko.ducktape.Selector, scala.Function1[B, DestFieldTpe]], ProductTpe), ret -> io.github.arainko.ducktape.Field$package.Field[A, B]
+params -> List(product), argTypes -> List(ProductTpe), ret -> io.github.arainko.ducktape.Field$package.Field[A, B]
+  */
 }

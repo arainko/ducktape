@@ -6,6 +6,13 @@
 
 If this project interests you, please drop a 🌟 - these things are worthless but give me a dopamine rush nonetheless.
 
+## Table of contents
+
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+Docs.generateTableOfContents()
+```
+
 ## Installation
 ```scala
 libraryDependencies += "io.github.arainko" %% "ducktape" % "@VERSION@"
