@@ -6,12 +6,35 @@
 
 If this project interests you, please drop a 🌟 - these things are worthless but give me a dopamine rush nonetheless.
 
+## Table of contents
+
+* [Installation](#installation)
+* [Motivating example](#motivating-example)
+* [Basics](#basics)
+* [Configuring transformations](#configuring-transformations)
+  * [Introduction and explanation](#introduction-and-explanation)
+  * [Product configurations](#product-configurations)
+  * [Coproduct configurations](#coproduct-configurations)
+  * [Specifics and limitations](#specifics-and-limitations)
+* [Transfomation rules](#transfomation-rules)
+  * [1. User supplied `Transformers`](#1-user-supplied-transformers)
+  * [2. Upcasting](#2-upcasting)
+  * [3. Mapping over an `Option`](#3-mapping-over-an-option)
+  * [4. Transforming and wrapping in an `Option`](#4-transforming-and-wrapping-in-an-option)
+  * [5. Mapping over and changing the collection type](#5-mapping-over-and-changing-the-collection-type)
+  * [6. Transforming between case classes](#6-transforming-between-case-classes)
+  * [7. Transforming between enums/sealed traits](#7-transforming-between-enumssealed-traits)
+  * [8. Same named singletons](#8-same-named-singletons)
+  * [9. Unwrapping a value class](#9-unwrapping-a-value-class)
+  * [10. Wrapping a value class](#10-wrapping-a-value-class)
+  * [11. Automatically derived `Transformer.Derived`](#11-automatically-derived-transformerderived)
+
 ## Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.0-M2"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.0-M4"
 
 // or if you're using Scala.js or Scala Native
-libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.0-M2"
+libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.0-M4"
 ```
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
@@ -89,7 +112,7 @@ val domainPerson = wirePerson.to[domain.Person]
 //     Card(
 //       name = "J. Doe",
 //       digits = 12345L,
-//       expires = 2023-12-30T15:39:54.297957841Z
+//       expires = 2024-03-07T17:35:02.461337585Z
 //     )
 //   ),
 //   updatedAt = Some(value = 1970-01-01T00:00:00Z)
@@ -111,7 +134,7 @@ val domainPerson = wirePerson.to[domain.Person]
           )
         else if (src.isInstanceOf[PayPal]) new PayPal(email = src.asInstanceOf[PayPal].email)
         else if (src.isInstanceOf[Cash.type]) MdocApp.this.domain.Payment.Cash
-        else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation")
+        else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.")
       )
       .to[Vector[Payment]](iterableFactory[Payment])
     val status$2: Some[Status] = Some.apply[Status](
@@ -119,7 +142,7 @@ val domainPerson = wirePerson.to[domain.Person]
       else if (MdocApp.this.wirePerson.status.isInstanceOf[PendingRegistration.type])
         MdocApp.this.domain.Status.PendingRegistration
       else if (MdocApp.this.wirePerson.status.isInstanceOf[Removed.type]) MdocApp.this.domain.Status.Removed
-      else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation")
+      else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.")
     )
     new Person(
       lastName = MdocApp.this.wirePerson.lastName,
@@ -172,8 +195,8 @@ val wirePerson: wire.Person = wire.Person(
 val domainPerson = wirePerson.to[domain.Person]
 // error:
 // No field 'name' found in MdocApp0.this.wire.PaymentMethod.Card @ Person.paymentMethods.element.at[MdocApp0.this.domain.Payment.Card].name
-//   case Cash
-//       ^
+// case class DestLevel1(int: Int | String, level2s: Vector[DestLevel2])
+//     ^
 ```
 
 Now onto dealing with that, let's first examine the error message:
@@ -201,7 +224,7 @@ val domainPerson =
 //     Card(
 //       name = "CONST NAME",
 //       digits = 12345L,
-//       expires = 2023-12-30T15:39:54.306592168Z
+//       expires = 2024-03-07T17:35:02.467381862Z
 //     )
 //   ),
 //   updatedAt = Some(value = 1970-01-01T00:00:00Z)
@@ -213,7 +236,7 @@ val domainPerson =
   
 ``` scala 
   {
-    val AppliedBuilder_this: AppliedBuilder[Person, Person] = into[Person](MdocApp1.this.wirePerson1)[MdocApp1.this.domain.Person]
+    val AppliedBuilder_this: AppliedBuilder[Person, Person] = into[Person](MdocApp2.this.wirePerson1)[MdocApp2.this.domain.Person]
 
     {
       val value$proxy3: Person = AppliedBuilder_this.inline$value
@@ -224,15 +247,15 @@ val domainPerson =
             if (src.isInstanceOf[Card])
               new Card(name = "CONST NAME", digits = src.asInstanceOf[Card].digits, expires = src.asInstanceOf[Card].expires)
             else if (src.isInstanceOf[PayPal]) new PayPal(email = src.asInstanceOf[PayPal].email)
-            else if (src.isInstanceOf[Cash.type]) MdocApp1.this.domain.Payment.Cash
-            else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation")
+            else if (src.isInstanceOf[Cash.type]) MdocApp2.this.domain.Payment.Cash
+            else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.")
           )
           .to[Vector[Payment]](iterableFactory[Payment])
         val status$4: Some[Status] = Some.apply[Status](
-          if (value$proxy3.status.isInstanceOf[Registered.type]) MdocApp1.this.domain.Status.Registered
-          else if (value$proxy3.status.isInstanceOf[PendingRegistration.type]) MdocApp1.this.domain.Status.PendingRegistration
-          else if (value$proxy3.status.isInstanceOf[Removed.type]) MdocApp1.this.domain.Status.Removed
-          else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation")
+          if (value$proxy3.status.isInstanceOf[Registered.type]) MdocApp2.this.domain.Status.Registered
+          else if (value$proxy3.status.isInstanceOf[PendingRegistration.type]) MdocApp2.this.domain.Status.PendingRegistration
+          else if (value$proxy3.status.isInstanceOf[Removed.type]) MdocApp2.this.domain.Status.Removed
+          else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.")
         )
         new Person(
           lastName = value$proxy3.lastName,
@@ -298,7 +321,7 @@ val wirePerson = wire.Person("John", "Doe",
 import io.github.arainko.ducktape.*
 
 wirePerson.to[domain.Person]
-// res5: Person = Person(
+// res6: Person = Person(
 //   firstName = "John",
 //   lastName = "Doe",
 //   paymentMethods = Vector(
@@ -313,14 +336,14 @@ wirePerson.to[domain.Person]
 
 ``` scala 
   ((new Person(
-    firstName = MdocApp4.this.wirePerson.firstName,
-    lastName = MdocApp4.this.wirePerson.lastName,
-    paymentMethods = MdocApp4.this.wirePerson.paymentMethods
+    firstName = MdocApp5.this.wirePerson.firstName,
+    lastName = MdocApp5.this.wirePerson.lastName,
+    paymentMethods = MdocApp5.this.wirePerson.paymentMethods
       .map[PaymentMethod]((src: PaymentMethod) =>
         if (src.isInstanceOf[Card]) new Card(name = src.asInstanceOf[Card].name, digits = src.asInstanceOf[Card].digits)
         else if (src.isInstanceOf[PayPal]) new PayPal(email = src.asInstanceOf[PayPal].email)
-        else if (src.isInstanceOf[Cash.type]) MdocApp4.this.domain.PaymentMethod.Cash
-        else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation")
+        else if (src.isInstanceOf[Cash.type]) MdocApp5.this.domain.PaymentMethod.Cash
+        else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.")
       )
       .to[Vector[PaymentMethod]](iterableFactory[PaymentMethod])
   ): Person): Person)
@@ -337,7 +360,7 @@ import io.github.arainko.ducktape.*
 wirePerson
   .into[domain.Person]
   .transform(Field.const(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, "overridden@email.com"))
-// res7: Person = Person(
+// res8: Person = Person(
 //   firstName = "John",
 //   lastName = "Doe",
 //   paymentMethods = Vector(
@@ -353,7 +376,7 @@ wirePerson
 
 ``` scala 
   {
-    val AppliedBuilder_this: AppliedBuilder[Person, Person] = into[Person](MdocApp4.this.wirePerson)[MdocApp4.this.domain.Person]
+    val AppliedBuilder_this: AppliedBuilder[Person, Person] = into[Person](MdocApp5.this.wirePerson)[MdocApp5.this.domain.Person]
 
     {
       val value$proxy7: Person = AppliedBuilder_this.inline$value
@@ -365,8 +388,8 @@ wirePerson
           .map[PaymentMethod]((src: PaymentMethod) =>
             if (src.isInstanceOf[Card]) new Card(name = src.asInstanceOf[Card].name, digits = src.asInstanceOf[Card].digits)
             else if (src.isInstanceOf[PayPal]) new PayPal(email = "overridden@email.com")
-            else if (src.isInstanceOf[Cash.type]) MdocApp4.this.domain.PaymentMethod.Cash
-            else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation")
+            else if (src.isInstanceOf[Cash.type]) MdocApp5.this.domain.PaymentMethod.Cash
+            else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.")
           )
           .to[Vector[PaymentMethod]](iterableFactory[PaymentMethod])
       ): Person
@@ -383,7 +406,7 @@ Read more in the section about [configuring transformations](#configuring-transf
 import io.github.arainko.ducktape.*
 
 wirePerson.via(domain.Person.apply)
-// res9: Person = Person(
+// res10: Person = Person(
 //   firstName = "John",
 //   lastName = "Doe",
 //   paymentMethods = Vector(
@@ -398,17 +421,17 @@ wirePerson.via(domain.Person.apply)
 
 ``` scala 
   {
-    val firstName: String = MdocApp4.this.wirePerson.firstName
-    val lastName: String = MdocApp4.this.wirePerson.lastName
-    val paymentMethods: Vector[PaymentMethod] = MdocApp4.this.wirePerson.paymentMethods
+    val firstName: String = MdocApp5.this.wirePerson.firstName
+    val lastName: String = MdocApp5.this.wirePerson.lastName
+    val paymentMethods: Vector[PaymentMethod] = MdocApp5.this.wirePerson.paymentMethods
       .map[PaymentMethod]((src: PaymentMethod) =>
         if (src.isInstanceOf[Card]) new Card(name = src.asInstanceOf[Card].name, digits = src.asInstanceOf[Card].digits)
         else if (src.isInstanceOf[PayPal]) new PayPal(email = src.asInstanceOf[PayPal].email)
-        else if (src.isInstanceOf[Cash.type]) MdocApp4.this.domain.PaymentMethod.Cash
-        else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation")
+        else if (src.isInstanceOf[Cash.type]) MdocApp5.this.domain.PaymentMethod.Cash
+        else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.")
       )
       .to[Vector[PaymentMethod]](iterableFactory[PaymentMethod])
-    MdocApp4.this.domain.Person.apply(firstName, lastName, paymentMethods)
+    MdocApp5.this.domain.Person.apply(firstName, lastName, paymentMethods)
   }
 ```
 </details>
@@ -423,7 +446,7 @@ import io.github.arainko.ducktape.*
 wirePerson
   .intoVia(domain.Person.apply)
   .transform(Field.const(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, "overridden@email.com"))
-// res11: Person = Person(
+// res12: Person = Person(
 //   firstName = "John",
 //   lastName = "Doe",
 //   paymentMethods = Vector(
@@ -441,9 +464,9 @@ wirePerson
   {
     val inst: AppliedViaBuilder[Person, Nothing, Function3[String, String, Vector[PaymentMethod], Person], Nothing] =
       inline$instance[Person, Function3[String, String, Vector[PaymentMethod], Person]](
-        MdocApp4.this.wirePerson,
+        MdocApp5.this.wirePerson,
         (firstName: String, lastName: String, paymentMethods: Vector[PaymentMethod]) =>
-          MdocApp4.this.domain.Person.apply(firstName, lastName, paymentMethods)
+          MdocApp5.this.domain.Person.apply(firstName, lastName, paymentMethods)
       )
     val AppliedViaBuilder_this: AppliedViaBuilder[
       Person,
@@ -479,8 +502,8 @@ wirePerson
           .map[PaymentMethod]((src: PaymentMethod) =>
             if (src.isInstanceOf[Card]) new Card(name = src.asInstanceOf[Card].name, digits = src.asInstanceOf[Card].digits)
             else if (src.isInstanceOf[PayPal]) new PayPal(email = "overridden@email.com")
-            else if (src.isInstanceOf[Cash.type]) MdocApp4.this.domain.PaymentMethod.Cash
-            else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation")
+            else if (src.isInstanceOf[Cash.type]) MdocApp5.this.domain.PaymentMethod.Cash
+            else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.")
           )
           .to[Vector[PaymentMethod]](iterableFactory[PaymentMethod])
       ): Person
@@ -557,7 +580,7 @@ wirePerson
     Field.const(_.age, 24),
     Case.const(_.paymentMethods.element.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash)
   )
-// res15: Person = Person(
+// res16: Person = Person(
 //   firstName = "John",
 //   lastName = "Doe",
 //   age = 24,
@@ -589,7 +612,7 @@ wirePerson
             else if (src.isInstanceOf[PayPal]) new PayPal(email = src.asInstanceOf[PayPal].email)
             else if (src.isInstanceOf[Cash.type]) Cash
             else if (src.isInstanceOf[Transfer]) domain.PaymentMethod.Cash
-            else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation")
+            else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.")
           )
           .to[Vector[PaymentMethod]](iterableFactory[PaymentMethod])
       ): Person
@@ -659,7 +682,6 @@ case class PaymentBand(name: String, digits: Long, color: String = "red")
 
 val card: wire.PaymentMethod.Card = 
   wire.PaymentMethod.Card(name = "J. Doe", digits = 213712345)
-// card: Card = Card(name = "J. Doe", digits = 213712345L)
 ```
 
 * `Field.const` - allows to supply a constant value for a given field
@@ -667,7 +689,7 @@ val card: wire.PaymentMethod.Card =
 card
   .into[PaymentBand]
   .transform(Field.const(_.color, "blue"))
-// res17: PaymentBand = PaymentBand(
+// res18: PaymentBand = PaymentBand(
 //   name = "J. Doe",
 //   digits = 213712345L,
 //   color = "blue"
@@ -696,7 +718,7 @@ card
   .transform(
     Field.computed(_.color, card => if (card.digits % 2 == 0) "green" else "yellow")
   )
-// res19: PaymentBand = PaymentBand(
+// res20: PaymentBand = PaymentBand(
 //   name = "J. Doe",
 //   digits = 213712345L,
 //   color = "yellow"
@@ -728,7 +750,7 @@ card
 card
   .into[PaymentBand]
   .transform(Field.default(_.color))
-// res21: PaymentBand = PaymentBand(
+// res22: PaymentBand = PaymentBand(
 //   name = "J. Doe",
 //   digits = 213712345L,
 //   color = "red"
@@ -759,16 +781,13 @@ card
 ```scala
 case class FieldSource(color: String, digits: Long, extra: Int)
 val source = FieldSource("magenta", 123445678, 23)
-// source: FieldSource = FieldSource(
-//   color = "magenta",
-//   digits = 123445678L,
-//   extra = 23
-// )
+```
 
+```scala
 card
   .into[PaymentBand]
   .transform(Field.allMatching(paymentBand => paymentBand, source))
-// res23: PaymentBand = PaymentBand(
+// res24: PaymentBand = PaymentBand(
 //   name = "J. Doe",
 //   digits = 123445678L,
 //   color = "magenta"
@@ -790,6 +809,162 @@ card
 ```
 </details>
 
+* `Field.fallbackToDefault` - falls back to default field values but ONLY in case a transformation cannot be created
+```scala
+case class SourceToplevel(level1: SourceLevel1, transformableButWithDefault: Int)
+case class SourceLevel1(str: String)
+
+case class DestToplevel(level1: DestLevel1, extra: Int = 111, transformableButWithDefault: Int = 3000)
+case class DestLevel1(extra: String = "level1", str: String)
+
+val source = SourceToplevel(SourceLevel1("str"), 400)
+```
+```scala
+source
+  .into[DestToplevel]
+  .transform(Field.fallbackToDefault)
+// res26: DestToplevel = DestToplevel(
+//   level1 = DestLevel1(extra = "level1", str = "str"),
+//   extra = 111,
+//   transformableButWithDefault = 400
+// )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+``` scala 
+  {
+    val AppliedBuilder_this: AppliedBuilder[SourceToplevel, DestToplevel] = into[SourceToplevel](source)[DestToplevel]
+
+    {
+      val value$proxy29: SourceToplevel = AppliedBuilder_this.inline$value
+
+      new DestToplevel(
+        level1 = new DestLevel1(extra = DestLevel1.$lessinit$greater$default$1, str = value$proxy29.level1.str),
+        extra = DestToplevel.$lessinit$greater$default$2,
+        transformableButWithDefault = value$proxy29.transformableButWithDefault
+      ): DestToplevel
+    }: DestToplevel
+  }
+```
+</details>
+
+`Field.fallbackToDefault` is a `regional` config, which means that you can control the scope where it applies:
+
+```scala
+source
+  .into[DestToplevel]
+  .transform(
+    Field.fallbackToDefault.regional(_.level1), // <-- we're applying the config starting on the `.level1` field and below, it'll be also applied to other transformations nested inside
+    Field.const(_.extra, 123) // <-- note that this field now needs to be configured manually
+  )
+// res28: DestToplevel = DestToplevel(
+//   level1 = DestLevel1(extra = "level1", str = "str"),
+//   extra = 123,
+//   transformableButWithDefault = 400
+// )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+``` scala 
+  {
+    val AppliedBuilder_this: AppliedBuilder[SourceToplevel, DestToplevel] = into[SourceToplevel](source)[DestToplevel]
+
+    {
+      val value$proxy32: SourceToplevel = AppliedBuilder_this.inline$value
+
+      new DestToplevel(
+        level1 = new DestLevel1(extra = DestLevel1.$lessinit$greater$default$1, str = value$proxy32.level1.str),
+        extra = 123,
+        transformableButWithDefault = value$proxy32.transformableButWithDefault
+      ): DestToplevel
+    }: DestToplevel
+  }
+```
+</details>
+
+* `Field.fallbackToNone` - falls back to `None` for `Option` fields for which a transformation cannot be created
+
+```scala
+case class SourceToplevel(level1: SourceLevel1, transformable: Option[Int])
+case class SourceLevel1(str: String)
+
+case class DestToplevel(level1: DestLevel1, extra: Option[Int], transformable: Option[Int])
+case class DestLevel1(extra: Option[String], str: String)
+
+val source = SourceToplevel(SourceLevel1("str"), Some(400))
+```
+
+```scala
+source
+  .into[DestToplevel]
+  .transform(Field.fallbackToNone)
+// res30: DestToplevel = DestToplevel(
+//   level1 = DestLevel1(extra = None, str = "str"),
+//   extra = None,
+//   transformable = Some(value = 400)
+// )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+``` scala 
+  {
+    val AppliedBuilder_this: AppliedBuilder[SourceToplevel, DestToplevel] = into[SourceToplevel](source)[DestToplevel]
+
+    {
+      val value$proxy35: SourceToplevel = AppliedBuilder_this.inline$value
+
+      new DestToplevel(
+        level1 = new DestLevel1(extra = None, str = value$proxy35.level1.str),
+        extra = None,
+        transformable = value$proxy35.transformable
+      ): DestToplevel
+    }: DestToplevel
+  }
+```
+</details>
+
+`Field.fallbackToNone` is a `regional` config, which means that you can control the scope where it applies:
+
+```scala
+source
+  .into[DestToplevel]
+  .transform(
+    Field.fallbackToNone.regional(_.level1), // <-- we're applying the config starting on the `.level1` field and below, it'll be also applied to other transformations nested inside
+    Field.const(_.extra, Some(123)) // <-- note that this field now needs to be configured manually
+  )
+// res32: DestToplevel = DestToplevel(
+//   level1 = DestLevel1(extra = None, str = "str"),
+//   extra = Some(value = 123),
+//   transformable = Some(value = 400)
+// )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+``` scala 
+  {
+    val AppliedBuilder_this: AppliedBuilder[SourceToplevel, DestToplevel] = into[SourceToplevel](source)[DestToplevel]
+
+    {
+      val value$proxy38: SourceToplevel = AppliedBuilder_this.inline$value
+
+      new DestToplevel(
+        level1 = new DestLevel1(extra = None, str = value$proxy38.level1.str),
+        extra = Some.apply[Int](123),
+        transformable = value$proxy38.transformable
+      ): DestToplevel
+    }: DestToplevel
+  }
+```
+</details>
+
 ### Coproduct configurations
 
 ```scala
@@ -802,7 +977,7 @@ val transfer = wire.PaymentMethod.Transfer("2764262")
 transfer
   .into[domain.PaymentMethod]
   .transform(Case.const(_.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash))
-// res25: PaymentMethod = Cash
+// res34: PaymentMethod = Cash
 ```
 <details>
   <summary>Click to see the generated code</summary>
@@ -812,14 +987,14 @@ transfer
     val AppliedBuilder_this: AppliedBuilder[PaymentMethod, PaymentMethod] = into[PaymentMethod](transfer)[domain.PaymentMethod]
 
     {
-      val value$proxy29: PaymentMethod = AppliedBuilder_this.inline$value
+      val value$proxy41: PaymentMethod = AppliedBuilder_this.inline$value
 
-      if (value$proxy29.isInstanceOf[Card])
-        new Card(name = value$proxy29.asInstanceOf[Card].name, digits = value$proxy29.asInstanceOf[Card].digits)
-      else if (value$proxy29.isInstanceOf[PayPal]) new PayPal(email = value$proxy29.asInstanceOf[PayPal].email)
-      else if (value$proxy29.isInstanceOf[Cash.type]) Cash
-      else if (value$proxy29.isInstanceOf[Transfer]) domain.PaymentMethod.Cash
-      else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation"): PaymentMethod
+      if (value$proxy41.isInstanceOf[Card])
+        new Card(name = value$proxy41.asInstanceOf[Card].name, digits = value$proxy41.asInstanceOf[Card].digits)
+      else if (value$proxy41.isInstanceOf[PayPal]) new PayPal(email = value$proxy41.asInstanceOf[PayPal].email)
+      else if (value$proxy41.isInstanceOf[Cash.type]) Cash
+      else if (value$proxy41.isInstanceOf[Transfer]) domain.PaymentMethod.Cash
+      else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape."): PaymentMethod
     }: PaymentMethod
   }
 ```
@@ -833,7 +1008,7 @@ transfer
   .transform(
     Case.computed(_.at[wire.PaymentMethod.Transfer], transfer => domain.PaymentMethod.Card("J. Doe", transfer.accountNo.toLong))
   )
-// res27: PaymentMethod = Card(name = "J. Doe", digits = 2764262L)
+// res36: PaymentMethod = Card(name = "J. Doe", digits = 2764262L)
 ```
 
 <details>
@@ -844,17 +1019,17 @@ transfer
     val AppliedBuilder_this: AppliedBuilder[PaymentMethod, PaymentMethod] = into[PaymentMethod](transfer)[domain.PaymentMethod]
 
     {
-      val value$proxy32: PaymentMethod = AppliedBuilder_this.inline$value
+      val value$proxy44: PaymentMethod = AppliedBuilder_this.inline$value
 
-      if (value$proxy32.isInstanceOf[Card])
-        new Card(name = value$proxy32.asInstanceOf[Card].name, digits = value$proxy32.asInstanceOf[Card].digits)
-      else if (value$proxy32.isInstanceOf[PayPal]) new PayPal(email = value$proxy32.asInstanceOf[PayPal].email)
-      else if (value$proxy32.isInstanceOf[Cash.type]) Cash
-      else if (value$proxy32.isInstanceOf[Transfer]) {
-        val transfer: Transfer = value$proxy32.asInstanceOf[Transfer]
+      if (value$proxy44.isInstanceOf[Card])
+        new Card(name = value$proxy44.asInstanceOf[Card].name, digits = value$proxy44.asInstanceOf[Card].digits)
+      else if (value$proxy44.isInstanceOf[PayPal]) new PayPal(email = value$proxy44.asInstanceOf[PayPal].email)
+      else if (value$proxy44.isInstanceOf[Cash.type]) Cash
+      else if (value$proxy44.isInstanceOf[Transfer]) {
+        val `transfer₂` : Transfer = value$proxy44.asInstanceOf[Transfer]
 
-        domain.PaymentMethod.Card.apply("J. Doe", augmentString(transfer.accountNo).toLong): PaymentMethod
-      } else throw new RuntimeException("Unhandled condition encountered during Coproduct Transformer derivation"): PaymentMethod
+        domain.PaymentMethod.Card.apply("J. Doe", augmentString(`transfer₂`.accountNo).toLong): PaymentMethod
+      } else throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape."): PaymentMethod
     }: PaymentMethod
   }
 ```
@@ -871,7 +1046,7 @@ wirePerson
     Case.const(_.paymentMethods.element.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash),
     Field.const(_.paymentMethods.element, domain.PaymentMethod.Cash) // <-- override all payment methods to `Cash`
   )
-// res29: Person = Person(
+// res38: Person = Person(
 //   firstName = "John",
 //   lastName = "Doe",
 //   age = 24,
@@ -889,7 +1064,7 @@ wirePerson
     Field.const(_.age, 24),
     Field.const(_.age, 50) // <-- override the previously configured 'age' field`
   )
-// res30: Person = Person(
+// res39: Person = Person(
 //   firstName = "John",
 //   lastName = "Doe",
 //   age = 50,
@@ -912,7 +1087,7 @@ wirePerson
     Field.const(_.paymentMethods.element, domain.PaymentMethod.Cash), // <-- override all payment methods to `Cash`,
     Field.const(_.paymentMethods, Vector.empty[domain.PaymentMethod]) // <-- also override the 'parent' of '_.paymentMethods.element' so now payment methods are just empty
   )
-// res31: Person = Person(
+// res40: Person = Person(
 //   firstName = "John",
 //   lastName = "Doe",
 //   age = 24,
@@ -932,8 +1107,8 @@ wirePerson
   )
 // error:
 // The path segment 'element' is not valid @ Person.paymentMethods
-//     Field.const(_.paymentMethods.element, domain.PaymentMethod.Cash), // <-- then the field below it
-//     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//   import io.github.arainko.ducktape.docs.*
+//  ^
 ```
 
 ## Transfomation rules
@@ -948,7 +1123,7 @@ Custom instances of a `Transfomer` are always prioritized since these also funct
 given Transformer[String, List[String]] = str => str :: Nil
 
 "single value".to[List[String]]
-// res33: List[String] = List("single value")
+// res42: List[String] = List("single value")
 ```
 
 <details>
@@ -966,7 +1141,7 @@ Transforming a type to its supertype is just an upcast.
 ```scala
 // (Int | String) >: Int
 1.to[Int | String]
-// res35: Int | String = 1
+// res44: Int | String = 1
 ```
 <details>
   <summary>Click to see the generated code</summary>
@@ -984,7 +1159,7 @@ Transforming between options comes down to mapping over it and recursively deriv
 given Transformer[Int, String] = int => int.toString
 
 Option(1).to[Option[String]]
-// res37: Option[String] = Some(value = "1")
+// res46: Option[String] = Some(value = "1")
 ```
 
 <details>
@@ -1005,7 +1180,7 @@ If a transformation between two types is possible then transforming between the 
 
 ```scala
 1.to[Option[Int | String]]
-// res39: Option[Int | String] = Some(value = 1)
+// res48: Option[Int | String] = Some(value = 1)
 ```
 
 <details>
@@ -1023,7 +1198,7 @@ If a transformation between two types is possible then transforming between the 
 import io.github.arainko.ducktape.to as convertTo
 
 List(1, 2, 3, 4).convertTo[Vector[Int | String]]
-// res41: Vector[Int | String] = Vector(1, 2, 3, 4)
+// res50: Vector[Int | String] = Vector(1, 2, 3, 4)
 ```
 
 <details>
@@ -1058,7 +1233,7 @@ case class DestLevel1(int: Int | String, level2s: Vector[DestLevel2])
 case class DestLevel2(value: Option[Int])
 
 SourceToplevel(SourceLevel1("extra", 1, List(SourceLevel2(1), SourceLevel2(2)))).to[DestToplevel]
-// res44: DestToplevel = DestToplevel(
+// res53: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(
 //     int = 1,
 //     level2s = Vector(
@@ -1112,7 +1287,7 @@ enum OtherPaymentMethod {
 }
 
 (PaymentMethod.Cash: PaymentMethod).to[OtherPaymentMethod]
-// res46: OtherPaymentMethod = Cash
+// res55: OtherPaymentMethod = Cash
 ```
 
 <details>
@@ -1132,7 +1307,7 @@ enum OtherPaymentMethod {
      else if (source$proxy8.isInstanceOf[PayPal]) new PayPal(email = source$proxy8.asInstanceOf[PayPal].email)
      else
        throw new RuntimeException(
-         "Unhandled condition encountered during Coproduct Transformer derivation"
+         "Unhandled case. This is most likely a bug in ducktape."
        ): OtherPaymentMethod): OtherPaymentMethod
   }
 ```
@@ -1152,7 +1327,7 @@ object example2 {
 }
 
 example1.Singleton.to[example2.Singleton.type]
-// res48: Singleton = Singleton
+// res57: Singleton = Singleton
 ```
 <details>
   <summary>Click to see the generated code</summary>
@@ -1168,7 +1343,7 @@ example1.Singleton.to[example2.Singleton.type]
 case class Wrapper1(value: Int) extends AnyVal
 
 Wrapper1(1).to[Int]
-// res50: Int = 1
+// res59: Int = 1
 ```
 
 <details>
@@ -1189,7 +1364,7 @@ Wrapper1(1).to[Int]
 case class Wrapper2(value: Int) extends AnyVal
 
 1.to[Wrapper2]
-// res52: Wrapper2 = Wrapper2(value = 1)
+// res61: Wrapper2 = Wrapper2(value = 1)
 ```
 
 <details>
@@ -1213,7 +1388,7 @@ final case class Dest[A](field1: Int, field2: String, generic: A)
 def transformSource[A, B](source: Source[A])(using Transformer.Derived[A, B]): Dest[B] = source.to[Dest[B]]
 
 transformSource[Int, Option[Int]](Source(1, "2", 3))
-// res54: Dest[Option[Int]] = Dest(
+// res63: Dest[Option[Int]] = Dest(
 //   field1 = 1,
 //   field2 = "2",
 //   generic = Some(value = 3)
@@ -1227,13 +1402,9 @@ transformSource[Int, Option[Int]](Source(1, "2", 3))
   {
     def transformSource[A, B](source: Source[A])(x$2: Transformer.Derived[A, B]): Dest[B] =
       (new Dest[B](field1 = source.field1, field2 = source.field2, generic = x$2.transform(source.generic)): Dest[B]): Dest[B]
-    transformSource[Int, Option[Int]](Source.apply[Int](1, "2", 3))({
-      final class $anon() extends Derived[Int, Option[Int]] {
-        def transform(value: Int): Option[Int] = Some.apply[Int](value): Option[Int]
-      }
-
-      new $anon(): Derived[Int, Option[Int]]
-    }: Derived[Int, Option[Int]])
+    transformSource[Int, Option[Int]](Source.apply[Int](1, "2", 3))(
+      new FromFunction[Int, Option[Int]]((value: Int) => Some.apply[Int](value): Option[Int]): Derived[Int, Option[Int]]
+    )
   }
 ```
 </details>

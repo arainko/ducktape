@@ -604,7 +604,93 @@ Docs.printCode(
 ``` 
 </details>
 
+`Field.fallbackToDefault` is a `regional` config, which means that you can control the scope where it applies:
+
+```scala mdoc
+source
+  .into[DestToplevel]
+  .transform(
+    Field.fallbackToDefault.regional(_.level1), // <-- we're applying the config starting on the `.level1` field and below, it'll be also applied to other transformations nested inside
+    Field.const(_.extra, 123) // <-- note that this field now needs to be configured manually
+  )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[DestToplevel]
+    .transform(
+      Field.fallbackToDefault.regional(_.level1), // <-- we're applying the config starting on the `.level1` field and below, it'll be also applied to other transformations nested inside
+      Field.const(_.extra, 123)
+    )
+)
+``` 
+</details>
+
 * `Field.fallbackToNone` - falls back to `None` for `Option` fields for which a transformation cannot be created
+
+```scala mdoc:nest:silent
+case class SourceToplevel(level1: SourceLevel1, transformable: Option[Int])
+case class SourceLevel1(str: String)
+
+case class DestToplevel(level1: DestLevel1, extra: Option[Int], transformable: Option[Int])
+case class DestLevel1(extra: Option[String], str: String)
+
+val source = SourceToplevel(SourceLevel1("str"), Some(400))
+```
+
+```scala mdoc
+source
+  .into[DestToplevel]
+  .transform(Field.fallbackToNone)
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[DestToplevel]
+    .transform(Field.fallbackToNone)
+)
+``` 
+</details>
+
+`Field.fallbackToNone` is a `regional` config, which means that you can control the scope where it applies:
+
+```scala mdoc
+source
+  .into[DestToplevel]
+  .transform(
+    Field.fallbackToNone.regional(_.level1), // <-- we're applying the config starting on the `.level1` field and below, it'll be also applied to other transformations nested inside
+    Field.const(_.extra, Some(123)) // <-- note that this field now needs to be configured manually
+  )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+  .into[DestToplevel]
+  .transform(
+    Field.fallbackToNone.regional(_.level1),
+    Field.const(_.extra, Some(123))
+  )
+)
+``` 
+</details>
 
 ### Coproduct configurations
 
