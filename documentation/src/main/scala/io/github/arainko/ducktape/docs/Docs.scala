@@ -63,10 +63,30 @@ object Docs {
   }
 
   def generateTableOfContents() = {
+    enum Content {
+      def value: String
+
+      final def render =
+        this match
+          case Header(value) => s"* [$value](${headerName(value)})"
+          case Subheader(value) => s"  * [$value](${headerName(value)})"
+        
+      case Header(value: String)
+      case Subheader(value: String)
+    }
+
+    object Content {
+      def fromLine(line: String) =
+        PartialFunction.condOpt(line) {
+          case s"## $contents" => Content.Header(contents)
+          case s"### $contents" => Content.Subheader(contents)
+          case s"#### $contents" => Content.Subheader(contents)
+        }
+    }
+
     def headerName(string: String) =
       "#" +
         string
-          .replace("#", "")
           .trim
           .replace(' ', '-')
           .filter(char => char.isLetterOrDigit || char == '-')
@@ -75,10 +95,10 @@ object Docs {
     val tableOfContents =
       Files
         .lines(Path.of("docs", "readme.md"))
-        .filter(line => line.startsWith("## "))
-        .map(line => s"[${line.drop(3)}](${headerName(line)})")
+        .filter(line => line.startsWith("##"))
+        .map(line => Content.fromLine(line).getOrElse(throw new Exception(s"Unsupported header: $line")).render)
         .skip(1) // drop the first entry i.e. 'Table of contents' itself
-        .collect(Collectors.joining(System.lineSeparator() + "* ", "* ", ""))
+        .collect(Collectors.joining(System.lineSeparator()))
 
     println(tableOfContents)
   }

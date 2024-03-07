@@ -476,7 +476,7 @@ What's worth noting is that any of the configuration options are purely a compil
 
 Let's introduce another payment method (not part of any of the previous payment method ADTs, just a standalone case class).
 
-```scala mdoc
+```scala mdoc:silent
 case class PaymentBand(name: String, digits: Long, color: String = "red")
 
 val card: wire.PaymentMethod.Card = 
@@ -550,10 +550,12 @@ card
 
 * `Field.allMatching` - allow to supply a field source whose fields will replace all matching fields in the destination (given that the names and the types match up)
 
-```scala mdoc
+```scala mdoc:silent
 case class FieldSource(color: String, digits: Long, extra: Int)
 val source = FieldSource("magenta", 123445678, 23)
+```
 
+```scala mdoc
 card
   .into[PaymentBand]
   .transform(Field.allMatching(paymentBand => paymentBand, source))
@@ -571,6 +573,38 @@ card
   )
 ``` 
 </details>
+
+* `Field.fallbackToDefault` - falls back to default field values but ONLY in case a transformation cannot be created
+```scala mdoc:nest:silent
+case class SourceToplevel(level1: SourceLevel1, transformableButWithDefault: Int)
+case class SourceLevel1(str: String)
+
+case class DestToplevel(level1: DestLevel1, extra: Int = 111, transformableButWithDefault: Int = 3000)
+case class DestLevel1(extra: String = "level1", str: String)
+
+val source = SourceToplevel(SourceLevel1("str"), 400)
+```
+```scala mdoc
+source
+  .into[DestToplevel]
+  .transform(Field.fallbackToDefault)
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+  import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[DestToplevel]
+    .transform(Field.fallbackToDefault)
+)
+``` 
+</details>
+
+* `Field.fallbackToNone` - falls back to `None` for `Option` fields for which a transformation cannot be created
 
 ### Coproduct configurations
 
