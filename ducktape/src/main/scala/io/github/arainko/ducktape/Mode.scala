@@ -10,12 +10,16 @@ private given Transformer.Mode.Either[String, List] with {}
 """
 )
 sealed trait Mode[F[+x]] {
-  def pure[A](value: A): F[A]
-  def map[A, B](fa: F[A], f: A => B): F[B]
+  final type G[+x] = F[x]
+
+  type Input[a] <: (a | List[a])
+
+  def pure[A](value: Input[A]): G[A]
+  def map[A, B](fa: F[Input[A]], f: Input[A] => B): G[B]
   def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
     collection: AColl,
-    transformation: A => F[B]
-  )(using factory: Factory[B, BColl]): F[BColl]
+    transformation: Input[A] => G[B]
+  )(using factory: Factory[B, BColl]): G[BColl]
 }
 
 object Mode {
@@ -24,6 +28,34 @@ object Mode {
   }
 
   object Accumulating {
+    trait OptionSupport { 
+      type G[+x]
+      def fromOption[A, B](value: Option[A], transformation: A => G[B]): G[B]
+    }
+
+    type Either2[E, Coll[x] <: Iterable[x]] = Either[E, Coll]
+
+    class Cos extends Either[String, List] with OptionSupport {
+      type Input[a] = a
+      def fromOption[A, B](value: Option[A], transformation: A => scala.Either[List[String], B]): G[B] = 
+        value match
+          case None => Left("Oh shite" :: Nil)
+          case Some(value) => transformation(value)
+        
+    }
+
+    // given Either[String, List] with OptionSupport {
+      
+    //   def fromOption[A, B](value: Option[A], transformation: A => G[B]): G[B]
+    // }
+
+    // val unpack: [A, B] => (value: Option[A], t: A => F[B]) => F[B]
+
+    // class Cos extends Either[String, List] with Test[this.F] with {
+    // }
+
+    // val cos = summon[Either[String, List]]
+
     class Either[E, Coll[x] <: Iterable[x]](using errorCollFactory: Factory[E, Coll[E]])
         extends Mode.Accumulating[[A] =>> scala.Either[Coll[E], A]] {
 
