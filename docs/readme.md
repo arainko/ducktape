@@ -484,6 +484,7 @@ val card: wire.PaymentMethod.Card =
 ```
 
 * `Field.const` - allows to supply a constant value for a given field
+
 ```scala mdoc
 card
   .into[PaymentBand]
@@ -793,11 +794,440 @@ wirePerson
   )
 ```
 
+## Fallible transfomations
+Sometimes ordinary field mappings just do not cut it, more often than not our domain model's constructors are hidden behind a safe factory method, eg.:
+
+```scala mdoc:reset
+import io.github.arainko.ducktape.*
+
+final case class Person private (name: String, age: Int)
+
+object Person {
+  def create(name: String, age: Int): Either[String, Person] =
+    for {
+      validatedName <- Either.cond(!name.isBlank, name, "Name should not be blank")
+      validatedAge  <- Either.cond(age > 0, age, "Age should be positive")
+    } yield Person(validatedName, validatedAge)
+}
+```
+
+The `via` method expansion mechanism has us covered in the most straight-forward of use cases where there are no nested fallible transformations:
+
+```scala mdoc
+
+final case class UnvalidatedPerson(name: String, age: Int, socialSecurityNo: String)
+
+val unvalidatedPerson = UnvalidatedPerson("ValidName", -1, "SSN")
+
+val transformed = unvalidatedPerson.via(Person.create)
+```
+
+But this quickly falls apart when nested transformations are introduced and we're pretty much back to square one where we're on our own to write the boilerplate.
+
+That's where `Fallible Transformers` and their modes come in: 
+* `Mode.Accumulating` for error accumulation,
+* `Mode.FailFast` for the cases where we just want to bail at the very first sight of trouble.
+
+Let's look at the definition of all of these:
+
+### Definition of `Transformer.Fallible` and `Mode`
+
+```scala
+object Transformer {
+  trait Fallible[F[+x], Source, Dest] {
+    def transform(value: Source): F[Dest]
+  }
+}
+```
+So a `Fallible` transformer takes a `Source` and gives back a `Dest` wrapped in an `F` where `F` is the wrapper type for our transformations eg. if `F[+x]` = `Either[List[String], x]` then the `transform` method will return an `Either[List[String], Dest]`.
+
+```scala
+sealed trait Mode[F[+x]] {
+  def pure[A](value: A): F[A]
+
+  def map[A, B](fa: F[A], f: A => B): F[B]
+
+  def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
+    collection: AColl,
+    transformation: A => F[B]
+  )(using factory: Factory[B, BColl]): F[BColl]
+}
+```
+
+Moving on to `Mode`, what exactly is it and why do we need it? So a `Mode[F]` is typeclass that gives us two bits of information:
+* a hint for the derivation mechanism which transformation mode to use (hence the name!)
+* some operations on the abstract `F` wrapper type, namely:
+  * `pure` is for wrapping arbitrary values into `F`, eg. if `F[+x] = Either[List[String], x]` then calling `pure` would involve just wrapping the value in a `Right.apply` call.
+  * `map` is for operating on the wrapped values, eg. if we find ourselves with a `F[Int]` in hand and we want to transform the value 'inside' to a `String` we can call `.map(_.toString)` to yield a `F[String]`
+  * `traverseCollection` is for the cases where we end up with a collection of wrapped values (eg. a `List[F[String]]`) and we want to transform that into a `F[List[String]]` according to the rules of the `F` type wrapper and not blow up the stack in the process
+
+As mentioned earlier, `Modes` come in two flavors - one for error accumulating transformations (`Mode.Accumulating[F]`) and one for fail fast transformations (`Mode.FailFast[F]`):
+
+```scala
+object Mode {
+  trait Accumulating[F[+x]] extends Mode[F] {
+    def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
+  }
+
+  trait FailFast[F[+x]] extends Mode[F] {
+    def flatMap[A, B](fa: F[A], f: A => F[B]): F[B]
+  }
+}
+```
+
+Each one of these exposes one operation that dictates its approach to errors, `flatMap` entails a dependency between fallible transformations so if we chain multiple `flatMaps` together our transformation will stop at the very first error - contrary to this, `Mode.Accumulating` exposes a `product` operation that given two independent transformations wrapped in an `F` gives us back a tuple wrapped in an `F`. What that really means is that each transformation is independent from one another so we're able to accumulate all of the errors produced by these.
+
+For accumulating transformations `ducktape` provides instances for `Either` with any subtype of `Iterable` on the left side, so that eg. `Mode.Accumulating[[A] =>> Either[List[String], A]]` is available out of the box (under the subclass of `Mode.Accumulating.Either[String, List]`).
+
+For fail fast transformations, instances for `Option` (`Mode.FailFast.Option`) and `Either` (`Mode.FailFast.Either`) are avaiable out of the box.
+
+### Making the most out of `Fallible Transformers`
+
+Now for the meat and potatoes of `Fallible Transformers`. To make use of the derivation mechanism that `ducktape` provides we should strive for our model to be modeled in a specific way - with a new nominal type per each validated field, which comes down to... Newtypes!
+
+Let's define a minimalist newtype abstraction that will also do validation (this is a one-time effort that can easily be extracted to a library):
+
+```scala mdoc
+abstract class NewtypeValidated[A](pred: A => Boolean, errorMessage: String) {
+  opaque type Type = A
+
+  protected def unsafe(value: A): Type = value
+
+  def make(value: A): Either[String, Type] = Either.cond(pred(value), value, errorMessage)
+
+  def makeAccumulating(value: A): Either[List[String], Type] = 
+    make(value).left.map(_ :: Nil)
+
+  extension (self: Type) {
+    def value: A = self
+  }
+
+  // these instances will be available in the implicit scope of `Type` (that is, our newtype)
+  given accumulatingWrappingTransformer: Transformer.Fallible[[a] =>> Either[List[String], a], A, Type] = makeAccumulating(_)
+
+  given failFastWrappingTransformer: Transformer.Fallible[[a] =>> Either[String, a], A, Type] = make(_)
+
+  given unwrappingTransformer: Transformer[Type, A] = _.value
+
+}
+```
+
+Now let's get back to the definition of `Person` and tweak it a little:
+
+```scala mdoc:nest
+case class Person(name: Name, age: Age, socialSecurityNo: SSN)
+
+object Name extends NewtypeValidated[String](str => !str.isBlank, "Name should not be blank!")
+type Name = Name.Type
+
+object Age extends NewtypeValidated[Int](int => int > 0, "Age should be positive!")
+type Age = Age.Type
+
+object SSN extends NewtypeValidated[String](str => str.length > 5, "SSN should be longer than 5!")
+type SSN = SSN.Type
+```
+
+We introduce a newtype for each field, this way we can keep our invariants at compiletime and also let `ducktape` do its thing.
+
+```scala mdoc:silent
+// this should trip up our validation
+val bad = UnvalidatedPerson(name = "", age = -1, socialSecurityNo = "SOCIALNO")
+
+// this one should pass
+val good = UnvalidatedPerson(name = "ValidName", age = 24, socialSecurityNo = "SOCIALNO")
+```
+
+Instances of `Transformer.Fallible` wrapped in some type `F` are derived automatically for case classes given that a `Mode.Accumulating` instance exists for `F` and all of the fields of the source type have a corresponding counterpart in the destination type and each one of them has an instance of either `Transformer.Fallible` or a total `Transformer` in scope.
+
+```scala mdoc
+given Mode.Accumulating.Either[String, List] with {}
+
+bad.fallibleTo[Person]
+good.fallibleTo[Person]
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(bad.fallibleTo[Person])
+``` 
+</details>
+
+Same goes for instances that do fail fast transformations (you need `Mode.FailFast[F]` in scope in this case)
+
+```scala mdoc:nest
+given Mode.FailFast.Either[String] with {}
+
+bad.fallibleTo[Person]
+good.fallibleTo[Person]
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+Docs.printCode(bad.fallibleTo[Person])
+```
+</details>
+
+### Configuring fallible transformations
+
+If we were to dissect how the types behind config options are structured, we'd see this:
+
+```scala
+opaque type Field[A, B] <: Field.Fallible[Nothing, A, B] = Field.Fallible[Nothing, A, B]
+
+object Field {
+  opaque type Fallible[+F[+x], A, B] = Unit
+}
+```
+
+Non-fallible config options are a subtype of fallible configs, i.e. all the things mentioned in [`Configuring transformations`](#configuring-transformations) are also applicable to fallible configurations.
+
+#### Fallible product configurations
+
+* `Field.fallibleConst` - a fallible variant of `Field.const` that allows for supplying values wrapped in an `F`
+
+```scala mdoc:nest
+given Mode.Accumulating.Either[String, List] with {}
+
+bad
+  .into[Person]
+  .fallible
+  .transform(
+    Field.fallibleConst(_.name, Name.makeAccumulating("ConstValidName")),
+    Field.fallibleConst(_.age, Age.makeAccumulating(25))
+  )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+Docs.printCode(
+  bad
+  .into[Person]
+  .fallible
+  .transform(
+    Field.fallibleConst(_.name, Name.makeAccumulating("ConstValidName")),
+    Field.fallibleConst(_.age, Age.makeAccumulating(25))
+  )
+)
+```
+</details>
+
+* `Field.fallibleComputed` - a fallible variant of `Field.computed` that allows for supplying functions that return values wrapped in an `F`
+
+```scala mdoc:nest
+given Mode.Accumulating.Either[String, List] with {}
+
+bad
+  .into[Person]
+  .fallible
+  .transform(
+    Field.fallibleComputed(_.name, uvp => Name.makeAccumulating(uvp.name + "ConstValidName")),
+    Field.fallibleComputed(_.age, uvp => Age.makeAccumulating(uvp.age + 25))
+  )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+Docs.printCode(
+  bad
+    .into[Person]
+    .fallible
+    .transform(
+      Field.fallibleComputed(_.name, uvp => Name.makeAccumulating(uvp.name + "ConstValidName")),
+      Field.fallibleComputed(_.age, uvp => Age.makeAccumulating(uvp.age + 25))
+    )
+)
+```
+</details>
+
+#### Fallible coproduct configurations
+
+Let's define a wire enum (pretend that it's coming from... somewhere) and a domain enum that doesn't exactly align with the wire one.
+```scala mdoc:nest
+object wire {
+  enum ReleaseKind {
+    case LP, EP, Single
+  }
+}
+
+object domain {
+  enum ReleaseKind {
+    case EP, LP
+  }
+}
+
+```
+
+* `Case.fallibleConst` - a fallible variant of `Case.const` that allows for supplying values wrapped in an `F`
+
+```scala mdoc:nest
+given Mode.FailFast.Either[String] with {}
+
+wire.ReleaseKind.Single
+  .into[domain.ReleaseKind]
+  .fallible
+  .transform(
+    Case.fallibleConst(_.at[wire.ReleaseKind.Single.type], Left("Unsupported release kind"))
+  )
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+Docs.printCode(
+  wire.ReleaseKind.Single
+    .into[domain.ReleaseKind]
+    .fallible
+    .transform(
+      Case.fallibleConst(_.at[wire.ReleaseKind.Single.type], Left("Unsupported release kind"))
+    )
+)
+```
+</details>
+
+* `Case.fallibleComputed` - a fallible variant of `Case.computed` that allows for supplying functions that return values wrapped in an `F`
+
+```scala mdoc:nest
+given Mode.FailFast.Either[String] with {}
+
+// Type inference is tricky with this one. The function being passed in needs to be typed with the exact expected type.
+def handleSingle(value: wire.ReleaseKind): Either[String, domain.ReleaseKind] = 
+  Left("It's a single alright, too bad we don't support it")
+
+wire.ReleaseKind.Single
+  .into[domain.ReleaseKind]
+  .fallible
+  .transform(
+    Case.fallibleComputed(_.at[wire.ReleaseKind.Single.type], handleSingle)
+  )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+Docs.printCode(
+  wire.ReleaseKind.Single
+    .into[domain.ReleaseKind]
+    .fallible
+    .transform(
+      Case.fallibleComputed(_.at[wire.ReleaseKind.Single.type], handleSingle)
+    )
+)
+```
+</details>
+
+### Building custom instances of fallible transformers
+Life is not always lolipops and crisps and sometimes you need to write a typeclass instance by hand. Worry not though, just like in the case of total transformers, we can easily define custom instances with the help of the configuration DSL (which, let's write it down once again, is a superset of total transformers' DSL).
+
+By all means go wild with the configuration options, I'm too lazy to write them all out here again.
+```scala mdoc:nest:silent
+given Mode.Accumulating.Either[String, List] with {}
+
+val customAccumulating =
+  Transformer
+    .define[UnvalidatedPerson, Person]
+    .fallible
+    .build(
+      Field.fallibleConst(_.name, Name.makeAccumulating("IAmAlwaysValidNow!"))
+    )
+```
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+Docs.printCode(
+  Transformer
+    .define[UnvalidatedPerson, Person]
+    .fallible
+    .build(
+      Field.fallibleConst(_.name, Name.makeAccumulating("IAmAlwaysValidNow!"))
+    )
+)
+```
+</details>
+
+```scala mdoc:nest:silent
+given Mode.FailFast.Either[String] with {}
+
+val customFailFast =
+  Transformer
+    .define[UnvalidatedPerson, Person]
+    .fallible
+    .build(
+      Field.fallibleComputed(_.age, uvp => Age.make(uvp.age + 30))
+    )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+Docs.printCode(
+  Transformer
+    .define[UnvalidatedPerson, Person]
+    .fallible
+    .build(
+      Field.fallibleComputed(_.age, uvp => Age.make(uvp.age + 30))
+    )
+)
+```
+</details>
+
+And for the ones that are not keen on writing out method arguments:
+```scala mdoc:nest:silent
+given Mode.Accumulating.Either[String, List] with {}
+
+val customAccumulatingVia =
+  Transformer
+    .defineVia[UnvalidatedPerson](Person.apply)
+    .fallible
+    .build(
+      Field.fallibleConst(_.name, Name.makeAccumulating("IAmAlwaysValidNow!"))
+    )
+```
+
+<details>
+  <summary>Click to see the generated code</summary>
+
+```scala mdoc:passthrough
+Docs.printCode(
+  Transformer
+    .defineVia[UnvalidatedPerson](Person.apply)
+    .fallible
+    .build(
+      Field.fallibleConst(_.name, Name.makeAccumulating("IAmAlwaysValidNow!"))
+    )
+)
+```
+</details>
+
+```scala mdoc:nest:silent
+given Mode.FailFast.Either[String] with {}
+
+val customFailFastVia =
+  Transformer
+    .defineVia[UnvalidatedPerson](Person.apply)
+    .fallible
+    .build(
+      Field.fallibleComputed(_.age, uvp => Age.make(uvp.age + 30))
+    )
+```
+
 ## Transfomation rules
 
 Let's go over the priority and rules that `ducktape` uses to create a transformation (in the same order they're tried in the implementation):
 
-#### 1. User supplied `Transformers`
+1. User supplied `Transformers`
 
 Custom instances of a `Transfomer` are always prioritized since these also function as an extension mechanism of the library.
 
@@ -817,7 +1247,7 @@ given Transformer[String, List[String]] = str => str :: Nil
 ``` 
 </details>
 
-#### 2. Upcasting
+2. Upcasting
 
 Transforming a type to its supertype is just an upcast.
 
@@ -833,7 +1263,7 @@ Transforming a type to its supertype is just an upcast.
 ``` 
 </details>
 
-#### 3. Mapping over an `Option`
+3. Mapping over an `Option`
 
 Transforming between options comes down to mapping over it and recursively deriving a transformation for the value inside.
 
@@ -851,7 +1281,7 @@ Option(1).to[Option[String]]
 ``` 
 </details>
 
-#### 4. Transforming and wrapping in an `Option`
+4. Transforming and wrapping in an `Option`
 
 If a transformation between two types is possible then transforming between the source type and an `Option` of the destination type is just wrapping the transformation result in a `Some`.
 
@@ -867,7 +1297,7 @@ If a transformation between two types is possible then transforming between the 
 ``` 
 </details>
 
-#### 5. Mapping over and changing the collection type
+5. Mapping over and changing the collection type
 
 ```scala mdoc:nest
 //`.to` is already a method on collections
@@ -884,7 +1314,7 @@ List(1, 2, 3, 4).convertTo[Vector[Int | String]]
 ``` 
 </details>
 
-#### 6. Transforming between case classes
+6. Transforming between case classes
 
 A source case class can be transformed into the destination case class given that:
 * source has fields whose names cover all of the destination's fields,
@@ -915,8 +1345,7 @@ SourceToplevel(SourceLevel1("extra", 1, List(SourceLevel2(1), SourceLevel2(2))))
 ``` 
 </details>
 
-
-#### 7. Transforming between enums/sealed traits
+7. Transforming between enums/sealed traits
 
 A source coproduct can be transformed into the destination coproduct given that:
 * destination's children have names that match all of the source's children,
@@ -951,7 +1380,7 @@ enum OtherPaymentMethod {
 ``` 
 </details>
 
-#### 8. Same named singletons
+8. Same named singletons
 
 Transformations between same named singletons come down to just reffering to the destination singleton.
 
@@ -976,7 +1405,7 @@ example1.Singleton.to[example2.Singleton.type]
 ``` 
 </details>
 
-#### 9. Unwrapping a value class
+9. Unwrapping a value class
 
 ```scala mdoc
 case class Wrapper1(value: Int) extends AnyVal
@@ -994,7 +1423,7 @@ Wrapper1(1).to[Int]
 ``` 
 </details>
 
-#### 10. Wrapping a value class
+10. Wrapping a value class
 
 ```scala mdoc
 case class Wrapper2(value: Int) extends AnyVal
@@ -1012,7 +1441,7 @@ case class Wrapper2(value: Int) extends AnyVal
 ``` 
 </details>
 
-#### 11. Automatically derived `Transformer.Derived`
+11. Automatically derived `Transformer.Derived`
 
 Instances of `Transformer.Derived` are automatically derived as a fallback to support use cases where a generic type (eg. a field of a case class) is unknown at definition site.
 
@@ -1040,3 +1469,26 @@ transformSource[Int, Option[Int]](Source(1, "2", 3))
   }
 ``` 
 </details>
+
+## Coming from 0.1.x
+
+While `ducktape 0.2.x` is not binary-compatible with `ducktape 0.1.x` it tries to be as source-compatible as possible with a few caveats (the following is a non-exhaustive list of source-incompatible changes that have a chance to be visible by the end users):
+
+* instances of `Transformers` and `Transformer.Fallible` are NOT auto-deriveable anymore. Any code that relies on auto derivation of these should switch to `Transformer.Derived` and `Transformer.Fallible.Derived`,
+* given definitions inside the companion of `Transformer` and `Transformer.Fallible` (like `Transformer.betweenNonOptionOption` etc) are gone and should be replaced with calls to `Transformer.derive` and `Transformer.Fallible.derive` with appropriate types as the type arguments,
+* the signature of `Mode[F]#traverseCollection` has changed from 
+```scala
+ def traverseCollection[A, B, AColl[x] <: Iterable[x], BColl[x] <: Iterable[x]](collection: AColl[A])(using
+    transformer: FallibleTransformer[F, A, B],
+    factory: Factory[B, BColl[B]]
+  ): F[BColl[B]]
+```
+to
+```scala
+def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
+    collection: AColl,
+    transformation: A => F[B]
+  )(using factory: Factory[B, BColl]): F[BColl]
+```
+* `BuilderConfig[A, B]` is replaced by the union of `Field[A, B]` and `Case[A, B]`, while `ArgBuilderConfig[A, B]` is replaced with `Field[A, B]`,
+* `FunctionMirror` is gone with no replacement (it was pretty much a leaking impl detail).
