@@ -1,3 +1,4 @@
+import org.typelevel.sbt.site.TypelevelSiteSettings
 import com.typesafe.tools.mima.core._
 import xerial.sbt.Sonatype._
 import org.typelevel.sbt.TypelevelMimaPlugin
@@ -53,7 +54,9 @@ lazy val docs =
     .enablePlugins(NoPublishPlugin, MdocPlugin, TypelevelSitePlugin)
     .disablePlugins(MimaPlugin)
     .settings(
-      tlSiteIsTypelevelProject := Some(TypelevelProject.Affiliate),
+      // laikaTheme := DeffSiteSettings.defaults.value.build,
+      // tlSiteIsTypelevelProject := Some(TypelevelProject.Affiliate),
+      tlSiteHelium := DeffSiteSettings.defaults.value,
       mdocVariables := Map("VERSION" -> tlLatestVersion.value.mkString),
       libraryDependencies += ("org.scalameta" %% "scalafmt-dynamic" % "3.6.1").cross(CrossVersion.for3Use2_13)
     )
