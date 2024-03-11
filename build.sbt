@@ -12,6 +12,7 @@ ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
 ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / scalaVersion := "3.3.2"
+ThisBuild / tlSitePublishBranch := Some("series/0.2.x")
 
 ThisBuild / semanticdbEnabled := true
 ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
@@ -49,9 +50,10 @@ lazy val ducktape =
 lazy val docs =
   project
     .in(file("documentation"))
-    .enablePlugins(NoPublishPlugin, MdocPlugin)
+    .enablePlugins(NoPublishPlugin, MdocPlugin, TypelevelSitePlugin)
     .disablePlugins(MimaPlugin)
     .settings(
+      tlSiteIsTypelevelProject := Some(TypelevelProject.Affiliate),
       mdocVariables := Map("VERSION" -> tlLatestVersion.value.mkString),
       libraryDependencies += ("org.scalameta" %% "scalafmt-dynamic" % "3.6.1").cross(CrossVersion.for3Use2_13)
     )
