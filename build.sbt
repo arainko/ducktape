@@ -1,3 +1,6 @@
+import laika.config.SelectionConfig
+import laika.config.ChoiceConfig
+import laika.config.Selections
 import org.typelevel.sbt.site.TypelevelSiteSettings
 import com.typesafe.tools.mima.core._
 import xerial.sbt.Sonatype._
@@ -56,6 +59,16 @@ lazy val docs =
     .settings(
       // laikaTheme := DeffSiteSettings.defaults.value.build,
       // tlSiteIsTypelevelProject := Some(TypelevelProject.Affiliate),
+      laikaConfig := LaikaConfig.defaults
+        .withConfigValue(
+          Selections(
+            SelectionConfig(
+              "underlying-code",
+              ChoiceConfig("visible", "User visible code"),
+              ChoiceConfig("generated", "Generated code")
+            )
+          )
+        ),
       tlSiteHelium := DeffSiteSettings.defaults.value,
       mdocVariables := Map("VERSION" -> tlLatestVersion.value.mkString),
       libraryDependencies += ("org.scalameta" %% "scalafmt-dynamic" % "3.6.1").cross(CrossVersion.for3Use2_13)

@@ -53,9 +53,10 @@ object DeffSiteSettings {
       .site
       .footer()
       .site
-      .topNavigationBar(defaultHomeLink)
+      .topNavigationBar(homeLink = defaultHomeLink)
       .site
       .favIcons(favIcon)
+      .site
+      .pageNavigation(enabled = true)
   }
-     
 }

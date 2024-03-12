@@ -6,13 +6,6 @@
 
 If this project interests you, please drop a 🌟 - these things are worthless but give me a dopamine rush nonetheless.
 
-## Table of contents
-
-```scala mdoc:passthrough
-import io.github.arainko.ducktape.docs.*
-Docs.generateTableOfContents()
-```
-
 ## Installation
 ```scala
 libraryDependencies += "io.github.arainko" %% "ducktape" % "@VERSION@"
@@ -84,13 +77,14 @@ val wirePerson: wire.Person = wire.Person(
 )
 ```
 
+@:select(underlying-code)
+
+@:choice(visible)
 ```scala mdoc
 val domainPerson = wirePerson.to[domain.Person]
 ```
 
-<details>
-  <summary>Click to see the generated code</summary>
-  
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -98,8 +92,7 @@ val domainPerson = wirePerson.to[domain.Person]
     wirePerson.to[domain.Person]
   )
 ``` 
-</details>
-
+@:@
 
 But now imagine that your wire model differs ever so slightly from your domain model, maybe the wire model's `PaymentMethod.Card` doesn't have the `name` field for some inexplicable reason...
 
@@ -173,6 +166,9 @@ especially the part after `@`:
 
 the thing above is basically a path to the field/subtype under which `ducktape` was not able to create a transformation, these are meant to be copy-pastable for when you're actually trying to fix the error, eg. by setting the `name` field to a constant value:
 
+@:select(underlying-code)
+
+@:choice(visible)
 ```scala mdoc
 val domainPerson = 
   wirePerson
@@ -180,9 +176,7 @@ val domainPerson =
     .transform(Field.const(_.paymentMethods.element.at[domain.Payment.Card].name, "CONST NAME"))
 ```
 
-<details>
-  <summary>Click to see the generated code</summary>
-  
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -203,8 +197,8 @@ val domainPerson =
       .into[domain.Person]
       .transform(Field.const(_.paymentMethods.element.at[domain.Payment.Card].name, "CONST NAME"))
   )
-``` 
-</details>
+```
+@:@
 
 ## Basics
 
@@ -253,25 +247,29 @@ val wirePerson = wire.Person("John", "Doe",
 ```
 
 * `Source#to[Dest]` - for any two types `Source` and `Dest`, used to create a direct transformation between `Source` and `Dest`:
+
+
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 import io.github.arainko.ducktape.*
 
 wirePerson.to[domain.Person]
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
   Docs.printCode(wirePerson.to[domain.Person])
 ``` 
-</details>
+@:@
 
 Read more about the rules under which the transformations are generated in ['Transformation rules'](#transfomation-rules).
 
 * `Source#into[Dest]` -  for any two types `Source` and `Dest`, used to create a 'transformation builder' that allows fixing transformation errors and overriding transformations for selected fields or subtypes.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 import io.github.arainko.ducktape.*
 
@@ -279,10 +277,7 @@ wirePerson
   .into[domain.Person]
   .transform(Field.const(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, "overridden@email.com"))
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -292,31 +287,33 @@ wirePerson
       .transform(Field.const(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, "overridden@email.com"))
   )
 ``` 
-</details>
+@:@
 
 Read more in the section about [configuring transformations](#configuring-transformations).
 
 * `Source#via(<method reference>)` - for any type `Source` and a `method reference` that can be eta-expanded into a function with named arguments, used to expand the method's argument list with the fields of the `Source` type
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 import io.github.arainko.ducktape.*
 
 wirePerson.via(domain.Person.apply)
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
   Docs.printCode(wirePerson.via(domain.Person.apply))
 ``` 
-</details>
+@:@
 
 To read about how these transformations are generated head on over to the section about [transformation rules](#transfomation-rules).
 
 * `Source.intoVia(<method reference>)` - for any type `Source` and a `method reference` that can be eta-expanded into a function with named arguments, used to create a 'transformation builder' that allows fixing transformation errors and overriding transformations for selected fields or subtypes.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 import io.github.arainko.ducktape.*
 
@@ -325,9 +322,7 @@ wirePerson
   .transform(Field.const(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, "overridden@email.com"))
 ```
 
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -337,7 +332,7 @@ wirePerson
       .transform(Field.const(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, "overridden@email.com"))
   )
 ``` 
-</details>
+@:@
 
 Read more in the section about [configuring transformations](#configuring-transformations).
 
@@ -395,6 +390,8 @@ wirePerson.to[domain.Person]
 
 The newly added field (`age`) and enum case (`PaymentMethod.Transfer`) do not have a corresponding mapping, let's say we want to set the age field to a constant value of 24 and when a PaymentMethod.Transfer is encountered we map it to `Cash` instead.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 wirePerson
   .into[domain.Person]
@@ -403,9 +400,7 @@ wirePerson
     Case.const(_.paymentMethods.element.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash)
   )
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -418,7 +413,7 @@ wirePerson
     )
   )
 ``` 
-</details>
+@:@
 
 Great! But let's take a step back and examine what we just did, starting with the first config example:
 ```scala
@@ -485,14 +480,14 @@ val card: wire.PaymentMethod.Card =
 
 * `Field.const` - allows to supply a constant value for a given field
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 card
   .into[PaymentBand]
   .transform(Field.const(_.color, "blue"))
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -502,9 +497,12 @@ card
     .transform(Field.const(_.color, "blue"))
   )
 ``` 
-</details>
+@:@
 
 * `Field.computed` - allows to compute a value with a function the shape of `Dest => FieldTpe`
+
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 card
   .into[PaymentBand]
@@ -512,9 +510,7 @@ card
     Field.computed(_.color, card => if (card.digits % 2 == 0) "green" else "yellow")
   )
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -526,18 +522,18 @@ card
     )
   )
 ``` 
-</details>
+@:@
 
 * `Field.default` - only works when a field's got a default value defined (defaults are not taken into consideration by default)
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 card
   .into[PaymentBand]
   .transform(Field.default(_.color))
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -547,7 +543,7 @@ card
     .transform(Field.default(_.color))
   )
 ``` 
-</details>
+@:@
 
 * `Field.allMatching` - allow to supply a field source whose fields will replace all matching fields in the destination (given that the names and the types match up)
 
@@ -556,14 +552,14 @@ case class FieldSource(color: String, digits: Long, extra: Int)
 val source = FieldSource("magenta", 123445678, 23)
 ```
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 card
   .into[PaymentBand]
   .transform(Field.allMatching(paymentBand => paymentBand, source))
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -573,9 +569,10 @@ card
     .transform(Field.allMatching(paymentBand => paymentBand, source))
   )
 ``` 
-</details>
+@:@
 
 * `Field.fallbackToDefault` - falls back to default field values but ONLY in case a transformation cannot be created
+
 ```scala mdoc:nest:silent
 case class SourceToplevel(level1: SourceLevel1, transformableButWithDefault: Int)
 case class SourceLevel1(str: String)
@@ -585,17 +582,18 @@ case class DestLevel1(extra: String = "level1", str: String)
 
 val source = SourceToplevel(SourceLevel1("str"), 400)
 ```
+
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 source
   .into[DestToplevel]
   .transform(Field.fallbackToDefault)
 ```
 
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
-  import io.github.arainko.ducktape.docs.*
+import io.github.arainko.ducktape.docs.*
 
 Docs.printCode(
   source
@@ -603,10 +601,12 @@ Docs.printCode(
     .transform(Field.fallbackToDefault)
 )
 ``` 
-</details>
+@:@
 
 `Field.fallbackToDefault` is a `regional` config, which means that you can control the scope where it applies:
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 source
   .into[DestToplevel]
@@ -615,12 +615,9 @@ source
     Field.const(_.extra, 123) // <-- note that this field now needs to be configured manually
   )
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
-  import io.github.arainko.ducktape.docs.*
+import io.github.arainko.ducktape.docs.*
 
 Docs.printCode(
   source
@@ -630,8 +627,8 @@ Docs.printCode(
       Field.const(_.extra, 123)
     )
 )
-``` 
-</details>
+```
+@:@
 
 * `Field.fallbackToNone` - falls back to `None` for `Option` fields for which a transformation cannot be created
 
@@ -645,15 +642,15 @@ case class DestLevel1(extra: Option[String], str: String)
 val source = SourceToplevel(SourceLevel1("str"), Some(400))
 ```
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 source
   .into[DestToplevel]
   .transform(Field.fallbackToNone)
 ```
 
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -663,10 +660,12 @@ Docs.printCode(
     .transform(Field.fallbackToNone)
 )
 ``` 
-</details>
+@:@
 
 `Field.fallbackToNone` is a `regional` config, which means that you can control the scope where it applies:
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 source
   .into[DestToplevel]
@@ -675,10 +674,7 @@ source
     Field.const(_.extra, Some(123)) // <-- note that this field now needs to be configured manually
   )
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -691,7 +687,7 @@ Docs.printCode(
   )
 )
 ``` 
-</details>
+@:@
 
 ### Coproduct configurations
 
@@ -700,14 +696,16 @@ val transfer = wire.PaymentMethod.Transfer("2764262")
 ```
 
 * `Case.const` - allows to supply a constant value for a given subtype of a coproduct
+
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 transfer
   .into[domain.PaymentMethod]
   .transform(Case.const(_.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash))
 ```
-<details>
-  <summary>Click to see the generated code</summary>
 
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -717,10 +715,12 @@ transfer
     .transform(Case.const(_.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash))
   )
 ``` 
-</details>
-
+@:@
 
 * `Case.computed` - allow to supply a function of the selected source type to the expected destination type
+
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 transfer
   .into[domain.PaymentMethod]
@@ -728,10 +728,7 @@ transfer
     Case.computed(_.at[wire.PaymentMethod.Transfer], transfer => domain.PaymentMethod.Card("J. Doe", transfer.accountNo.toLong))
   )
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -743,7 +740,7 @@ transfer
     )
   )
 ``` 
-</details>
+@:@
 
 ### Specifics and limitations
 
@@ -939,39 +936,37 @@ val good = UnvalidatedPerson(name = "ValidName", age = 24, socialSecurityNo = "S
 
 Instances of `Transformer.Fallible` wrapped in some type `F` are derived automatically for case classes given that a `Mode.Accumulating` instance exists for `F` and all of the fields of the source type have a corresponding counterpart in the destination type and each one of them has an instance of either `Transformer.Fallible` or a total `Transformer` in scope.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 given Mode.Accumulating.Either[String, List] with {}
 
 bad.fallibleTo[Person]
 good.fallibleTo[Person]
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
 import io.github.arainko.ducktape.docs.*
 
 Docs.printCode(bad.fallibleTo[Person])
 ``` 
-</details>
+@:@
 
 Same goes for instances that do fail fast transformations (you need `Mode.FailFast[F]` in scope in this case)
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc:nest
 given Mode.FailFast.Either[String] with {}
 
 bad.fallibleTo[Person]
 good.fallibleTo[Person]
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
 Docs.printCode(bad.fallibleTo[Person])
 ```
-</details>
+@:@
 
 ### Configuring fallible transformations
 
@@ -991,6 +986,8 @@ Non-fallible config options are a subtype of fallible configs, i.e. all the thin
 
 * `Field.fallibleConst` - a fallible variant of `Field.const` that allows for supplying values wrapped in an `F`
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc:nest
 given Mode.Accumulating.Either[String, List] with {}
 
@@ -1002,10 +999,7 @@ bad
     Field.fallibleConst(_.age, Age.makeAccumulating(25))
   )
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
 Docs.printCode(
   bad
@@ -1017,10 +1011,13 @@ Docs.printCode(
   )
 )
 ```
-</details>
+@:@
 
 * `Field.fallibleComputed` - a fallible variant of `Field.computed` that allows for supplying functions that return values wrapped in an `F`
 
+
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc:nest
 given Mode.Accumulating.Either[String, List] with {}
 
@@ -1032,10 +1029,7 @@ bad
     Field.fallibleComputed(_.age, uvp => Age.makeAccumulating(uvp.age + 25))
   )
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
 Docs.printCode(
   bad
@@ -1047,7 +1041,7 @@ Docs.printCode(
     )
 )
 ```
-</details>
+@:@
 
 #### Fallible coproduct configurations
 
@@ -1069,6 +1063,8 @@ object domain {
 
 * `Case.fallibleConst` - a fallible variant of `Case.const` that allows for supplying values wrapped in an `F`
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc:nest
 given Mode.FailFast.Either[String] with {}
 
@@ -1079,9 +1075,7 @@ wire.ReleaseKind.Single
     Case.fallibleConst(_.at[wire.ReleaseKind.Single.type], Left("Unsupported release kind"))
   )
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
 Docs.printCode(
   wire.ReleaseKind.Single
@@ -1092,10 +1086,12 @@ Docs.printCode(
     )
 )
 ```
-</details>
+@:@
 
 * `Case.fallibleComputed` - a fallible variant of `Case.computed` that allows for supplying functions that return values wrapped in an `F`
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc:nest
 given Mode.FailFast.Either[String] with {}
 
@@ -1110,10 +1106,7 @@ wire.ReleaseKind.Single
     Case.fallibleComputed(_.at[wire.ReleaseKind.Single.type], handleSingle)
   )
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
 Docs.printCode(
   wire.ReleaseKind.Single
@@ -1124,12 +1117,15 @@ Docs.printCode(
     )
 )
 ```
-</details>
+@:@
 
 ### Building custom instances of fallible transformers
 Life is not always lolipops and crisps and sometimes you need to write a typeclass instance by hand. Worry not though, just like in the case of total transformers, we can easily define custom instances with the help of the configuration DSL (which, let's write it down once again, is a superset of total transformers' DSL).
 
 By all means go wild with the configuration options, I'm too lazy to write them all out here again.
+
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc:nest:silent
 given Mode.Accumulating.Either[String, List] with {}
 
@@ -1141,9 +1137,7 @@ val customAccumulating =
       Field.fallibleConst(_.name, Name.makeAccumulating("IAmAlwaysValidNow!"))
     )
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
 Docs.printCode(
   Transformer
@@ -1154,36 +1148,12 @@ Docs.printCode(
     )
 )
 ```
-</details>
-
-```scala mdoc:nest:silent
-given Mode.FailFast.Either[String] with {}
-
-val customFailFast =
-  Transformer
-    .define[UnvalidatedPerson, Person]
-    .fallible
-    .build(
-      Field.fallibleComputed(_.age, uvp => Age.make(uvp.age + 30))
-    )
-```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
-```scala mdoc:passthrough
-Docs.printCode(
-  Transformer
-    .define[UnvalidatedPerson, Person]
-    .fallible
-    .build(
-      Field.fallibleComputed(_.age, uvp => Age.make(uvp.age + 30))
-    )
-)
-```
-</details>
+@:@
 
 And for the ones that are not keen on writing out method arguments:
+
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc:nest:silent
 given Mode.Accumulating.Either[String, List] with {}
 
@@ -1195,10 +1165,7 @@ val customAccumulatingVia =
       Field.fallibleConst(_.name, Name.makeAccumulating("IAmAlwaysValidNow!"))
     )
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
 Docs.printCode(
   Transformer
@@ -1209,19 +1176,8 @@ Docs.printCode(
     )
 )
 ```
-</details>
+@:@
 
-```scala mdoc:nest:silent
-given Mode.FailFast.Either[String] with {}
-
-val customFailFastVia =
-  Transformer
-    .defineVia[UnvalidatedPerson](Person.apply)
-    .fallible
-    .build(
-      Field.fallibleComputed(_.age, uvp => Age.make(uvp.age + 30))
-    )
-```
 
 ## Transfomation rules
 
@@ -1231,88 +1187,82 @@ Let's go over the priority and rules that `ducktape` uses to create a transforma
 
 Custom instances of a `Transfomer` are always prioritized since these also function as an extension mechanism of the library.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 given Transformer[String, List[String]] = str => str :: Nil
 
 "single value".to[List[String]]
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
   Docs.printCode("single value".to[List[String]])
 ``` 
-</details>
+@:@
 
 2. Upcasting
 
 Transforming a type to its supertype is just an upcast.
-
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 // (Int | String) >: Int
 1.to[Int | String]
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   Docs.printCode(1.to[Int | String])
 ``` 
-</details>
+@:@
 
 3. Mapping over an `Option`
 
 Transforming between options comes down to mapping over it and recursively deriving a transformation for the value inside.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 given Transformer[Int, String] = int => int.toString
 
 Option(1).to[Option[String]]
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   Docs.printCode(Option(1).to[Option[String]])
 ``` 
-</details>
+@:@
 
 4. Transforming and wrapping in an `Option`
 
 If a transformation between two types is possible then transforming between the source type and an `Option` of the destination type is just wrapping the transformation result in a `Some`.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 1.to[Option[Int | String]]
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   Docs.printCode(1.to[Option[Int | String]])
 ``` 
-</details>
-
+@:@
 5. Mapping over and changing the collection type
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc:nest
 //`.to` is already a method on collections
 import io.github.arainko.ducktape.to as convertTo
 
 List(1, 2, 3, 4).convertTo[Vector[Int | String]]
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   Docs.printCode(List(1, 2, 3, 4).convertTo[Vector[Int | String]])
 ``` 
-</details>
+@:@
 
 6. Transforming between case classes
 
@@ -1320,6 +1270,8 @@ A source case class can be transformed into the destination case class given tha
 * source has fields whose names cover all of the destination's fields,
 * a transformation for the types corresponding to those fields can be derived.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc:reset-object
 import io.github.arainko.ducktape.*
 
@@ -1333,9 +1285,7 @@ case class DestLevel2(value: Option[Int])
 
 SourceToplevel(SourceLevel1("extra", 1, List(SourceLevel2(1), SourceLevel2(2)))).to[DestToplevel]
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -1343,7 +1293,7 @@ SourceToplevel(SourceLevel1("extra", 1, List(SourceLevel2(1), SourceLevel2(2))))
     SourceToplevel(SourceLevel1("extra", 1, List(SourceLevel2(1), SourceLevel2(2)))).to[DestToplevel]
     )
 ``` 
-</details>
+@:@
 
 7. Transforming between enums/sealed traits
 
@@ -1351,6 +1301,8 @@ A source coproduct can be transformed into the destination coproduct given that:
 * destination's children have names that match all of the source's children,
 * a transformation between those two corresponding types can be derived.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 sealed trait PaymentMethod
 
@@ -1369,21 +1321,20 @@ enum OtherPaymentMethod {
 
 (PaymentMethod.Cash: PaymentMethod).to[OtherPaymentMethod]
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
   Docs.printCode((PaymentMethod.Cash: PaymentMethod).to[OtherPaymentMethod])
 ``` 
-</details>
+@:@
 
 8. Same named singletons
 
 Transformations between same named singletons come down to just reffering to the destination singleton.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 object example1 {
   case object Singleton
@@ -1395,51 +1346,46 @@ object example2 {
 
 example1.Singleton.to[example2.Singleton.type]
 ```
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
   Docs.printCode(example1.Singleton.to[example2.Singleton.type])
 ``` 
-</details>
+@:@
 
 9. Unwrapping a value class
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 case class Wrapper1(value: Int) extends AnyVal
 
 Wrapper1(1).to[Int]
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
   Docs.printCode(Wrapper1(1).to[Int])
 ``` 
-</details>
-
+@:@
 10. Wrapping a value class
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 case class Wrapper2(value: Int) extends AnyVal
 
 1.to[Wrapper2]
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
   Docs.printCode(1.to[Wrapper2])
 ``` 
-</details>
+@:@
 
 11. Automatically derived `Transformer.Derived`
 
@@ -1447,6 +1393,8 @@ Instances of `Transformer.Derived` are automatically derived as a fallback to su
 
 Note that `Transformer[A, B] <: Transformer.Derived[A, B]` so any `Transformer` in scope is eligible to become a `Transformer.Derived`.
 
+@:select(underlying-code)
+@:choice(visible)
 ```scala mdoc
 final case class Source[A](field1: Int, field2: String, generic: A)
 final case class Dest[A](field1: Int, field2: String, generic: A)
@@ -1455,10 +1403,7 @@ def transformSource[A, B](source: Source[A])(using Transformer.Derived[A, B]): D
 
 transformSource[Int, Option[Int]](Source(1, "2", 3))
 ```
-
-<details>
-  <summary>Click to see the generated code</summary>
-
+@:choice(generated)
 ```scala mdoc:passthrough
   import io.github.arainko.ducktape.docs.*
 
@@ -1468,7 +1413,7 @@ transformSource[Int, Option[Int]](Source(1, "2", 3))
     transformSource[Int, Option[Int]](Source(1, "2", 3))
   }
 ``` 
-</details>
+@:@
 
 ## Coming from 0.1.x
 
