@@ -24,9 +24,12 @@ object DeffSiteSettings {
     )
   )
 
-  val favIcon: Favicon = 
-    Favicon.external("https://user-images.githubusercontent.com/46346508/236060869-3b118075-f660-44c9-9d0d-d40fba5c8db0.svg", "32x32", "image/svg+xml")
-  
+  val favIcon: Favicon =
+    Favicon.external(
+      "https://user-images.githubusercontent.com/46346508/236060869-3b118075-f660-44c9-9d0d-d40fba5c8db0.svg",
+      "32x32",
+      "image/svg+xml"
+    )
 
   // light theme colours
   // Tl suffix indicates these are lifted directly from somewhere within the Typelevel site
@@ -47,10 +50,7 @@ object DeffSiteSettings {
   val softYellow = Color.hex("f9f5d9")
 
   val defaults = setting {
-    TypelevelSiteSettings
-      .defaults
-      .value
-      .site
+    TypelevelSiteSettings.defaults.value.site
       .footer()
       .site
       .topNavigationBar(homeLink = defaultHomeLink)
@@ -58,5 +58,6 @@ object DeffSiteSettings {
       .favIcons(favIcon)
       .site
       .pageNavigation(enabled = true)
+
   }
 }

@@ -4,7 +4,7 @@ import org.scalafmt.dynamic.ConsoleScalafmtReporter
 import org.scalafmt.interfaces.Scalafmt
 
 import java.io.{ OutputStream, PrintStream }
-import java.nio.file.{Files, Path}
+import java.nio.file.{ Files, Path }
 import java.time.Instant
 import java.util.stream.Collectors
 import scala.quoted.*
