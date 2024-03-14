@@ -11,6 +11,7 @@ import sbt.Keys.licenses
 import org.typelevel.sbt.site.*
 import org.typelevel.sbt.TypelevelSitePlugin.autoImport.*
 import laika.ast.*
+import laika.ast.Path.Root
 // import org.typel
 
 object DeffSiteSettings {
@@ -38,7 +39,7 @@ object DeffSiteSettings {
   val coralTl = Color.hex("f86971")
   val pinkTl = Color.hex("ffb4b5")
   val whiteTl = Color.hex("ffffff")
-  val gunmetalTl = Color.hex("21303f")
+  val gunmetalTl = Color.hex("35213f")
   val platinumTl = Color.hex("e6e8ea")
   // Extra colours to supplement
   val lightPink = Color.hex("ffe7e7")
@@ -49,6 +50,9 @@ object DeffSiteSettings {
   val lighterSlateCyan = Color.hex("f4f8fa")
   val softYellow = Color.hex("f9f5d9")
 
+  val logoDark = Color.hex("b4a7d6")
+  val logoLight = Color.hex("d9d2e9")
+
   val defaults = setting {
     TypelevelSiteSettings.defaults.value.site
       .footer()
@@ -58,6 +62,46 @@ object DeffSiteSettings {
       .favIcons(favIcon)
       .site
       .pageNavigation(enabled = true)
+      .site
+      .internalCSS(Root / "styles")
+      .site
+      .layout(contentWidth = Length(100, LengthUnit.percent))
+      .site
+      .themeColors(
+        primary = slateBlue,
+        secondary = logoDark,
+        primaryMedium = mediumSlateCyanButDarker,
+        primaryLight = lighterSlateCyan,
+        text = gunmetalTl,
+        background = whiteTl,
+        bgGradient = (mediumSlateCyan, lighterSlateCyan)
+      )
+      .site
+      .messageColors(
+        info = slateBlue,
+        infoLight = lightSlateCyan,
+        warning = slateBlue,
+        warningLight = softYellow,
+        error = slateBlue,
+        errorLight = lightPink
+      )
+      .site
+      .syntaxHighlightingColors(
+        base = ColorQuintet(
+          gunmetalTl,
+          Color.hex("73ad9b"), // comments
+          Color.hex("b2adb4"), // ?
+          pinkTl, // identifier
+          platinumTl // base colour
+        ),
+        wheel = ColorQuintet(
+          Color.hex("8fa1c9"), // substitution, annotation
+          Color.hex("81e67b"), // keyword, escape-sequence
+          Color.hex("ffde6d"), // declaration name
+          Color.hex("86aac1"), // literals
+          coralTl // type/class name
+        )
+      )
 
   }
 }

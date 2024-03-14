@@ -1,0 +1,14 @@
+pre code {
+  white-space: pre;
+}
+
+pre {
+  white-space: pre;
+  overflow-x: auto;
+}
+
+@media (min-width: 1450px) {
+  main.content {
+    max-width: 90%;
+  }
+}

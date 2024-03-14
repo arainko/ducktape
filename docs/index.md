@@ -1,4 +1,4 @@
-# ducktape 0.2.x
+# Quick start
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape_3/badge.svg?style=flat-square)](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape_3)
 
