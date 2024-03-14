@@ -53,6 +53,10 @@ object DeffSiteSettings {
   val logoDark = Color.hex("b4a7d6")
   val logoLight = Color.hex("d9d2e9")
 
+  val veryLight = Color.hex("f4f2f7")
+
+  val secondary = Color.hex("8f7eb9")
+
   val defaults = setting {
     TypelevelSiteSettings.defaults.value.site
       .footer()
@@ -68,10 +72,10 @@ object DeffSiteSettings {
       .layout(contentWidth = Length(100, LengthUnit.percent))
       .site
       .themeColors(
-        primary = slateBlue,
-        secondary = logoDark,
-        primaryMedium = mediumSlateCyanButDarker,
-        primaryLight = lighterSlateCyan,
+        primary = logoDark,
+        secondary = secondary,
+        primaryMedium = logoLight,
+        primaryLight = veryLight,
         text = gunmetalTl,
         background = whiteTl,
         bgGradient = (mediumSlateCyan, lighterSlateCyan)

@@ -12,3 +12,19 @@ pre {
     max-width: 90%;
   }
 }
+
+code {
+  color: var(--secondary-color);
+}
+
+li.tab a, li.tab a:hover {
+  color: var(--secondary-color);
+}
+
+.nav-list li a {
+  color: var(--secondary-color);
+}
+
+#page-nav a {
+  color: var(--secondary-color);
+}
