@@ -215,3 +215,40 @@ jobs:
         with:
           modules-ignore: rootjs_3 docs_3 rootjvm_3 rootnative_3
           configs-ignore: test scala-tool scala-doc-tool test-internal
+
+  site:
+    name: Generate Site
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        java: [temurin@17]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout current branch (full)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java (temurin@17)
+        id: setup-java-temurin-17
+        if: matrix.java == 'temurin@17'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: sbt
+
+      - name: sbt update
+        if: matrix.java == 'temurin@17' && steps.setup-java-temurin-17.outputs.cache-hit == 'false'
+        run: sbt --client '+update'
+
+      - name: Generate site
+        run: sbt --client 'docs/tlSite'
+
+      - name: Publish site
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/series/0.2.x'
+        uses: peaceiris/actions-gh-pages@v3.9.3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: documentation/target/docs/site
+          keep_files: true
