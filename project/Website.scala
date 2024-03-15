@@ -39,7 +39,6 @@ object DeffSiteSettings {
   val coralTl = Color.hex("f86971")
   val pinkTl = Color.hex("ffb4b5")
   val whiteTl = Color.hex("ffffff")
-  val gunmetalTl = Color.hex("35213f")
   val platinumTl = Color.hex("e6e8ea")
   // Extra colours to supplement
   val lightPink = Color.hex("ffe7e7")
@@ -54,6 +53,10 @@ object DeffSiteSettings {
   val logoLight = Color.hex("d9d2e9")
   val veryLight = Color.hex("f4f2f7")
   val secondary = Color.hex("8f7eb9")
+  val primary = Color.hex("7f6caf")
+  val darkPurple = Color.hex("30244e")
+  val text = Color.hex("09070f")
+
 
   val defaults = setting {
     TypelevelSiteSettings.defaults.value.site
@@ -70,11 +73,11 @@ object DeffSiteSettings {
       .layout(contentWidth = Length(100, LengthUnit.percent))
       .site
       .themeColors(
-        primary = logoDark,
+        primary = primary,
         secondary = secondary,
-        primaryMedium = logoLight,
+        primaryMedium = logoDark,
         primaryLight = veryLight,
-        text = gunmetalTl,
+        text = text,
         background = whiteTl,
         bgGradient = (mediumSlateCyan, lighterSlateCyan)
       )
@@ -90,7 +93,7 @@ object DeffSiteSettings {
       .site
       .syntaxHighlightingColors(
         base = ColorQuintet(
-          gunmetalTl,
+          darkPurple,
           Color.hex("73ad9b"), // comments
           Color.hex("b2adb4"), // ?
           pinkTl, // identifier
