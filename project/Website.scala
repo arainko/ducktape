@@ -52,9 +52,7 @@ object DeffSiteSettings {
 
   val logoDark = Color.hex("b4a7d6")
   val logoLight = Color.hex("d9d2e9")
-
   val veryLight = Color.hex("f4f2f7")
-
   val secondary = Color.hex("8f7eb9")
 
   val defaults = setting {
