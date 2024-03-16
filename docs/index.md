@@ -18,16 +18,25 @@ NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing
 
 You're currently browsing the documentation for `ducktape 0.2.x`, if you're looking for the `0.1.x` docs go here: https://github.com/arainko/ducktape/tree/series/0.1.x#-ducktape
 
+## Entrypoint of the library
+
+The user-facing API of `ducktape` is mostly a bunch of extension methods that allow us to transform between types in a variety of ways, the only import needed to get started looks like this:
+
+```scala
+import io.github.arainko.ducktape.*
+```
+
 ## Motivating example
 
-`ducktape` is all about painlessly transforming between similiarly structured case classes/enums/sealed traits:
+`ducktape` is all about painlessly transforming between similiarly structured case classes/enums/sealed traits. If we were to define two really, really similar sets of case class and/or enums, eg. ones like these:
 
-```scala mdoc:silent
+@:select(model)
+@:choice(wire)
+```scala mdoc
 import java.time.Instant
 import io.github.arainko.ducktape.*
 
-// imagine this is a wire model of some kind - JSON, protobuf, avro, what have you...
-object wire {
+object wire:
   final case class Person(
     firstName: String,
     lastName: String,
@@ -43,9 +52,14 @@ object wire {
     case Card(name: String, digits: Long, expires: Instant)
     case PayPal(email: String)
     case Cash
-}
+```
 
-object domain {
+@:choice(domain)
+```scala mdoc
+import java.time.Instant
+import io.github.arainko.ducktape.*
+
+object domain:
   final case class Person( // <-- fields reshuffled
     lastName: String,
     firstName: String,
@@ -62,8 +76,11 @@ object domain {
     case Card(name: String, digits: Long, expires: Instant)
     case PayPal(email: String)
     case Cash
-}
+```
+@:@
 
+...and an input instance that we intend to transform into its `domain` counterpart:
+```scala mdoc:silent
 val wirePerson: wire.Person = wire.Person(
   "John",
   "Doe",
@@ -77,10 +94,12 @@ val wirePerson: wire.Person = wire.Person(
 )
 ```
 
+...then transforming between the `wire` and `domain` models is just a matter of calling `.to[domain.Person]` on the input:
+
 @:select(underlying-code)
 @:choice(visible)
 ```scala mdoc
-val domainPerson = wirePerson.to[domain.Person]
+wirePerson.to[domain.Person]
 ```
 
 @:choice(generated)
@@ -95,11 +114,36 @@ Docs.printCode(
 
 But now imagine that your wire model differs ever so slightly from your domain model, maybe the wire model's `PaymentMethod.Card` doesn't have the `name` field for some inexplicable reason...
 
-```scala mdoc:reset:invisible
+@:select(model)
+@:choice(wire)
+```scala mdoc:reset
 import java.time.Instant
 import io.github.arainko.ducktape.*
 
-object domain {
+object wire:
+  final case class Person(
+    firstName: String,
+    lastName: String,
+    paymentMethods: List[wire.PaymentMethod],
+    status: wire.Status,
+    updatedAt: Option[Instant]
+  )
+
+  enum Status:
+    case Registered, PendingRegistration, Removed
+
+  enum PaymentMethod:
+    case Card(digits: Long, expires: Instant) // <-- poof, 'name' is gone
+    case PayPal(email: String)
+    case Cash
+```
+
+@:choice(domain)
+```scala mdoc
+import java.time.Instant
+import io.github.arainko.ducktape.*
+
+object domain:
   final case class Person(
     lastName: String,
     firstName: String,
@@ -116,28 +160,10 @@ object domain {
     case Card(name: String, digits: Long, expires: Instant)
     case PayPal(email: String)
     case Cash
-}
 ```
+@:@
 
 ```scala mdoc:silent
-object wire {
-  final case class Person(
-    firstName: String,
-    lastName: String,
-    paymentMethods: List[wire.PaymentMethod],
-    status: wire.Status,
-    updatedAt: Option[Instant]
-  )
-
-  enum Status:
-    case Registered, PendingRegistration, Removed
-
-  enum PaymentMethod:
-    case Card(digits: Long, expires: Instant) // <-- poof, 'name' is gone
-    case PayPal(email: String)
-    case Cash
-}
-
 val wirePerson: wire.Person = wire.Person(
   "John",
   "Doe",
@@ -151,17 +177,22 @@ val wirePerson: wire.Person = wire.Person(
 )
 ```
 ...and when you try to transform between these two representations the compiler now yells at you.
+
 ```scala mdoc:fail
 val domainPerson = wirePerson.to[domain.Person]
 ```
 
 Now onto dealing with that, let's first examine the error message:
 
+@:style(long-quote)
 `No field 'name' found in MdocApp0.this.wire.PaymentMethod.Card @ Person.paymentMethods.element.at[MdocApp0.this.domain.Payment.Card].name`
+@:@
 
 especially the part after `@`:
 
+@:style(long-quote)
 `Person.paymentMethods.element.at[MdocApp0.this.domain.Payment.Card].name`
+@:@
 
 the thing above is basically a path to the field/subtype under which `ducktape` was not able to create a transformation, these are meant to be copy-pastable for when you're actually trying to fix the error, eg. by setting the `name` field to a constant value:
 

@@ -16,3 +16,7 @@ pre {
 #sidebar .nav-list li.nav-header {
   color: #60489c;
 }
+
+.long-quote code {
+  white-space: normal;
+}

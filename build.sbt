@@ -66,6 +66,11 @@ lazy val docs =
               "underlying-code",
               ChoiceConfig("visible", "User visible code"),
               ChoiceConfig("generated", "Generated code")
+            ),
+            SelectionConfig(
+              "model",
+              ChoiceConfig("wire", "Wire model"),
+              ChoiceConfig("domain", "Domain model")
             )
           )
         ),
