@@ -66,7 +66,7 @@ object Field {
 }
 ```
 
-Non-fallible config options are a subtype of fallible configs, i.e. all the things mentioned in [`Configuring transformations`](#configuring-transformations) are also applicable to fallible configurations.
+Non-fallible config options are a subtype of fallible configs, i.e. all the things mentioned in [`configuring transformations`](../total_transformations/configuring_transformations.md) are also applicable to fallible configurations.
 
 ### Product configurations
 
@@ -132,7 +132,6 @@ Docs.printCode(
 @:@
 
 ### Coproduct configurations
-
 
 Let's define a wire enum (pretend that it's coming from... somewhere) and a domain enum that doesn't exactly align with the wire one.
 ```scala mdoc:nest

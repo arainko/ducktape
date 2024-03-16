@@ -163,7 +163,7 @@ object domain:
 ```
 @:@
 
-```scala mdoc:silent
+```scala mdoc:invisible
 val wirePerson: wire.Person = wire.Person(
   "John",
   "Doe",
@@ -229,3 +229,5 @@ Docs.printCode(
 )
 ```
 @:@
+
+Read more in the chapter dedicated to [configuring transformations](total_transformations/configuring_transformations.md).

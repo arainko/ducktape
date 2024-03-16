@@ -55,7 +55,7 @@ val wirePerson = wire.Person(
 )
 ```
 
-### How to actually transform stuff
+### Using total transformations
 
 * `Source#to[Dest]` - for any two types `Source` and `Dest`, used to create a direct transformation between `Source` and `Dest`:
 

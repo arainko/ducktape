@@ -1,29 +1,26 @@
-import laika.ast.Image
 import laika.ast.LengthUnit.px
-import laika.ast.Span
-import laika.ast.TemplateString
+import laika.ast.Path.Root
+import laika.ast._
 import laika.helium.Helium
 import laika.helium.config._
 import laika.theme.config.Color
 import org.typelevel.sbt.TypelevelGitHubPlugin.gitHubUserRepo
+import org.typelevel.sbt.TypelevelSitePlugin.autoImport._
+import org.typelevel.sbt.site._
 import sbt.Def._
-import sbt.Keys.licenses
-import org.typelevel.sbt.site.*
-import org.typelevel.sbt.TypelevelSitePlugin.autoImport.*
-import laika.ast.*
-import laika.ast.Path.Root
-// import org.typel
+import sbt.Keys.{ licenses, scmInfo }
 
 object DeffSiteSettings {
 
-  val defaultHomeLink: ThemeLink = ImageLink.external(
-    "https://github.com/arainko/ducktape/tree/series/0.2.x",
-    Image.external(
-      "https://user-images.githubusercontent.com/46346508/236060869-3b118075-f660-44c9-9d0d-d40fba5c8db0.svg",
-      height = Some(Length(50, px)),
-      width = Some(Length(50, px))
+  val defaultHomeLink: ThemeLink =
+    ImageLink.internal(
+      Root / "index.md",
+      Image.external(
+        "https://user-images.githubusercontent.com/46346508/236060869-3b118075-f660-44c9-9d0d-d40fba5c8db0.svg",
+        height = Some(Length(50, px)),
+        width = Some(Length(50, px))
+      )
     )
-  )
 
   val favIcon: Favicon =
     Favicon.external(
@@ -57,12 +54,17 @@ object DeffSiteSettings {
   val darkPurple = Color.hex("30244e")
   val text = Color.hex("09070f")
 
+  val githubLink: Initialize[Option[IconLink]] = setting {
+    scmInfo.value.map { info => IconLink.external(info.browseUrl.toString, HeliumIcon.github) }
+  }
 
   val defaults = setting {
     TypelevelSiteSettings.defaults.value.site
       .footer()
       .site
-      .topNavigationBar(homeLink = defaultHomeLink)
+      .resetDefaults(topNavigation = true)
+      .site
+      .topNavigationBar(homeLink = defaultHomeLink, navLinks = githubLink.value.toList)
       .site
       .favIcons(favIcon)
       .site
@@ -80,15 +82,6 @@ object DeffSiteSettings {
         text = text,
         background = whiteTl,
         bgGradient = (mediumSlateCyan, lighterSlateCyan)
-      )
-      .site
-      .messageColors(
-        info = slateBlue,
-        infoLight = lightSlateCyan,
-        warning = slateBlue,
-        warningLight = softYellow,
-        error = slateBlue,
-        errorLight = lightPink
       )
       .site
       .syntaxHighlightingColors(

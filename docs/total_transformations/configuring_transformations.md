@@ -2,13 +2,13 @@
 
 ### Introduction and explanation
 
-Transformations can customized or 'fixed' with a slew of configuration options, let's examine a quick example based on a slightly modified version of the previously introduced model:
+More often than not the models we work with daily do not map one-to-one with one another - let's define a wire/domain model pair that we'd like to transform.
 
-```scala mdoc:reset-object:silent
-import io.github.arainko.ducktape.*
-
-object wire {
-  final case class Person(
+@:select(model)
+@:choice(wire)
+```scala mdoc
+object wire:
+  case class Person(
     firstName: String,
     lastName: String,
     paymentMethods: List[wire.PaymentMethod]
@@ -19,10 +19,12 @@ object wire {
     case PayPal(email: String)
     case Cash
     case Transfer(accountNo: String) // <-- additional enum case, not present in the domain model
-}
+```
 
-object domain {
-  final case class Person(
+@:choice(domain)
+```scala mdoc
+object domain:
+  case class Person(
     firstName: String,
     lastName: String,
     age: Int, // <-- additional field, not present in the wire model
@@ -33,8 +35,12 @@ object domain {
     case Card(name: String, digits: Long)
     case PayPal(email: String)
     case Cash
-}
+```
+@:@
 
+...and an input value we want transformed:
+
+```scala mdoc:silent
 val wirePerson = wire.Person(
   "John",
   "Doe",
@@ -47,16 +53,22 @@ val wirePerson = wire.Person(
 )
 ```
 
-Right off the bat the compiler yells at for trying to transform into a `domain.Person` for two reasons:
+If we were to just call `.to[domain.Person]` the compiler would yell at us with a (hopefully) helpful message that should lead us into being able to complete such transformation:
+
 ```scala mdoc:fail
+import io.github.arainko.ducktape.*
+
 wirePerson.to[domain.Person]
 ```
 
-The newly added field (`age`) and enum case (`PaymentMethod.Transfer`) do not have a corresponding mapping, let's say we want to set the age field to a constant value of 24 and when a PaymentMethod.Transfer is encountered we map it to `Cash` instead.
+The newly added field (`age`) and enum case (`PaymentMethod.Transfer`) do not have a corresponding mapping, let's say we want to set the age field to a constant value of 24 and when a `PaymentMethod.Transfer` is encountered we map it to `Cash` instead.
 
 @:select(underlying-code)
 @:choice(visible)
+
 ```scala mdoc
+import io.github.arainko.ducktape.*
+
 wirePerson
   .into[domain.Person]
   .transform(
@@ -64,6 +76,7 @@ wirePerson
     Case.const(_.paymentMethods.element.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash)
   )
 ```
+
 @:choice(generated)
 ```scala mdoc:passthrough
 import io.github.arainko.ducktape.docs.*
@@ -87,7 +100,7 @@ Field.const(_.age, 24)
             the first argument is the path to the field we're configuring (all Field configs operate on the destination type)        
 ```
 
-and now for the second one:
+...and now for the second one:
 
 ```scala
 Case.const(_.paymentMethods.element.at[wire.PaymentMethod.Transfer], domain.PaymentMethod.Cash)
@@ -415,6 +428,7 @@ Docs.printCode(
 ### Specifics and limitations
 
 * Configs can override transformations
+
 ```scala mdoc
 wirePerson
   .into[domain.Person]
@@ -438,6 +452,7 @@ wirePerson
 ```
 
 * Config on a field or a case 'above' overrides the configs 'below'
+
 ```scala mdoc
 wirePerson
   .into[domain.Person]
@@ -453,6 +468,7 @@ wirePerson
 ```
 
 However, first configuring the field a level above and then the field a level below is not supported:
+
 ```scala mdoc:fail
 wirePerson
   .into[domain.Person]
