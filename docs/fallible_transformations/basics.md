@@ -1,4 +1,79 @@
 ## Basics
+
+### Entrypoint
+
+Much as in the case of [total transformations](../total_transformations/basics.md) the entry point of fallible transformations is just single import that brings in a bunch of extension methods:
+
+```scala mdoc
+import io.github.arainko.ducktape.*
+```
+
+### Introduction
+
+Sometimes we 
+
+@:select(fallible-model)
+
+@:choice(wire)
+```scala mdoc
+object wire:
+  final case class Person(
+    firstName: String,
+    lastName: String,
+    paymentMethods: List[wire.PaymentMethod]
+  )
+
+  enum PaymentMethod:
+    case Card(name: String, digits: Long)
+    case PayPal(email: String)
+    case Cash
+```
+
+@:choice(domain)
+```scala mdoc
+import newtypes.*
+
+object domain:
+  final case class Person(
+    firstName: NonEmptyString,
+    lastName: NonEmptyString,
+    paymentMethods: Vector[domain.PaymentMethod]
+  )
+
+  enum PaymentMethod:
+    case PayPal(email: NonEmptyString)
+    case Card(digits: Positive, name: NonEmptyString)
+    case Cash
+```
+@:choice(newtypes)
+```scala mdoc
+object newtypes:
+  opaque type NonEmptyString <: String = String
+
+  object NonEmptyString:
+    def create(value: String): Either[String, NonEmptyString] = 
+      Either.cond(!value.isBlank, value, s"not a non-empty string")
+
+    given failFast: Transformer.Fallible[[a] =>> Either[String, a], String, NonEmptyString] = 
+      create
+
+    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], String, NonEmptyString] = 
+      create(_).left.map(_ :: Nil)
+
+  opaque type Positive <: Long = Long
+  
+  object Positive:
+    def create(value: Long): Either[String, Positive] = 
+      Either.cond(value > 0, value, "not a positive long")
+
+    given failFast: Transformer.Fallible[[a] =>> Either[String, a], Long, Positive] = 
+      create
+
+    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], Long, Positive] = 
+      create(_).left.map(_ :: Nil)
+```
+@:@
+
 Sometimes ordinary field mappings just do not cut it, more often than not our domain model's constructors are hidden behind a safe factory method, eg.:
 
 ```scala mdoc:reset
