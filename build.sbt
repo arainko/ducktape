@@ -1,3 +1,7 @@
+import laika.config.SelectionConfig
+import laika.config.ChoiceConfig
+import laika.config.Selections
+import org.typelevel.sbt.site.TypelevelSiteSettings
 import com.typesafe.tools.mima.core._
 import xerial.sbt.Sonatype._
 import org.typelevel.sbt.TypelevelMimaPlugin
@@ -12,6 +16,7 @@ ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
 ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / scalaVersion := "3.3.2"
+ThisBuild / tlSitePublishBranch := Some("series/0.2.x")
 
 ThisBuild / semanticdbEnabled := true
 ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
@@ -49,9 +54,27 @@ lazy val ducktape =
 lazy val docs =
   project
     .in(file("documentation"))
-    .enablePlugins(NoPublishPlugin, MdocPlugin)
+    .enablePlugins(NoPublishPlugin, MdocPlugin, TypelevelSitePlugin)
     .disablePlugins(MimaPlugin)
     .settings(
+      // laikaTheme := DeffSiteSettings.defaults.value.build,
+      // tlSiteIsTypelevelProject := Some(TypelevelProject.Affiliate),
+      laikaConfig := LaikaConfig.defaults
+        .withConfigValue(
+          Selections(
+            SelectionConfig(
+              "underlying-code",
+              ChoiceConfig("visible", "User visible code"),
+              ChoiceConfig("generated", "Generated code")
+            ),
+            SelectionConfig(
+              "model",
+              ChoiceConfig("wire", "Wire model"),
+              ChoiceConfig("domain", "Domain model")
+            )
+          )
+        ),
+      tlSiteHelium := DeffSiteSettings.defaults.value,
       mdocVariables := Map("VERSION" -> tlLatestVersion.value.mkString),
       libraryDependencies += ("org.scalameta" %% "scalafmt-dynamic" % "3.6.1").cross(CrossVersion.for3Use2_13)
     )
