@@ -10,7 +10,7 @@ import io.github.arainko.ducktape.*
 
 ### Introduction
 
-Sometimes we 
+Sometimes our domains are modeled with refinement types (i.e. instead of using a plain `String` we declare a `NonEmptyString` that exposes a smart constructor that enforces certain invariants throughout the app) and fallible transformations are specifically geared towards making that usecase as lighweight as possible. Let's introduce a wire/domain pair of models that make use of this pattern:
 
 @:select(fallible-model)
 
@@ -54,9 +54,12 @@ object newtypes:
     def create(value: String): Either[String, NonEmptyString] = 
       Either.cond(!value.isBlank, value, s"not a non-empty string")
 
+// expand the 'create' method into an instance of Transformer.Fallible
+// this is a key component in making those transformations automatic
     given failFast: Transformer.Fallible[[a] =>> Either[String, a], String, NonEmptyString] = 
       create
 
+// also declare the same fallible transformer but make it ready for error accumulation
     given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], String, NonEmptyString] = 
       create(_).left.map(_ :: Nil)
 
@@ -73,6 +76,30 @@ object newtypes:
       create(_).left.map(_ :: Nil)
 ```
 @:@
+
+...and also an input value that we'll transform later down the line:
+
+```scala mdoc:silent
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Sometimes ordinary field mappings just do not cut it, more often than not our domain model's constructors are hidden behind a safe factory method, eg.:
 
