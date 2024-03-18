@@ -18,5 +18,6 @@ pre {
 }
 
 .long-quote code {
+  word-break: break-all;
   white-space: normal;
 }
