@@ -18,6 +18,10 @@ NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing
 
 You're currently browsing the documentation for `ducktape 0.2.x`, if you're looking for the `0.1.x` docs go here: https://github.com/arainko/ducktape/tree/series/0.1.x#-ducktape
 
+## Documentation
+
+Head on over to the [docs site](https://arainko.github.io/ducktape/)!
+
 ## Motivating example
 
 `ducktape` is all about painlessly transforming between similiarly structured case classes/enums/sealed traits:
