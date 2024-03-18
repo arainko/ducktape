@@ -7,7 +7,7 @@ import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransf
 import scala.util.boundary
 import scala.util.boundary.Label
 
-object FallibilityRefiner {
+private[ducktape] object FallibilityRefiner {
   def run[E <: Plan.Error](plan: Plan[E, Fallible]): Plan[E, Nothing] | None.type =
     recurse(plan) match
       case None    => None

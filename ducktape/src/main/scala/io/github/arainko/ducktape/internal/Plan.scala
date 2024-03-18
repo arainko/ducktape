@@ -7,8 +7,8 @@ import scala.collection.immutable.ListMap
 import scala.quoted.*
 import scala.reflect.TypeTest
 
-object Fallible
-type Fallible = Fallible.type
+private[ducktape] object Fallible
+private[ducktape] type Fallible = Fallible.type
 
 private[ducktape] sealed trait Plan[+E <: Plan.Error, +F <: Fallible] {
   import Plan.*

@@ -2,11 +2,11 @@ package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
 
-sealed trait ProductConstructor {
+private[ducktape] sealed trait ProductConstructor {
   def apply(fields: Map[String, Expr[Any]])(using Quotes): Expr[Any]
 }
 
-object ProductConstructor {
+private[ducktape] object ProductConstructor {
   final class Primary(structure: Structure.Product) extends ProductConstructor {
     def apply(fields: Map[String, Expr[Any]])(using Quotes): Expr[Any] = {
       import quotes.reflect.*
