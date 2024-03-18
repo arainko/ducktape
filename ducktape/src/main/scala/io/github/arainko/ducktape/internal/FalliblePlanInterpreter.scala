@@ -6,7 +6,7 @@ import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransf
 import scala.collection.Factory
 import scala.quoted.*
 
-object FalliblePlanInterpreter {
+private[ducktape] object FalliblePlanInterpreter {
   def run[F[+x]: Type, A: Type, B: Type](
     plan: Plan[Nothing, Fallible],
     sourceValue: Expr[A],

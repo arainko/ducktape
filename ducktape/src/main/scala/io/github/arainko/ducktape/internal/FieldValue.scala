@@ -10,7 +10,7 @@ private[ducktape] enum FieldValue {
   case Unwrapped(name: String, tpe: Type[?], value: Expr[Any])
 }
 
-object FieldValue {
+private[ducktape] object FieldValue {
   extension [F[+x]](wrapped: FieldValue.Wrapped[F]) {
     def unwrapped(value: Expr[Any]): FieldValue.Unwrapped = FieldValue.Unwrapped(wrapped.name, wrapped.tpe, value)
   }

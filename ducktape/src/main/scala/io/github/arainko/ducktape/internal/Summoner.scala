@@ -5,12 +5,12 @@ import io.github.arainko.ducktape.internal.Summoner.UserDefined.TotalTransformer
 
 import scala.quoted.{ Expr, Quotes, Type }
 
-sealed trait Summoner[+F <: Fallible] {
+private[ducktape] sealed trait Summoner[+F <: Fallible] {
   def summonUserDefined[A: Type, B: Type](using Quotes): Option[Summoner.UserDefined[F]]
   def summonDerived[A: Type, B: Type](using Quotes): Option[Summoner.Derived[F]]
 }
 
-object Summoner {
+private[ducktape] object Summoner {
   def apply[F <: Fallible](using summoner: Summoner[F]): summoner.type = summoner
 
   object Total extends Summoner[Nothing] {

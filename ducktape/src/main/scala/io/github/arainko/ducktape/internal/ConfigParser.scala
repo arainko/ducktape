@@ -6,11 +6,11 @@ import scala.quoted.*
 
 import Configuration.*
 
-sealed trait ConfigParser[+F <: Fallible] {
+private[ducktape] sealed trait ConfigParser[+F <: Fallible] {
   def apply(using Quotes): PartialFunction[quotes.reflect.Term, Instruction[F]]
 }
 
-object ConfigParser {
+private[ducktape] object ConfigParser {
   def combine[F <: Fallible](parsers: NonEmptyList[ConfigParser[F]])(using
     Quotes
   ): PartialFunction[quotes.reflect.Term, Instruction[F]] =

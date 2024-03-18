@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.*
 
 import scala.quoted.*
 
-object FallibleTransformations {
+private[ducktape] object FallibleTransformations {
   inline def between[F[+x], A, B](
     source: A,
     F: Mode[F],

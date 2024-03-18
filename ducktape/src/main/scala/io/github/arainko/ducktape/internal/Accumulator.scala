@@ -2,9 +2,9 @@ package io.github.arainko.ducktape.internal
 
 import scala.collection.mutable.Builder
 
-opaque type Accumulator[A] = Builder[A, List[A]]
+private[ducktape] opaque type Accumulator[A] = Builder[A, List[A]]
 
-object Accumulator {
+private[ducktape] object Accumulator {
 
   inline def use[A]: [B] => (f: Accumulator[A] ?=> B) => (List[A], B) =
     [B] =>
