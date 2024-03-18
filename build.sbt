@@ -71,6 +71,12 @@ lazy val docs =
               "model",
               ChoiceConfig("wire", "Wire model"),
               ChoiceConfig("domain", "Domain model")
+            ),
+            SelectionConfig(
+              "fallible-model",
+              ChoiceConfig("wire", "Wire model"),
+              ChoiceConfig("domain", "Domain model"),
+              ChoiceConfig("newtypes", "Newtypes")
             )
           )
         ),
