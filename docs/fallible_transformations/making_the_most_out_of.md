@@ -1,7 +1,7 @@
 
-## Making the most out of `Fallible Transformers`
+## Making the most out of fallible transformations
 
-Now for the meat and potatoes of `Fallible Transformers`. To make use of the derivation mechanism that `ducktape` provides we should strive for our model to be modeled in a specific way - with a new nominal type per each validated field, which comes down to... Newtypes!
+Now for the meat and potatoes of fallible transformations. To make use of the derivation mechanism that `ducktape` provides we should strive for our model to be modeled in a specific way - with a new nominal type per each validated field, which comes down to... Newtypes!
 
 Let's define a minimalist newtype abstraction that will also do validation (this is a one-time effort that can easily be extracted to a library):
 

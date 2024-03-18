@@ -1,60 +1,6 @@
-TODO CHANGE THE START OF THIS SECTION SO IT'S NOT SO RANDOM
-
-```scala mdoc
-import io.github.arainko.ducktape.*
-
-abstract class NewtypeValidated[A](pred: A => Boolean, errorMessage: String) {
-  opaque type Type = A
-
-  protected def unsafe(value: A): Type = value
-
-  def make(value: A): Either[String, Type] = Either.cond(pred(value), value, errorMessage)
-
-  def makeAccumulating(value: A): Either[List[String], Type] =
-    make(value).left.map(_ :: Nil)
-
-  extension (self: Type) {
-    def value: A = self
-  }
-
-  // these instances will be available in the implicit scope of `Type` (that is, our newtype)
-  given accumulatingWrappingTransformer: Transformer.Fallible[[a] =>> Either[List[String], a], A, Type] = makeAccumulating(_)
-
-  given failFastWrappingTransformer: Transformer.Fallible[[a] =>> Either[String, a], A, Type] = make(_)
-
-  given unwrappingTransformer: Transformer[Type, A] = _.value
-
-}
-```
-
-Now let's get back to the definition of `Person` and tweak it a little:
-
-```scala mdoc:nest
-case class Person(name: Name, age: Age, socialSecurityNo: SSN)
-
-object Name extends NewtypeValidated[String](str => !str.isBlank, "Name should not be blank!")
-type Name = Name.Type
-
-object Age extends NewtypeValidated[Int](int => int > 0, "Age should be positive!")
-type Age = Age.Type
-
-object SSN extends NewtypeValidated[String](str => str.length > 5, "SSN should be longer than 5!")
-type SSN = SSN.Type
-```
-
-We introduce a newtype for each field, this way we can keep our invariants at compiletime and also let `ducktape` do its thing.
-
-```scala mdoc:silent
-case class UnvalidatedPerson(name: String, age: Int, socialSecurityNo: String)
-
-// this should trip up our validation
-val bad = UnvalidatedPerson(name = "", age = -1, socialSecurityNo = "SOCIALNO")
-
-// this one should pass
-val good = UnvalidatedPerson(name = "ValidName", age = 24, socialSecurityNo = "SOCIALNO")
-```
-
 ## Configuring fallible transformations
+
+### Prelude
 
 If we were to dissect how the types behind config options are structured, we'd see this:
 
@@ -66,7 +12,71 @@ object Field {
 }
 ```
 
-Non-fallible config options are a subtype of fallible configs, i.e. all the things mentioned in [`configuring transformations`](../total_transformations/configuring_transformations.md) are also applicable to fallible configurations.
+Non-fallible config options are a subtype of fallible configs, which means that all the things mentioned in [`configuring transformations`](../total_transformations/configuring_transformations.md) are also applicable to fallible configurations (and should be read before diving into this doc).
+
+Having said all that, let's declare a wire/domain model pair we'll be working on:
+
+@:select(fallible-model)
+
+@:choice(wire)
+```scala mdoc
+object wire:
+  case class Person(name: String, age: Long, socialSecurityNo: String)
+```
+
+@:choice(domain)
+```scala mdoc
+import newtypes.*
+
+object domain:
+  case class Person(name: NonEmptyString, age: Positive, socialSecurityNo: NonEmptyString)
+```
+@:choice(newtypes)
+```scala mdoc
+import io.github.arainko.ducktape.*
+
+object newtypes:
+  opaque type NonEmptyString <: String = String
+
+  object NonEmptyString:
+    def make(value: String): Either[String, NonEmptyString] = 
+      Either.cond(!value.isBlank, value, s"not a non-empty string")
+
+    def makeAccumulating(value: String): Either[List[String], NonEmptyString] = 
+      make(value).left.map(_ :: Nil)
+
+    given failFast: Transformer.Fallible[[a] =>> Either[String, a], String, NonEmptyString] = 
+      make
+
+    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], String, NonEmptyString] = 
+      makeAccumulating
+
+  opaque type Positive <: Long = Long
+  
+  object Positive:
+    def make(value: Long): Either[String, Positive] = 
+      Either.cond(value > 0, value, "not a positive long")
+
+    def makeAccumulating(value: Long): Either[List[String], Positive] = 
+      make(value).left.map(_ :: Nil)
+
+    given failFast: Transformer.Fallible[[a] =>> Either[String, a], Long, Positive] = 
+      make
+
+    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], Long, Positive] = 
+      makeAccumulating
+```
+@:@
+
+...and some input examples:
+
+```scala mdoc:silent
+// this should trip up our validation
+val bad = wire.Person(name = "", age = -1, socialSecurityNo = "SOCIALNO")
+
+// this one should pass
+val good = wire.Person(name = "ValidName", age = 24, socialSecurityNo = "SOCIALNO")
+```
 
 ### Product configurations
 
@@ -75,14 +85,16 @@ Non-fallible config options are a subtype of fallible configs, i.e. all the thin
 @:select(underlying-code)
 @:choice(visible)
 ```scala mdoc:nest
+import io.github.arainko.ducktape.*
+
 given Mode.Accumulating.Either[String, List] with {}
 
 bad
-  .into[Person]
+  .into[domain.Person]
   .fallible
   .transform(
-    Field.fallibleConst(_.name, Name.makeAccumulating("ConstValidName")),
-    Field.fallibleConst(_.age, Age.makeAccumulating(25))
+    Field.fallibleConst(_.name, NonEmptyString.makeAccumulating("ConstValidName")),
+    Field.fallibleConst(_.age, Positive.makeAccumulating(25))
   )
 ```
 @:choice(generated)
@@ -91,11 +103,11 @@ import io.github.arainko.ducktape.docs.*
 
 Docs.printCode(
   bad
-    .into[Person]
+    .into[domain.Person]
     .fallible
     .transform(
-      Field.fallibleConst(_.name, Name.makeAccumulating("ConstValidName")),
-      Field.fallibleConst(_.age, Age.makeAccumulating(25))
+      Field.fallibleConst(_.name, NonEmptyString.makeAccumulating("ConstValidName")),
+      Field.fallibleConst(_.age, Positive.makeAccumulating(25))
     )
 )
 ```
@@ -110,22 +122,22 @@ Docs.printCode(
 given Mode.Accumulating.Either[String, List] with {}
 
 bad
-  .into[Person]
+  .into[domain.Person]
   .fallible
   .transform(
-    Field.fallibleComputed(_.name, uvp => Name.makeAccumulating(uvp.name + "ConstValidName")),
-    Field.fallibleComputed(_.age, uvp => Age.makeAccumulating(uvp.age + 25))
+    Field.fallibleComputed(_.name, uvp => NonEmptyString.makeAccumulating(uvp.name + "ConstValidName")),
+    Field.fallibleComputed(_.age, uvp => Positive.makeAccumulating(uvp.age + 25))
   )
 ```
 @:choice(generated)
 ```scala mdoc:passthrough
 Docs.printCode(
   bad
-    .into[Person]
+    .into[domain.Person]
     .fallible
     .transform(
-      Field.fallibleComputed(_.name, uvp => Name.makeAccumulating(uvp.name + "ConstValidName")),
-      Field.fallibleComputed(_.age, uvp => Age.makeAccumulating(uvp.age + 25))
+      Field.fallibleComputed(_.name, uvp => NonEmptyString.makeAccumulating(uvp.name + "ConstValidName")),
+      Field.fallibleComputed(_.age, uvp => Positive.makeAccumulating(uvp.age + 25))
     )
 )
 ```
@@ -135,17 +147,13 @@ Docs.printCode(
 
 Let's define a wire enum (pretend that it's coming from... somewhere) and a domain enum that doesn't exactly align with the wire one.
 ```scala mdoc:nest
-object wire {
-  enum ReleaseKind {
+object wire:
+  enum ReleaseKind:
     case LP, EP, Single
-  }
-}
 
-object domain {
-  enum ReleaseKind {
+object domain:
+  enum ReleaseKind:
     case EP, LP
-  }
-}
 ```
 
 * `Case.fallibleConst` - a fallible variant of `Case.const` that allows for supplying values wrapped in an `F`
@@ -211,6 +219,14 @@ Life is not always lolipops and crisps and sometimes you need to write a typecla
 
 By all means go wild with the configuration options, I'm too lazy to write them all out here again.
 
+```scala mdoc:nest:invisible
+object wire:
+  case class Person(name: String, age: Long, socialSecurityNo: String)
+
+object domain:
+  case class Person(name: NonEmptyString, age: Positive, socialSecurityNo: NonEmptyString)
+```
+
 @:select(underlying-code)
 @:choice(visible)
 ```scala mdoc:nest:silent
@@ -218,20 +234,20 @@ given Mode.Accumulating.Either[String, List] with {}
 
 val customAccumulating =
   Transformer
-    .define[UnvalidatedPerson, Person]
+    .define[wire.Person, domain.Person]
     .fallible
     .build(
-      Field.fallibleConst(_.name, Name.makeAccumulating("IAmAlwaysValidNow!"))
+      Field.fallibleConst(_.name, NonEmptyString.makeAccumulating("IAmAlwaysValidNow!"))
     )
 ```
 @:choice(generated)
 ```scala mdoc:passthrough
 Docs.printCode(
   Transformer
-    .define[UnvalidatedPerson, Person]
+    .define[wire.Person, domain.Person]
     .fallible
     .build(
-      Field.fallibleConst(_.name, Name.makeAccumulating("IAmAlwaysValidNow!"))
+      Field.fallibleConst(_.name, NonEmptyString.makeAccumulating("IAmAlwaysValidNow!"))
     )
 )
 ```
@@ -246,20 +262,20 @@ given Mode.Accumulating.Either[String, List] with {}
 
 val customAccumulatingVia =
   Transformer
-    .defineVia[UnvalidatedPerson](Person.apply)
+    .defineVia[wire.Person](domain.Person.apply)
     .fallible
     .build(
-      Field.fallibleConst(_.name, Name.makeAccumulating("IAmAlwaysValidNow!"))
+      Field.fallibleConst(_.name, NonEmptyString.makeAccumulating("IAmAlwaysValidNow!"))
     )
 ```
 @:choice(generated)
 ```scala mdoc:passthrough
 Docs.printCode(
   Transformer
-    .defineVia[UnvalidatedPerson](Person.apply)
+    .defineVia[wire.Person](domain.Person.apply)
     .fallible
     .build(
-      Field.fallibleConst(_.name, Name.makeAccumulating("IAmAlwaysValidNow!"))
+      Field.fallibleConst(_.name, NonEmptyString.makeAccumulating("IAmAlwaysValidNow!"))
     )
 )
 ```
