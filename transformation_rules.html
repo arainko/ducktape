@@ -118,7 +118,7 @@
         
         <h3 id="_1-user-supplied-transformers" class="section"><a class="anchor-link left" href="#_1-user-supplied-transformers"><i class="icofont-laika link">&#xef71;</i></a>1. User supplied <code>Transformers</code></h3>
         <p>Custom instances of a <code>Transfomer</code> are always prioritized since these also function as an extension mechanism of the library.</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-1">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -138,7 +138,7 @@
         
         <h3 id="_2-upcasting" class="section"><a class="anchor-link left" href="#_2-upcasting"><i class="icofont-laika link">&#xef71;</i></a>2. Upcasting</h3>
         <p>Transforming a type to its supertype is just an upcast.</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-2">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -155,7 +155,7 @@
         
         <h3 id="_3-mapping-over-an-option" class="section"><a class="anchor-link left" href="#_3-mapping-over-an-option"><i class="icofont-laika link">&#xef71;</i></a>3. Mapping over an <code>Option</code></h3>
         <p>Transforming between options comes down to mapping over it and recursively deriving a transformation for the value inside.</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-3">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -177,7 +177,7 @@
         
         <h3 id="_4-transforming-and-wrapping-in-an-option" class="section"><a class="anchor-link left" href="#_4-transforming-and-wrapping-in-an-option"><i class="icofont-laika link">&#xef71;</i></a>4. Transforming and wrapping in an <code>Option</code></h3>
         <p>If a transformation between two types is possible then transforming between the source type and an <code>Option</code> of the destination type is just wrapping the transformation result in a <code>Some</code>.</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-4">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -192,7 +192,7 @@
         </div>
         
         <h3 id="_5-mapping-over-and-changing-the-collection-type" class="section"><a class="anchor-link left" href="#_5-mapping-over-and-changing-the-collection-type"><i class="icofont-laika link">&#xef71;</i></a>5. Mapping over and changing the collection type</h3>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-5">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -220,7 +220,7 @@
           <li>source has fields whose names cover all of the destination&#39;s fields,</li>
           <li>a transformation for the types corresponding to those fields can be derived.</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-6">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -269,7 +269,7 @@
           <li>destination&#39;s children have names that match all of the source&#39;s children,</li>
           <li>a transformation between those two corresponding types can be derived.</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-7">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -314,7 +314,7 @@
         
         <h3 id="_8-same-named-singletons" class="section"><a class="anchor-link left" href="#_8-same-named-singletons"><i class="icofont-laika link">&#xef71;</i></a>8. Same named singletons</h3>
         <p>Transformations between same named singletons come down to just reffering to the destination singleton.</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-8">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -337,7 +337,7 @@
         </div>
         
         <h3 id="_9-unwrapping-a-value-class" class="section"><a class="anchor-link left" href="#_9-unwrapping-a-value-class"><i class="icofont-laika link">&#xef71;</i></a>9. Unwrapping a value class</h3>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-9">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -357,7 +357,7 @@
         </div>
         
         <h3 id="_10-wrapping-a-value-class" class="section"><a class="anchor-link left" href="#_10-wrapping-a-value-class"><i class="icofont-laika link">&#xef71;</i></a>10. Wrapping a value class</h3>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-10">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -376,7 +376,7 @@
         <h3 id="_11-automatically-derived-transformer-derived" class="section"><a class="anchor-link left" href="#_11-automatically-derived-transformer-derived"><i class="icofont-laika link">&#xef71;</i></a>11. Automatically derived <code>Transformer.Derived</code></h3>
         <p>Instances of <code>Transformer.Derived</code> are automatically derived as a fallback to support use cases where a generic type (eg. a field of a case class) is unknown at definition site.</p>
         <p>Note that <code>Transformer[A, B] &lt;: Transformer.Derived[A, B]</code> so any <code>Transformer</code> in scope is eligible to become a <code>Transformer.Derived</code>.</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-11">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>

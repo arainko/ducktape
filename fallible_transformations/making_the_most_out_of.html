@@ -149,7 +149,7 @@
 </span><span class="comment">// this one should pass
 </span><span class="keyword">val</span><span> </span><span class="identifier">good</span><span> = </span><span class="type-name">UnvalidatedPerson</span><span>(</span><span class="identifier">name</span><span> = </span><span class="string-literal">&quot;ValidName&quot;</span><span>, </span><span class="identifier">age</span><span> = </span><span class="number-literal">24</span><span>, </span><span class="identifier">socialSecurityNo</span><span> = </span><span class="string-literal">&quot;SOCIALNO&quot;</span><span>)</span></code></pre>
         <p>Fallible transformations wrapped in some type <code>F</code> are derived automatically for case classes given that a <code>Transformer.Fallible</code> instance exists for <code>F</code> and all of the fields of the source type have a corresponding counterpart in the destination type and each one of them has an instance of either <code>Transformer.Fallible</code> or a total <code>Transformer</code> in scope.</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-1">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -180,7 +180,7 @@
           </div>
         </div>
         <p>Same goes for instances that do fail fast transformations (you need <code>Mode.FailFast[F]</code> in scope in this case)</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-2">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>

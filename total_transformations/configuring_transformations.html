@@ -165,7 +165,7 @@
 // wirePerson
 // ^</span></code></pre>
         <p>The newly added field (<code>age</code>) and enum case (<code>PaymentMethod.Transfer</code>) do not have a corresponding mapping, let&#39;s say we want to set the age field to a constant value of 24 and when a <code>PaymentMethod.Transfer</code> is encountered we map it to <code>Cash</code> instead.</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-1">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -258,7 +258,7 @@
         <ul>
           <li><code>Field.const</code> - allows to supply a constant value for a given field</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-2">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -286,7 +286,7 @@
         <ul>
           <li><code>Field.computed</code> - allows to compute a value with a function the shape of <code>Dest =&gt; FieldTpe</code></li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-3">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -320,7 +320,7 @@
         <ul>
           <li><code>Field.default</code> - only works when a field&#39;s got a default value defined (defaults are not taken into consideration by default)</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-4">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -354,7 +354,7 @@
         </ul>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">FieldSource</span><span>(</span><span class="identifier">color</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">digits</span><span>: </span><span class="type-name">Long</span><span>, </span><span class="identifier">extra</span><span>: </span><span class="type-name">Int</span><span>)
 </span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span> = </span><span class="type-name">FieldSource</span><span>(</span><span class="string-literal">&quot;magenta&quot;</span><span>, </span><span class="number-literal">123445678</span><span>, </span><span class="number-literal">23</span><span>)</span></code></pre>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-5">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -393,7 +393,7 @@
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span>: </span><span class="type-name">String</span><span> = </span><span class="string-literal">&quot;level1&quot;</span><span>, </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>)
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span> = </span><span class="type-name">SourceToplevel</span><span>(</span><span class="type-name">SourceLevel1</span><span>(</span><span class="string-literal">&quot;str&quot;</span><span>), </span><span class="number-literal">400</span><span>)</span></code></pre>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-6">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -423,7 +423,7 @@
           </div>
         </div>
         <p><code>Field.fallbackToDefault</code> is a <code>regional</code> config, which means that you can control the scope where it applies:</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-7">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -467,7 +467,7 @@
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span>: </span><span class="type-name">Option</span><span>[</span><span class="type-name">String</span><span>], </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>)
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span> = </span><span class="type-name">SourceToplevel</span><span>(</span><span class="type-name">SourceLevel1</span><span>(</span><span class="string-literal">&quot;str&quot;</span><span>), </span><span class="type-name">Some</span><span>(</span><span class="number-literal">400</span><span>))</span></code></pre>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-8">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -497,7 +497,7 @@
           </div>
         </div>
         <p><code>Field.fallbackToNone</code> is a <code>regional</code> config, which means that you can control the scope where it applies:</p>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-9">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -538,7 +538,7 @@
         <ul>
           <li><code>Case.const</code> - allows to supply a constant value for a given subtype of a coproduct</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-10">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -568,7 +568,7 @@
         <ul>
           <li><code>Case.computed</code> - allow to supply a function of the selected source type to the expected destination type</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code">
+        <div class="tab-container" data-tab-group="underlying-code-11">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
