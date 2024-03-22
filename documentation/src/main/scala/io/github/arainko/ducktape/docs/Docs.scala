@@ -10,14 +10,9 @@ import java.util.stream.Collectors
 import scala.quoted.*
 import scala.util.chaining.*
 
-/**
- * Sometimes the code printed with `Printer.TreeShortCode` is not fully legal (at least in scalafmt terms)
- * so we create an error reporter that doesn't report anything to not bother ourselves with weird stacktraces when the docs are compiling
- */
-object SilentReporter extends ConsoleScalafmtReporter(PrintStream(OutputStream.nullOutputStream()))
 
 object Docs {
-  val scalafmt = Scalafmt.create(this.getClass.getClassLoader()).withReporter(SilentReporter)
+  val scalafmt = Scalafmt.create(this.getClass.getClassLoader())
   val config = Path.of(".scalafmt.conf")
 
   inline def printCode[A](inline value: A): A = ${ printCodeMacro[A]('value) }
@@ -31,10 +26,12 @@ object Docs {
      */
     val typeLambdaSingleArgRegex = """\[(\[\p{L}+ >: Nothing <: \p{L}+\]) =>""".r
     val typeLambdaTwoArgsRegex = """\[(\[\p{L}+ >: Nothing <: \p{L}+\, \p{L}+ >: Nothing <: \p{L}+\]) =>""".r
+    val typeLambdaInsideRegex = """(\[\p{L}+ >: Nothing <: \p{L}+\]) =>\s""".r
     def fixTypeLambdas(input: String): String =
       typeLambdaSingleArgRegex
         .replaceAllIn(input, "[$1 =>>")
         .pipe(typeLambdaTwoArgsRegex.replaceAllIn(_, "[$1 =>>"))
+        .pipe(typeLambdaInsideRegex.replaceAllIn(_, "$1 =>> "))
 
     val struct = fixTypeLambdas(Printer.TreeShortCode.show(value.asTerm))
 

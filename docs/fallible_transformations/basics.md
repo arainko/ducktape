@@ -102,7 +102,7 @@ These will be used interchangably throughout the examples below, but if you want
 
 * `Source#fallibleTo[Dest]` - for any two types `Source` and `Dest`, used to create a direct transformation between `Source` and `Dest` but taking into account all of the fallible transformations between the fields:
 
-@:select(underlying-code)
+@:select(underlying-code-1)
 @:choice(visible)
 ```scala mdoc
 given Mode.Accumulating.Either[String, List] with {}
@@ -121,7 +121,7 @@ Read more about the rules under which the transformations are generated in a cha
 
 * `Source#into[Dest].fallible` -  for any two types `Source` and `Dest`, used to create a 'transformation builder' that allows fixing transformation errors and overriding transformations for selected fields or subtypes.
 
-@:select(underlying-code)
+@:select(underlying-code-2)
 @:choice(visible)
 ```scala mdoc:nest
 given Mode.FailFast.Either[String] with {}
@@ -155,7 +155,7 @@ Read more in the section about [configuring fallible transformations](configurin
 
 * `Source#fallibleVia(<method reference>)` - for any type `Source` and a method reference that can be eta-expanded into a function with named arguments (which is subsequently used to expand the method's argument list with the fields of the `Source` type):
 
-@:select(underlying-code)
+@:select(underlying-code-3)
 @:choice(visible)
 ```scala mdoc:nest
 given Mode.Accumulating.Either[String, List] with {}
@@ -172,7 +172,7 @@ Docs.printCode(wirePerson.fallibleVia(domain.Person.apply))
 
 * `Source.intoVia(<method reference>).fallible` - for any type `Source` and a method reference that can be eta-expanded into a function with named arguments, used to create a 'transformation builder' that allows fixing transformation errors and overriding transformations for selected fields or subtypes.
 
-@:select(underlying-code)
+@:select(underlying-code-4)
 @:choice(visible)
 ```scala mdoc:nest
 given Mode.FailFast.Either[String] with {}

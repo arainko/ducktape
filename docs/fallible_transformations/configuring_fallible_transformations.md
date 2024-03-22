@@ -82,7 +82,7 @@ val good = wire.Person(name = "ValidName", age = 24, socialSecurityNo = "SOCIALN
 
 * `Field.fallibleConst` - a fallible variant of `Field.const` that allows for supplying values wrapped in an `F`
 
-@:select(underlying-code)
+@:select(underlying-code-1)
 @:choice(visible)
 ```scala mdoc:nest
 import io.github.arainko.ducktape.*
@@ -116,7 +116,7 @@ Docs.printCode(
 * `Field.fallibleComputed` - a fallible variant of `Field.computed` that allows for supplying functions that return values wrapped in an `F`
 
 
-@:select(underlying-code)
+@:select(underlying-code-2)
 @:choice(visible)
 ```scala mdoc:nest
 given Mode.Accumulating.Either[String, List] with {}
@@ -158,7 +158,7 @@ object domain:
 
 * `Case.fallibleConst` - a fallible variant of `Case.const` that allows for supplying values wrapped in an `F`
 
-@:select(underlying-code)
+@:select(underlying-code-3)
 @:choice(visible)
 ```scala mdoc:nest
 given Mode.FailFast.Either[String] with {}
@@ -185,7 +185,7 @@ Docs.printCode(
 
 * `Case.fallibleComputed` - a fallible variant of `Case.computed` that allows for supplying functions that return values wrapped in an `F`
 
-@:select(underlying-code)
+@:select(underlying-code-4)
 @:choice(visible)
 ```scala mdoc:nest
 given Mode.FailFast.Either[String] with {}
@@ -227,7 +227,7 @@ object domain:
   case class Person(name: NonEmptyString, age: Positive, socialSecurityNo: NonEmptyString)
 ```
 
-@:select(underlying-code)
+@:select(underlying-code-5)
 @:choice(visible)
 ```scala mdoc:nest:silent
 given Mode.Accumulating.Either[String, List] with {}
@@ -255,7 +255,7 @@ Docs.printCode(
 
 And for the ones that are not keen on writing out method arguments:
 
-@:select(underlying-code)
+@:select(underlying-code-6)
 @:choice(visible)
 ```scala mdoc:nest:silent
 given Mode.Accumulating.Either[String, List] with {}

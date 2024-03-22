@@ -63,7 +63,7 @@ wirePerson.to[domain.Person]
 
 The newly added field (`age`) and enum case (`PaymentMethod.Transfer`) do not have a corresponding mapping, let's say we want to set the age field to a constant value of 24 and when a `PaymentMethod.Transfer` is encountered we map it to `Cash` instead.
 
-@:select(underlying-code)
+@:select(underlying-code-1)
 @:choice(visible)
 
 ```scala mdoc
@@ -157,7 +157,7 @@ val card: wire.PaymentMethod.Card =
 
 * `Field.const` - allows to supply a constant value for a given field
 
-@:select(underlying-code)
+@:select(underlying-code-2)
 @:choice(visible)
 ```scala mdoc
 card
@@ -178,7 +178,7 @@ Docs.printCode(
 
 * `Field.computed` - allows to compute a value with a function the shape of `Dest => FieldTpe`
 
-@:select(underlying-code)
+@:select(underlying-code-3)
 @:choice(visible)
 ```scala mdoc
 card
@@ -203,7 +203,7 @@ Docs.printCode(
 
 * `Field.default` - only works when a field's got a default value defined (defaults are not taken into consideration by default)
 
-@:select(underlying-code)
+@:select(underlying-code-4)
 @:choice(visible)
 ```scala mdoc
 card
@@ -229,7 +229,7 @@ case class FieldSource(color: String, digits: Long, extra: Int)
 val source = FieldSource("magenta", 123445678, 23)
 ```
 
-@:select(underlying-code)
+@:select(underlying-code-5)
 @:choice(visible)
 ```scala mdoc
 card
@@ -260,7 +260,7 @@ case class DestLevel1(extra: String = "level1", str: String)
 val source = SourceToplevel(SourceLevel1("str"), 400)
 ```
 
-@:select(underlying-code)
+@:select(underlying-code-6)
 @:choice(visible)
 ```scala mdoc
 source
@@ -282,7 +282,7 @@ Docs.printCode(
 
 `Field.fallbackToDefault` is a `regional` config, which means that you can control the scope where it applies:
 
-@:select(underlying-code)
+@:select(underlying-code-7)
 @:choice(visible)
 ```scala mdoc
 source
@@ -323,7 +323,7 @@ case class DestLevel1(extra: Option[String], str: String)
 val source = SourceToplevel(SourceLevel1("str"), Some(400))
 ```
 
-@:select(underlying-code)
+@:select(underlying-code-8)
 @:choice(visible)
 ```scala mdoc
 source
@@ -345,7 +345,7 @@ Docs.printCode(
 
 `Field.fallbackToNone` is a `regional` config, which means that you can control the scope where it applies:
 
-@:select(underlying-code)
+@:select(underlying-code-9)
 @:choice(visible)
 ```scala mdoc
 source
@@ -380,7 +380,7 @@ val transfer = wire.PaymentMethod.Transfer("2764262")
 
 * `Case.const` - allows to supply a constant value for a given subtype of a coproduct
 
-@:select(underlying-code)
+@:select(underlying-code-10)
 @:choice(visible)
 ```scala mdoc
 transfer
@@ -402,7 +402,7 @@ Docs.printCode(
 
 * `Case.computed` - allow to supply a function of the selected source type to the expected destination type
 
-@:select(underlying-code)
+@:select(underlying-code-11)
 @:choice(visible)
 ```scala mdoc
 transfer

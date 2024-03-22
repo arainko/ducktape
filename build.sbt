@@ -57,27 +57,32 @@ lazy val docs =
     .enablePlugins(NoPublishPlugin, MdocPlugin, TypelevelSitePlugin)
     .disablePlugins(MimaPlugin)
     .settings(
-      // laikaTheme := DeffSiteSettings.defaults.value.build,
-      // tlSiteIsTypelevelProject := Some(TypelevelProject.Affiliate),
       laikaConfig := LaikaConfig.defaults
         .withConfigValue(
           Selections(
-            SelectionConfig(
-              "underlying-code",
-              ChoiceConfig("visible", "User visible code"),
-              ChoiceConfig("generated", "Generated code")
-            ),
-            SelectionConfig(
-              "model",
-              ChoiceConfig("wire", "Wire model"),
-              ChoiceConfig("domain", "Domain model")
-            ),
-            SelectionConfig(
-              "fallible-model",
-              ChoiceConfig("wire", "Wire model"),
-              ChoiceConfig("domain", "Domain model"),
-              ChoiceConfig("newtypes", "Newtypes")
-            )
+            Seq(
+              SelectionConfig(
+                "model",
+                ChoiceConfig("wire", "Wire model"),
+                ChoiceConfig("domain", "Domain model")
+              ),
+              SelectionConfig(
+                "fallible-model",
+                ChoiceConfig("wire", "Wire model"),
+                ChoiceConfig("domain", "Domain model"),
+                ChoiceConfig("newtypes", "Newtypes")
+              )
+            ) ++ (
+              // Going overboard with this since all selections are connected to each other (eg. you pick an option on of them)
+              // then all of them will change, this caused screen jumps when looking at the generated code
+              (1 to 15).map(num =>
+                SelectionConfig(
+                  s"underlying-code-$num",
+                  ChoiceConfig("visible", "User visible code"),
+                  ChoiceConfig("generated", "Generated code")
+                )
+              )
+            ): _*
           )
         ),
       tlSiteHelium := DeffSiteSettings.defaults.value,

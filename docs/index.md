@@ -96,7 +96,7 @@ val wirePerson: wire.Person = wire.Person(
 
 ...then transforming between the `wire` and `domain` models is just a matter of calling `.to[domain.Person]` on the input:
 
-@:select(underlying-code)
+@:select(underlying-code-1)
 @:choice(visible)
 ```scala mdoc
 wirePerson.to[domain.Person]
@@ -196,7 +196,7 @@ especially the part after `@`:
 
 the thing above is basically a path to the field/subtype under which `ducktape` was not able to create a transformation, these are meant to be copy-pastable for when you're actually trying to fix the error, eg. by setting the `name` field to a constant value:
 
-@:select(underlying-code)
+@:select(underlying-code-2)
 
 @:choice(visible)
 ```scala mdoc

@@ -59,7 +59,7 @@ val wirePerson = wire.Person(
 
 * `Source#to[Dest]` - for any two types `Source` and `Dest`, used to create a direct transformation between `Source` and `Dest`:
 
-@:select(underlying-code)
+@:select(underlying-code-1)
 @:choice(visible)
 ```scala mdoc
 import io.github.arainko.ducktape.*
@@ -78,7 +78,7 @@ Read more about the rules under which the transformations are generated in a cha
 
 * `Source#into[Dest]` -  for any two types `Source` and `Dest`, used to create a 'transformation builder' that allows fixing transformation errors and overriding transformations for selected fields or subtypes.
 
-@:select(underlying-code)
+@:select(underlying-code-2)
 @:choice(visible)
 ```scala mdoc
 import io.github.arainko.ducktape.*
@@ -103,7 +103,7 @@ Read more in the section about [configuring transformations](configuring_transfo
 
 * `Source#via(<method reference>)` - for any type `Source` and a method reference that can be eta-expanded into a function with named arguments (which is subsequently used to expand the method's argument list with the fields of the `Source` type):
 
-@:select(underlying-code)
+@:select(underlying-code-3)
 @:choice(visible)
 ```scala mdoc
 import io.github.arainko.ducktape.*
@@ -122,7 +122,7 @@ To read about how these transformations are generated head on over to the sectio
 
 * `Source.intoVia(<method reference>)` - for any type `Source` and a method reference that can be eta-expanded into a function with named arguments, used to create a 'transformation builder' that allows fixing transformation errors and overriding transformations for selected fields or subtypes.
 
-@:select(underlying-code)
+@:select(underlying-code-4)
 @:choice(visible)
 ```scala mdoc
 import io.github.arainko.ducktape.*

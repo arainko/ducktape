@@ -6,7 +6,7 @@ Let's go over the priority and rules that `ducktape` uses to create a transforma
 
 Custom instances of a `Transfomer` are always prioritized since these also function as an extension mechanism of the library.
 
-@:select(underlying-code)
+@:select(underlying-code-1)
 @:choice(visible)
 ```scala mdoc
 import io.github.arainko.ducktape.*
@@ -28,7 +28,7 @@ Docs.printCode("single value".to[List[String]])
 
 Transforming a type to its supertype is just an upcast.
 
-@:select(underlying-code)
+@:select(underlying-code-2)
 @:choice(visible)
 ```scala mdoc
 // (Int | String) >: Int
@@ -44,7 +44,7 @@ Docs.printCode(1.to[Int | String])
 
 Transforming between options comes down to mapping over it and recursively deriving a transformation for the value inside.
 
-@:select(underlying-code)
+@:select(underlying-code-3)
 @:choice(visible)
 ```scala mdoc
 given Transformer[Int, String] = int => int.toString
@@ -61,7 +61,7 @@ Docs.printCode(Option(1).to[Option[String]])
 
 If a transformation between two types is possible then transforming between the source type and an `Option` of the destination type is just wrapping the transformation result in a `Some`.
 
-@:select(underlying-code)
+@:select(underlying-code-4)
 @:choice(visible)
 ```scala mdoc
 1.to[Option[Int | String]]
@@ -74,7 +74,7 @@ Docs.printCode(1.to[Option[Int | String]])
 
 ### 5. Mapping over and changing the collection type
 
-@:select(underlying-code)
+@:select(underlying-code-5)
 @:choice(visible)
 ```scala mdoc:nest
 //`.to` is already a method on collections
@@ -94,7 +94,7 @@ A source case class can be transformed into the destination case class given tha
 * source has fields whose names cover all of the destination's fields,
 * a transformation for the types corresponding to those fields can be derived.
 
-@:select(underlying-code)
+@:select(underlying-code-6)
 @:choice(visible)
 ```scala mdoc:reset-object
 import io.github.arainko.ducktape.*
@@ -125,7 +125,7 @@ A source coproduct can be transformed into the destination coproduct given that:
 * destination's children have names that match all of the source's children,
 * a transformation between those two corresponding types can be derived.
 
-@:select(underlying-code)
+@:select(underlying-code-7)
 @:choice(visible)
 ```scala mdoc
 sealed trait PaymentMethod
@@ -157,7 +157,7 @@ Docs.printCode((PaymentMethod.Cash: PaymentMethod).to[OtherPaymentMethod])
 
 Transformations between same named singletons come down to just reffering to the destination singleton.
 
-@:select(underlying-code)
+@:select(underlying-code-8)
 @:choice(visible)
 ```scala mdoc
 object example1 {
@@ -180,7 +180,7 @@ Docs.printCode(example1.Singleton.to[example2.Singleton.type])
 
 ### 9. Unwrapping a value class
 
-@:select(underlying-code)
+@:select(underlying-code-9)
 @:choice(visible)
 ```scala mdoc
 case class Wrapper1(value: Int) extends AnyVal
@@ -197,7 +197,7 @@ Docs.printCode(Wrapper1(1).to[Int])
 
 ### 10. Wrapping a value class
 
-@:select(underlying-code)
+@:select(underlying-code-10)
 @:choice(visible)
 ```scala mdoc
 case class Wrapper2(value: Int) extends AnyVal
@@ -218,7 +218,7 @@ Instances of `Transformer.Derived` are automatically derived as a fallback to su
 
 Note that `Transformer[A, B] <: Transformer.Derived[A, B]` so any `Transformer` in scope is eligible to become a `Transformer.Derived`.
 
-@:select(underlying-code)
+@:select(underlying-code-11)
 @:choice(visible)
 ```scala mdoc
 final case class Source[A](field1: Int, field2: String, generic: A)
