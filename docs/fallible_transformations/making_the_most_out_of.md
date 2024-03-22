@@ -61,7 +61,7 @@ val good = UnvalidatedPerson(name = "ValidName", age = 24, socialSecurityNo = "S
 
 Fallible transformations wrapped in some type `F` are derived automatically for case classes given that a `Transformer.Fallible` instance exists for `F` and all of the fields of the source type have a corresponding counterpart in the destination type and each one of them has an instance of either `Transformer.Fallible` or a total `Transformer` in scope.
 
-@:select(underlying-code)
+@:select(underlying-code-1)
 @:choice(visible)
 ```scala mdoc
 given Mode.Accumulating.Either[String, List] with {}
@@ -79,7 +79,7 @@ Docs.printCode(bad.fallibleTo[Person])
 
 Same goes for instances that do fail fast transformations (you need `Mode.FailFast[F]` in scope in this case)
 
-@:select(underlying-code)
+@:select(underlying-code-2)
 @:choice(visible)
 ```scala mdoc:nest
 given Mode.FailFast.Either[String] with {}
