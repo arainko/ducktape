@@ -57,8 +57,6 @@ lazy val docs =
     .enablePlugins(NoPublishPlugin, MdocPlugin, TypelevelSitePlugin)
     .disablePlugins(MimaPlugin)
     .settings(
-      // laikaTheme := DeffSiteSettings.defaults.value.build,
-      // tlSiteIsTypelevelProject := Some(TypelevelProject.Affiliate),
       laikaConfig := LaikaConfig.defaults
         .withConfigValue(
           Selections(
