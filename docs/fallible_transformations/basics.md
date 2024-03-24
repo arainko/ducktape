@@ -51,28 +51,28 @@ object newtypes:
   opaque type NonEmptyString <: String = String
 
   object NonEmptyString:
-    def create(value: String): Either[String, NonEmptyString] = 
+    def create(value: String): Either[String, NonEmptyString] =
       Either.cond(!value.isBlank, value, s"not a non-empty string")
 
 // expand the 'create' method into an instance of Transformer.Fallible
 // this is a key component in making those transformations automatic
-    given failFast: Transformer.Fallible[[a] =>> Either[String, a], String, NonEmptyString] = 
+    given failFast: Transformer.Fallible[[a] =>> Either[String, a], String, NonEmptyString] =
       create
 
 // also declare the same fallible transformer but make it ready for error accumulation
-    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], String, NonEmptyString] = 
+    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], String, NonEmptyString] =
       create(_).left.map(_ :: Nil)
 
   opaque type Positive <: Long = Long
-  
+
   object Positive:
-    def create(value: Long): Either[String, Positive] = 
+    def create(value: Long): Either[String, Positive] =
       Either.cond(value > 0, value, "not a positive long")
 
-    given failFast: Transformer.Fallible[[a] =>> Either[String, a], Long, Positive] = 
+    given failFast: Transformer.Fallible[[a] =>> Either[String, a], Long, Positive] =
       create
 
-    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], Long, Positive] = 
+    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], Long, Positive] =
       create(_).left.map(_ :: Nil)
 ```
 @:@
@@ -142,11 +142,14 @@ import io.github.arainko.ducktape.docs.*
 
 Docs.printCode(
   wirePerson
-  .into[domain.Person]
-  .fallible
-  .transform(
-    Field.fallibleConst(_.paymentMethods.element.at[domain.PaymentMethod.PayPal].email, newtypes.NonEmptyString.create("overridden@email.com"))
-  )
+    .into[domain.Person]
+    .fallible
+    .transform(
+      Field.fallibleConst(
+        _.paymentMethods.element.at[domain.PaymentMethod.PayPal].email,
+        newtypes.NonEmptyString.create("overridden@email.com")
+      )
+    )
 )
 ``` 
 @:@
@@ -183,7 +186,7 @@ wirePerson
   .transform(
     Field.fallibleConst(
       _.paymentMethods.element.at[domain.PaymentMethod.PayPal].email,
-       newtypes.NonEmptyString.create("overridden@email.com")
+      newtypes.NonEmptyString.create("overridden@email.com")
     )
   )
 ```
@@ -198,8 +201,8 @@ Docs.printCode(
       Field.fallibleConst(
         _.paymentMethods.element.at[domain.PaymentMethod.PayPal].email,
         newtypes.NonEmptyString.create("overridden@email.com")
-        )
       )
+    )
 )
 ``` 
 @:@
