@@ -48,7 +48,7 @@ lazy val ducktape =
     .settings(
       scalacOptions ++= List("-deprecation", "-Wunused:all"),
       Test / scalacOptions --= List("-deprecation"),
-      libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0-M10" % Test
+      libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0-M11" % Test
     )
 
 lazy val docs =
