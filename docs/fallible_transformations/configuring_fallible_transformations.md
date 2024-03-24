@@ -39,31 +39,31 @@ object newtypes:
   opaque type NonEmptyString <: String = String
 
   object NonEmptyString:
-    def make(value: String): Either[String, NonEmptyString] = 
+    def make(value: String): Either[String, NonEmptyString] =
       Either.cond(!value.isBlank, value, s"not a non-empty string")
 
-    def makeAccumulating(value: String): Either[List[String], NonEmptyString] = 
+    def makeAccumulating(value: String): Either[List[String], NonEmptyString] =
       make(value).left.map(_ :: Nil)
 
-    given failFast: Transformer.Fallible[[a] =>> Either[String, a], String, NonEmptyString] = 
+    given failFast: Transformer.Fallible[[a] =>> Either[String, a], String, NonEmptyString] =
       make
 
-    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], String, NonEmptyString] = 
+    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], String, NonEmptyString] =
       makeAccumulating
 
   opaque type Positive <: Long = Long
-  
+
   object Positive:
-    def make(value: Long): Either[String, Positive] = 
+    def make(value: Long): Either[String, Positive] =
       Either.cond(value > 0, value, "not a positive long")
 
-    def makeAccumulating(value: Long): Either[List[String], Positive] = 
+    def makeAccumulating(value: Long): Either[List[String], Positive] =
       make(value).left.map(_ :: Nil)
 
-    given failFast: Transformer.Fallible[[a] =>> Either[String, a], Long, Positive] = 
+    given failFast: Transformer.Fallible[[a] =>> Either[String, a], Long, Positive] =
       make
 
-    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], Long, Positive] = 
+    given accumulating: Transformer.Fallible[[a] =>> Either[List[String], a], Long, Positive] =
       makeAccumulating
 ```
 @:@

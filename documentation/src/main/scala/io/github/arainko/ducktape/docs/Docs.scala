@@ -10,7 +10,6 @@ import java.util.stream.Collectors
 import scala.quoted.*
 import scala.util.chaining.*
 
-
 object Docs {
   val scalafmt = Scalafmt.create(this.getClass.getClassLoader())
   val config = Path.of(".scalafmt.conf")
