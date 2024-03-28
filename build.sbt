@@ -15,7 +15,7 @@ ThisBuild / startYear := Some(2023)
 ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
 ThisBuild / tlSonatypeUseLegacyHost := false
-ThisBuild / scalaVersion := "3.3.3"
+ThisBuild / scalaVersion := "3.4.1"
 ThisBuild / tlSitePublishBranch := Some("series/0.2.x")
 
 ThisBuild / semanticdbEnabled := true
