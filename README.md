@@ -8,15 +8,15 @@ If this project interests you, please drop a 🌟 - these things are worthless b
 
 ## Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.0-RC1"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.0"
 
 // or if you're using Scala.js or Scala Native
-libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.0-RC1"
+libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.0"
 ```
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
 
-You're currently browsing the documentation for `ducktape 0.2.x`, if you're looking for the `0.1.x` docs go here: https://github.com/arainko/ducktape/tree/series/0.1.x#-ducktape
+You're currently browsing the documentation for `ducktape 0.2.x`, if you're looking for the `0.1.x` docs go here: https://github.com/arainko/ducktape/tree/series/0.1.x
 
 ## Documentation
 
