@@ -51,7 +51,8 @@ private[ducktape] object Plan {
   case class Configured[+F <: Fallible] private (
     source: Structure,
     dest: Structure,
-    config: Configuration[F]
+    config: Configuration[F],
+    span: Span
   ) extends Plan[Nothing, F]
 
   case class BetweenProductFunction[+E <: Plan.Error, +F <: Fallible](
@@ -124,12 +125,12 @@ private[ducktape] object Plan {
   }
 
   object Configured {
-    def from[F <: Fallible](plan: Plan[Plan.Error, F], conf: Configuration[F], side: Side)(using Quotes): Plan.Configured[F] =
+    def from[F <: Fallible](plan: Plan[Plan.Error, F], conf: Configuration[F], instruction: Configuration.Instruction[F])(using Quotes): Plan.Configured[F] =
       (plan.source.tpe, plan.dest.tpe, conf.tpe) match {
         case ('[src], '[dest], '[confTpe]) =>
-          val source = if side.isDest then Structure.Lazy.of[confTpe](plan.source.path) else plan.source
-          val dest = if side.isSource then Structure.Lazy.of[confTpe](plan.dest.path) else plan.dest
-          Plan.Configured(source, dest, conf)
+          val source = if instruction.side.isDest then Structure.Lazy.of[confTpe](plan.source.path) else plan.source
+          val dest = if instruction.side.isSource then Structure.Lazy.of[confTpe](plan.dest.path) else plan.dest
+          Plan.Configured(source, dest, conf, instruction.span)
       }
   }
 
@@ -138,6 +139,7 @@ private[ducktape] object Plan {
   final case class Reconfigured[+F <: Fallible](
     errors: List[Plan.Error],
     successes: List[(Path, Side)],
+    warnings: List[Warning],
     result: Plan[Plan.Error, F]
   )
 

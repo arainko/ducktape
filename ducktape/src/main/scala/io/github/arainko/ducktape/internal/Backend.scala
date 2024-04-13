@@ -17,6 +17,10 @@ private[ducktape] object Backend {
     Logger.info("Config", configs)
     Logger.info("Reconfigured plan", reconfiguredPlan)
 
+    reconfiguredPlan.warnings.foreach { warning =>
+      report.warning(warning.message, warning.span.toPosition)
+    }
+
     reconfiguredPlan.result.refine match {
       case Left(errors) =>
         val ogErrors =

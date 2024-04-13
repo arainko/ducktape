@@ -15,7 +15,7 @@ private[ducktape] object PlanConfigurer {
     def configureSingle(
       plan: Plan[Plan.Error, F],
       config: Configuration.Instruction[F]
-    )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)]): Plan[Plan.Error, F] = {
+    )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[Warning]): Plan[Plan.Error, F] = {
 
       def recurse(
         current: Plan[Plan.Error, F],
@@ -89,19 +89,20 @@ private[ducktape] object PlanConfigurer {
       else recurse(plan, config.path.segments.toList, None)
     }
 
-    val (errors, (successes, reconfiguredPlan)) =
+    val (errors, successes, warnings, reconfiguredPlan) =
       Accumulator.use[Plan.Error]:
         Accumulator.use[(Path, Side)]:
-          configs.foldLeft(plan)(configureSingle)
+          Accumulator.use[Warning]:
+            configs.foldLeft(plan)(configureSingle) *: EmptyTuple
 
-    Plan.Reconfigured(errors, successes, reconfiguredPlan)
+    Plan.Reconfigured(errors, successes, warnings, reconfiguredPlan)
   }
 
   private def configurePlan[F <: Fallible](
     config: Configuration.Instruction[F],
     current: Plan[Error, F],
     parent: Plan[Plan.Error, F] | None.type
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)]) = {
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[Warning]) = {
     config match {
       case cfg: (Configuration.Instruction.Static[F] | Configuration.Instruction.Dynamic[F]) =>
         staticOrDynamic(cfg, current, parent)
@@ -135,7 +136,7 @@ private[ducktape] object PlanConfigurer {
     instruction: Configuration.Instruction.Static[F] | Configuration.Instruction.Dynamic[F],
     current: Plan[Plan.Error, F],
     parent: Plan[Plan.Error, F] | None.type
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)]) = {
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[Warning]) = {
     instruction match {
       case static: Configuration.Instruction.Static[F] =>
         current.configureIfValid(static, static.config)
@@ -156,7 +157,7 @@ private[ducktape] object PlanConfigurer {
     plan: Plan[Plan.Error, F],
     modifier: Configuration.Instruction.Regional,
     parent: Plan[Plan.Error, F] | None.type
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)]): Plan[Plan.Error, F] =
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[Warning]): Plan[Plan.Error, F] =
     plan match {
       case plan: Upcast => plan
 
@@ -201,7 +202,7 @@ private[ducktape] object PlanConfigurer {
   private def bulk[F <: Fallible](
     current: Plan[Plan.Error, F],
     instruction: Configuration.Instruction.Bulk
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)]): Plan[Error, F] = {
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[Warning]): Plan[Error, F] = {
 
     enum IsAnythingModified {
       case Yes, No
@@ -250,7 +251,12 @@ private[ducktape] object PlanConfigurer {
     private def configureIfValid(
       instruction: Configuration.Instruction[F],
       config: Configuration[F]
-    )(using quotes: Quotes, errors: Accumulator[Plan.Error], successes: Accumulator[(Path, Side)]) = {
+    )(using
+      quotes: Quotes,
+      errors: Accumulator[Plan.Error],
+      successes: Accumulator[(Path, Side)],
+      warnings: Accumulator[Warning]
+    ) = {
       def isReplaceableBy(update: Configuration[F])(using Quotes) =
         update.tpe.repr <:< currentPlan.destPath.currentTpe.repr
 
@@ -259,7 +265,8 @@ private[ducktape] object PlanConfigurer {
           if instruction.side == Side.Dest then currentPlan.destPath -> instruction.side
           else currentPlan.sourcePath -> instruction.side
         }
-        Plan.Configured.from(currentPlan, config, instruction.side)
+        Accumulator.appendAll(configuredCollector.run(currentPlan, Nil).map(plan => Warning(plan.span, "Config overriden")))
+        Plan.Configured.from(currentPlan, config, instruction)
       else
         Accumulator.append {
           Plan.Error.from(
@@ -275,5 +282,17 @@ private[ducktape] object PlanConfigurer {
         }
     }
   }
+
+  private val configuredCollector =
+    new PlanTraverser[List[Plan.Configured[Fallible]]] {
+      protected def foldOver(
+        plan: Plan[Error, Fallible],
+        accumulator: List[Plan.Configured[Fallible]]
+      ): List[Plan.Configured[Fallible]] =
+        plan match {
+          case configured: Plan.Configured[Fallible] => configured :: accumulator
+          case other                                 => accumulator
+        }
+    }
 
 }
