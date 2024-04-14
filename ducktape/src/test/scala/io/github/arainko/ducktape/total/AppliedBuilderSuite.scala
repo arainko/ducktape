@@ -152,9 +152,9 @@ class AppliedBuilderSuite extends DucktapeSuite {
   }: @nowarn("msg=unused")
 
   test("The last applied field config is the picked one") {
-    final case class FieldSource(additionalArg: String)
+    final case class FieldSource(additionalArg: String, str: String)
 
-    val fieldSource = FieldSource("str-sourced")
+    val fieldSource = FieldSource("str-sourced", "str2")
 
     val expected = TestClassWithAdditionalString(1, "str", "str-computed")
 
@@ -164,13 +164,23 @@ class AppliedBuilderSuite extends DucktapeSuite {
         .into[TestClassWithAdditionalString]
         .transform(
           Field.const(_.additionalArg, "FIRST"),
+
+
           Field.renamed(_.additionalArg, _.str),
+
           Field.allMatching(fieldSource),
+          Field.allMatching(fieldSource),
+          
           Field.computed(_.additionalArg, _.str + "-computed")
         )
 
+
     assertEquals(actual, expected)
   }
+
+  
+
+
 
   test("When configs are applied to the same field repeateadly a warning is emitted".ignore) {
     assertFailsToCompileWith {

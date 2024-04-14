@@ -261,11 +261,16 @@ private[ducktape] object PlanConfigurer {
         update.tpe.repr <:< currentPlan.destPath.currentTpe.repr
 
       if isReplaceableBy(config) then
-        Accumulator.append {
-          if instruction.side == Side.Dest then currentPlan.destPath -> instruction.side
-          else currentPlan.sourcePath -> instruction.side
+        val (path, _) =
+          Accumulator.append {
+            if instruction.side == Side.Dest then currentPlan.destPath -> instruction.side
+            else currentPlan.sourcePath -> instruction.side
+          }
+        Accumulator.appendAll {
+          ConfiguredCollector
+            .run(currentPlan, Nil)
+            .map(plan => Warning(plan.span, instruction.span, path))
         }
-        Accumulator.appendAll(configuredCollector.run(currentPlan, Nil).map(plan => Warning(plan.span, "Config overriden")))
         Plan.Configured.from(currentPlan, config, instruction)
       else
         Accumulator.append {
@@ -283,16 +288,15 @@ private[ducktape] object PlanConfigurer {
     }
   }
 
-  private val configuredCollector =
-    new PlanTraverser[List[Plan.Configured[Fallible]]] {
-      protected def foldOver(
-        plan: Plan[Error, Fallible],
-        accumulator: List[Plan.Configured[Fallible]]
-      ): List[Plan.Configured[Fallible]] =
-        plan match {
-          case configured: Plan.Configured[Fallible] => configured :: accumulator
-          case other                                 => accumulator
-        }
-    }
+  private object ConfiguredCollector extends PlanTraverser[List[Plan.Configured[Fallible]]] {
+    protected def foldOver(
+      plan: Plan[Error, Fallible],
+      accumulator: List[Plan.Configured[Fallible]]
+    ): List[Plan.Configured[Fallible]] =
+      plan match {
+        case configured: Plan.Configured[Fallible] => configured :: accumulator
+        case other                                 => accumulator
+      }
+  }
 
 }
