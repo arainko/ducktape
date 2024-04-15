@@ -177,6 +177,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
 
     assertEquals(actual, expected)
   }
+  
 
   
 

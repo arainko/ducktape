@@ -28,7 +28,7 @@ private[ducktape] object FallibilityRefiner {
             case Summoner.Derived.TotalTransformer(value)    => ()
             case Summoner.Derived.FallibleTransformer(value) => boundary.break(None)
 
-        case Configured(source, dest, config) =>
+        case Configured(source, dest, config, _) =>
           config match
             case Configuration.Const(value, tpe)                    => ()
             case Configuration.CaseComputed(tpe, function)          => ()

@@ -20,8 +20,22 @@ private[ducktape] object Backend {
     reconfiguredPlan.warnings
       .groupBy(_.span)
       .foreach { (span, warnings) =>
-        val rendered = warnings.map(_.render).mkString(System.lineSeparator)
-        report.warning(rendered, span.toPosition)
+        val messages =
+          warnings
+            .groupBy(_.overriderSpan)
+            .map { (overriderSpan, warnings) =>
+              val pos = overriderSpan.toPosition
+              val codeAndLocation = s"${pos.sourceCode.mkString} @ ${pos.sourceFile.name}:${pos.endLine + 1}:${pos.endColumn + 1}"
+
+              if warnings.size > 1 then s"""
+              |Configs for:
+              |${warnings.map(w => "  * " + w.path.render).mkString(System.lineSeparator)}
+              |overriden by $codeAndLocation
+              |""".stripMargin
+              else warnings.map(_.render).mkString
+            }
+
+        messages.foreach(report.warning(_, span.toPosition))
       }
 
     reconfiguredPlan.result.refine match {
