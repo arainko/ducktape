@@ -8,6 +8,6 @@ private[ducktape] final case class Warning(span: Span, overriderSpan: Span, path
     val pos = overriderSpan.toPosition
     val codeAndLocation = s"${pos.sourceCode.mkString} @ ${pos.sourceFile.name}:${pos.endLine + 1}:${pos.endColumn + 1}"
 
-    s"Config for ${path.render} overriden by $codeAndLocation"
+    s"Config for ${path.render} is being overriden by $codeAndLocation"
   }
 }

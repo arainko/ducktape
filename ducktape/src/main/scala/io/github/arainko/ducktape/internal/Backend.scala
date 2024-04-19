@@ -27,11 +27,9 @@ private[ducktape] object Backend {
               val pos = overriderSpan.toPosition
               val codeAndLocation = s"${pos.sourceCode.mkString} @ ${pos.sourceFile.name}:${pos.endLine + 1}:${pos.endColumn + 1}"
 
-              if warnings.size > 1 then s"""
-              |Configs for:
+              if warnings.size > 1 then s"""Configs for:
               |${warnings.map(w => "  * " + w.path.render).mkString(System.lineSeparator)}
-              |overriden by $codeAndLocation
-              |""".stripMargin
+              |are being overriden by $codeAndLocation""".stripMargin
               else warnings.map(_.render).mkString
             }
 
