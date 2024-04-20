@@ -42,20 +42,20 @@ private[ducktape] object FalliblePlanInterpreter {
               case Configuration.FallibleConst(value, tpe) =>
                 tpe match {
                   case '[dest] =>
-                    Value.Wrapped('{ ${ F.value }.embedContext(${ Expr(dest.path.render) }, ${ value.asExprOf[F[dest]] }) })
+                    Value.Wrapped(F.embedContext(dest.path, value.asExprOf[F[dest]]))
                 }
               case Configuration.FallibleFieldComputed(tpe, function) =>
                 tpe match {
                   case '[tpe] =>
                     Value.Wrapped(
-                      '{ ${ F.value }.embedContext(${ Expr(dest.path.render) }, ${ '{$function($toplevelValue)}.asExprOf[F[tpe]] }) }
+                      F.embedContext(dest.path, '{ $function($toplevelValue) }.asExprOf[F[tpe]])
                     )
                 }
 
               case Configuration.FallibleCaseComputed(tpe, function) =>
                 tpe match {
                   case '[tpe] =>
-                    Value.Wrapped('{ $function($value) }.asExprOf[F[tpe]])
+                    Value.Wrapped(F.embedContext(dest.path, '{ $function($value) }.asExprOf[F[tpe]]))
                 }
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
@@ -152,7 +152,7 @@ private[ducktape] object FalliblePlanInterpreter {
                     val transformer = t.asExprOf[Transformer.Fallible[F, src, dest]]
 
                     Value.Wrapped(
-                      '{ ${ F.value }.embedContext(${ Expr(dest.path.render) },  $transformer.transform($source)) }
+                      F.embedContext(dest.path, '{ $transformer.transform($source) })
                     )
             }
 
@@ -167,8 +167,8 @@ private[ducktape] object FalliblePlanInterpreter {
                   case Summoner.Derived.FallibleTransformer(t) =>
                     val transformer = t.asExprOf[Transformer.Fallible.Derived[F, src, dest]]
                     Value.Wrapped(
-                      '{ ${ F.value }.embedContext(${ Expr(dest.path.render) },  $transformer.transform($source)) }
-                      )
+                      F.embedContext(dest.path, '{ $transformer.transform($source) })
+                    )
             }
         }
   }
@@ -214,7 +214,7 @@ private[ducktape] object FalliblePlanInterpreter {
     plan.dest.tpe match {
       case '[dest] =>
         F match {
-          case TransformationMode.Accumulating(f) =>
+          case TransformationMode.Accumulating(f, _) =>
             NonEmptyList
               .fromList(wrapped.toList)
               .map { wrappeds =>
@@ -226,7 +226,7 @@ private[ducktape] object FalliblePlanInterpreter {
                 val fields = unwrapped.map(field => field.name -> field.value).toMap
                 Value.Unwrapped(construct(fields))
               }
-          case TransformationMode.FailFast(f) =>
+          case TransformationMode.FailFast(f, _) =>
             Value.Wrapped(
               ProductBinder
                 .nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct)

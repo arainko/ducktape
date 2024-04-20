@@ -18,8 +18,6 @@ sealed trait Mode[F[+x]] {
     collection: AColl,
     transformation: A => F[B]
   )(using factory: Factory[B, BColl]): F[BColl]
-
-  def embedContext[A](path: String, fa: F[A]): F[A] = fa
 }
 
 object Mode {
