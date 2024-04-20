@@ -10,12 +10,16 @@ private given Transformer.Mode.Either[String, List] with {}
 """
 )
 sealed trait Mode[F[+x]] {
+  final type Self[+x] = F[x]
+
   def pure[A](value: A): F[A]
   def map[A, B](fa: F[A], f: A => B): F[B]
   def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
     collection: AColl,
     transformation: A => F[B]
   )(using factory: Factory[B, BColl]): F[BColl]
+
+  def embedContext[A](path: String, fa: F[A]): F[A] = fa
 }
 
 object Mode {
@@ -147,5 +151,15 @@ object Mode {
     val option: Mode.FailFast.Option = Mode.FailFast.Option()
 
     def either[E]: Mode.FailFast.Either[E] = Mode.FailFast.Either[E]
+  }
+
+  type Path = String
+
+  object Capability {
+    trait ContextAware {
+      type Self[+x]
+
+      def embedContext[A](path: Path, self: Self[A]): Self[A]
+    }
   }
 }

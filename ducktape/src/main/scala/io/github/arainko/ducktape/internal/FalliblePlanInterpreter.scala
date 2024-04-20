@@ -29,7 +29,7 @@ private[ducktape] object FalliblePlanInterpreter {
         plan match {
           case Plan.Upcast(_, _) => Value.Unwrapped(value)
 
-          case Plan.Configured(_, _, config) =>
+          case Plan.Configured(_, dest, config) =>
             config match
               case cfg @ Configuration.Const(_, _) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
@@ -42,12 +42,14 @@ private[ducktape] object FalliblePlanInterpreter {
               case Configuration.FallibleConst(value, tpe) =>
                 tpe match {
                   case '[dest] =>
-                    Value.Wrapped(value.asExprOf[F[dest]])
+                    Value.Wrapped('{ ${ F.value }.embedContext(${ Expr(dest.path.render) }, ${ value.asExprOf[F[dest]] }) })
                 }
               case Configuration.FallibleFieldComputed(tpe, function) =>
                 tpe match {
                   case '[tpe] =>
-                    Value.Wrapped('{ $function($toplevelValue) }.asExprOf[F[tpe]])
+                    Value.Wrapped(
+                      '{ ${ F.value }.embedContext(${ Expr(dest.path.render) }, ${ '{$function($toplevelValue)}.asExprOf[F[tpe]] }) }
+                    )
                 }
 
               case Configuration.FallibleCaseComputed(tpe, function) =>
@@ -148,7 +150,10 @@ private[ducktape] object FalliblePlanInterpreter {
                     Value.Unwrapped('{ $transformer.transform($source) })
                   case FallibleTransformer(t) =>
                     val transformer = t.asExprOf[Transformer.Fallible[F, src, dest]]
-                    Value.Wrapped('{ $transformer.transform($source) })
+
+                    Value.Wrapped(
+                      '{ ${ F.value }.embedContext(${ Expr(dest.path.render) },  $transformer.transform($source)) }
+                    )
             }
 
           case Plan.Derived(source, dest, transformer) =>
@@ -161,7 +166,9 @@ private[ducktape] object FalliblePlanInterpreter {
                     Value.Unwrapped('{ $transformer.transform($source) })
                   case Summoner.Derived.FallibleTransformer(t) =>
                     val transformer = t.asExprOf[Transformer.Fallible.Derived[F, src, dest]]
-                    Value.Wrapped('{ $transformer.transform($source) })
+                    Value.Wrapped(
+                      '{ ${ F.value }.embedContext(${ Expr(dest.path.render) },  $transformer.transform($source)) }
+                      )
             }
         }
   }

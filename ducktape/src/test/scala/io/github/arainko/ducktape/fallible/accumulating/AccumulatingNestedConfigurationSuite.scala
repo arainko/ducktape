@@ -7,9 +7,13 @@ import io.github.arainko.ducktape.internal.*
 import scala.annotation.nowarn
 
 class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
-  private given F: Mode.Accumulating.Either[String, List] with {}
+  private given F: Mode.Accumulating.Either[String, List] with {
+    override def embedContext[A](path: String, fa: Either[List[String], A]): Either[List[String], A] = 
+      fa.left.map(_.map(err => s"$err @ $path"))
+  }
 
-  def fallibleComputation(value: Int) = Positive.accTransformer.transform(value)
+  def fallibleComputation(value: Int): Either[List[String], Positive] = 
+    Left(List("wow"))
 
   test("nested product fields can be configured") {
     final case class SourceToplevel1(level1: SourceLevel1)
@@ -24,10 +28,11 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
     val expected = DestToplevel1(DestLevel1(DestLevel2(Positive(1), Positive(2137))))
 
     assertEachEquals(
-      source
-        .into[DestToplevel1]
-        .fallible
-        .transform(Field.fallibleConst(_.level1.level2.extra, fallibleComputation(2137))),
+      internal.CodePrinter.code:
+        source
+          .into[DestToplevel1]
+          .fallible
+          .transform(Field.fallibleConst(_.level1.level2.extra, fallibleComputation(2137))),
       source
         .intoVia(DestToplevel1.apply)
         .fallible
