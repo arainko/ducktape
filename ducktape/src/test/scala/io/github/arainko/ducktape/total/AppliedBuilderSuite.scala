@@ -68,6 +68,22 @@ class AppliedBuilderSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
+  test("Field.renamed properly uses a differently-named field for that argument") {
+    val expected = TestClassWithFieldRenamed("str", 1)
+
+    given Transformer[TestClass, TestClassWithFieldRenamed] =
+      _
+        .into[TestClassWithFieldRenamed]
+        .transform(Field.renamed(_.strRenamed, _.str))
+
+    val actual =
+      testClass
+        .into[TestClassWithFieldRenamed]
+        .transform(Field.renamed(_.strRenamed, _.str))
+
+    assertEquals(actual, expected)
+  }
+
   test("Field.renamed fails when the types of fields do not match") {
     assertFailsToCompileWith {
       """
@@ -357,6 +373,7 @@ object AppliedBuilderSuite {
   final case class TestClass(str: String, int: Int)
   final case class TestClassWithAdditionalList(int: Int, str: String, additionalArg: List[String])
   final case class TestClassWithAdditionalString(int: Int, str: String, additionalArg: String)
+  final case class TestClassWithFieldRenamed(strRenamed: String, int: Int)
 
   enum MoreCases {
     case Case1
