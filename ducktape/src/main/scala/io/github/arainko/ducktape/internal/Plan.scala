@@ -125,7 +125,9 @@ private[ducktape] object Plan {
   }
 
   object Configured {
-    def from[F <: Fallible](plan: Plan[Plan.Error, F], conf: Configuration[F], instruction: Configuration.Instruction[F])(using Quotes): Plan.Configured[F] =
+    def from[F <: Fallible](plan: Plan[Plan.Error, F], conf: Configuration[F], instruction: Configuration.Instruction[F])(using
+      Quotes
+    ): Plan.Configured[F] =
       (plan.source.tpe, plan.dest.tpe, conf.tpe) match {
         case ('[src], '[dest], '[confTpe]) =>
           val source = if instruction.side.isDest then Structure.Lazy.of[confTpe](plan.source.path) else plan.source
@@ -139,7 +141,7 @@ private[ducktape] object Plan {
   final case class Reconfigured[+F <: Fallible](
     errors: List[Plan.Error],
     successes: List[(Path, Side)],
-    warnings: List[Warning],
+    warnings: List[ConfigWarning],
     result: Plan[Plan.Error, F]
   )
 

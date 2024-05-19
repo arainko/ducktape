@@ -2,7 +2,6 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.internal.Configuration.Instruction
 
-import scala.collection.mutable.Builder
 import scala.quoted.*
 
 private[ducktape] object PlanConfigurer {
@@ -15,7 +14,7 @@ private[ducktape] object PlanConfigurer {
     def configureSingle(
       plan: Plan[Plan.Error, F],
       config: Configuration.Instruction[F]
-    )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[Warning]): Plan[Plan.Error, F] = {
+    )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning]): Plan[Plan.Error, F] = {
 
       def recurse(
         current: Plan[Plan.Error, F],
@@ -92,7 +91,7 @@ private[ducktape] object PlanConfigurer {
     val (errors, successes, warnings, reconfiguredPlan) =
       Accumulator.use[Plan.Error]:
         Accumulator.use[(Path, Side)]:
-          Accumulator.use[Warning]:
+          Accumulator.use[ConfigWarning]:
             configs.foldLeft(plan)(configureSingle) *: EmptyTuple
 
     Plan.Reconfigured(errors, successes, warnings, reconfiguredPlan)
@@ -102,7 +101,7 @@ private[ducktape] object PlanConfigurer {
     config: Configuration.Instruction[F],
     current: Plan[Error, F],
     parent: Plan[Plan.Error, F] | None.type
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[Warning]) = {
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning]) = {
     config match {
       case cfg: (Configuration.Instruction.Static[F] | Configuration.Instruction.Dynamic[F]) =>
         staticOrDynamic(cfg, current, parent)
@@ -136,7 +135,7 @@ private[ducktape] object PlanConfigurer {
     instruction: Configuration.Instruction.Static[F] | Configuration.Instruction.Dynamic[F],
     current: Plan[Plan.Error, F],
     parent: Plan[Plan.Error, F] | None.type
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[Warning]) = {
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning]) = {
     instruction match {
       case static: Configuration.Instruction.Static[F] =>
         current.configureIfValid(static, static.config)
@@ -157,7 +156,7 @@ private[ducktape] object PlanConfigurer {
     plan: Plan[Plan.Error, F],
     modifier: Configuration.Instruction.Regional,
     parent: Plan[Plan.Error, F] | None.type
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[Warning]): Plan[Plan.Error, F] =
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning]): Plan[Plan.Error, F] =
     plan match {
       case plan: Upcast => plan
 
@@ -202,7 +201,7 @@ private[ducktape] object PlanConfigurer {
   private def bulk[F <: Fallible](
     current: Plan[Plan.Error, F],
     instruction: Configuration.Instruction.Bulk
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[Warning]): Plan[Error, F] = {
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning]): Plan[Error, F] = {
 
     enum IsAnythingModified {
       case Yes, No
@@ -255,7 +254,7 @@ private[ducktape] object PlanConfigurer {
       quotes: Quotes,
       errors: Accumulator[Plan.Error],
       successes: Accumulator[(Path, Side)],
-      warnings: Accumulator[Warning]
+      warnings: Accumulator[ConfigWarning]
     ) = {
       def isReplaceableBy(update: Configuration[F])(using Quotes) =
         update.tpe.repr <:< currentPlan.destPath.currentTpe.repr
@@ -269,7 +268,7 @@ private[ducktape] object PlanConfigurer {
         Accumulator.appendAll {
           ConfiguredCollector
             .run(currentPlan, Nil)
-            .map(plan => Warning(plan.span, instruction.span, path))
+            .map(plan => ConfigWarning(plan.span, instruction.span, path))
         }
         Plan.Configured.from(currentPlan, config, instruction)
       else

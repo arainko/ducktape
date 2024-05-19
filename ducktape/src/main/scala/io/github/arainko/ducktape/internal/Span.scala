@@ -7,6 +7,8 @@ private[ducktape] final case class Span(start: Int, end: Int) derives Debug {
     import quotes.reflect.*
     Position(SourceFile.current, start, end)
   }
+
+  def withEnd(f: Int => Int): Span = copy(end = f(end))
 }
 
 private[ducktape] object Span {
