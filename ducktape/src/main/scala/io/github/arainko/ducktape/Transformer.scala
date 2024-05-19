@@ -46,9 +46,14 @@ object Transformer {
       Derived.FromFunction(source => FallibleTransformations.between[F, Source, Dest](source, F, "definition"))
   }
 
+  object Debug {
+    inline def showCode[A](inline value: A): A = internal.CodePrinter.code(value)
+  }
+
   @deprecated(message = "Use io.github.arainko.ducktape.Mode instead", since = "ducktape 0.2.0-M3")
   type Mode[F[+x]] = io.github.arainko.ducktape.Mode[F]
 
   @deprecated(message = "Use io.github.arainko.ducktape.Mode instead", since = "ducktape 0.2.0-M3")
   val Mode = io.github.arainko.ducktape.Mode
+
 }

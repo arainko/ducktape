@@ -94,4 +94,14 @@ private[ducktape] object ErrorMessage {
       "Case config's path should always end with an `.at` segment"
     val side: Side = Side.Source
   }
+
+  case object LoopingTransformerDetected extends ErrorMessage {
+    val side: Side = Side.Dest
+
+    def render(using Quotes): String =
+      "Detected usage of `_.to[B]`, `_.fallibleTo[B]`, `_.into[B].transform()` or `_.into[B].fallible.transform()` in a given Transformer definition which results in a self-looping Transformer. Please use `Transformer.define[A, B]` or `Transformer.define[A, B].fallible` (for some types A and B) to create Transformer definitions"
+
+    val span: Span | None.type = None
+  }
+
 }
