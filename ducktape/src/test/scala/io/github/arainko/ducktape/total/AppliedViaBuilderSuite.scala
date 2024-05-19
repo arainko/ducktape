@@ -47,11 +47,11 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
-  test("When an Arg is configured multiple times a warning is emitted".ignore) {
+  test("When an Arg is configured multiple times a warning is emitted") {
     @nowarn("msg=unused local definition")
     def method(str: String, int: Int, additionalArg: String) = TestClassWithAdditionalString(int, str, additionalArg)
 
-    assertFailsToCompileWith {
+    assertFailsToCompileContains {
       """
       testClass
         .intoVia(method)
@@ -60,7 +60,7 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
           Arg.renamed(_.additionalArg, _.str)
         )
       """
-    }("Arg 'additionalArg' is configured multiple times")
+    }("Config for TestClassWithAdditionalString.additionalArg is being overriden by")
   }
 
   test("Builder reports a missing argument") {

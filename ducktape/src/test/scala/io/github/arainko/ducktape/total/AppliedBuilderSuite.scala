@@ -152,13 +152,13 @@ class AppliedBuilderSuite extends DucktapeSuite {
   }: @nowarn("msg=unused")
 
   test("The last applied field config is the picked one") {
-    final case class FieldSource(additionalArg: String)
+    final case class FieldSource(additionalArg: String, str: String)
 
-    val fieldSource = FieldSource("str-sourced")
+    val fieldSource = FieldSource("str-sourced", "str2")
 
-    val expected = TestClassWithAdditionalString(1, "str", "str-computed")
+    val expected = TestClassWithAdditionalString(1, "str2", "str-computed")
 
-    // @nowarn("msg=Field 'additionalArg' is configured multiple times")
+    @nowarn("msg=Config[s]? for")
     val actual =
       testClass
         .into[TestClassWithAdditionalString]
@@ -168,12 +168,34 @@ class AppliedBuilderSuite extends DucktapeSuite {
           Field.allMatching(fieldSource),
           Field.computed(_.additionalArg, _.str + "-computed")
         )
-
     assertEquals(actual, expected)
   }
 
-  test("When configs are applied to the same field repeateadly a warning is emitted".ignore) {
-    assertFailsToCompileWith {
+  test("overriding multiple fields multiple times is reported appropriately") {
+    final case class FieldSource(additionalArg: String, str: String)
+
+    val fieldSource = FieldSource("str-sourced", "str2")
+
+    val expected = TestClassWithAdditionalString(1, "str2", "str-computed")
+
+    assertFailsToCompileContains {
+      """
+      testClass
+        .into[TestClassWithAdditionalString]
+        .transform(
+          Field.allMatching(fieldSource),
+          Field.allMatching(fieldSource),
+        )
+        """
+    }("""Configs for:
+  * TestClassWithAdditionalString.str
+  * TestClassWithAdditionalString.additionalArg
+are being overriden by Field.allMatching(fieldSource)""")
+  }: @nowarn("msg=unused")
+
+  test("When configs are applied to the same field repeateadly a warning is emitted") {
+
+    assertFailsToCompileContains {
       """
       testClass
         .into[TestClassWithAdditionalString]
@@ -182,7 +204,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
           Field.renamed(_.additionalArg, _.str),
         )
       """
-    }("Field 'additionalArg' is configured multiple times")
+    }("Config for TestClassWithAdditionalString.additionalArg is being overriden by Field.renamed(_.additionalArg, _.str)")
   }
 
   test("Case.const properly applies the constant for that subtype") {
@@ -270,9 +292,9 @@ class AppliedBuilderSuite extends DucktapeSuite {
     assertEquals(actual, expected)
   }
 
-  test("When a Case is configured multiple times a warning is emitted".ignore) {
+  test("When a Case is configured multiple times a warning is emitted") {
 
-    assertFailsToCompileWith {
+    assertFailsToCompileContains {
       """
       LessCases.Case1
         .into[MoreCases]
@@ -281,7 +303,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
           Case.const[LessCases.Case3.type](MoreCases.Case3)
         )
       """
-    }("Case 'io.github.arainko.ducktape.total.builder.AppliedBuilderSuite.LessCases.Case3' is configured multiple times")
+    }("Config for LessCases.at[io.github.arainko.ducktape.total.AppliedBuilderSuite.LessCases.Case3.type] is being overriden by")
   }
 
   test("derive a transformer for case classes with default values if configured") {
