@@ -1,8 +1,11 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.internal.Plan.{ Derived, UserDefined }
+import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
 import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
+import scala.util.boundary
 
 private[ducktape] object Planner {
   import Structure.*
@@ -28,7 +31,7 @@ private[ducktape] object Planner {
           planProductFunctionTransformation(source, dest)
 
         case UserDefinedTransformation(transformer) =>
-          Plan.UserDefined(source, dest, transformer)
+          verifyNotSelfReferential(Plan.UserDefined(source, dest, transformer))
 
         case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
           Plan.Upcast(source, dest)
@@ -70,7 +73,7 @@ private[ducktape] object Planner {
           Plan.BetweenUnwrappedWrapped(source, dest)
 
         case DerivedTransformation(transformer) =>
-          Plan.Derived(source, dest, transformer)
+          verifyNotSelfReferential(Plan.Derived(source, dest, transformer))
 
         case (source, dest) =>
           Plan.Error(
@@ -157,13 +160,13 @@ private[ducktape] object Planner {
     def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Depth, TransformationSite, Summoner[F]) = {
       val (src, dest) = structs
 
-      def summonTransformer =
+      def summonTransformer(using Quotes) =
         (src.tpe -> dest.tpe) match {
           case '[src] -> '[dest] => Summoner[F].summonUserDefined[src, dest]
         }
 
       // if current depth is lower or equal to 1 then that means we're most likely referring to ourselves
-      summon[TransformationSite] match {
+      TransformationSite.current match {
         case TransformationSite.Definition if Depth.current <= 1 => None
         case TransformationSite.Definition                       => summonTransformer
         case TransformationSite.Transformation                   => summonTransformer
@@ -179,5 +182,32 @@ private[ducktape] object Planner {
         case '[src] -> '[dest] => Summoner[F].summonDerived[src, dest]
       }
     }
+  }
+
+  private def verifyNotSelfReferential(
+    plan: Plan.Derived[Fallible] | Plan.UserDefined[Fallible]
+  )(using TransformationSite, Depth, Quotes): Plan.Error | plan.type = {
+    import quotes.reflect.*
+
+    val transformerExpr = plan match
+      case UserDefined(source, dest, Summoner.UserDefined.TotalTransformer(t))    => t
+      case UserDefined(source, dest, Summoner.UserDefined.FallibleTransformer(t)) => t
+      case Derived(source, dest, Summoner.Derived.TotalTransformer(t))            => t
+      case Derived(source, dest, Summoner.Derived.FallibleTransformer(t))         => t
+
+    val transformerSymbol = transformerExpr.asTerm.symbol
+
+    TransformationSite.current match
+      case TransformationSite.Transformation if Depth.current == 1 =>
+        boundary[Plan.Error | plan.type]:
+          var owner = Symbol.spliceOwner
+          while (!owner.isNoSymbol) {
+            if owner == transformerSymbol then
+              boundary.break(Plan.Error.from(plan, ErrorMessage.LoopingTransformerDetected, None))
+            owner = owner.maybeOwner
+          }
+          plan
+      case _ => plan
+
   }
 }

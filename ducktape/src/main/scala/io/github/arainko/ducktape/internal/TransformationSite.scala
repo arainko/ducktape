@@ -8,6 +8,8 @@ private[ducktape] enum TransformationSite {
 }
 
 private[ducktape] object TransformationSite {
+  def current(using ts: TransformationSite): TransformationSite = ts
+
   def fromStringExpr(value: Expr["transformation" | "definition"])(using Quotes): TransformationSite = {
     import quotes.reflect.*
 
