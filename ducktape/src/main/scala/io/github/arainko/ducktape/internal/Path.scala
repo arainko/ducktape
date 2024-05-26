@@ -4,6 +4,8 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
 import scala.reflect.TypeTest
+import io.github.arainko.ducktape.TransformationPath
+import io.github.arainko.ducktape.internal.Path.Segment
 
 private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
   def appended(segment: Path.Segment): Path = self.copy(segments = segments.appended(segment))
@@ -62,6 +64,21 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
           val suffix = if (repr.isSingleton) ".type" else ""
           s"at[${tpe.repr.show(using Printer.TypeReprAnsiCode)}${suffix}]"
       }.mkString(s"$printedRoot.", ".", "")
+  }
+
+  def asTransformationPathExpr(using Quotes): Expr[TransformationPath] = {
+    import quotes.reflect.*
+
+    val segs = segments.map {
+      case Segment.Field(tpe, name) => '{ TransformationPath.Segment.field(${ Expr(name) }) }
+      case Segment.Case(tpe) =>
+        val tpeName = tpe.repr.show(using Printer.TypeReprShortCode)
+        '{ TransformationPath.Segment.subtype(${ Expr(tpeName) }) }
+      case Segment.Element(tpe) => '{ TransformationPath.Segment.element }
+    }
+
+    val runtimeSegments = Expr.ofList(segs)
+    '{ TransformationPath.create($runtimeSegments) }
   }
 }
 
