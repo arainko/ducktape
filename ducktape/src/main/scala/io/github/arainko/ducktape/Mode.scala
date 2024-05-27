@@ -19,6 +19,10 @@ sealed trait Mode[F[+x]] {
 }
 
 object Mode {
+  extension [F[+x], M <: Mode[F]](self: M) {
+    inline def locally[A](inline f: M ?=> A): A = f(using self)
+  }
+
   trait Accumulating[F[+x]] extends Mode[F] {
     def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
   }
