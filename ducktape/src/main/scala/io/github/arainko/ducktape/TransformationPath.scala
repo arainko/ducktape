@@ -6,6 +6,9 @@ import io.github.arainko.ducktape.TransformationPath.Segment.Subtype
 
 sealed trait TransformationPath {
   def segments: List[TransformationPath.Segment]
+
+  final def render: String =
+    segments.map
 }
 
 object TransformationPath {

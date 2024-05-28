@@ -8,8 +8,8 @@ import scala.annotation.nowarn
 
 class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
   private given F: Mode.Accumulating.Either[String, List] with Mode.Capability.ContextAware with {
-    override def embedContext[A](path: String, fa: Either[List[String], A]): Either[List[String], A] =
-      fa.left.map(_.map(err => s"$err @ $path"))
+    override def embedContext[A](path: TransformationPath, fa: Either[List[String], A]): Either[List[String], A] =
+      fa.left.map(_.map(err => s"$err @ ${path.render}"))
   }
 
   def fallibleComputation(value: Int): Either[List[String], Positive] =

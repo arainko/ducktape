@@ -151,13 +151,11 @@ object Mode {
     def either[E]: Mode.FailFast.Either[E] = Mode.FailFast.Either[E]
   }
 
-  type Path = String
-
   object Capability {
     trait ContextAware {
       type Self[+x]
 
-      def embedContext[A](path: Path, self: Self[A]): Self[A]
+      def embedContext[A](path: TransformationPath, self: Self[A]): Self[A]
     }
   }
 }

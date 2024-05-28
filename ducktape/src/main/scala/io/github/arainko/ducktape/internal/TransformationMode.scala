@@ -10,7 +10,7 @@ private[ducktape] enum TransformationMode[F[+x]] {
 
   def embedContext[A: Type](path: Path, expr: Expr[F[A]])(using Quotes, Type[F]): Expr[F[A]] =
     contextAware
-      .fold(expr)(ctxAware => '{ $ctxAware.embedContext[A](${ Expr(path.render) }, $expr) })
+      .fold(expr)(ctxAware => '{ $ctxAware.embedContext[A](${ path.asTransformationPathExpr }, $expr) })
 
   case Accumulating(
     value: Expr[Mode.Accumulating[F]],
