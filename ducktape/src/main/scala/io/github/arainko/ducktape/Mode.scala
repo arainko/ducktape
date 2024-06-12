@@ -2,6 +2,8 @@ package io.github.arainko.ducktape
 
 import scala.annotation.implicitNotFound
 import scala.collection.Factory
+import scala.runtime.TupleMirror
+import scala.deriving.Mirror
 
 @implicitNotFound(
   """ducktape needs an instance of either Mode.Accumulating[F] or Mode.FailFast[F] in implicit scope to infer the wrapper type F and determine the mode of fallible transformations.
@@ -152,4 +154,16 @@ object Mode {
 
     def either[E]: Mode.FailFast.Either[E] = Mode.FailFast.Either[E]
   }
+}
+
+object test {
+  def mirrorOf[A](using A: Mirror.Of[A]): A.type = A
+
+  (1, 2, 3, 4).to[(Int, Int, Int)]
+
+  val a = mirrorOf[1 *: "asd" *: "d" *: 1 *: EmptyTuple]
+
+  val b = mirrorOf[(1, 2, "3", "4")]
+
+  summon[a.MirroredElemLabels <:< ("_1", "_2", "_3", "_4")]
 }

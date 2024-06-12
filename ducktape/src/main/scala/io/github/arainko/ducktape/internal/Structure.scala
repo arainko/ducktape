@@ -28,7 +28,7 @@ private[ducktape] object Structure {
 
   def toplevelNothing(using Quotes) = Structure.Ordinary(Type.of[Nothing], Path.empty(Type.of[Nothing]))
 
-  case class Product(tpe: Type[?], path: Path, fields: Map[String, Structure]) extends Structure {
+  case class Product(tpe: Type[?], path: Path, fields: ListMap[String, Structure], isTuple: Boolean) extends Structure {
     private var cachedDefaults: Map[String, Expr[Any]] = null
 
     def defaults(using Quotes): Map[String, Expr[Any]] =
@@ -80,7 +80,7 @@ private[ducktape] object Structure {
 
   def fromTypeRepr(using Quotes)(repr: quotes.reflect.TypeRepr, path: Path): Structure =
     repr.widen.asType match {
-      case '[tpe] => Structure.of[tpe](path)
+      case '[tpe] => Structure.of[tpe](path)name
     }
 
   def of[A: Type](path: Path)(using Quotes): Structure = {
@@ -140,8 +140,10 @@ private[ducktape] object Structure {
                           case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], name)))
                         })
                       )
-                      .toMap
-                  Structure.Product(Type.of[A], path, structures)
+                      .to(ListMap)
+
+                  
+                  Structure.Product(Type.of[A], path, structures, Type.of[A].repr.isTupleN)
                 case '{
                       $m: Mirror.Sum {
                         type MirroredElemLabels = labels

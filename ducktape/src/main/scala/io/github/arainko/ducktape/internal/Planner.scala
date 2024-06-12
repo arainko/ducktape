@@ -89,24 +89,45 @@ private[ducktape] object Planner {
     source: Structure.Product,
     dest: Structure.Product
   )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
-    val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-      val plan =
-        source.fields
-          .get(destField)
-          .map { sourceStruct =>
-            recurse(sourceStruct, destFieldStruct)
-          }
-          .getOrElse(
-            Plan.Error(
-              Structure.of[Nothing](source.path),
-              destFieldStruct,
-              ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
-              None
+    def nameWise = {
+      val fieldPlans = FieldName.Dest.wrapKeys(dest.fields).map { (destField, destFieldStruct) =>
+        val plan =
+          source.fields
+            .get(destField)
+            .map(sourceStruct => recurse(sourceStruct, destFieldStruct))
+            .getOrElse(
+              Plan.Error(
+                Structure.of[Nothing](source.path),
+                destFieldStruct,
+                ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
+                None
+              )
             )
-          )
-      destField -> plan
+        destField -> plan
+      }
+      Plan.BetweenProducts(source, dest, fieldPlans)
     }
-    Plan.BetweenProducts(source, dest, fieldPlans)
+
+    (source.isTuple, dest.isTuple) match {
+      case (true, true) =>
+        nameWise
+      case (true, false) =>
+        FieldName.Dest.wrapKeys(dest.fields)
+          .zipExact(FieldName.Source.wrapKeys(source.fields))
+          
+
+        ???
+      case (false, true) =>
+        ???
+      case (false, false) =>
+        nameWise
+    }
+  }
+
+  extension [A](self: Iterable[A]) {
+    private def zipExact[B](that: Iterable[B]): Option[Iterable[(A, B)]] = {
+      if self.size <= that.size then Some(self.zip(that)) else None
+    }
   }
 
   private def planProductFunctionTransformation[F <: Fallible](

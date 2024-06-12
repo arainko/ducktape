@@ -77,7 +77,7 @@ private[ducktape] object Path {
 
     final def narrow[A <: Segment](using tt: TypeTest[Segment, A]): Option[A] = tt.unapply(this)
 
-    case Field(tpe: Type[?], name: String)
+    case Field(tpe: Type[?], name: FieldName)
     case Case(tpe: Type[?])
     case Element(tpe: Type[?])
   }
