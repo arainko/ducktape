@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
 import scala.reflect.TypeTest
+import io.github.arainko.ducktape.internal.Debug.AST
 
 private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
   def appended(segment: Path.Segment): Path = self.copy(segments = segments.appended(segment))
@@ -69,7 +70,7 @@ private[ducktape] object Path {
   def empty(root: Type[?]): Path = Path(root, Vector.empty)
 
   given debug: Debug[Path] with {
-    extension (self: Path) def show(using Quotes): String = self.render
+    def astify(self: Path)(using Quotes): AST = Debug.AST.Text(self.render)
   }
 
   enum Segment derives Debug {
