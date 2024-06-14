@@ -68,6 +68,8 @@ private[ducktape] object ErrorMessage {
           s"The path segment 'at[${tpe.repr.show}]' is not valid because its parent is not a coproduct or the picked type is not a subtype of that coproduct"
         case Segment.Element(_) =>
           s"The path segment 'element' is not valid" // TODO: Revise this error message
+        case Segment.TupleElement(tpe, index) => 
+          s"The path segment '_$index' or '.apply($index)' is not valid" // TODO: Revise this error message
       }
   }
 

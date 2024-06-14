@@ -80,7 +80,7 @@ private[ducktape] object Plan {
   case class BetweenProducts[+E <: Plan.Error, +F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product,
-    fieldPlans: Map[FieldName.Dest, Plan[E, F]]
+    fieldPlans: Map[String, Plan[E, F]]
   ) extends Plan[E, F]
 
   case class BetweenCoproducts[+E <: Plan.Error, +F <: Fallible](

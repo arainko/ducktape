@@ -28,7 +28,7 @@ private[ducktape] object Structure {
 
   def toplevelNothing(using Quotes) = Structure.Ordinary(Type.of[Nothing], Path.empty(Type.of[Nothing]))
 
-  case class Product(tpe: Type[?], path: Path, fields: ListMap[String, Structure], isTuple: Boolean) extends Structure {
+  case class Product(tpe: Type[?], path: Path, fields: ListMap[String, Structure]) extends Structure {
     private var cachedDefaults: Map[String, Expr[Any]] = null
 
     def defaults(using Quotes): Map[String, Expr[Any]] =
@@ -38,6 +38,8 @@ private[ducktape] object Structure {
         cachedDefaults
       }
   }
+
+  case class Tuple(tpe: Type[?], path: Path, elements: Vector[Structure], isPlain: Boolean) extends Structure
 
   case class Coproduct(tpe: Type[?], path: Path, children: Map[String, Structure]) extends Structure
 
@@ -80,7 +82,7 @@ private[ducktape] object Structure {
 
   def fromTypeRepr(using Quotes)(repr: quotes.reflect.TypeRepr, path: Path): Structure =
     repr.widen.asType match {
-      case '[tpe] => Structure.of[tpe](path)name
+      case '[tpe] => Structure.of[tpe](path)
     }
 
   def of[A: Type](path: Path)(using Quotes): Structure = {
@@ -103,8 +105,17 @@ private[ducktape] object Structure {
           val paramTpe = repr.memberType(param)
           Structure.ValueClass(tpe, path, paramTpe.asType, param.name)
 
-        case _ =>
+        case tpe =>
           Expr.summon[Mirror.Of[A]] match {
+            case None if tpe.repr <:< TypeRepr.of[*:[Any, scala.Tuple]] =>
+              val elements =
+                tupleTypeElements(tpe.repr).zipWithIndex.map { (tpe, idx) =>
+                  tpe.asType match {
+                    case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
+                  }
+                }.toVector
+              Structure.Tuple(Type.of[A], path, elements, isPlain = false)
+
             case None =>
               Structure.Ordinary(Type.of[A], path)
 
@@ -126,6 +137,24 @@ private[ducktape] object Structure {
                     } =>
                   val value = materializeSingleton[A]
                   Structure.Singleton(Type.of[A], path, constantString[label], value.asExpr)
+                  
+                case '{
+                      $m: Mirror.Product {
+                        type MirroredElemLabels = labels
+                        type MirroredElemTypes = types
+                      }
+                    } if tpe.repr.isTupleN =>
+                  val structures =
+                    tupleTypeElements(TypeRepr.of[types]).zipWithIndex
+                      .map((tpe, idx) =>
+                        tpe.asType match {
+                          case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
+                        }
+                      )
+                      .toVector
+
+                  Structure.Tuple(Type.of[A], path, structures, isPlain = true)
+
                 case '{
                       $m: Mirror.Product {
                         type MirroredElemLabels = labels
@@ -142,8 +171,7 @@ private[ducktape] object Structure {
                       )
                       .to(ListMap)
 
-                  
-                  Structure.Product(Type.of[A], path, structures, Type.of[A].repr.isTupleN)
+                  Structure.Product(Type.of[A], path, structures)
                 case '{
                       $m: Mirror.Sum {
                         type MirroredElemLabels = labels

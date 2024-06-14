@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
 import scala.reflect.TypeTest
+import io.github.arainko.ducktape.internal.Path.Segment
 
 private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
   def appended(segment: Path.Segment): Path = self.copy(segments = segments.appended(segment))
@@ -55,8 +56,9 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
     if (self.segments.isEmpty) printedRoot
     else
       self.segments.map {
-        case Path.Segment.Field(_, name) => name
-        case Path.Segment.Element(_)     => "element"
+        case Path.Segment.Field(_, name)    => name
+        case Segment.TupleElement(_, index) => s"_$index"
+        case Path.Segment.Element(_)        => "element"
         case Path.Segment.Case(tpe) =>
           val repr = tpe.repr
           val suffix = if (repr.isSingleton) ".type" else ""
@@ -77,7 +79,8 @@ private[ducktape] object Path {
 
     final def narrow[A <: Segment](using tt: TypeTest[Segment, A]): Option[A] = tt.unapply(this)
 
-    case Field(tpe: Type[?], name: FieldName)
+    case Field(tpe: Type[?], name: String)
+    case TupleElement(tpe: Type[?], index: Int)
     case Case(tpe: Type[?])
     case Element(tpe: Type[?])
   }

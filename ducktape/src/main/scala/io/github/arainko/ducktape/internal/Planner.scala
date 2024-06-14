@@ -90,7 +90,7 @@ private[ducktape] object Planner {
     dest: Structure.Product
   )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
     def nameWise = {
-      val fieldPlans = FieldName.Dest.wrapKeys(dest.fields).map { (destField, destFieldStruct) =>
+      val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
         val plan =
           source.fields
             .get(destField)
@@ -108,20 +108,7 @@ private[ducktape] object Planner {
       Plan.BetweenProducts(source, dest, fieldPlans)
     }
 
-    (source.isTuple, dest.isTuple) match {
-      case (true, true) =>
-        nameWise
-      case (true, false) =>
-        FieldName.Dest.wrapKeys(dest.fields)
-          .zipExact(FieldName.Source.wrapKeys(source.fields))
-          
-
-        ???
-      case (false, true) =>
-        ???
-      case (false, false) =>
-        nameWise
-    }
+    nameWise
   }
 
   extension [A](self: Iterable[A]) {
