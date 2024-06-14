@@ -13,6 +13,14 @@ private[ducktape] trait PlanTraverser[A] {
               recurse(next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenProducts(_, _, fieldPlans) =>
               recurse(fieldPlans.values.toList ::: next, foldOver(plan, accumulator))
+            case plan @ Plan.BetweenProductTuple(_, _, plans) =>
+              recurse(plans.toList ::: next, foldOver(plan, accumulator))
+            case plan @ Plan.BetweenTupleProduct(_, _, plans) =>
+              recurse(plans.toList ::: next, foldOver(plan, accumulator))
+            case plan @ Plan.BetweenTuples(_, _, plans) =>
+              recurse(plans.toList ::: next, foldOver(plan, accumulator))
+            case plan @ Plan.BetweenTupleFunction(_, _, plans) =>
+              recurse(plans.toList ::: next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenCoproducts(_, _, casePlans) =>
               recurse(casePlans.toList ::: next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenProductFunction(_, _, argPlans) =>
