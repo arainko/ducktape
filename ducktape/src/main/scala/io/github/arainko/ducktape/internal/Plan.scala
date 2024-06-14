@@ -61,6 +61,12 @@ private[ducktape] object Plan {
     argPlans: ListMap[String, Plan[E, F]]
   ) extends Plan[E, F]
 
+  case class BetweenTupleFunction[+E <: Plan.Error, +F <: Fallible](
+    source: Structure.Tuple,
+    dest: Structure.Function,
+    argPlans: Vector[Plan[E, F]]
+  ) extends Plan[E, F]
+
   case class BetweenUnwrappedWrapped(
     source: Structure,
     dest: Structure.ValueClass
@@ -81,6 +87,24 @@ private[ducktape] object Plan {
     source: Structure.Product,
     dest: Structure.Product,
     fieldPlans: Map[String, Plan[E, F]]
+  ) extends Plan[E, F]
+
+  case class BetweenProductTuple[+E <: Plan.Error, +F <: Fallible](
+    source: Structure.Product,
+    dest: Structure.Tuple,
+    plans: Vector[Plan[E, F]]
+  ) extends Plan[E, F]
+
+  case class BetweenTupleProduct[+E <: Plan.Error, +F <: Fallible](
+    source: Structure.Tuple,
+    dest: Structure.Product,
+    plans: Vector[Plan[E, F]]
+  ) extends Plan[E, F]
+
+  case class BetweenTuples[+E <: Plan.Error, +F <: Fallible](
+    source: Structure.Tuple,
+    dest: Structure.Tuple,
+    plans: Vector[Plan[E, F]]
   ) extends Plan[E, F]
 
   case class BetweenCoproducts[+E <: Plan.Error, +F <: Fallible](

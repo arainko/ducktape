@@ -30,6 +30,11 @@ private[ducktape] object Planner {
         case (source: Product, dest: Function) =>
           planProductFunctionTransformation(source, dest)
 
+        case (source: Tuple, dest: Function) =>
+          positionWisePlans(source, dest, source.elements, dest.args.values.toSeq) match
+            case plans: Vector[Plan[Plan.Error, F]] => Plan.BetweenTupleFunction(source, dest, plans)
+            case error: Plan.Error                  => error
+
         case UserDefinedTransformation(transformer) =>
           verifyNotSelfReferential(Plan.UserDefined(source, dest, transformer))
 
@@ -59,6 +64,21 @@ private[ducktape] object Planner {
 
         case (source: Product, dest: Product) =>
           planProductTransformation(source, dest)
+
+        case (source: Product, dest: Tuple) =>
+          positionWisePlans(source, dest, source.fields.values.toSeq, dest.elements) match
+            case plans: Vector[Plan[Plan.Error, F]] => Plan.BetweenProductTuple(source, dest, plans)
+            case error: Plan.Error                  => error
+
+        case (source: Tuple, dest: Product) => 
+          positionWisePlans(source, dest, source.elements, dest.fields.values.toSeq) match
+            case plans: Vector[Plan[Plan.Error, F]] => Plan.BetweenTupleProduct(source, dest, plans)
+            case error: Plan.Error                  => error
+
+        case (source: Structure.Tuple, dest: Structure.Tuple) => 
+          positionWisePlans(source, dest, source.elements, dest.elements) match 
+            case plans: Vector[Plan[Plan.Error, F]] => Plan.BetweenTuples(source, dest, plans)
+            case error: Plan.Error                  => error
 
         case (source: Coproduct, dest: Coproduct) =>
           planCoproductTransformation(source, dest)
@@ -111,10 +131,14 @@ private[ducktape] object Planner {
     nameWise
   }
 
-  extension [A](self: Iterable[A]) {
-    private def zipExact[B](that: Iterable[B]): Option[Iterable[(A, B)]] = {
-      if self.size <= that.size then Some(self.zip(that)) else None
-    }
+  private def positionWisePlans[F <: Fallible](
+    sourceStruct: Structure,
+    destStruct: Structure,
+    source: Seq[Structure],
+    dest: Seq[Structure]
+  )(using Quotes, Depth, TransformationSite, Summoner[F]): Vector[Plan[Plan.Error, F]] | Plan.Error = {
+    if source.size >= dest.size then source.lazyZip(dest).map((src, dest) => recurse(src, dest)).toVector
+    else Plan.Error(sourceStruct, destStruct, ErrorMessage.RecursionSuspected /*TODO ERROR MESSAGE*/, None)
   }
 
   private def planProductFunctionTransformation[F <: Fallible](

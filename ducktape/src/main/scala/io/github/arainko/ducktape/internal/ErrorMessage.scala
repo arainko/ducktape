@@ -106,4 +106,6 @@ private[ducktape] object ErrorMessage {
     val span: Span | None.type = None
   }
 
+  
+
 }

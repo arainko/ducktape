@@ -159,7 +159,7 @@ object Mode {
 object test {
   def mirrorOf[A](using A: Mirror.Of[A]): A.type = A
 
-  (1, 2, 3, 4).to[(Int, Int, Int)]
+  (1, 2, 3, 4).to[Int *: Int *: Int *: EmptyTuple]
 
   val a = mirrorOf[1 *: "asd" *: "d" *: 1 *: EmptyTuple]
 
