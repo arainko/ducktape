@@ -6,6 +6,8 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
 import scala.util.boundary
+import scala.collection.immutable.ListMap
+import scala.collection.immutable.VectorMap
 
 private[ducktape] object Planner {
   import Structure.*
@@ -72,7 +74,10 @@ private[ducktape] object Planner {
 
         case (source: Tuple, dest: Product) => 
           positionWisePlans(source, dest, source.elements, dest.fields.values.toSeq) match
-            case plans: Vector[Plan[Plan.Error, F]] => Plan.BetweenTupleProduct(source, dest, plans)
+            case plans: Vector[Plan[Plan.Error, F]] => 
+              // safe under the assumption that 'positionWisePlans' always returns dest.fields.size amount of plans
+              val fieldPlans = dest.fields.keys.zip(plans).to(ListMap)
+              Plan.BetweenTupleProduct(source, dest, fieldPlans)
             case error: Plan.Error                  => error
 
         case (source: Structure.Tuple, dest: Structure.Tuple) => 
@@ -146,6 +151,7 @@ private[ducktape] object Planner {
     dest: Structure.Function
   )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
+      VectorMap
       val plan =
         source.fields
           .get(destField)

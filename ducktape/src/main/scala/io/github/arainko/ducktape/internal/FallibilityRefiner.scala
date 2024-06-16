@@ -39,12 +39,10 @@ private[ducktape] object FallibilityRefiner {
             case Configuration.FallibleCaseComputed(tpe, function)  => boundary.break(None)
 
         case BetweenProductFunction(source, dest, argPlans) =>
-          val iterator = argPlans.valuesIterator
-          while iterator.hasNext do
-            recurse(iterator.next()) match {
-              case None => boundary.break(None)
-              case ()   => ()
-            }
+          evaluate(argPlans.values)
+
+        case BetweenTupleFunction(source, dest, argPlans) => 
+          evaluate(argPlans)
 
         case BetweenUnwrappedWrapped(source, dest) => ()
 
@@ -53,20 +51,19 @@ private[ducktape] object FallibilityRefiner {
         case BetweenSingletons(source, dest) => ()
 
         case BetweenProducts(source, dest, fieldPlans) =>
-          val iterator = fieldPlans.valuesIterator
-          while iterator.hasNext do
-            recurse(iterator.next()) match {
-              case None => boundary.break(None)
-              case ()   => ()
-            }
+          evaluate(fieldPlans.values)
+
+        case BetweenProductTuple(source, dest, plans) =>
+          evaluate(plans)
+
+        case BetweenTupleProduct(source, dest, plans) => 
+          evaluate(plans.values)
+
+        case BetweenTuples(source, dest, plans) => 
+          evaluate(plans)
 
         case BetweenCoproducts(source, dest, casePlans) =>
-          val iterator = casePlans.iterator
-          while iterator.hasNext do
-            recurse(iterator.next()) match {
-              case None => boundary.break(None)
-              case ()   => ()
-            }
+          evaluate(casePlans)
 
         case BetweenOptions(source, dest, plan) =>
           recurse(plan)
@@ -79,4 +76,11 @@ private[ducktape] object FallibilityRefiner {
 
         case Plan.Error(source, dest, message, suppressed) => ()
 
+  private inline def evaluate(plans: Iterable[Plan[Plan.Error, Fallible]])(using inline label: boundary.Label[None.type | Unit]) =
+    val iterator = plans.iterator
+    while iterator.hasNext do
+      recurse(iterator.next()) match {
+        case None => boundary.break(None)
+        case ()   => ()
+      }
 }

@@ -45,6 +45,47 @@ private[ducktape] object PlanConfigurer {
               case other => invalidPathSegment(config, other, segment)
             }
 
+          case (segment @ Path.Segment.TupleElement(_, index)) :: tail =>
+            current match {
+              case plan @ BetweenTuples(source, dest, plans) =>
+                plans
+                  .lift(index)
+                  .map(elemPlan => plan.copy(plans = plans.updated(index, recurse(elemPlan, tail, plan))))
+                  .getOrElse(
+                    Plan.Error
+                      .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
+                  )
+
+              case plan @ BetweenProductTuple(source, dest, plans) if config.side.isDest =>
+                plans
+                  .lift(index)
+                  .map(elemPlan => plan.copy(plans = plans.updated(index, recurse(elemPlan, tail, plan))))
+                  .getOrElse(
+                    Plan.Error
+                      .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
+                  )
+
+              case plan @ BetweenTupleProduct(source, dest, plans) if config.side.isSource =>
+                plans.toVector
+                  .lift(index)
+                  .map((name, fieldPlan) => plan.copy(plans = plans.updated(name, recurse(fieldPlan, tail, plan))))
+                  .getOrElse(
+                    Plan.Error
+                      .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
+                  )
+
+              case plan @ BetweenTupleProduct(source, dest, plans) if config.side.isSource =>
+                plans.toVector
+                  .lift(index)
+                  .map((name, fieldPlan) => plan.copy(plans = plans.updated(name, recurse(fieldPlan, tail, plan))))
+                  .getOrElse(
+                    Plan.Error
+                      .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
+                  )
+
+              case other => invalidPathSegment(config, other, segment)
+            }
+
           case (segment @ Path.Segment.Case(tpe)) :: tail =>
             current match {
               // BetweenNonOptionOption keeps the same type as its source so we passthrough it when traversing source nodes

@@ -16,7 +16,7 @@ private[ducktape] trait PlanTraverser[A] {
             case plan @ Plan.BetweenProductTuple(_, _, plans) =>
               recurse(plans.toList ::: next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenTupleProduct(_, _, plans) =>
-              recurse(plans.toList ::: next, foldOver(plan, accumulator))
+              recurse(plans.values.toList ::: next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenTuples(_, _, plans) =>
               recurse(plans.toList ::: next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenTupleFunction(_, _, plans) =>
