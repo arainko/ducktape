@@ -33,6 +33,24 @@ private[ducktape] object PlanConfigurer {
 
                 plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
 
+              case plan @ BetweenTupleProduct(source, dest, plans) if config.side.isDest =>
+                plans
+                  .get(fieldName)
+                  .map(fieldPlan => plan.copy(plans = plans.updated(fieldName, recurse(fieldPlan, tail, plan))))
+                  .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidFieldAccessor(fieldName, config.span), None))
+
+              case plan @ BetweenProductTuple(source, dest, plans) if config.side.isSource =>
+                // TODO: try to come up with something nicer? this is meh
+                source.fields.keys
+                  .zip(plans)
+                  .toVector
+                  .zipWithIndex
+                  .collectFirst {
+                    case (`fieldName`, fieldPlan) -> index =>
+                      plan.copy(plans = plans.updated(index, recurse(fieldPlan, tail, plan)))
+                  }
+                  .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidFieldAccessor(fieldName, config.span), None))
+
               case plan @ BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
                 val argPlan =
                   argPlans
@@ -41,6 +59,12 @@ private[ducktape] object PlanConfigurer {
                     .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidArgAccessor(fieldName, config.span), None))
 
                 plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
+
+              case plan @ BetweenTupleFunction(source, dest, argPlans) if config.side.isDest =>
+                argPlans
+                  .get(fieldName)
+                  .map(argPlan => plan.copy(argPlans = argPlans.updated(fieldName, recurse(argPlan, tail, plan))))
+                  .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidArgAccessor(fieldName, config.span), None))
 
               case other => invalidPathSegment(config, other, segment)
             }
@@ -74,10 +98,10 @@ private[ducktape] object PlanConfigurer {
                       .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
                   )
 
-              case plan @ BetweenTupleProduct(source, dest, plans) if config.side.isSource =>
+              case plan @ BetweenTupleFunction(source, dest, plans) if config.side.isSource =>
                 plans.toVector
                   .lift(index)
-                  .map((name, fieldPlan) => plan.copy(plans = plans.updated(name, recurse(fieldPlan, tail, plan))))
+                  .map((name, fieldPlan) => plan.copy(argPlans = plans.updated(name, recurse(fieldPlan, tail, plan))))
                   .getOrElse(
                     Plan.Error
                       .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
@@ -210,6 +234,9 @@ private[ducktape] object PlanConfigurer {
       case plan: BetweenProductFunction[Plan.Error, F] =>
         plan.copy(argPlans = plan.argPlans.transform((_, argPlan) => regional(argPlan, modifier, plan)))
 
+      case plan: BetweenTupleFunction[Plan.Error, F] =>
+        plan.copy(argPlans = plan.argPlans.transform((_, argPlan) => regional(argPlan, modifier, plan)))
+
       case plan: BetweenUnwrappedWrapped => plan
 
       case plan: BetweenWrappedUnwrapped => plan
@@ -218,6 +245,15 @@ private[ducktape] object PlanConfigurer {
 
       case plan: BetweenProducts[Plan.Error, F] =>
         plan.copy(fieldPlans = plan.fieldPlans.transform((_, fieldPlan) => regional(fieldPlan, modifier, plan)))
+
+      case plan: BetweenProductTuple[Plan.Error, F] =>
+        plan.copy(plans = plan.plans.map(fieldPlan => regional(fieldPlan, modifier, plan)))
+
+      case plan: BetweenTupleProduct[Plan.Error, F] =>
+        plan.copy(plans = plan.plans.transform((_, fieldPlan) => regional(fieldPlan, modifier, plan)))
+
+      case plan: BetweenTuples[Plan.Error, F] =>
+        plan.copy(plans = plan.plans.map(fieldPlan => regional(fieldPlan, modifier, plan)))
 
       case plan: BetweenCoproducts[Plan.Error, F] =>
         plan.copy(casePlans = plan.casePlans.map(regional(_, modifier, plan)))
@@ -239,6 +275,7 @@ private[ducktape] object PlanConfigurer {
         }
     }
 
+  //TODO: Needs taking a look at after adding tuple transformations
   private def bulk[F <: Fallible](
     current: Plan[Plan.Error, F],
     instruction: Configuration.Instruction.Bulk

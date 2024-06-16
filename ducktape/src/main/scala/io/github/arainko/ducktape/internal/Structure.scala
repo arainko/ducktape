@@ -107,7 +107,7 @@ private[ducktape] object Structure {
 
         case tpe @ '[Any *: scala.Tuple] if !tpe.repr.isTupleN => // let plain tuples be caught later on
           val elements =
-            tupleTypeElements(tpe.repr).zipWithIndex.map { (tpe, idx) =>
+            tupleTypeElements(tpe.repr.dealias).zipWithIndex.map { (tpe, idx) =>
               tpe.asType match {
                 case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
               }
@@ -204,8 +204,11 @@ private[ducktape] object Structure {
 
     @tailrec def loop(curr: TypeRepr, acc: List[TypeRepr]): List[TypeRepr] =
       curr match {
-        case AppliedType(pairTpe, head :: tail :: Nil) => loop(tail, head :: acc)
-        case _                                         => acc
+        case AppliedType(pairTpe, head :: tail :: Nil) => 
+          loop(tail, head :: acc)
+        case tpe                                         => 
+          println(tpe.show)
+          acc
       }
     loop(tp, Nil).reverse
   }

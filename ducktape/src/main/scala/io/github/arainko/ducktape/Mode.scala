@@ -156,10 +156,21 @@ object Mode {
   }
 }
 
-object test {
+case class JustInts(int1: Int, int2: Int, int3: Int)
+
+object test extends App {
   def mirrorOf[A](using A: Mirror.Of[A]): A.type = A
 
-  // (1, 2, 3, 4).to[Int *: Int *: Int *: EmptyTuple]
+  type BigAssTuple = Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: EmptyTuple
+
+  internal.CodePrinter.code:
+    Transformer.define[BigAssTuple, Tuple.Map[BigAssTuple, Option]].build()
+
+
+  // internal.CodePrinter.code:
+  //   (1, 2, 3, 4).to[Int *: Int *: Int *: EmptyTuple]
+
+  // (1, 2)._
 
   val a = mirrorOf[1 *: "asd" *: "d" *: 1 *: EmptyTuple]
 

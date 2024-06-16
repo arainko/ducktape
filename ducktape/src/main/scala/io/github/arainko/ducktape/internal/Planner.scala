@@ -34,8 +34,11 @@ private[ducktape] object Planner {
 
         case (source: Tuple, dest: Function) =>
           positionWisePlans(source, dest, source.elements, dest.args.values.toSeq) match
-            case plans: Vector[Plan[Plan.Error, F]] => Plan.BetweenTupleFunction(source, dest, plans)
-            case error: Plan.Error                  => error
+            case plans: Vector[Plan[Plan.Error, F]] =>
+              // safe under the assumption that 'positionWisePlans' always returns dest.args.size amount of plans
+              val argPlans = dest.args.keys.zip(plans).to(ListMap)
+              Plan.BetweenTupleFunction(source, dest, argPlans)
+            case error: Plan.Error => error
 
         case UserDefinedTransformation(transformer) =>
           verifyNotSelfReferential(Plan.UserDefined(source, dest, transformer))
@@ -72,16 +75,16 @@ private[ducktape] object Planner {
             case plans: Vector[Plan[Plan.Error, F]] => Plan.BetweenProductTuple(source, dest, plans)
             case error: Plan.Error                  => error
 
-        case (source: Tuple, dest: Product) => 
+        case (source: Tuple, dest: Product) =>
           positionWisePlans(source, dest, source.elements, dest.fields.values.toSeq) match
-            case plans: Vector[Plan[Plan.Error, F]] => 
+            case plans: Vector[Plan[Plan.Error, F]] =>
               // safe under the assumption that 'positionWisePlans' always returns dest.fields.size amount of plans
               val fieldPlans = dest.fields.keys.zip(plans).to(ListMap)
               Plan.BetweenTupleProduct(source, dest, fieldPlans)
-            case error: Plan.Error                  => error
+            case error: Plan.Error => error
 
-        case (source: Structure.Tuple, dest: Structure.Tuple) => 
-          positionWisePlans(source, dest, source.elements, dest.elements) match 
+        case (source: Structure.Tuple, dest: Structure.Tuple) =>
+          positionWisePlans(source, dest, source.elements, dest.elements) match
             case plans: Vector[Plan[Plan.Error, F]] => Plan.BetweenTuples(source, dest, plans)
             case error: Plan.Error                  => error
 
@@ -143,7 +146,7 @@ private[ducktape] object Planner {
     dest: Seq[Structure]
   )(using Quotes, Depth, TransformationSite, Summoner[F]): Vector[Plan[Plan.Error, F]] | Plan.Error = {
     if source.size >= dest.size then source.lazyZip(dest).map((src, dest) => recurse(src, dest)).toVector
-    else Plan.Error(sourceStruct, destStruct, ErrorMessage.RecursionSuspected /*TODO ERROR MESSAGE*/, None)
+    else Plan.Error(sourceStruct, destStruct, ErrorMessage.LoopingTransformerDetected /*TODO ERROR MESSAGE*/, None)
   }
 
   private def planProductFunctionTransformation[F <: Fallible](

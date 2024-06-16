@@ -18,4 +18,15 @@ extension (expr: Expr[Any]) {
     import quotes.reflect.*
     Select.unique(expr.asTerm, name)
   }
+
+  private[ducktape] def accesFieldByIndex(index: Int, parentStructure: Structure.Tuple)(using Quotes): Expr[Any] = {
+    import quotes.reflect.*
+    if parentStructure.isPlain then accessFieldByName(s"_${index + 1}").asExpr // tuple accessors are 1 based
+    else
+      val tpeAtIndex = parentStructure.elements(index).tpe
+      (expr, tpeAtIndex) match {
+        case '{ $prod: scala.Product } -> '[tpe] => '{ $prod.productElement(${ Expr(index) }).asInstanceOf[tpe] }
+      }
+
+  }
 }

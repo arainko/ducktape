@@ -42,7 +42,7 @@ private[ducktape] object FallibilityRefiner {
           evaluate(argPlans.values)
 
         case BetweenTupleFunction(source, dest, argPlans) => 
-          evaluate(argPlans)
+          evaluate(argPlans.values)
 
         case BetweenUnwrappedWrapped(source, dest) => ()
 

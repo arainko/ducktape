@@ -64,7 +64,7 @@ private[ducktape] object Plan {
   case class BetweenTupleFunction[+E <: Plan.Error, +F <: Fallible](
     source: Structure.Tuple,
     dest: Structure.Function,
-    argPlans: Vector[Plan[E, F]]
+    argPlans: ListMap[String, Plan[E, F]]
   ) extends Plan[E, F]
 
   case class BetweenUnwrappedWrapped(
