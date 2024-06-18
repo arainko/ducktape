@@ -59,6 +59,12 @@ private[ducktape] object FalliblePlanInterpreter {
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
             productTransformation(plan, fieldPlans, value, F)(ProductConstructor.Primary(dest))
 
+          case plan @ Plan.BetweenProductTuple(source, dest, plans) => ???
+
+          case plan @ Plan.BetweenTupleProduct(source, dest, plans) => ???
+
+          case plan @ Plan.BetweenTuples(source, dest, plans) => ???
+
           case Plan.BetweenCoproducts(source, dest, casePlans) =>
             dest.tpe match {
               case '[destSupertype] =>
@@ -83,6 +89,9 @@ private[ducktape] object FalliblePlanInterpreter {
 
           case plan @ Plan.BetweenProductFunction(source, dest, argPlans) =>
             productTransformation(plan, argPlans, value, F)(ProductConstructor.Func(dest.function))
+
+          case plan @ Plan.BetweenTupleFunction(source, dest, argPlans) => 
+            ???
 
           case Plan.BetweenOptions(source, dest, plan) =>
             (source.paramStruct.tpe, dest.paramStruct.tpe) match {
