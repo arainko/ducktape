@@ -3,25 +3,29 @@ package io.github.arainko.ducktape.internal
 import scala.quoted.*
 
 private[ducktape] sealed trait ProductConstructor {
-  def apply(fields: Map[String, Expr[Any]])(using Quotes): Expr[Any]
+  def apply(fields: Seq[Expr[Any]])(using Quotes): Expr[Any]
 }
 
 private[ducktape] object ProductConstructor {
   final class Primary(structure: Structure.Product) extends ProductConstructor {
-    def apply(fields: Map[String, Expr[Any]])(using Quotes): Expr[Any] = {
+    def apply(fields: Seq[Expr[Any]])(using Quotes): Expr[Any] = {
       import quotes.reflect.*
 
       Constructor(structure.tpe.repr)
-        .appliedToArgs(fields.map((name, value) => NamedArg(name, value.asTerm)).toList)
+        .appliedToArgs(fields.map(value => value.asTerm).toList)
         .asExpr
     }
   }
 
+  case object Tuple extends ProductConstructor {
+    def apply(fields: Seq[Expr[Any]])(using Quotes): Expr[Any] = 
+      Expr.ofTupleFromSeq(fields)
+  }
+
   final class Func(function: Function) extends ProductConstructor {
-    def apply(fields: Map[String, Expr[Any]])(using Quotes): Expr[Any] = {
+    def apply(fields: Seq[Expr[Any]])(using Quotes): Expr[Any] = {
       import quotes.reflect.*
-      val args = function.args.map((name, _) => fields(name).asTerm).toList
-      function.appliedTo(args)
+      function.appliedTo(fields.map(_.asTerm).toList)
     }
   }
 }

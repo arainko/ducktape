@@ -34,9 +34,9 @@ private[ducktape] object ProductBinder {
                         // TODO: Come back to this at some point, owners of the collected unwrapped defs need to be aligned to Symbol.spliceOwner
                         // so there are Exprs being constructed in a wrong way somewhere (this only occurts when falling back to the non-fallible PlanInterpreter)
                         val fields =
-                          ((field.name -> unwrappedValue) :: collectedUnwrappedFields.map(f =>
-                            f.name -> alignOwner(f.value)
-                          )).toMap
+                          ((field.index -> unwrappedValue) :: collectedUnwrappedFields.map(f =>
+                            f.index -> alignOwner(f.value)
+                          )).sortBy { case (idx, _) => idx }.map { case (_, expr) => expr }
                         construct(fields).asExprOf[Dest]
                     )
                   }
@@ -62,7 +62,7 @@ private[ducktape] object ProductBinder {
           }
 
         case Nil =>
-          val fields = collectedUnwrappedFields.map(f => f.name -> f.value).toMap
+          val fields = collectedUnwrappedFields.sorted.map(_.value)
           def constructedValue(using Quotes) = construct(fields).asExprOf[Dest]
           '{ $F.pure[Dest]($constructedValue) }
       }
@@ -84,7 +84,7 @@ private[ducktape] object ProductBinder {
   )(using Quotes) = {
     import quotes.reflect.*
 
-    val mtpe = MethodType(List(field.name))(_ => List(TypeRepr.of[A]), _ => TypeRepr.of[F[B]])
+    val mtpe = MethodType(List(s"field${field.index}"))(_ => List(TypeRepr.of[A]), _ => TypeRepr.of[F[B]])
     Lambda(
       Symbol.spliceOwner,
       mtpe,

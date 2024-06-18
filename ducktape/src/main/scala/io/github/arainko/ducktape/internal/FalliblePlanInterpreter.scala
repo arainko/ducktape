@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransf
 
 import scala.collection.Factory
 import scala.quoted.*
+import scala.collection.immutable.ListMap
 
 private[ducktape] object FalliblePlanInterpreter {
   def run[F[+x]: Type, A: Type, B: Type](
@@ -57,13 +58,16 @@ private[ducktape] object FalliblePlanInterpreter {
                 }
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
-            productTransformation(plan, fieldPlans, value, F)(ProductConstructor.Primary(dest))
+            fromProductTransformation(plan, fieldPlans, value, F)(ProductConstructor.Primary(dest))
 
-          case plan @ Plan.BetweenProductTuple(source, dest, plans) => ???
+          case plan @ Plan.BetweenProductTuple(source, dest, plans) =>
+            fromProductTransformation(plan, source.fields.keys.zip(plans).to(ListMap), value, F)(ProductConstructor.Tuple)
 
-          case plan @ Plan.BetweenTupleProduct(source, dest, plans) => ???
+          case plan @ Plan.BetweenTupleProduct(source, dest, plans) => 
+            fromTupleTransformation(source, plan, plans.values.toVector, value, F)(ProductConstructor.Primary(dest))
 
-          case plan @ Plan.BetweenTuples(source, dest, plans) => ???
+          case plan @ Plan.BetweenTuples(source, dest, plans) => 
+            fromTupleTransformation(source, plan, plans, value, F)(ProductConstructor.Tuple)
 
           case Plan.BetweenCoproducts(source, dest, casePlans) =>
             dest.tpe match {
@@ -88,9 +92,10 @@ private[ducktape] object FalliblePlanInterpreter {
             }
 
           case plan @ Plan.BetweenProductFunction(source, dest, argPlans) =>
-            productTransformation(plan, argPlans, value, F)(ProductConstructor.Func(dest.function))
+            fromProductTransformation(plan, argPlans, value, F)(ProductConstructor.Func(dest.function))
 
-          case plan @ Plan.BetweenTupleFunction(source, dest, argPlans) => 
+          case plan @ Plan.BetweenTupleFunction(source, dest, argPlans) =>
+            fromTupleTransformation(source, plan, argPlans.values.toVector, value, F)(ProductConstructor.Func(dest.function))
             ???
 
           case Plan.BetweenOptions(source, dest, plan) =>
@@ -186,31 +191,32 @@ private[ducktape] object FalliblePlanInterpreter {
           value.asExprOf[F[A]]
     }
 
-    final def asFieldValue(name: String, tpe: Type[?]): Either[FieldValue.Unwrapped, FieldValue.Wrapped[F]] =
+    final def asFieldValue(index: Int, tpe: Type[?]): Either[FieldValue.Unwrapped, FieldValue.Wrapped[F]] =
       this match {
-        case unw: Unwrapped[F]   => Left(new FieldValue.Unwrapped(name, tpe, unw.value))
-        case wrapped: Wrapped[F] => Right(new FieldValue.Wrapped(name, tpe, wrapped.value))
+        case unw: Unwrapped[F]   => Left(new FieldValue.Unwrapped(index, tpe, unw.value))
+        case wrapped: Wrapped[F] => Right(new FieldValue.Wrapped(index, tpe, wrapped.value))
       }
 
     case Unwrapped(value: Expr[Any])
     case Wrapped(value: Expr[F[Any]])
   }
 
-  private def productTransformation[F[+x]: Type, A: Type](
+  private def fromTupleTransformation[F[+x]: Type, A: Type](
+    sourceStruct: Structure.Tuple,
     plan: Plan[Nothing, Fallible],
-    fieldPlans: Map[String, Plan[Nothing, Fallible]],
+    plans: Vector[Plan[Nothing, Fallible]],
     value: Expr[Any],
     F: TransformationMode[F]
   )(construct: ProductConstructor)(using quotes: Quotes, toplevelValue: Expr[A]) = {
     import quotes.reflect.*
 
     val (unwrapped, wrapped) =
-      fieldPlans.partitionMap {
-        case (fieldName, p: Plan.Configured[Fallible]) =>
-          recurse(p, value, F).asFieldValue(fieldName, p.dest.tpe)
-        case (fieldName, plan) =>
-          val fieldValue = value.accessFieldByName(fieldName).asExpr
-          recurse(plan, fieldValue, F).asFieldValue(fieldName, plan.dest.tpe)
+      plans.zipWithIndex.partitionMap {
+        case (p: Plan.Configured[Fallible]) -> index =>
+          recurse(p, value, F).asFieldValue(index, p.dest.tpe)
+        case plan -> index =>
+          val fieldValue = value.accesFieldByIndex(index, sourceStruct)
+          recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
       }
 
     plan.dest.tpe match {
@@ -225,7 +231,48 @@ private[ducktape] object FalliblePlanInterpreter {
                 }
               }
               .getOrElse {
-                val fields = unwrapped.map(field => field.name -> field.value).toMap
+                val fields = unwrapped.map(field => field.value).toVector
+                Value.Unwrapped(construct(fields))
+              }
+          case TransformationMode.FailFast(f) =>
+            Value.Wrapped(
+              ProductBinder
+                .nestFlatMapsAndConstruct[F, dest](f, unwrapped.toList, wrapped.toList, construct)
+            )
+        }
+    }
+  }
+
+  private def fromProductTransformation[F[+x]: Type, A: Type](
+    plan: Plan[Nothing, Fallible],
+    fieldPlans: ListMap[String, Plan[Nothing, Fallible]],
+    value: Expr[Any],
+    F: TransformationMode[F]
+  )(construct: ProductConstructor)(using quotes: Quotes, toplevelValue: Expr[A]) = {
+    import quotes.reflect.*
+
+    val (unwrapped, wrapped) =
+      fieldPlans.zipWithIndex.partitionMap {
+        case (fieldName, p: Plan.Configured[Fallible]) -> index =>
+          recurse(p, value, F).asFieldValue(index, p.dest.tpe)
+        case (fieldName, plan) -> index =>
+          val fieldValue = value.accessFieldByName(fieldName).asExpr
+          recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
+      }
+
+    plan.dest.tpe match {
+      case '[dest] =>
+        F match {
+          case TransformationMode.Accumulating(f) =>
+            NonEmptyList
+              .fromList(wrapped.toList)
+              .map { wrappeds =>
+                Value.Wrapped {
+                  ProductZipper.zipAndConstruct[F, dest](f, wrappeds, unwrapped.toList)(construct)
+                }
+              }
+              .getOrElse {
+                val fields = unwrapped.map(field => field.value).toVector
                 Value.Unwrapped(construct(fields))
               }
           case TransformationMode.FailFast(f) =>

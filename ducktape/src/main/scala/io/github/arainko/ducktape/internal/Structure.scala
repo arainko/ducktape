@@ -204,10 +204,9 @@ private[ducktape] object Structure {
 
     @tailrec def loop(curr: TypeRepr, acc: List[TypeRepr]): List[TypeRepr] =
       curr match {
-        case AppliedType(pairTpe, head :: tail :: Nil) => 
+        case AppliedType(pairTpe, head :: tail :: Nil) =>
           loop(tail, head :: acc)
-        case tpe                                         => 
-          println(tpe.show)
+        case _ =>
           acc
       }
     loop(tp, Nil).reverse

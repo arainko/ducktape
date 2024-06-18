@@ -86,7 +86,7 @@ private[ducktape] object Plan {
   case class BetweenProducts[+E <: Plan.Error, +F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product,
-    fieldPlans: Map[String, Plan[E, F]]
+    fieldPlans: ListMap[String, Plan[E, F]]
   ) extends Plan[E, F]
 
   case class BetweenProductTuple[+E <: Plan.Error, +F <: Fallible](

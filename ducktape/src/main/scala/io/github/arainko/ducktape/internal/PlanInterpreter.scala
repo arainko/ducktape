@@ -86,7 +86,14 @@ private[ducktape] object PlanInterpreter {
         destTpe.function.appliedTo(args.toList)
 
       case Plan.BetweenTupleFunction(source, dest, argPlans) =>
-        ???
+        val args = argPlans.values.zipWithIndex.map {
+          case (p: Plan.Configured[Nothing], index) =>
+            recurse(p, value).asTerm
+          case (plan, index) =>
+            val fieldValue = value.accesFieldByIndex(index, source)
+            recurse(plan, fieldValue).asTerm
+        }
+        dest.function.appliedTo(args.toList)
 
       case Plan.BetweenOptions(sourceTpe, destTpe, plan) =>
         (sourceTpe.paramStruct.tpe -> destTpe.paramStruct.tpe) match {
