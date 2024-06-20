@@ -161,10 +161,31 @@ case class JustInts(int1: Int, int2: Int, int3: Int)
 object test extends App {
   def mirrorOf[A](using A: Mirror.Of[A]): A.type = A
 
+  given t[A]: Transformer.Fallible[Option, Option[A], A] with {
+    def transform(source: Option[A]): Option[A] = source
+  }
+
   type BigAssTuple = Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: EmptyTuple
 
-  internal.CodePrinter.code:
-    Transformer.define[BigAssTuple, Tuple.Map[BigAssTuple, Option]].build()
+  case class Test(coll: List[Int], opt: Option[List[Int]], eith: Either[String, Int])
+
+  case class Test2(coll: List[Int], opt: Option[Vector[Int]])
+
+  Mode.FailFast.either[String].locally {
+
+
+    // internal.CodePrinter.code:
+      // Transformer
+      // .define[Test, Test2]
+      // .fallible
+      // .build(
+      //   Field.const(_.coll.element, 1)
+      // )
+      test[Test, Int](_.eith.element.toShort)
+  }
+
+  def test[A, B](s: Selector ?=> A => B) = s(using ???)(???)
+
 
 
   // internal.CodePrinter.code:
