@@ -131,6 +131,12 @@ private[ducktape] object Plan {
     plan: Plan[E, F]
   ) extends Plan[E, F]
 
+  case class BetweenFallibleNonFallible[+E <: Plan.Error, +F <: Fallible](
+    source: Structure,
+    dest: Structure,
+    plan: Plan[E, F]
+  ) extends Plan[E, Fallible]
+
   case class Error(
     source: Structure,
     dest: Structure,

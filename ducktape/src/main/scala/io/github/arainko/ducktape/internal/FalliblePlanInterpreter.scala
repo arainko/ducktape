@@ -57,6 +57,37 @@ private[ducktape] object FalliblePlanInterpreter {
                     Value.Wrapped('{ $function($value) }.asExprOf[F[tpe]])
                 }
 
+          case plan @ Plan.BetweenFallibleNonFallible(source, dest, innerPlan) =>
+            
+            (F, FallibilityRefiner.run(innerPlan)) match {
+              case _-> (plan: Plan[Nothing, Nothing]) => 
+                (source.tpe -> dest.tpe) match {
+                  case '[F[a]] -> '[b] =>
+                    val source = value.asExprOf[F[a]]
+                    Value.Wrapped(
+                      '{${ F.value }.map[a, b]($source, a => ${ PlanInterpreter.recurse(plan, 'a).asExprOf[b] })}
+                    )
+                }
+
+              case TransformationMode.Accumulating(acc) -> None => 
+                (source.tpe -> dest.tpe) match {
+                  case '[F[a]] -> '[F[b]] =>
+                    val source = value.asExprOf[F[a]]
+
+                    // Option[A] -> Option[]
+
+                    Value.Wrapped(
+                      ???
+                    // '{ $acc.product()  }
+                      // '{${ F.value }.map[a, b]($source, a => ${ PlanInterpreter.recurse(plan, 'a).asExprOf[b] })}
+                    )
+                }
+
+
+              case TransformationMode.FailFast(ff) -> None => 
+                ???
+            }
+
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
             fromProductTransformation(plan, fieldPlans, value, F)(ProductConstructor.Primary(dest))
 
@@ -96,7 +127,6 @@ private[ducktape] object FalliblePlanInterpreter {
 
           case plan @ Plan.BetweenTupleFunction(source, dest, argPlans) =>
             fromTupleTransformation(source, plan, argPlans.values.toVector, value, F)(ProductConstructor.Func(dest.function))
-            ???
 
           case Plan.BetweenOptions(source, dest, plan) =>
             (source.paramStruct.tpe, dest.paramStruct.tpe) match {

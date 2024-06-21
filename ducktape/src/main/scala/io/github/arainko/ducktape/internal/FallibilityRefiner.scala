@@ -74,6 +74,9 @@ private[ducktape] object FallibilityRefiner {
         case BetweenCollections(source, dest, plan) =>
           recurse(plan)
 
+        case BetweenFallibleNonFallible(source, dest, plan) => 
+          boundary.break(None)
+
         case Plan.Error(source, dest, message, suppressed) => ()
 
   private inline def evaluate(plans: Iterable[Plan[Plan.Error, Fallible]])(using inline label: boundary.Label[None.type | Unit]) =

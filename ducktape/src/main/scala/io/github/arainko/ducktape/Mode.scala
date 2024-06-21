@@ -4,6 +4,7 @@ import scala.annotation.implicitNotFound
 import scala.collection.Factory
 import scala.runtime.TupleMirror
 import scala.deriving.Mirror
+import java.sql.Ref
 
 @implicitNotFound(
   """ducktape needs an instance of either Mode.Accumulating[F] or Mode.FailFast[F] in implicit scope to infer the wrapper type F and determine the mode of fallible transformations.
@@ -170,6 +171,46 @@ object test extends App {
   case class Test(coll: List[Int], opt: Option[List[Int]], eith: Either[String, Int])
 
   case class Test2(coll: List[Int], opt: Option[Vector[Int]])
+
+  case class Refined(value: Int)
+
+  def refine(int: Int): Either[String, Refined] = ???
+
+  def refineAcc(int: Int): Either[List[String], Refined] = ???
+
+  val source: Either[String, Int] = ???
+
+  val sourceAcc: Either[List[String], Int] = ???
+
+  val srcTuple = (
+    source,
+    source,
+    source
+  )
+
+
+  val mode = Mode.Accumulating.either[String, List]
+
+  val destTupleFF: Either[String, (Refined, Refined, Refined)] = 
+    source.flatMap(refine).flatMap { src1 =>
+      source.flatMap(refine).flatMap { src2 =>
+        source.flatMap(refine).map { src3 =>
+          (src1, src2, src3)
+        }
+      }
+    }
+
+  def thatT(fa: Either[List[String], Int], f: Int => Either[List[String], Refined]): Either[List[String], Refined] =
+    fa.flatMap(f)
+
+  val destTupleAcc = ???
+    // mode.traverseCollection(
+    // mode.traverseCollection[Int, Refined, List[Int], List[Refined]]((sourceAcc, sourceAcc, sourceAcc).toList, refineAcc)
+
+  
+    
+
+
 
   Mode.FailFast.either[String].locally {
 
