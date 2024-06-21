@@ -25,8 +25,6 @@ private[ducktape] trait PlanTraverser[A] {
               recurse(casePlans.toList ::: next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenProductFunction(_, _, argPlans) =>
               recurse(argPlans.values.toList ::: next, foldOver(plan, accumulator))
-            case plan @ Plan.BetweenFallibleNonFallible(_, _, innerPlan) =>
-              recurse(innerPlan :: next, foldOver(plan, accumulator))
             case p @ Plan.BetweenOptions(_, _, plan) =>
               recurse(plan :: next, foldOver(p, accumulator))
             case p @ Plan.BetweenNonOptionOption(_, _, plan) =>
