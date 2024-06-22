@@ -173,6 +173,10 @@ object test extends App {
 
   Mode.FailFast.either[String].locally {
 
+    ((1, 2, 3, 4), 2, 3, 4)
+      .into[((Int, Int, Int, Int), Int, Int)]
+      .transform(Field.const(_.apply(0).apply(1), 2))
+
 
     // internal.CodePrinter.code:
       // Transformer

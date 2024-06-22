@@ -2,16 +2,30 @@ package io.github.arainko.ducktape.internal
 
 import scala.annotation.tailrec
 import scala.quoted.*
+import scala.NonEmptyTuple
 
 private[ducktape] object PathSelector {
   def unapply(using Quotes)(expr: quotes.reflect.Term): Some[Path] = {
     import quotes.reflect.{ Selector as _, * }
+
+    println(expr.show(using Printer.TreeStructure))
 
     @tailrec
     def recurse(using Quotes)(acc: List[Path.Segment], term: quotes.reflect.Term): Path = {
       import quotes.reflect.*
 
       term match {
+        case Inlined(
+              Some(
+                Apply(
+                  TypeApply(Select(tree, "apply"), List(Inferred())),
+                  List(Literal(IntConstant(index)))
+                )
+              ),
+              _,
+              Typed(term, tpe @ Applied(TypeIdent("Elem"), _))
+            ) =>
+          recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.asType, index)), tree)
         case Inlined(_, _, tree) =>
           Logger.debug("Matched 'Inlined', recursing...")
           recurse(acc, tree)
@@ -42,11 +56,19 @@ private[ducktape] object PathSelector {
           Path(ident.tpe.asType, acc.toVector)
         case other =>
           Logger.debug(s"Matched an unexpected term")
-          report.errorAndAbort(other.show(using Printer.TreeShortCode))
+          report.errorAndAbort(other.show(using Printer.TreeStructure))
       }
     }
 
     Some(Logger.loggedInfo("Parsed path")(recurse(Nil, expr)))
+  }
+
+  object AsExpr {
+    def unapply(using Quotes)(term: quotes.reflect.Term): Some[Expr[Any]] = Some(term.asExpr)
+  }
+
+  object AsType {
+    def unapply(using Quotes)(tt: quotes.reflect.TypeTree): Some[Type[?]] = Some(tt.tpe.asType)
   }
 
 }
