@@ -1,5 +1,6 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.internal.Debug.AST
 import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
@@ -69,7 +70,7 @@ private[ducktape] object Path {
   def empty(root: Type[?]): Path = Path(root, Vector.empty)
 
   given debug: Debug[Path] with {
-    extension (self: Path) def show(using Quotes): String = self.render
+    def astify(self: Path)(using Quotes): AST = Debug.AST.Text(self.render)
   }
 
   enum Segment derives Debug {

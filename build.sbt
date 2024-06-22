@@ -51,6 +51,7 @@ lazy val ducktape =
       Test / scalacOptions ++= List("-Werror", "-Wconf:cat=deprecation:s"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0" % Test
     )
+    .nativeSettings(tlMimaPreviousVersions := Set.empty)
 
 lazy val docs =
   project
