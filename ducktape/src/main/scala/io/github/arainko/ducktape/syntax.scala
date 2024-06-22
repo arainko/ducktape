@@ -20,10 +20,3 @@ extension [F[+x], Source](value: Source)(using F: Mode[F]) {
   transparent inline def fallibleVia[Func](inline function: Func): F[Any] =
     FallibleTransformations.viaInferred[F, Source, Func](value, function, F)
 }
-
-case class Costam(int: Int, str: String)
-case class Costam2(str: String, int: Int)
-
-object test {
-  Costam(1, "").to[Costam2]
-}

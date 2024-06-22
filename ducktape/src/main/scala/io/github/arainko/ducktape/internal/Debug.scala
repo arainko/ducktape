@@ -25,9 +25,7 @@ private[ducktape] object Debug extends LowPriorityDebug {
   }
 
   given int: Debug[Int] with {
-
     override def astify(self: Int)(using Quotes): AST = Text(self.toString)
-
   }
 
   given bool: Debug[Boolean] with {
@@ -162,38 +160,39 @@ private[ducktape] object Debug extends LowPriorityDebug {
     final def show: String = {
       def ident(n: Int) = "  " * n
 
+      // if you think this is over then you're wrong
+      val Separator = System.lineSeparator
+
       def recurse(ast: AST, depth: Int): String = {
         ast match
           case Empty       => ""
           case Text(value) => value
           case p @ Product(name, fields) =>
             if (p.length >= 80) {
-                s"$name(" +
-                System.lineSeparator +
-                fields
-                  .map((name, ast) => ident(depth + 1) + s"$name = ${recurse(ast, depth + 1)}")
-                  .mkString("," + System.lineSeparator) +
-                System.lineSeparator + ident(depth) +
-                ")"
+              s"$name(".bold + Separator +
+                fields.map { (name, ast) =>
+                  ident(depth + 1) + name.yellow +  " = ".yellow + recurse(ast, depth + 1)
+                }.mkString("," + Separator) + Separator + ident(depth) + ")".bold
             } else {
-              s"$name(${fields.map((name, ast) => s"$name = ${recurse(ast, 0)}").mkString(", ")})"
+              name.bold + "(".bold + fields.map((name, ast) => name.yellow + " = ".yellow + recurse(ast, 0)).mkString(", ") + ")".bold
             }
 
           case c @ Collection(name, values) =>
             if (c.length >= 80) {
-              ident(depth) + s"$name(" + System.lineSeparator() +
-                values.map(recurse(_, depth + 1)).mkString("," + System.lineSeparator) +
-                ")"
+              s"$name(".bold + Separator +
+                values.map(value => ident(depth + 1) + recurse(value, depth + 1)).mkString("," + Separator) + Separator + ident(
+                  depth
+                ) + ")".bold
             } else {
-              
-                s"$name(" +
-                values.map(recurse(_, 0)).mkString(", ") +
-                ")"
+              s"$name(".bold + values.map(recurse(_, 0)).mkString(", ") + ")".bold
             }
-
       }
-
       recurse(this, 0)
+    }
+
+    extension (self: String) {
+      private def bold: String = s"${Console.BOLD}$self${Console.RESET}"
+      private def yellow: String = s"${Console.YELLOW}$self${Console.RESET}"
     }
   }
 }
