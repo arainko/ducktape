@@ -1,10 +1,10 @@
 package io.github.arainko.ducktape.internal
 
+import scala.collection.immutable.ListMap
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.ClassTag
-import scala.collection.immutable.ListMap
 
 private[ducktape] trait Debug[-A] {
   def astify(self: A)(using Quotes): Debug.AST
@@ -171,10 +171,12 @@ private[ducktape] object Debug extends LowPriorityDebug {
             if (p.length >= 80) {
               s"$name(".bold + Separator +
                 fields.map { (name, ast) =>
-                  ident(depth + 1) + name.yellow +  " = ".yellow + recurse(ast, depth + 1)
+                  ident(depth + 1) + name.yellow + " = ".yellow + recurse(ast, depth + 1)
                 }.mkString("," + Separator) + Separator + ident(depth) + ")".bold
             } else {
-              name.bold + "(".bold + fields.map((name, ast) => name.yellow + " = ".yellow + recurse(ast, 0)).mkString(", ") + ")".bold
+              name.bold + "(".bold + fields
+                .map((name, ast) => name.yellow + " = ".yellow + recurse(ast, 0))
+                .mkString(", ") + ")".bold
             }
 
           case c @ Collection(name, values) =>
