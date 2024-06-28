@@ -171,12 +171,17 @@ object test extends App {
 
   case class Test2(coll: List[Int], opt: Option[Vector[Int]])
 
+  case class P(int: Int)
+  
+  case class D(int: Int)
+
   Mode.FailFast.either[String].locally {
 
-    ((1, 2, 3, 4), 2, 3, 4)
-      .into[((Int, Int, Int, Int), Int, Int)]
-      .transform(Field.const(_.apply(0).apply(1), 2))
-
+    internal.CodePrinter.code:
+      ((1, 2, 3, 4), 2, 3, 4)
+        .into[((Int, Int, Int), Int, Int)]
+        .transform2(Field.const(_._1._2, 2))
+      
 
     // internal.CodePrinter.code:
       // Transformer

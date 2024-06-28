@@ -70,8 +70,11 @@ private[ducktape] object PlanConfigurer {
             }
 
           case (segment @ Path.Segment.TupleElement(_, index)) :: tail =>
+            Logger.debug(s"Matched tupleElement with index of $index")
+
             current match {
               case plan @ BetweenTuples(source, dest, plans) =>
+                Logger.debug(ds"Matched $plan")
                 plans
                   .lift(index)
                   .map(elemPlan => plan.copy(plans = plans.updated(index, recurse(elemPlan, tail, plan))))
@@ -81,6 +84,7 @@ private[ducktape] object PlanConfigurer {
                   )
 
               case plan @ BetweenProductTuple(source, dest, plans) if config.side.isDest =>
+                Logger.debug(ds"Matched $plan")
                 plans
                   .lift(index)
                   .map(elemPlan => plan.copy(plans = plans.updated(index, recurse(elemPlan, tail, plan))))
@@ -90,6 +94,7 @@ private[ducktape] object PlanConfigurer {
                   )
 
               case plan @ BetweenTupleProduct(source, dest, plans) if config.side.isSource =>
+                Logger.debug(ds"Matched $plan")
                 plans.toVector
                   .lift(index)
                   .map((name, fieldPlan) => plan.copy(plans = plans.updated(name, recurse(fieldPlan, tail, plan))))
@@ -99,6 +104,7 @@ private[ducktape] object PlanConfigurer {
                   )
 
               case plan @ BetweenTupleFunction(source, dest, plans) if config.side.isSource =>
+                Logger.debug(ds"Matched $plan")
                 plans.toVector
                   .lift(index)
                   .map((name, fieldPlan) => plan.copy(argPlans = plans.updated(name, recurse(fieldPlan, tail, plan))))
@@ -107,7 +113,9 @@ private[ducktape] object PlanConfigurer {
                       .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
                   )
 
-              case other => invalidPathSegment(config, other, segment)
+              case other =>
+                Logger.debug(s"Failing with invalid path segment on node: ${other.getClass.getSimpleName}")
+                invalidPathSegment(config, other, segment)
             }
 
           case (segment @ Path.Segment.Case(tpe)) :: tail =>
@@ -167,6 +175,8 @@ private[ducktape] object PlanConfigurer {
     current: Plan[Error, F],
     parent: Plan[Plan.Error, F] | None.type
   )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning]) = {
+    Logger.debug(ds"Configuring plan $current with $config")
+
     config match {
       case cfg: (Configuration.Instruction.Static[F] | Configuration.Instruction.Dynamic[F]) =>
         staticOrDynamic(cfg, current, parent)

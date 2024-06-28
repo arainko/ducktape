@@ -6,7 +6,7 @@ import scala.quoted.*
 private[ducktape] object Logger {
 
   // Logger Config
-  private[ducktape] transparent inline given level: Level = Level.Info
+  private[ducktape] transparent inline given level: Level = Level.Debug
   private val output = Output.StdOut
   private def filter(msg: String) = true
 
@@ -71,4 +71,18 @@ private[ducktape] object Logger {
     quotes: Quotes
   ): Unit =
     debug(s"$msg: ${Debug.show(value)}")
+}
+
+extension (ctx: StringContext) {
+  private[ducktape] def ds(args: Any*): String = {
+    val pi = ctx.parts.iterator
+    val ai = args.iterator
+    val bldr = new StringBuilder(pi.next())
+    while (ai.hasNext) {
+      bldr append ai.next().getClass().getSimpleName()
+      bldr append pi.next()
+    }
+    bldr.toString
+  }
+  
 }

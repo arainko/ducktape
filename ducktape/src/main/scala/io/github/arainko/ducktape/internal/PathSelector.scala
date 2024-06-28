@@ -2,7 +2,6 @@ package io.github.arainko.ducktape.internal
 
 import scala.annotation.tailrec
 import scala.quoted.*
-import scala.NonEmptyTuple
 
 private[ducktape] object PathSelector {
   def unapply(using Quotes)(expr: quotes.reflect.Term): Some[Path] = {
@@ -35,6 +34,11 @@ private[ducktape] object PathSelector {
         case Block(_, tree) =>
           Logger.debug("Matched 'Block', recursing...")
           recurse(acc, tree)
+        case select @ Select(tree, name @ TupleField(index)) =>
+          Logger.debug(s"Matched 'Select' (matching a tuple field) with name = $name")
+          if tree.tpe <:< TypeRepr.of[Tuple] then recurse(acc.prepended(Path.Segment.TupleElement(tree.tpe.asType, index)), tree)
+          else recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, FieldName.Dest(name))), tree)
+
         case select @ Select(tree, name) =>
           Logger.debug(s"Matched 'Select' (matching field access) with name = $name")
           recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, FieldName.Dest(name))), tree)
@@ -63,12 +67,8 @@ private[ducktape] object PathSelector {
     Some(Logger.loggedInfo("Parsed path")(recurse(Nil, expr)))
   }
 
-  object AsExpr {
-    def unapply(using Quotes)(term: quotes.reflect.Term): Some[Expr[Any]] = Some(term.asExpr)
+  private object TupleField {
+    def unapply(name: String): Option[Int] =
+      name.stripPrefix("_").toIntOption.map(_ - 1) // ._1 means .apply(0)
   }
-
-  object AsType {
-    def unapply(using Quotes)(tt: quotes.reflect.TypeTree): Some[Type[?]] = Some(tt.tpe.asType)
-  }
-
 }

@@ -12,13 +12,16 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
 
   def prepended(segment: Path.Segment): Path = self.copy(segments = segments.prepended(segment))
 
+  // deliberately use something that requires a total function so that when a new Path.Segment is declared
+  // it's not forgotten about
   def currentTpe(using Quotes): Type[?] = {
-
-    segments.reverse.collectFirst {
-      case Path.Segment.Element(tpe)     => tpe
-      case Path.Segment.Field(tpe, name) => tpe
+    segments.reverse.find {
+      case Path.Segment.Element(_)         => true
+      case Path.Segment.Field(_, _)        => true
+      case Path.Segment.TupleElement(_, _) => true
+      case Path.Segment.Case(_)            => false
     }
-      .getOrElse(root)
+      .fold(root)(_.tpe)
       .repr
       .widen
       .asType
