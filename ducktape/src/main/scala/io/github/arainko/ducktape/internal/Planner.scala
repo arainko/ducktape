@@ -6,7 +6,6 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
 import scala.util.boundary
-import scala.collection.immutable.ListMap
 import scala.collection.immutable.VectorMap
 
 private[ducktape] object Planner {
@@ -33,12 +32,9 @@ private[ducktape] object Planner {
           planProductFunctionTransformation(source, dest)
 
         case (source: Tuple, dest: Function) =>
-          positionWisePlans(source, dest, source.elements, dest.args.values.toSeq) match
-            case plans: Vector[Plan[Plan.Error, F]] =>
-              // safe under the assumption that 'positionWisePlans' always returns dest.args.size amount of plans
-              val argPlans = dest.args.keys.zip(plans).to(ListMap)
-              Plan.BetweenTupleFunction(source, dest, argPlans)
-            case error: Plan.Error => error
+          val plans = positionWisePlans(source, source.elements, dest.args.values.toIndexedSeq)
+          val argPlans = dest.args.keys.zip(plans).to(VectorMap)
+          Plan.BetweenTupleFunction(source, dest, argPlans)
 
         case UserDefinedTransformation(transformer) =>
           verifyNotSelfReferential(Plan.UserDefined(source, dest, transformer))
@@ -71,22 +67,18 @@ private[ducktape] object Planner {
           planProductTransformation(source, dest)
 
         case (source: Product, dest: Tuple) =>
-          positionWisePlans(source, dest, source.fields.values.toSeq, dest.elements) match
-            case plans: Vector[Plan[Plan.Error, F]] => Plan.BetweenProductTuple(source, dest, plans)
-            case error: Plan.Error                  => error
+          val plans = positionWisePlans(source, source.fields.values.toIndexedSeq, dest.elements)
+          Plan.BetweenProductTuple(source, dest, plans)
 
         case (source: Tuple, dest: Product) =>
-          positionWisePlans(source, dest, source.elements, dest.fields.values.toSeq) match
-            case plans: Vector[Plan[Plan.Error, F]] =>
-              // safe under the assumption that 'positionWisePlans' always returns dest.fields.size amount of plans
-              val fieldPlans = dest.fields.keys.zip(plans).to(ListMap)
-              Plan.BetweenTupleProduct(source, dest, fieldPlans)
-            case error: Plan.Error => error
+          val plans = positionWisePlans(source, source.elements, dest.fields.values.toIndexedSeq)
+          // safe under the assumption that 'positionWisePlans' always returns dest.fields.size amount of plans
+          val fieldPlans = dest.fields.keys.zip(plans).to(VectorMap)
+          Plan.BetweenTupleProduct(source, dest, fieldPlans)
 
         case (source: Structure.Tuple, dest: Structure.Tuple) =>
-          positionWisePlans(source, dest, source.elements, dest.elements) match
-            case plans: Vector[Plan[Plan.Error, F]] => Plan.BetweenTuples(source, dest, plans)
-            case error: Plan.Error                  => error
+          val plans = positionWisePlans(source, source.elements, dest.elements)
+          Plan.BetweenTuples(source, dest, plans)
 
         case (source: Coproduct, dest: Coproduct) =>
           planCoproductTransformation(source, dest)
@@ -117,36 +109,43 @@ private[ducktape] object Planner {
     source: Structure.Product,
     dest: Structure.Product
   )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
-    def nameWise = {
-      val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-        val plan =
-          source.fields
-            .get(destField)
-            .map(sourceStruct => recurse(sourceStruct, destFieldStruct))
-            .getOrElse(
-              Plan.Error(
-                Structure.of[Nothing](source.path),
-                destFieldStruct,
-                ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
-                None
-              )
-            )
-        destField -> plan
-      }
-      Plan.BetweenProducts(source, dest, fieldPlans)
-    }
 
-    nameWise
+    val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
+      val plan =
+        source.fields
+          .get(destField)
+          .map(sourceStruct => recurse(sourceStruct, destFieldStruct))
+          .getOrElse(
+            Plan.Error(
+              Structure.of[Nothing](source.path),
+              destFieldStruct,
+              ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
+              None
+            )
+          )
+      destField -> plan
+    }
+    Plan.BetweenProducts(source, dest, fieldPlans)
   }
 
   private def positionWisePlans[F <: Fallible](
     sourceStruct: Structure,
-    destStruct: Structure,
-    source: Seq[Structure],
-    dest: Seq[Structure]
-  )(using Quotes, Depth, TransformationSite, Summoner[F]): Vector[Plan[Plan.Error, F]] | Plan.Error = {
-    if source.size >= dest.size then source.lazyZip(dest).map((src, dest) => recurse(src, dest)).toVector
-    else Plan.Error(sourceStruct, destStruct, ErrorMessage.LoopingTransformerDetected /*TODO ERROR MESSAGE*/, None)
+    source: IndexedSeq[Structure],
+    dest: IndexedSeq[Structure]
+  )(using Quotes, Depth, TransformationSite, Summoner[F]): Vector[Plan[Plan.Error, F]] = {
+    dest.zipWithIndex.map { (destFieldStruct, index) =>
+      source
+        .lift(index)
+        .map(sourceStruct => recurse(sourceStruct, destFieldStruct))
+        .getOrElse(
+          Plan.Error(
+            Structure.of[Nothing](sourceStruct.path),
+            destFieldStruct,
+            ErrorMessage.NoFieldFoundAtIndex(index, sourceStruct.tpe),
+            None
+          )
+        )
+    }.toVector
   }
 
   private def planProductFunctionTransformation[F <: Fallible](
@@ -154,7 +153,6 @@ private[ducktape] object Planner {
     dest: Structure.Function
   )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
-      VectorMap
       val plan =
         source.fields
           .get(destField)

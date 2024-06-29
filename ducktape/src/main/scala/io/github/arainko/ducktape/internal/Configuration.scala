@@ -55,7 +55,7 @@ private[ducktape] object Configuration {
 
   trait FieldModifier {
     def apply(
-      parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible],
+      parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible] | Plan.BetweenTupleProduct[Plan.Error, Fallible],
       field: String,
       plan: Plan[Plan.Error, Fallible]
     )(using Quotes): Configuration[Nothing] | plan.type

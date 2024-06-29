@@ -5,7 +5,7 @@ import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransf
 
 import scala.collection.Factory
 import scala.quoted.*
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.VectorMap
 
 private[ducktape] object FalliblePlanInterpreter {
   def run[F[+x]: Type, A: Type, B: Type](
@@ -61,7 +61,7 @@ private[ducktape] object FalliblePlanInterpreter {
             fromProductTransformation(plan, fieldPlans, value, F)(ProductConstructor.Primary(dest))
 
           case plan @ Plan.BetweenProductTuple(source, dest, plans) =>
-            fromProductTransformation(plan, source.fields.keys.zip(plans).to(ListMap), value, F)(ProductConstructor.Tuple)
+            fromProductTransformation(plan, source.fields.keys.zip(plans).to(VectorMap), value, F)(ProductConstructor.Tuple)
 
           case plan @ Plan.BetweenTupleProduct(source, dest, plans) => 
             fromTupleTransformation(source, plan, plans.values.toVector, value, F)(ProductConstructor.Primary(dest))
@@ -245,7 +245,7 @@ private[ducktape] object FalliblePlanInterpreter {
 
   private def fromProductTransformation[F[+x]: Type, A: Type](
     plan: Plan[Nothing, Fallible],
-    fieldPlans: ListMap[String, Plan[Nothing, Fallible]],
+    fieldPlans: VectorMap[String, Plan[Nothing, Fallible]],
     value: Expr[Any],
     F: TransformationMode[F]
   )(construct: ProductConstructor)(using quotes: Quotes, toplevelValue: Expr[A]) = {

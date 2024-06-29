@@ -171,16 +171,24 @@ object test extends App {
 
   case class Test2(coll: List[Int], opt: Option[Vector[Int]])
 
-  case class P(int: Int)
+  case class P(int: Int, int1: Int, int2: Option[Int])
   
   case class D(int: Int)
 
+  internal.CodePrinter.code:
+    Transformer.defineVia[(Int, Int)](P.apply).build(Field.fallbackToNone)
+
+  internal.CodePrinter.code:
+    Transformer.define[(Int, Int, Int), (Int, Int, Int, Int)].build(Field.const(_._4, 1))
+
   Mode.FailFast.either[String].locally {
 
-    internal.CodePrinter.code:
-      ((1, 2, 3, 4), 2, 3, 4)
-        .into[((Int, Int, Int), Int, Int)]
-        .transform2(Field.const(_._1._2, 2))
+    
+
+    // internal.CodePrinter.code:
+      // ((1, 2, 3, 4), 2, 3, 4)
+        // .into[((Int, Int, Int), Int, Int)]
+        // .transform2(Field.const(_._1._2, 2))
       
 
     // internal.CodePrinter.code:

@@ -1,6 +1,6 @@
 package io.github.arainko.ducktape.internal
 
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.VectorMap
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.quoted.*
@@ -59,7 +59,7 @@ private[ducktape] object Debug extends LowPriorityDebug {
       Collection(
         "Map",
         self
-          .map((key, value) => Product("Entry", ListMap("key" -> debugKey.astify(key), "value" -> debugValue.astify(value))))
+          .map((key, value) => Product("Entry", VectorMap("key" -> debugKey.astify(key), "value" -> debugValue.astify(value))))
           .toVector
       )
     }
@@ -114,7 +114,7 @@ private[ducktape] object Debug extends LowPriorityDebug {
             case label -> debug -> value =>
               label -> debug.astify(value)
           }
-          .to(ListMap)
+          .to(VectorMap)
 
         Product(tpeName, fields)
       }
@@ -140,7 +140,7 @@ private[ducktape] object Debug extends LowPriorityDebug {
   enum AST {
     case Empty
     case Text(value: String)
-    case Product(name: String, fields: ListMap[String, AST])
+    case Product(name: String, fields: VectorMap[String, AST])
     case Collection(name: String, values: Vector[AST])
 
     final def dropEmpty: AST =

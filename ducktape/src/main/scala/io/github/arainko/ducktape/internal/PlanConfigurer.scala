@@ -43,7 +43,6 @@ private[ducktape] object PlanConfigurer {
                 // TODO: try to come up with something nicer? this is meh
                 source.fields.keys
                   .zip(plans)
-                  .toVector
                   .zipWithIndex
                   .collectFirst {
                     case (`fieldName`, fieldPlan) -> index =>
@@ -80,7 +79,7 @@ private[ducktape] object PlanConfigurer {
                   .map(elemPlan => plan.copy(plans = plans.updated(index, recurse(elemPlan, tail, plan))))
                   .getOrElse(
                     Plan.Error
-                      .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
+                      .from(plan, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
                   )
 
               case plan @ BetweenProductTuple(source, dest, plans) if config.side.isDest =>
@@ -90,7 +89,7 @@ private[ducktape] object PlanConfigurer {
                   .map(elemPlan => plan.copy(plans = plans.updated(index, recurse(elemPlan, tail, plan))))
                   .getOrElse(
                     Plan.Error
-                      .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
+                      .from(plan, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
                   )
 
               case plan @ BetweenTupleProduct(source, dest, plans) if config.side.isSource =>
@@ -100,7 +99,7 @@ private[ducktape] object PlanConfigurer {
                   .map((name, fieldPlan) => plan.copy(plans = plans.updated(name, recurse(fieldPlan, tail, plan))))
                   .getOrElse(
                     Plan.Error
-                      .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
+                      .from(plan, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
                   )
 
               case plan @ BetweenTupleFunction(source, dest, plans) if config.side.isSource =>
@@ -110,7 +109,7 @@ private[ducktape] object PlanConfigurer {
                   .map((name, fieldPlan) => plan.copy(argPlans = plans.updated(name, recurse(fieldPlan, tail, plan))))
                   .getOrElse(
                     Plan.Error
-                      .from(plan, /* TODO ERROR MESSAGE */ ErrorMessage.InvalidFieldAccessor(s"_$index", config.span), None)
+                      .from(plan, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
                   )
 
               case other =>
@@ -285,7 +284,7 @@ private[ducktape] object PlanConfigurer {
         }
     }
 
-  //TODO: Needs taking a look at after adding tuple transformations
+  // TODO: Support tuple-to-tuple, product-to-tuple?
   private def bulk[F <: Fallible](
     current: Plan[Plan.Error, F],
     instruction: Configuration.Instruction.Bulk
@@ -298,7 +297,8 @@ private[ducktape] object PlanConfigurer {
     var isAnythingModified = IsAnythingModified.No
 
     def updatePlan(
-      parent: Plan.BetweenProducts[Plan.Error, F] | Plan.BetweenProductFunction[Plan.Error, F]
+      parent: Plan.BetweenProducts[Plan.Error, F] | Plan.BetweenProductFunction[Plan.Error, F] |
+        Plan.BetweenTupleProduct[Plan.Error, F]
     )(
       name: String,
       plan: Plan[Plan.Error, F]
@@ -319,8 +319,11 @@ private[ducktape] object PlanConfigurer {
         case prod: Plan.BetweenProducts[Plan.Error, F] =>
           val updatedFieldPlans = prod.fieldPlans.transform(updatePlan(prod))
           prod.copy(fieldPlans = updatedFieldPlans)
+        case prodTuple: Plan.BetweenTupleProduct[Plan.Error, F] =>
+          val updatedFieldPlans = prodTuple.plans.transform(updatePlan(prodTuple))
+          prodTuple.copy(plans = updatedFieldPlans)
       }
-      .toRight("This config only works when sideing a function-to-product or a product-to-product transformations")
+      .toRight("This config only works when applied to name-wise based product transformations (product-to-product, tuple-to-product, product-via-function)")
       .filterOrElse(_ => isAnythingModified == IsAnythingModified.Yes, "Config option is not doing anything")
       .fold(
         errorMessage => {
@@ -385,5 +388,4 @@ private[ducktape] object PlanConfigurer {
         case other                                 => accumulator
       }
   }
-
 }

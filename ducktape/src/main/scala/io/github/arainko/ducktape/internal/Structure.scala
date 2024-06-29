@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.internal.Structure.*
 import io.github.arainko.ducktape.internal.*
 
 import scala.annotation.tailrec
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.VectorMap
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.TypeTest
@@ -28,7 +28,7 @@ private[ducktape] object Structure {
 
   def toplevelNothing(using Quotes) = Structure.Ordinary(Type.of[Nothing], Path.empty(Type.of[Nothing]))
 
-  case class Product(tpe: Type[?], path: Path, fields: ListMap[String, Structure]) extends Structure {
+  case class Product(tpe: Type[?], path: Path, fields: VectorMap[String, Structure]) extends Structure {
     private var cachedDefaults: Map[String, Expr[Any]] = null
 
     def defaults(using Quotes): Map[String, Expr[Any]] =
@@ -46,7 +46,7 @@ private[ducktape] object Structure {
   case class Function(
     tpe: Type[?],
     path: Path,
-    args: ListMap[String, Structure],
+    args: VectorMap[String, Structure],
     function: io.github.arainko.ducktape.internal.Function
   ) extends Structure
 
@@ -169,7 +169,7 @@ private[ducktape] object Structure {
                           case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], name)))
                         })
                       )
-                      .to(ListMap)
+                      .to(VectorMap)
 
                   Structure.Product(Type.of[A], path, structures)
                 case '{
