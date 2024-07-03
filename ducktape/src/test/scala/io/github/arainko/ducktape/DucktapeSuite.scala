@@ -21,6 +21,19 @@ trait DucktapeSuite extends FunSuite {
     (head :: tail.toList).foreach(expected => errors.contains(expected))
   }
 
+  inline def assertTransforms[A, B](source: A, expected: B)(using loc: Location) =
+    assertEachEquals(
+      source.to[B],
+      source.into[B].transform(),
+      Transformer.define[A, B].build().transform(source),
+    )(expected)
+
+  inline def assertTransformsConfigured[A, B](source: A, expected: B)(inline config: (Field[A, B] | Case[A, B])*)(using loc: Location) =
+    assertEachEquals(
+      source.into[B].transform(config*),
+      Transformer.define[A, B].build(config*).transform(source),
+    )(expected)
+
   extension [A](inline self: A) {
     inline def code: A = internal.CodePrinter.code(self)
 
