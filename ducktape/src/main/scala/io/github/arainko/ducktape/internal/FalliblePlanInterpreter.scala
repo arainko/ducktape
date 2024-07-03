@@ -96,7 +96,6 @@ private[ducktape] object FalliblePlanInterpreter {
 
           case plan @ Plan.BetweenTupleFunction(source, dest, argPlans) =>
             fromTupleTransformation(source, plan, argPlans.values.toVector, value, F)(ProductConstructor.Func(dest.function))
-            ???
 
           case Plan.BetweenOptions(source, dest, plan) =>
             (source.paramStruct.tpe, dest.paramStruct.tpe) match {
