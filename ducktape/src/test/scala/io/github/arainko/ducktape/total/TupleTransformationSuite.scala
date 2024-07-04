@@ -41,7 +41,7 @@ class TupleTransformationSuite extends DucktapeSuite {
     )(expected)
   }
 
-  test("tuple-to-tuple can be configured") {
+  test("tuple-to-tuple can be configured (dest side)") {
     val source = (1, 1, List(1), (1, 2, 3))
     val expected: (Int, Option[(Int, Int)], Vector[Int], (Int, Int, Int, Int)) = (1, Option((1, 2)), Vector(1), (1, 2, 3, 4))
 
@@ -49,6 +49,29 @@ class TupleTransformationSuite extends DucktapeSuite {
       Field.const(_.apply(3).apply(3), 4),
       Field.computed(_.apply(1).element, elem => (elem._2, 2))
     )
+  }
+
+  test("tuple-to-tuple can be configured (source side)") {
+    enum Source {
+      case One
+      case Two
+    }
+
+    enum Dest {
+      case One
+      case Three
+    }
+
+    val source: (Int, Source, List[Source], (Source, Source, Source)) = (1, Source.One, List(Source.One), (Source.One, Source.Two, Source.Two))
+    val expected: (Int, Option[Dest], Vector[Dest], (Dest, Dest)) = (1, Option(Dest.One), Vector(Dest.One), (Dest.One, Dest.Three))
+
+    assertTransformsConfigured(source, expected)(
+      Case.const(_.apply(3).apply(1).at[Source.Two.type], Dest.Three),
+      Case.const(_.apply(3).apply(0).at[Source.Two.type], Dest.Three),
+      Case.const(_.apply(1).at[Source.Two.type], Dest.Three),
+      Case.const(_.apply(2).element.at[Source.Two.type], Dest.Three)
+    )
+
   }
 
   test("plain tuples can be configured with _-accessors") {
