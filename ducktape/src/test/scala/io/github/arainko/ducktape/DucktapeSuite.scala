@@ -1,6 +1,9 @@
 package io.github.arainko.ducktape
 
 import munit.{ Compare, FunSuite, Location }
+import scala.compiletime.ops.int.*
+import scala.reflect.ClassTag
+
 
 trait DucktapeSuite extends FunSuite {
   def assertEachEquals[Source, Dest](head: Source, tail: Source*)(expected: Dest)(using Location, Compare[Source, Dest]) = {
@@ -33,6 +36,18 @@ trait DucktapeSuite extends FunSuite {
       source.into[B].transform(config*),
       Transformer.define[A, B].build(config*).transform(source),
     )(expected)
+
+  def homogenousTupleOf[A: ClassTag](size: Int, indexToValue: Int => A): Fill[A, size.type] = {
+    val values = (0 until size).map(indexToValue).toArray
+    Tuple.fromArray(values).asInstanceOf[Fill[A, size.type]]
+  }
+
+
+  type Fill[Tpe, N <: Int] <: Tuple =
+    N match {
+      case 0     => EmptyTuple
+      case S[n1] => Tpe *: Fill[Tpe, n1]
+    }
 
   extension [A](inline self: A) {
     inline def code: A = internal.CodePrinter.code(self)

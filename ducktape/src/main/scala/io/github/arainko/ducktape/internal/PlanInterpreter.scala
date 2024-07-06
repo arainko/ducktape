@@ -5,7 +5,6 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.collection.Factory
 import scala.quoted.*
-import scala.annotation.meta.field
 
 private[ducktape] object PlanInterpreter {
 
