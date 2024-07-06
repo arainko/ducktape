@@ -35,11 +35,11 @@ private[ducktape] object PathSelector {
         case select @ Select(tree, name @ TupleField(index)) =>
           Logger.debug(s"Matched 'Select' (matching a tuple field) with name = $name")
           if tree.tpe <:< TypeRepr.of[Tuple] then recurse(acc.prepended(Path.Segment.TupleElement(tree.tpe.asType, index)), tree)
-          else recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, FieldName.Dest(name))), tree)
+          else recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, name)), tree)
 
         case select @ Select(tree, name) =>
           Logger.debug(s"Matched 'Select' (matching field access) with name = $name")
-          recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, FieldName.Dest(name))), tree)
+          recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, name)), tree)
         case TypeApply(Apply(TypeApply(Select(Ident(_), "at"), _), tree :: Nil), tpe :: Nil) =>
           Logger.debug(s"Matched 'TypeApply' (matching '.at')", tpe.tpe.asType)
           recurse(acc.prepended(Path.Segment.Case(tpe.tpe.asType)), tree)
@@ -52,13 +52,13 @@ private[ducktape] object PathSelector {
               argTpe :: Nil
             ) =>
           Logger.debug(s"Matched 'selectDynamic' (matching a function arg selector) with name = $argName")
-          Path(ident.tpe.asType, acc.prepended(Path.Segment.Field(argTpe.tpe.asType, FieldName.Dest(argName))).toVector)
+          Path(ident.tpe.asType, acc.prepended(Path.Segment.Field(argTpe.tpe.asType, argName)).toVector)
         case ident @ Ident(_) =>
           Logger.debug(s"Matched 'Ident', returning...")
           Path(ident.tpe.asType, acc.toVector)
         case other =>
           Logger.debug(s"Matched an unexpected term")
-          report.errorAndAbort(other.show(using Printer.TreeStructure))
+          report.errorAndAbort(s"Couldn't parse an unexpected config option: ${other.show(using Printer.TreeShortCode)}")
       }
     }
 

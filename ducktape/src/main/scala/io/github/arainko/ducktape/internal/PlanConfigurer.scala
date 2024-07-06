@@ -40,15 +40,13 @@ private[ducktape] object PlanConfigurer {
                   .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidFieldAccessor(fieldName, config.span), None))
 
               case plan @ BetweenProductTuple(source, dest, plans) if config.side.isSource =>
-                // TODO: try to come up with something nicer? this is meh
-                source.fields.keys
-                  .zip(plans)
-                  .zipWithIndex
-                  .collectFirst {
-                    case (`fieldName`, fieldPlan) -> index =>
-                      plan.copy(plans = plans.updated(index, recurse(fieldPlan, tail, plan)))
-                  }
-                  .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidFieldAccessor(fieldName, config.span), None))
+                val sourceFields = source.fields.keys
+
+                // basically, find the index of `fieldName`
+                plans.zipWithIndex.collectFirst {
+                  case (fieldPlan, index @ sourceFields(`fieldName`)) =>
+                    plan.copy(plans = plans.updated(index, recurse(fieldPlan, tail, plan)))
+                }.getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidFieldAccessor(fieldName, config.span), None))
 
               case plan @ BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
                 val argPlan =

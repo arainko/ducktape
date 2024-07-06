@@ -61,7 +61,6 @@ private[ducktape] object FalliblePlanInterpreter {
             fromProductTransformation(plan, source, fieldPlans, value, F)(ProductConstructor.Primary(dest))
 
           case plan @ Plan.BetweenProductTuple(source, dest, plans) =>
-            // WRONG
             fromProductTransformation(plan, source, plans, value, F)(ProductConstructor.Tuple)
 
           case plan @ Plan.BetweenTupleProduct(source, dest, plans) =>
