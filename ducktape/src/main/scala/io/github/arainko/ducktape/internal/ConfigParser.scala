@@ -43,7 +43,10 @@ private[ducktape] object ConfigParser {
                   .toRight("Selected path's length should be at least 1")
               defaults <-
                 PartialFunction
-                  .condOpt(parent) { case parent: Plan.BetweenProducts[Plan.Error, Fallible] => parent.dest.defaults }
+                  .condOpt(parent) {
+                    case parent: Plan.BetweenProducts[Plan.Error, Fallible]     => parent.dest.defaults
+                    case parent: Plan.BetweenTupleProduct[Plan.Error, Fallible] => parent.dest.defaults
+                  }
                   .toRight("Selected field's parent is not a product")
               defaultValue <-
                 defaults

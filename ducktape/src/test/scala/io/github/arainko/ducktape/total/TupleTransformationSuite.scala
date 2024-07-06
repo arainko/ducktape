@@ -251,4 +251,40 @@ class TupleTransformationSuite extends DucktapeSuite {
       Field.const(_.apply(25), Some(25))
     )
   }
+
+  test("Field.fallbackToDefault works for tuple-to-product") {
+    case class Toplevel(int: Int, opt: Option[Int], coll: Vector[Int], level1: Level1)
+    case class Level1(int1: Int, int2: Int, int3: Int, int4: Int = 4)
+
+    val source = (1, 1, List(1), (1, 2, 3))
+    val expected = Toplevel(1, Some(1), Vector(1), Level1(1, 2, 3, 4))
+
+    assertTransformsConfigured(source, expected)(
+      Field.fallbackToDefault,
+    )
+  }
+
+  test("Field.fallbackToNone works") {
+    case class Toplevel(int: Int, opt: Option[Int], coll: Vector[Int], level1: Level1)
+    case class Level1(int1: Int, int2: Int, int3: Int, int4: Option[Int])
+
+    val source = (1, 1, List(1), (1, 2, 3))
+    val expected = Toplevel(1, Some(1), Vector(1), Level1(1, 2, 3, None))
+
+    assertTransformsConfigured(source, expected)(
+      Field.fallbackToNone,
+    )
+  }
+
+  test("Field.default works for tuple-to-product") {
+    case class Toplevel(int: Int, opt: Option[Int], coll: Vector[Int], level1: Level1)
+    case class Level1(int1: Int, int2: Int, int3: Int, int4: Int = 4)
+
+    val source = (1, 1, List(1), (1, 2, 3))
+    val expected = Toplevel(1, Some(1), Vector(1), Level1(1, 2, 3, 4))
+
+    assertTransformsConfigured(source, expected)(
+      Field.default(_.level1.int4),
+    )
+  }
 }

@@ -48,6 +48,12 @@ private[ducktape] object Configuration {
               dest.defaults
                 .get(fieldName)
                 .collect { case expr if expr.asTerm.tpe <:< plan.dest.tpe.repr => Configuration.Const(expr, plan.dest.tpe) }
+            case (Plan.BetweenTupleProduct(_, dest, _), Some(Path.Segment.Field(_, fieldName))) =>
+              import quotes.reflect.*
+
+              dest.defaults
+                .get(fieldName)
+                .collect { case expr if expr.asTerm.tpe <:< plan.dest.tpe.repr => Configuration.Const(expr, plan.dest.tpe) }
           }
           .flatten
           .getOrElse(plan)
