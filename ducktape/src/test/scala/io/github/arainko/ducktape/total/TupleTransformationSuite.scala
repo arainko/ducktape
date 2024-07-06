@@ -1,7 +1,7 @@
 package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
-import munit.{Compare, Location}
+import munit.{ Compare, Location }
 
 import scala.reflect.ClassTag
 
@@ -260,7 +260,7 @@ class TupleTransformationSuite extends DucktapeSuite {
     val expected = Toplevel(1, Some(1), Vector(1), Level1(1, 2, 3, 4))
 
     assertTransformsConfigured(source, expected)(
-      Field.fallbackToDefault,
+      Field.fallbackToDefault
     )
   }
 
@@ -272,7 +272,7 @@ class TupleTransformationSuite extends DucktapeSuite {
     val expected = Toplevel(1, Some(1), Vector(1), Level1(1, 2, 3, None))
 
     assertTransformsConfigured(source, expected)(
-      Field.fallbackToNone,
+      Field.fallbackToNone
     )
   }
 
@@ -284,7 +284,21 @@ class TupleTransformationSuite extends DucktapeSuite {
     val expected = Toplevel(1, Some(1), Vector(1), Level1(1, 2, 3, 4))
 
     assertTransformsConfigured(source, expected)(
-      Field.default(_.level1.int4),
+      Field.default(_.level1.int4)
+    )
+  }
+
+  test("Field.allMatching works for tuple-to-product") {
+    case class Toplevel(int: Int, opt: Option[Int], coll: Vector[Int], level1: Level1)
+    case class Level1(int1: Int, int2: Int, int3: Int, int4: Int)
+
+    case class FieldSource(int2137: Int, int3: Int, int4: Int)
+
+    val source = (1, 1, List(1), (1, 2, 3))
+    val expected = Toplevel(1, Some(1), Vector(1), Level1(1, 2, 5, 6))
+
+    assertTransformsConfigured(source, expected)(
+      Field.allMatching(_.level1, FieldSource(2137, 5, 6))
     )
   }
 }
