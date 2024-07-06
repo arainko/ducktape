@@ -33,6 +33,21 @@ private[ducktape] object PlanConfigurer {
 
                 plan.copy(fieldPlans = fieldPlans.updated(fieldName, fieldPlan))
 
+              case plan @ BetweenTupleProduct(source, dest, plans) if config.side.isDest =>
+                plans
+                  .get(fieldName)
+                  .map(fieldPlan => plan.copy(plans = plans.updated(fieldName, recurse(fieldPlan, tail, plan))))
+                  .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidFieldAccessor(fieldName, config.span), None))
+
+              case plan @ BetweenProductTuple(source, dest, plans) if config.side.isSource =>
+                val sourceFields = source.fields.keys
+
+                // basically, find the index of `fieldName`
+                plans.zipWithIndex.collectFirst {
+                  case (fieldPlan, index @ sourceFields(`fieldName`)) =>
+                    plan.copy(plans = plans.updated(index, recurse(fieldPlan, tail, plan)))
+                }.getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidFieldAccessor(fieldName, config.span), None))
+
               case plan @ BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
                 val argPlan =
                   argPlans
@@ -42,7 +57,62 @@ private[ducktape] object PlanConfigurer {
 
                 plan.copy(argPlans = argPlans.updated(fieldName, argPlan))
 
+              case plan @ BetweenTupleFunction(source, dest, argPlans) if config.side.isDest =>
+                argPlans
+                  .get(fieldName)
+                  .map(argPlan => plan.copy(argPlans = argPlans.updated(fieldName, recurse(argPlan, tail, plan))))
+                  .getOrElse(Plan.Error.from(plan, ErrorMessage.InvalidArgAccessor(fieldName, config.span), None))
+
               case other => invalidPathSegment(config, other, segment)
+            }
+
+          case (segment @ Path.Segment.TupleElement(_, index)) :: tail =>
+            Logger.debug(s"Matched tupleElement with index of $index")
+
+            current match {
+              case plan @ BetweenTuples(source, dest, plans) =>
+                Logger.debug(ds"Matched $plan")
+                plans
+                  .lift(index)
+                  .map(elemPlan => plan.copy(plans = plans.updated(index, recurse(elemPlan, tail, plan))))
+                  .getOrElse(
+                    Plan.Error
+                      .from(plan, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
+                  )
+
+              case plan @ BetweenProductTuple(source, dest, plans) if config.side.isDest =>
+                Logger.debug(ds"Matched $plan")
+                plans
+                  .lift(index)
+                  .map(elemPlan => plan.copy(plans = plans.updated(index, recurse(elemPlan, tail, plan))))
+                  .getOrElse(
+                    Plan.Error
+                      .from(plan, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
+                  )
+
+              case plan @ BetweenTupleProduct(source, dest, plans) if config.side.isSource =>
+                Logger.debug(ds"Matched $plan")
+                plans.toVector
+                  .lift(index)
+                  .map((name, fieldPlan) => plan.copy(plans = plans.updated(name, recurse(fieldPlan, tail, plan))))
+                  .getOrElse(
+                    Plan.Error
+                      .from(plan, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
+                  )
+
+              case plan @ BetweenTupleFunction(source, dest, plans) if config.side.isSource =>
+                Logger.debug(ds"Matched $plan")
+                plans.toVector
+                  .lift(index)
+                  .map((name, fieldPlan) => plan.copy(argPlans = plans.updated(name, recurse(fieldPlan, tail, plan))))
+                  .getOrElse(
+                    Plan.Error
+                      .from(plan, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
+                  )
+
+              case other =>
+                Logger.debug(s"Failing with invalid path segment on node: ${other.getClass.getSimpleName}")
+                invalidPathSegment(config, other, segment)
             }
 
           case (segment @ Path.Segment.Case(tpe)) :: tail =>
@@ -102,6 +172,8 @@ private[ducktape] object PlanConfigurer {
     current: Plan[Error, F],
     parent: Plan[Plan.Error, F] | None.type
   )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning]) = {
+    Logger.debug(ds"Configuring plan $current with $config")
+
     config match {
       case cfg: (Configuration.Instruction.Static[F] | Configuration.Instruction.Dynamic[F]) =>
         staticOrDynamic(cfg, current, parent)
@@ -169,6 +241,9 @@ private[ducktape] object PlanConfigurer {
       case plan: BetweenProductFunction[Plan.Error, F] =>
         plan.copy(argPlans = plan.argPlans.transform((_, argPlan) => regional(argPlan, modifier, plan)))
 
+      case plan: BetweenTupleFunction[Plan.Error, F] =>
+        plan.copy(argPlans = plan.argPlans.transform((_, argPlan) => regional(argPlan, modifier, plan)))
+
       case plan: BetweenUnwrappedWrapped => plan
 
       case plan: BetweenWrappedUnwrapped => plan
@@ -177,6 +252,15 @@ private[ducktape] object PlanConfigurer {
 
       case plan: BetweenProducts[Plan.Error, F] =>
         plan.copy(fieldPlans = plan.fieldPlans.transform((_, fieldPlan) => regional(fieldPlan, modifier, plan)))
+
+      case plan: BetweenProductTuple[Plan.Error, F] =>
+        plan.copy(plans = plan.plans.map(fieldPlan => regional(fieldPlan, modifier, plan)))
+
+      case plan: BetweenTupleProduct[Plan.Error, F] =>
+        plan.copy(plans = plan.plans.transform((_, fieldPlan) => regional(fieldPlan, modifier, plan)))
+
+      case plan: BetweenTuples[Plan.Error, F] =>
+        plan.copy(plans = plan.plans.map(fieldPlan => regional(fieldPlan, modifier, plan)))
 
       case plan: BetweenCoproducts[Plan.Error, F] =>
         plan.copy(casePlans = plan.casePlans.map(regional(_, modifier, plan)))
@@ -198,6 +282,7 @@ private[ducktape] object PlanConfigurer {
         }
     }
 
+  // TODO: Support tuple-to-tuple, product-to-tuple?
   private def bulk[F <: Fallible](
     current: Plan[Plan.Error, F],
     instruction: Configuration.Instruction.Bulk
@@ -210,7 +295,8 @@ private[ducktape] object PlanConfigurer {
     var isAnythingModified = IsAnythingModified.No
 
     def updatePlan(
-      parent: Plan.BetweenProducts[Plan.Error, F] | Plan.BetweenProductFunction[Plan.Error, F]
+      parent: Plan.BetweenProducts[Plan.Error, F] | Plan.BetweenProductFunction[Plan.Error, F] |
+        Plan.BetweenTupleProduct[Plan.Error, F]
     )(
       name: String,
       plan: Plan[Plan.Error, F]
@@ -231,8 +317,13 @@ private[ducktape] object PlanConfigurer {
         case prod: Plan.BetweenProducts[Plan.Error, F] =>
           val updatedFieldPlans = prod.fieldPlans.transform(updatePlan(prod))
           prod.copy(fieldPlans = updatedFieldPlans)
+        case prodTuple: Plan.BetweenTupleProduct[Plan.Error, F] =>
+          val updatedFieldPlans = prodTuple.plans.transform(updatePlan(prodTuple))
+          prodTuple.copy(plans = updatedFieldPlans)
       }
-      .toRight("This config only works when sideing a function-to-product or a product-to-product transformations")
+      .toRight(
+        "This config only works when applied to name-wise based product transformations (product-to-product, tuple-to-product, product-via-function)"
+      )
       .filterOrElse(_ => isAnythingModified == IsAnythingModified.Yes, "Config option is not doing anything")
       .fold(
         errorMessage => {
@@ -297,5 +388,4 @@ private[ducktape] object PlanConfigurer {
         case other                                 => accumulator
       }
   }
-
 }

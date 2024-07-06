@@ -48,6 +48,12 @@ private[ducktape] object Configuration {
               dest.defaults
                 .get(fieldName)
                 .collect { case expr if expr.asTerm.tpe <:< plan.dest.tpe.repr => Configuration.Const(expr, plan.dest.tpe) }
+            case (Plan.BetweenTupleProduct(_, dest, _), Some(Path.Segment.Field(_, fieldName))) =>
+              import quotes.reflect.*
+
+              dest.defaults
+                .get(fieldName)
+                .collect { case expr if expr.asTerm.tpe <:< plan.dest.tpe.repr => Configuration.Const(expr, plan.dest.tpe) }
           }
           .flatten
           .getOrElse(plan)
@@ -55,7 +61,8 @@ private[ducktape] object Configuration {
 
   trait FieldModifier {
     def apply(
-      parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible],
+      parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible] |
+        Plan.BetweenTupleProduct[Plan.Error, Fallible],
       field: String,
       plan: Plan[Plan.Error, Fallible]
     )(using Quotes): Configuration[Nothing] | plan.type

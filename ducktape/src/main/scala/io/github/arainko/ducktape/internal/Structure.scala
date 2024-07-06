@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.internal.Structure.*
 import io.github.arainko.ducktape.internal.*
 
 import scala.annotation.tailrec
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.VectorMap
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.TypeTest
@@ -28,7 +28,7 @@ private[ducktape] object Structure {
 
   def toplevelNothing(using Quotes) = Structure.Ordinary(Type.of[Nothing], Path.empty(Type.of[Nothing]))
 
-  case class Product(tpe: Type[?], path: Path, fields: Map[String, Structure]) extends Structure {
+  case class Product(tpe: Type[?], path: Path, fields: VectorMap[String, Structure]) extends Structure {
     private var cachedDefaults: Map[String, Expr[Any]] = null
 
     def defaults(using Quotes): Map[String, Expr[Any]] =
@@ -39,12 +39,14 @@ private[ducktape] object Structure {
       }
   }
 
+  case class Tuple(tpe: Type[?], path: Path, elements: Vector[Structure], isPlain: Boolean) extends Structure
+
   case class Coproduct(tpe: Type[?], path: Path, children: Map[String, Structure]) extends Structure
 
   case class Function(
     tpe: Type[?],
     path: Path,
-    args: ListMap[String, Structure],
+    args: VectorMap[String, Structure],
     function: io.github.arainko.ducktape.internal.Function
   ) extends Structure
 
@@ -103,7 +105,16 @@ private[ducktape] object Structure {
           val paramTpe = repr.memberType(param)
           Structure.ValueClass(tpe, path, paramTpe.asType, param.name)
 
-        case _ =>
+        case tpe @ '[Any *: scala.Tuple] if !tpe.repr.isTupleN => // let plain tuples be caught later on
+          val elements =
+            tupleTypeElements(tpe.repr.dealias).zipWithIndex.map { (tpe, idx) =>
+              tpe.asType match {
+                case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
+              }
+            }.toVector
+          Structure.Tuple(Type.of[A], path, elements, isPlain = false)
+
+        case tpe =>
           Expr.summon[Mirror.Of[A]] match {
             case None =>
               Structure.Ordinary(Type.of[A], path)
@@ -126,6 +137,24 @@ private[ducktape] object Structure {
                     } =>
                   val value = materializeSingleton[A]
                   Structure.Singleton(Type.of[A], path, constantString[label], value.asExpr)
+
+                case '{
+                      $m: Mirror.Product {
+                        type MirroredElemLabels = labels
+                        type MirroredElemTypes = types
+                      }
+                    } if tpe.repr.isTupleN =>
+                  val structures =
+                    tupleTypeElements(TypeRepr.of[types]).zipWithIndex
+                      .map((tpe, idx) =>
+                        tpe.asType match {
+                          case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
+                        }
+                      )
+                      .toVector
+
+                  Structure.Tuple(Type.of[A], path, structures, isPlain = true)
+
                 case '{
                       $m: Mirror.Product {
                         type MirroredElemLabels = labels
@@ -140,7 +169,8 @@ private[ducktape] object Structure {
                           case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], name)))
                         })
                       )
-                      .toMap
+                      .to(VectorMap)
+
                   Structure.Product(Type.of[A], path, structures)
                 case '{
                       $m: Mirror.Sum {
@@ -174,8 +204,10 @@ private[ducktape] object Structure {
 
     @tailrec def loop(curr: TypeRepr, acc: List[TypeRepr]): List[TypeRepr] =
       curr match {
-        case AppliedType(pairTpe, head :: tail :: Nil) => loop(tail, head :: acc)
-        case _                                         => acc
+        case AppliedType(pairTpe, head :: tail :: Nil) =>
+          loop(tail, head :: acc)
+        case _ =>
+          acc
       }
     loop(tp, Nil).reverse
   }

@@ -12,6 +12,17 @@ private[ducktape] object PathSelector {
       import quotes.reflect.*
 
       term match {
+        case Inlined(
+              Some(
+                Apply(
+                  TypeApply(Select(tree, "apply"), List(Inferred())),
+                  List(Literal(IntConstant(index)))
+                )
+              ),
+              _,
+              Typed(term, tpe @ Applied(TypeIdent("Elem"), _))
+            ) =>
+          recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.asType, index)), tree)
         case Inlined(_, _, tree) =>
           Logger.debug("Matched 'Inlined', recursing...")
           recurse(acc, tree)
@@ -21,6 +32,11 @@ private[ducktape] object PathSelector {
         case Block(_, tree) =>
           Logger.debug("Matched 'Block', recursing...")
           recurse(acc, tree)
+        case select @ Select(tree, name @ TupleField(index)) =>
+          Logger.debug(s"Matched 'Select' (matching a tuple field) with name = $name")
+          if tree.tpe <:< TypeRepr.of[Tuple] then recurse(acc.prepended(Path.Segment.TupleElement(tree.tpe.asType, index)), tree)
+          else recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, name)), tree)
+
         case select @ Select(tree, name) =>
           Logger.debug(s"Matched 'Select' (matching field access) with name = $name")
           recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, name)), tree)
@@ -42,11 +58,15 @@ private[ducktape] object PathSelector {
           Path(ident.tpe.asType, acc.toVector)
         case other =>
           Logger.debug(s"Matched an unexpected term")
-          report.errorAndAbort(other.show(using Printer.TreeShortCode))
+          report.errorAndAbort(s"Couldn't parse an unexpected config option: ${other.show(using Printer.TreeShortCode)}")
       }
     }
 
     Some(Logger.loggedInfo("Parsed path")(recurse(Nil, expr)))
   }
 
+  private object TupleField {
+    def unapply(name: String): Option[Int] =
+      name.stripPrefix("_").toIntOption.map(_ - 1) // ._1 means .apply(0)
+  }
 }

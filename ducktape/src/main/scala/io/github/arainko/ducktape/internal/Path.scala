@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.internal.Debug.AST
+import io.github.arainko.ducktape.internal.Path.Segment
 import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
@@ -11,13 +12,16 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
 
   def prepended(segment: Path.Segment): Path = self.copy(segments = segments.prepended(segment))
 
+  // deliberately use something that requires a total function so that when a new Path.Segment is declared
+  // it's not forgotten about
   def currentTpe(using Quotes): Type[?] = {
-
-    segments.reverse.collectFirst {
-      case Path.Segment.Element(tpe)     => tpe
-      case Path.Segment.Field(tpe, name) => tpe
+    segments.reverse.find {
+      case Path.Segment.Element(_)         => true
+      case Path.Segment.Field(_, _)        => true
+      case Path.Segment.TupleElement(_, _) => true
+      case Path.Segment.Case(_)            => false
     }
-      .getOrElse(root)
+      .fold(root)(_.tpe)
       .repr
       .widen
       .asType
@@ -56,8 +60,9 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
     if (self.segments.isEmpty) printedRoot
     else
       self.segments.map {
-        case Path.Segment.Field(_, name) => name
-        case Path.Segment.Element(_)     => "element"
+        case Path.Segment.Field(_, name)    => name
+        case Segment.TupleElement(_, index) => s"apply($index)"
+        case Path.Segment.Element(_)        => "element"
         case Path.Segment.Case(tpe) =>
           val repr = tpe.repr
           val suffix = if (repr.isSingleton) ".type" else ""
@@ -79,6 +84,7 @@ private[ducktape] object Path {
     final def narrow[A <: Segment](using tt: TypeTest[Segment, A]): Option[A] = tt.unapply(this)
 
     case Field(tpe: Type[?], name: String)
+    case TupleElement(tpe: Type[?], index: Int)
     case Case(tpe: Type[?])
     case Element(tpe: Type[?])
   }

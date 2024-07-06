@@ -8,8 +8,7 @@ private[ducktape] object Logger {
   // Logger Config
   private[ducktape] transparent inline given level: Level = Level.Off
   private val output = Output.StdOut
-  private def filter(msg: String) = true
-
+  private def filter(msg: String, loc: String) = true
   enum Level {
     case Off, Debug, Info
   }
@@ -22,12 +21,20 @@ private[ducktape] object Logger {
     case StdOut, Report
 
     final def print(msg: String, level: Level)(using Quotes) = {
-      def colored(color: String & Singleton)(msg: String) = s"$color$msg${Console.RESET}"
+      import quotes.reflect.*
+
+      def colored(color: String & scala.Singleton)(msg: String) = s"$color$msg${Console.RESET}"
       def green(msg: String) = colored(Console.GREEN)(msg)
-      val formatted = s"${green(s"[${level.toString().toUpperCase()}]")} $msg"
+
+      val location =
+        Symbol.spliceOwner.pos
+          .map(pos => s"${pos.sourceFile.name}:${pos.startLine}:${pos.startColumn}")
+          .map(formatted => green(" [" + formatted + "]"))
+          .getOrElse("")
+      val formatted = s"${green(s"[${level.toString().toUpperCase()}]")}$location $msg"
       this match {
-        case StdOut => if (filter(msg)) println(formatted)
-        case Report => if (filter(msg)) quotes.reflect.report.info(formatted)
+        case StdOut => if (filter(msg, location)) println(formatted)
+        case Report => if (filter(msg, location)) quotes.reflect.report.info(formatted)
       }
     }
   }
@@ -71,4 +78,18 @@ private[ducktape] object Logger {
     quotes: Quotes
   ): Unit =
     debug(s"$msg: ${Debug.show(value)}")
+}
+
+extension (ctx: StringContext) {
+  private[ducktape] def ds(args: Any*): String = {
+    val pi = ctx.parts.iterator
+    val ai = args.iterator
+    val bldr = new StringBuilder(pi.next())
+    while (ai.hasNext) {
+      bldr.append(ai.next().getClass().getSimpleName())
+      bldr.append(pi.next())
+    }
+    bldr.toString
+  }
+
 }

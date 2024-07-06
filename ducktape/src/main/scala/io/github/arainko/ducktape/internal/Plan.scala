@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.*
 
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.reflect.TypeTest
 
@@ -58,7 +58,13 @@ private[ducktape] object Plan {
   case class BetweenProductFunction[+E <: Plan.Error, +F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function,
-    argPlans: ListMap[String, Plan[E, F]]
+    argPlans: VectorMap[String, Plan[E, F]]
+  ) extends Plan[E, F]
+
+  case class BetweenTupleFunction[+E <: Plan.Error, +F <: Fallible](
+    source: Structure.Tuple,
+    dest: Structure.Function,
+    argPlans: VectorMap[String, Plan[E, F]]
   ) extends Plan[E, F]
 
   case class BetweenUnwrappedWrapped(
@@ -80,7 +86,25 @@ private[ducktape] object Plan {
   case class BetweenProducts[+E <: Plan.Error, +F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product,
-    fieldPlans: Map[String, Plan[E, F]]
+    fieldPlans: VectorMap[String, Plan[E, F]]
+  ) extends Plan[E, F]
+
+  case class BetweenProductTuple[+E <: Plan.Error, +F <: Fallible](
+    source: Structure.Product,
+    dest: Structure.Tuple,
+    plans: Vector[Plan[E, F]]
+  ) extends Plan[E, F]
+
+  case class BetweenTupleProduct[+E <: Plan.Error, +F <: Fallible](
+    source: Structure.Tuple,
+    dest: Structure.Product,
+    plans: VectorMap[String, Plan[E, F]]
+  ) extends Plan[E, F]
+
+  case class BetweenTuples[+E <: Plan.Error, +F <: Fallible](
+    source: Structure.Tuple,
+    dest: Structure.Tuple,
+    plans: Vector[Plan[E, F]]
   ) extends Plan[E, F]
 
   case class BetweenCoproducts[+E <: Plan.Error, +F <: Fallible](

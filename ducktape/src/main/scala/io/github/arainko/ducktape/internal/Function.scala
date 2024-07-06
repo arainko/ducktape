@@ -2,10 +2,10 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.*
 
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.VectorMap
 import scala.quoted.*
 
-private[ducktape] final case class Function(args: ListMap[String, Type[?]], returnTpe: Type[?], expr: Expr[Any]) derives Debug {
+private[ducktape] final case class Function(args: VectorMap[String, Type[?]], returnTpe: Type[?], expr: Expr[Any]) derives Debug {
 
   def appliedTo(using Quotes)(terms: List[quotes.reflect.Term]): Expr[Any] = {
     import quotes.reflect.*
@@ -40,7 +40,7 @@ private[ducktape] object Function {
 
     unapply(expr.asTerm).map { (vals, term) =>
       val returnTpe = term.tpe.asType
-      val args = vals.map(valDef => valDef.name -> valDef.tpt.tpe.asType).to(ListMap)
+      val args = vals.map(valDef => valDef.name -> valDef.tpt.tpe.asType).to(VectorMap)
       Logger.loggedDebug("Result"):
         Function(args, returnTpe, expr)
     }
@@ -66,7 +66,7 @@ private[ducktape] object Function {
               case other                           => None
             }
             .reverse
-            .to(ListMap)
+            .to(VectorMap)
 
         Logger.loggedDebug("Result"):
           Function(args, retTpe.asType, functionExpr)

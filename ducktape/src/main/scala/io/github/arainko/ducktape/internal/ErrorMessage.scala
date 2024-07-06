@@ -13,7 +13,7 @@ private[ducktape] sealed trait ErrorMessage derives Debug {
 private[ducktape] object ErrorMessage {
   final case class NoFieldFound(fieldName: String, fieldTpe: Type[?], sourceTpe: Type[?]) extends ErrorMessage {
     def render(using Quotes): String = s"No field '$fieldName' found in ${sourceTpe.repr.show}"
-    def span = None
+    val span = None
     val side = Side.Dest
   }
 
@@ -21,6 +21,11 @@ private[ducktape] object ErrorMessage {
     def render(using Quotes): String = s"No child named '$childName' found in ${destTpe.repr.show}"
     def span = None
     val side = Side.Source
+  }
+
+  final case class InvalidTupleAccesor(positionIndex: Int, span: Span) extends ErrorMessage {
+    def render(using Quotes): String = s"'_.${positionIndex + 1}' or '.apply($positionIndex)' is not a valid tuple accessor"
+    val side = Side.Dest
   }
 
   final case class InvalidFieldAccessor(fieldName: String, span: Span) extends ErrorMessage {
@@ -67,7 +72,9 @@ private[ducktape] object ErrorMessage {
         case Segment.Case(tpe) =>
           s"The path segment 'at[${tpe.repr.show}]' is not valid because its parent is not a coproduct or the picked type is not a subtype of that coproduct"
         case Segment.Element(_) =>
-          s"The path segment 'element' is not valid" // TODO: Revise this error message
+          s"The path segment 'element' is not valid"
+        case Segment.TupleElement(tpe, index) =>
+          s"The path segment '_${index + 1}' or '.apply($index)' is not valid"
       }
   }
 
@@ -102,6 +109,12 @@ private[ducktape] object ErrorMessage {
       "Detected usage of `_.to[B]`, `_.fallibleTo[B]`, `_.into[B].transform()` or `_.into[B].fallible.transform()` in a given Transformer definition which results in a self-looping Transformer. Please use `Transformer.define[A, B]` or `Transformer.define[A, B].fallible` (for some types A and B) to create Transformer definitions"
 
     val span: Span | None.type = None
+  }
+
+  final case class NoFieldFoundAtIndex(fieldIndex: Int, sourceTpe: Type[?]) extends ErrorMessage {
+    def render(using Quotes): String = s"No field at index $fieldIndex found in ${sourceTpe.repr.show}"
+    val span = None
+    val side = Side.Dest
   }
 
 }

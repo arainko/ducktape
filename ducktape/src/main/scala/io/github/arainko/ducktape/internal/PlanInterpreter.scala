@@ -32,6 +32,40 @@ private[ducktape] object PlanInterpreter {
         }
         Constructor(destTpe.tpe.repr).appliedToArgs(args.toList).asExpr
 
+      case Plan.BetweenProductTuple(source, dest, plans) =>
+        val fields = source.fields.keys
+        val args = plans.zipWithIndex.map {
+          case (p: Plan.Configured[Nothing], _) =>
+            recurse(p, value)
+          case (plan, index) =>
+            val fieldName = fields(index)
+            val fieldValue = value.accessFieldByName(fieldName).asExpr
+            recurse(plan, fieldValue)
+        }
+
+        Expr.ofTupleFromSeq(args.toSeq)
+
+      case Plan.BetweenTupleProduct(source, dest, plans) =>
+        val args = plans.values.zipWithIndex.map {
+          case (p: Plan.Configured[Nothing], idx) =>
+            recurse(p, value).asTerm
+          case (plan, idx) =>
+            val elemValue = value.accesFieldByIndex(idx, source)
+            recurse(plan, elemValue).asTerm
+        }
+        Constructor(dest.tpe.repr).appliedToArgs(args.toList).asExpr
+
+      case Plan.BetweenTuples(source, dest, plans) =>
+        val args = plans.zipWithIndex.map {
+          case (p: Plan.Configured[Nothing], idx) =>
+            recurse(p, value)
+          case (plan, idx) =>
+            val elemValue = value.accesFieldByIndex(idx, source)
+            recurse(plan, elemValue)
+        }
+
+        Expr.ofTupleFromSeq(args)
+
       case Plan.BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
         val branches = casePlans.map { plan =>
           (plan.source.tpe -> plan.dest.tpe) match {
@@ -51,6 +85,16 @@ private[ducktape] object PlanInterpreter {
             recurse(plan, fieldValue).asTerm
         }
         destTpe.function.appliedTo(args.toList)
+
+      case Plan.BetweenTupleFunction(source, dest, argPlans) =>
+        val args = argPlans.values.zipWithIndex.map {
+          case (p: Plan.Configured[Nothing], index) =>
+            recurse(p, value).asTerm
+          case (plan, index) =>
+            val fieldValue = value.accesFieldByIndex(index, source)
+            recurse(plan, fieldValue).asTerm
+        }
+        dest.function.appliedTo(args.toList)
 
       case Plan.BetweenOptions(sourceTpe, destTpe, plan) =>
         (sourceTpe.paramStruct.tpe -> destTpe.paramStruct.tpe) match {

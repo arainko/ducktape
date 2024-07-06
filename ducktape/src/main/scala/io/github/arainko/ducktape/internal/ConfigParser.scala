@@ -43,7 +43,10 @@ private[ducktape] object ConfigParser {
                   .toRight("Selected path's length should be at least 1")
               defaults <-
                 PartialFunction
-                  .condOpt(parent) { case parent: Plan.BetweenProducts[Plan.Error, Fallible] => parent.dest.defaults }
+                  .condOpt(parent) {
+                    case parent: Plan.BetweenProducts[Plan.Error, Fallible]     => parent.dest.defaults
+                    case parent: Plan.BetweenTupleProduct[Plan.Error, Fallible] => parent.dest.defaults
+                  }
                   .toRight("Selected field's parent is not a product")
               defaultValue <-
                 defaults
@@ -205,7 +208,8 @@ private[ducktape] object ConfigParser {
       .map { sourceStruct =>
         val modifier = new FieldModifier:
           def apply(
-            parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible],
+            parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible] |
+              Plan.BetweenTupleProduct[Plan.Error, Fallible],
             field: String,
             plan: Plan[Plan.Error, Fallible]
           )(using Quotes): Configuration[Nothing] | plan.type =

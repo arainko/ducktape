@@ -51,7 +51,7 @@ private[ducktape] object ProductZipper {
     construct: ProductConstructor
   )(using Quotes) = {
     val unzippedFields = ProductZipper.unzip(nestedPairs, wrappedFields)
-    val fields = (unzippedFields ::: unwrappedFields).map(field => field.name -> alignOwner(field.value)).toMap
+    val fields = (unzippedFields ::: unwrappedFields).sortBy(_.index).map(field => alignOwner(field.value))
     construct(fields).asExprOf[Dest]
   }
 
@@ -75,7 +75,6 @@ private[ducktape] object ProductZipper {
         else fields(idx).unwrapped(unpackLeft(unpackRight(nestedPairs, size - 1 - idx).asExpr).asExpr)
       }.toList
     }
-
   }
 
   private def unpackRight(expr: Expr[Any], times: Int)(using Quotes): quotes.reflect.Term = {
