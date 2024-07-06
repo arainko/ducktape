@@ -41,7 +41,7 @@ private[ducktape] object FallibilityRefiner {
         case BetweenProductFunction(source, dest, argPlans) =>
           evaluate(argPlans.values)
 
-        case BetweenTupleFunction(source, dest, argPlans) => 
+        case BetweenTupleFunction(source, dest, argPlans) =>
           evaluate(argPlans.values)
 
         case BetweenUnwrappedWrapped(source, dest) => ()
@@ -56,10 +56,10 @@ private[ducktape] object FallibilityRefiner {
         case BetweenProductTuple(source, dest, plans) =>
           evaluate(plans)
 
-        case BetweenTupleProduct(source, dest, plans) => 
+        case BetweenTupleProduct(source, dest, plans) =>
           evaluate(plans.values)
 
-        case BetweenTuples(source, dest, plans) => 
+        case BetweenTuples(source, dest, plans) =>
           evaluate(plans)
 
         case BetweenCoproducts(source, dest, casePlans) =>

@@ -26,13 +26,11 @@ private[ducktape] object Logger {
       def colored(color: String & scala.Singleton)(msg: String) = s"$color$msg${Console.RESET}"
       def green(msg: String) = colored(Console.GREEN)(msg)
 
-      val location = 
-        Symbol
-        .spliceOwner
-        .pos
-        .map(pos => s"${pos.sourceFile.name}:${pos.startLine}:${pos.startColumn}")
-        .map(formatted => green(" [" + formatted + "]"))
-        .getOrElse("")
+      val location =
+        Symbol.spliceOwner.pos
+          .map(pos => s"${pos.sourceFile.name}:${pos.startLine}:${pos.startColumn}")
+          .map(formatted => green(" [" + formatted + "]"))
+          .getOrElse("")
       val formatted = s"${green(s"[${level.toString().toUpperCase()}]")}$location $msg"
       this match {
         case StdOut => if (filter(msg, location)) println(formatted)
@@ -88,10 +86,10 @@ extension (ctx: StringContext) {
     val ai = args.iterator
     val bldr = new StringBuilder(pi.next())
     while (ai.hasNext) {
-      bldr append ai.next().getClass().getSimpleName()
-      bldr append pi.next()
+      bldr.append(ai.next().getClass().getSimpleName())
+      bldr.append(pi.next())
     }
     bldr.toString
   }
-  
+
 }

@@ -4,9 +4,9 @@ import io.github.arainko.ducktape.internal.Plan.{ Derived, UserDefined }
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
 import io.github.arainko.ducktape.internal.*
 
+import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
-import scala.collection.immutable.VectorMap
 
 private[ducktape] object Planner {
   import Structure.*

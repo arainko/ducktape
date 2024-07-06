@@ -18,7 +18,7 @@ private[ducktape] object ProductConstructor {
   }
 
   case object Tuple extends ProductConstructor {
-    def apply(fields: Seq[Expr[Any]])(using Quotes): Expr[Any] = 
+    def apply(fields: Seq[Expr[Any]])(using Quotes): Expr[Any] =
       Expr.ofTupleFromSeq(fields)
   }
 

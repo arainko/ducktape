@@ -1,11 +1,11 @@
 package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.internal.Debug.AST
+import io.github.arainko.ducktape.internal.Path.Segment
 import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
 import scala.reflect.TypeTest
-import io.github.arainko.ducktape.internal.Path.Segment
 
 private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Segment]) { self =>
   def appended(segment: Path.Segment): Path = self.copy(segments = segments.appended(segment))

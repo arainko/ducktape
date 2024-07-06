@@ -323,7 +323,9 @@ private[ducktape] object PlanConfigurer {
           val updatedFieldPlans = prodTuple.plans.transform(updatePlan(prodTuple))
           prodTuple.copy(plans = updatedFieldPlans)
       }
-      .toRight("This config only works when applied to name-wise based product transformations (product-to-product, tuple-to-product, product-via-function)")
+      .toRight(
+        "This config only works when applied to name-wise based product transformations (product-to-product, tuple-to-product, product-via-function)"
+      )
       .filterOrElse(_ => isAnythingModified == IsAnythingModified.Yes, "Config option is not doing anything")
       .fold(
         errorMessage => {

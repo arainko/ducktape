@@ -34,7 +34,7 @@ private[ducktape] object PlanInterpreter {
 
       case Plan.BetweenProductTuple(source, dest, plans) =>
         val fields = source.fields.keys
-        val args = plans.zipWithIndex.map { 
+        val args = plans.zipWithIndex.map {
           case (p: Plan.Configured[Nothing], _) =>
             recurse(p, value)
           case (plan, index) =>
@@ -46,7 +46,7 @@ private[ducktape] object PlanInterpreter {
         Expr.ofTupleFromSeq(args.toSeq)
 
       case Plan.BetweenTupleProduct(source, dest, plans) =>
-        val args = plans.values.zipWithIndex.map { 
+        val args = plans.values.zipWithIndex.map {
           case (p: Plan.Configured[Nothing], idx) =>
             recurse(p, value).asTerm
           case (plan, idx) =>
@@ -56,7 +56,7 @@ private[ducktape] object PlanInterpreter {
         Constructor(dest.tpe.repr).appliedToArgs(args.toList).asExpr
 
       case Plan.BetweenTuples(source, dest, plans) =>
-        val args = plans.zipWithIndex.map { 
+        val args = plans.zipWithIndex.map {
           case (p: Plan.Configured[Nothing], idx) =>
             recurse(p, value)
           case (plan, idx) =>

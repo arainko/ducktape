@@ -4,8 +4,8 @@ import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
 
 import scala.collection.Factory
-import scala.quoted.*
 import scala.collection.immutable.VectorMap
+import scala.quoted.*
 
 private[ducktape] object FalliblePlanInterpreter {
   def run[F[+x]: Type, A: Type, B: Type](
@@ -61,13 +61,13 @@ private[ducktape] object FalliblePlanInterpreter {
             fromProductTransformation(plan, source, fieldPlans, value, F)(ProductConstructor.Primary(dest))
 
           case plan @ Plan.BetweenProductTuple(source, dest, plans) =>
-            //WRONG
+            // WRONG
             fromProductTransformation(plan, source, plans, value, F)(ProductConstructor.Tuple)
 
-          case plan @ Plan.BetweenTupleProduct(source, dest, plans) => 
+          case plan @ Plan.BetweenTupleProduct(source, dest, plans) =>
             fromTupleTransformation(source, plan, plans.values.toVector, value, F)(ProductConstructor.Primary(dest))
 
-          case plan @ Plan.BetweenTuples(source, dest, plans) => 
+          case plan @ Plan.BetweenTuples(source, dest, plans) =>
             fromTupleTransformation(source, plan, plans, value, F)(ProductConstructor.Tuple)
 
           case Plan.BetweenCoproducts(source, dest, casePlans) =>
@@ -243,7 +243,7 @@ private[ducktape] object FalliblePlanInterpreter {
     }
   }
 
-  //TODO: this is pretty hideous, please refactor this later on
+  // TODO: this is pretty hideous, please refactor this later on
   private def fromProductTransformation[F[+x]: Type, A: Type](
     plan: Plan[Nothing, Fallible],
     source: Structure.Product,
@@ -276,9 +276,9 @@ private[ducktape] object FalliblePlanInterpreter {
 
     val (unwrapped, wrapped) =
       fieldPlans match
-        case vector: Vector[Plan[Nothing, Fallible]] => handleVector(vector)
+        case vector: Vector[Plan[Nothing, Fallible]]               => handleVector(vector)
         case vectorMap: VectorMap[String, Plan[Nothing, Fallible]] => handleVectorMap(vectorMap)
-      
+
     plan.dest.tpe match {
       case '[dest] =>
         F match {

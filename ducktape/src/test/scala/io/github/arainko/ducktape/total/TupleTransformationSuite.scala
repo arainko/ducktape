@@ -1,8 +1,8 @@
 package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
-import munit.Location
-import munit.Compare
+import munit.{Compare, Location}
+
 import scala.reflect.ClassTag
 
 class TupleTransformationSuite extends DucktapeSuite {

@@ -2,8 +2,6 @@ package io.github.arainko.ducktape
 
 import scala.annotation.implicitNotFound
 import scala.collection.Factory
-import scala.runtime.TupleMirror
-import scala.deriving.Mirror
 
 @implicitNotFound(
   """ducktape needs an instance of either Mode.Accumulating[F] or Mode.FailFast[F] in implicit scope to infer the wrapper type F and determine the mode of fallible transformations.
@@ -154,65 +152,4 @@ object Mode {
 
     def either[E]: Mode.FailFast.Either[E] = Mode.FailFast.Either[E]
   }
-}
-
-case class JustInts(int1: Int, int2: Int, int3: Int)
-
-object test extends App {
-  def mirrorOf[A](using A: Mirror.Of[A]): A.type = A
-
-  given t[A]: Transformer.Fallible[Option, Option[A], A] with {
-    def transform(source: Option[A]): Option[A] = source
-  }
-
-  type BigAssTuple = Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: Int *: EmptyTuple
-
-  case class Test(coll: List[Int], opt: Option[List[Int]], eith: Either[String, Int])
-
-  case class Test2(coll: List[Int], opt: Option[Vector[Int]])
-
-  case class P(int: Int, int1: Int, int2: Option[Int])
-  
-  case class D(int: Int)
-
-  internal.CodePrinter.code:
-    Transformer.defineVia[(Int, Int)](P.apply).build(Field.fallbackToNone)
-
-  internal.CodePrinter.code:
-    Transformer.define[(Int, Int, Int), (Int, Int, Int, Int)].build(Field.const(_._4, 1))
-
-  Mode.FailFast.either[String].locally {
-
-    
-
-    // internal.CodePrinter.code:
-      // ((1, 2, 3, 4), 2, 3, 4)
-        // .into[((Int, Int, Int), Int, Int)]
-        // .transform2(Field.const(_._1._2, 2))
-      
-
-    // internal.CodePrinter.code:
-      // Transformer
-      // .define[Test, Test2]
-      // .fallible
-      // .build(
-      //   Field.const(_.coll.element, 1)
-      // )
-      test[Test, Int](_.eith.element.toShort)
-  }
-
-  def test[A, B](s: Selector ?=> A => B) = s(using ???)(???)
-
-
-
-  // internal.CodePrinter.code:
-  //   (1, 2, 3, 4).to[Int *: Int *: Int *: EmptyTuple]
-
-  // (1, 2)._
-
-  val a = mirrorOf[1 *: "asd" *: "d" *: 1 *: EmptyTuple]
-
-  val b = mirrorOf[(1, 2, "3", "4")]
-
-  summon[a.MirroredElemLabels <:< ("_1", "_2", "_3", "_4")]
 }
