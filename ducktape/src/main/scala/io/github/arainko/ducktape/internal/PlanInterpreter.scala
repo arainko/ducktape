@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.collection.Factory
 import scala.quoted.*
+import scala.annotation.meta.field
 
 private[ducktape] object PlanInterpreter {
 
@@ -33,14 +34,15 @@ private[ducktape] object PlanInterpreter {
         Constructor(destTpe.tpe.repr).appliedToArgs(args.toList).asExpr
 
       case Plan.BetweenProductTuple(source, dest, plans) =>
-        val args =  
-          source.fields.keys.zip(plans).map { 
-            case (fieldName, p: Plan.Configured[Nothing]) =>
-              recurse(p, value)
-            case (fieldName, plan) =>
-              val fieldValue = value.accessFieldByName(fieldName).asExpr
-              recurse(plan, fieldValue)
-          }
+        val fields = source.fields.keys
+        val args = plans.zipWithIndex.map { 
+          case (p: Plan.Configured[Nothing], _) =>
+            recurse(p, value)
+          case (plan, index) =>
+            val fieldName = fields(index)
+            val fieldValue = value.accessFieldByName(fieldName).asExpr
+            recurse(plan, fieldValue)
+        }
 
         Expr.ofTupleFromSeq(args.toSeq)
 

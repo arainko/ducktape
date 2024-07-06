@@ -58,10 +58,11 @@ private[ducktape] object FalliblePlanInterpreter {
                 }
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
-            fromProductTransformation(plan, fieldPlans, value, F)(ProductConstructor.Primary(dest))
+            fromProductTransformation(plan, source, fieldPlans, value, F)(ProductConstructor.Primary(dest))
 
           case plan @ Plan.BetweenProductTuple(source, dest, plans) =>
-            fromProductTransformation(plan, source.fields.keys.zip(plans).to(VectorMap), value, F)(ProductConstructor.Tuple)
+            //WRONG
+            fromProductTransformation(plan, source, plans, value, F)(ProductConstructor.Tuple)
 
           case plan @ Plan.BetweenTupleProduct(source, dest, plans) => 
             fromTupleTransformation(source, plan, plans.values.toVector, value, F)(ProductConstructor.Primary(dest))
@@ -92,7 +93,7 @@ private[ducktape] object FalliblePlanInterpreter {
             }
 
           case plan @ Plan.BetweenProductFunction(source, dest, argPlans) =>
-            fromProductTransformation(plan, argPlans, value, F)(ProductConstructor.Func(dest.function))
+            fromProductTransformation(plan, source, argPlans, value, F)(ProductConstructor.Func(dest.function))
 
           case plan @ Plan.BetweenTupleFunction(source, dest, argPlans) =>
             fromTupleTransformation(source, plan, argPlans.values.toVector, value, F)(ProductConstructor.Func(dest.function))
@@ -242,15 +243,17 @@ private[ducktape] object FalliblePlanInterpreter {
     }
   }
 
+  //TODO: this is pretty hideous, please refactor this later on
   private def fromProductTransformation[F[+x]: Type, A: Type](
     plan: Plan[Nothing, Fallible],
-    fieldPlans: VectorMap[String, Plan[Nothing, Fallible]],
+    source: Structure.Product,
+    fieldPlans: Vector[Plan[Nothing, Fallible]] | VectorMap[String, Plan[Nothing, Fallible]],
     value: Expr[Any],
     F: TransformationMode[F]
   )(construct: ProductConstructor)(using quotes: Quotes, toplevelValue: Expr[A]) = {
     import quotes.reflect.*
 
-    val (unwrapped, wrapped) =
+    def handleVectorMap(fieldPlans: VectorMap[String, Plan[Nothing, Fallible]])(using Quotes) =
       fieldPlans.zipWithIndex.partitionMap {
         case (fieldName, p: Plan.Configured[Fallible]) -> index =>
           recurse(p, value, F).asFieldValue(index, p.dest.tpe)
@@ -259,6 +262,23 @@ private[ducktape] object FalliblePlanInterpreter {
           recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
       }
 
+    def handleVector(fieldPlans: Vector[Plan[Nothing, Fallible]])(using Quotes) = {
+      val sourceFields = source.fields.keys
+      fieldPlans.zipWithIndex.partitionMap {
+        case (p: Plan.Configured[Fallible]) -> index =>
+          recurse(p, value, F).asFieldValue(index, p.dest.tpe)
+        case plan -> index =>
+          val fieldName = sourceFields(index)
+          val fieldValue = value.accessFieldByName(fieldName).asExpr
+          recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
+      }
+    }
+
+    val (unwrapped, wrapped) =
+      fieldPlans match
+        case vector: Vector[Plan[Nothing, Fallible]] => handleVector(vector)
+        case vectorMap: VectorMap[String, Plan[Nothing, Fallible]] => handleVectorMap(vectorMap)
+      
     plan.dest.tpe match {
       case '[dest] =>
         F match {

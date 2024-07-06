@@ -13,19 +13,19 @@ class TupleTransformationSuite extends DucktapeSuite {
   }
 
   test("tuple-to-product works") {
-    case class DestToplevel(int: Int, opt: Option[Int], coll: Vector[Int], level1: DestLevel1)
-    case class DestLevel1(int1: Int, int2: Int)
+    case class Toplevel(int: Int, opt: Option[Int], coll: Vector[Int], level1: Level1)
+    case class Level1(int1: Int, int2: Int)
 
     val source = (1, 1, List(1), (1, 2, 3))
-    val expected = DestToplevel(1, Some(1), Vector(1), DestLevel1(1, 2))
+    val expected = Toplevel(1, Some(1), Vector(1), Level1(1, 2))
     assertTransforms(source, expected)
   }
 
   test("product-to-tuple works") {
-    case class DestToplevel(int: Int, opt: Int, coll: Vector[Int], level1: DestLevel1)
-    case class DestLevel1(int1: Int, int2: Int, int3: Int)
+    case class Toplevel(int: Int, opt: Int, coll: Vector[Int], level1: Level1)
+    case class Level1(int1: Int, int2: Int, int3: Int)
 
-    val source = DestToplevel(1, 1, Vector(1), DestLevel1(1, 2, 3))
+    val source = Toplevel(1, 1, Vector(1), Level1(1, 2, 3))
     val expected = (1, Option(1), List(1), (1, 2))
     assertTransforms(source, expected)
   }
@@ -62,8 +62,11 @@ class TupleTransformationSuite extends DucktapeSuite {
       case Three
     }
 
-    val source: (Int, Source, List[Source], (Source, Source, Source)) = (1, Source.One, List(Source.One), (Source.One, Source.Two, Source.Two))
-    val expected: (Int, Option[Dest], Vector[Dest], (Dest, Dest)) = (1, Option(Dest.One), Vector(Dest.One), (Dest.One, Dest.Three))
+    val source: (Int, Source, List[Source], (Source, Source, Source)) = 
+      (1, Source.One, List(Source.One), (Source.One, Source.Two, Source.Two))
+
+    val expected: (Int, Option[Dest], Vector[Dest], (Dest, Dest)) = 
+      (1, Option(Dest.One), Vector(Dest.One), (Dest.One, Dest.Three))
 
     assertTransformsConfigured(source, expected)(
       Case.const(_.apply(3).apply(1).at[Source.Two.type], Dest.Three),
@@ -71,6 +74,39 @@ class TupleTransformationSuite extends DucktapeSuite {
       Case.const(_.apply(1).at[Source.Two.type], Dest.Three),
       Case.const(_.apply(2).element.at[Source.Two.type], Dest.Three)
     )
+
+  }
+
+  test("product-to-tuple can be configured (dest side)") {
+    case class Toplevel(int: Int, opt: Int, coll: Vector[Int], level1: Level1)
+    case class Level1(int1: Int, int2: Int, int3: Int)
+
+    val source = Toplevel(1, 1, Vector(1), Level1(1, 2, 3))
+    val expected  = (1, Option((1, 2)), Vector(1), (1, 2, 3, 4))
+
+    assertTransformsConfigured(source, expected)(
+      Field.const(_.apply(3).apply(3), 4),
+      Field.const(_.apply(1).element, (1, 2))
+    )
+  }
+
+  test("product-to-tuple can be configures (source side)") {
+
+  }
+
+  test("tuple-to-product can be configured (dest side)") {
+
+  }
+
+  test("tuple-to-product can be configured (source side)") {
+
+  }
+
+  test("tuple-to-function can be configured (dest side)") {
+
+  }
+
+  test("tuple-to-function can be configured (source side)") {
 
   }
 
