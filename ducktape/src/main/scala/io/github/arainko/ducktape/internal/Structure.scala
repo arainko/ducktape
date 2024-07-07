@@ -68,10 +68,10 @@ private[ducktape] object Structure {
   }
 
   object Lazy {
-    def of[A: Type](path: Path)(using Context[Fallible], Quotes): Lazy = Lazy(Type.of[A], path, () => Structure.of[A](path))
+    def of[A: Type](path: Path)(using Context, Quotes): Lazy = Lazy(Type.of[A], path, () => Structure.of[A](path))
   }
 
-  def fromFunction(function: io.github.arainko.ducktape.internal.Function)(using Context[Fallible], Quotes): Structure.Function = {
+  def fromFunction(function: io.github.arainko.ducktape.internal.Function)(using Context, Quotes): Structure.Function = {
     import quotes.reflect.*
     val path = Path.empty(function.returnTpe)
 
@@ -83,12 +83,12 @@ private[ducktape] object Structure {
     Structure.Function(function.returnTpe, path, args, function)
   }
 
-  def fromTypeRepr(using Context[Fallible], Quotes)(repr: quotes.reflect.TypeRepr, path: Path): Structure =
+  def fromTypeRepr(using Context, Quotes)(repr: quotes.reflect.TypeRepr, path: Path): Structure =
     repr.widen.asType match {
       case '[tpe] => Structure.of[tpe](path)
     }
 
-  def of[A: Type](path: Path)(using Context[Fallible], Quotes): Structure = {
+  def of[A: Type](path: Path)(using Context, Quotes): Structure = {
     import quotes.reflect.*
 
     Logger.loggedInfo("Structure"):

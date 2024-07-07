@@ -7,17 +7,22 @@ import scala.quoted.*
 import Configuration.*
 
 private[ducktape] sealed trait ConfigParser[+F <: Fallible] {
-  def apply(using Quotes, Context[Fallible]): PartialFunction[quotes.reflect.Term, Instruction[F]]
+  def apply(using Quotes, Context): PartialFunction[quotes.reflect.Term, Instruction[F]]
 }
 
 private[ducktape] object ConfigParser {
+  val total = NonEmptyList(Total)
+
+  def fallible[F[+x]: Type] = NonEmptyList(Total, PossiblyFallible[F])
+
   def combine[F <: Fallible](parsers: NonEmptyList[ConfigParser[F]])(using
-    Quotes, Context[Fallible]
+    Quotes,
+    Context
   ): PartialFunction[quotes.reflect.Term, Instruction[F]] =
     parsers.map(_.apply).reduceLeft(_ orElse _)
 
   object Total extends ConfigParser[Nothing] {
-    def apply(using Quotes, Context[Fallible]): PartialFunction[quotes.reflect.Term, Instruction[Nothing]] = {
+    def apply(using Quotes, Context): PartialFunction[quotes.reflect.Term, Instruction[Nothing]] = {
       import quotes.reflect.*
       {
         case cfg @ Apply(
@@ -141,7 +146,7 @@ private[ducktape] object ConfigParser {
   }
 
   class PossiblyFallible[F[+x]: Type] extends ConfigParser[Fallible] {
-    def apply(using Quotes, Context[Fallible]): PartialFunction[quotes.reflect.Term, Instruction[Fallible]] = {
+    def apply(using Quotes, Context): PartialFunction[quotes.reflect.Term, Instruction[Fallible]] = {
       import quotes.reflect.*
       {
         case cfg @ Apply(
@@ -195,7 +200,7 @@ private[ducktape] object ConfigParser {
     }
   }
 
-  private def parseAllMatching(using Quotes, Context[Fallible])(
+  private def parseAllMatching(using Quotes, Context)(
     sourceExpr: Expr[Any],
     path: Path,
     fieldSourceTpe: quotes.reflect.TypeRepr,
@@ -237,7 +242,7 @@ private[ducktape] object ConfigParser {
   }
 
   private object DeprecatedConfig {
-    def unapply(using Quotes, Context[Fallible])(term: quotes.reflect.Term) = {
+    def unapply(using Quotes, Context)(term: quotes.reflect.Term) = {
       import quotes.reflect.*
 
       PartialFunction.condOpt(term.asExpr):

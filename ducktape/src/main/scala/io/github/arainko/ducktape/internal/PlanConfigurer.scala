@@ -10,7 +10,7 @@ private[ducktape] object PlanConfigurer {
   def run[F <: Fallible](
     plan: Plan[Erroneous, F],
     configs: List[Configuration.Instruction[F]]
-  )(using Quotes, Context[Fallible]): Plan.Reconfigured[F] = {
+  )(using Quotes, Context): Plan.Reconfigured[F] = {
     def configureSingle(
       plan: Plan[Erroneous, F],
       config: Configuration.Instruction[F]
@@ -171,7 +171,7 @@ private[ducktape] object PlanConfigurer {
     config: Configuration.Instruction[F],
     current: Plan[Erroneous, F],
     parent: Plan[Erroneous, F] | None.type
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning], Context[Fallible]) = {
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning], Context) = {
     Logger.debug(ds"Configuring plan $current with $config")
 
     config match {
@@ -207,7 +207,7 @@ private[ducktape] object PlanConfigurer {
     instruction: Configuration.Instruction.Static[F] | Configuration.Instruction.Dynamic[F],
     current: Plan[Erroneous, F],
     parent: Plan[Erroneous, F] | None.type
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning], Context[Fallible]) = {
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning], Context) = {
     instruction match {
       case static: Configuration.Instruction.Static[F] =>
         current.configureIfValid(static, static.config)
@@ -228,7 +228,7 @@ private[ducktape] object PlanConfigurer {
     plan: Plan[Erroneous, F],
     modifier: Configuration.Instruction.Regional,
     parent: Plan[Erroneous, F] | None.type
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning], Context[Fallible]): Plan[Erroneous, F] =
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning], Context): Plan[Erroneous, F] =
     plan match {
       case plan: Upcast => plan
 
@@ -286,7 +286,7 @@ private[ducktape] object PlanConfigurer {
   private def bulk[F <: Fallible](
     current: Plan[Erroneous, F],
     instruction: Configuration.Instruction.Bulk
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning], Context[Fallible]): Plan[Erroneous, F] = {
+  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning], Context): Plan[Erroneous, F] = {
 
     enum IsAnythingModified {
       case Yes, No
@@ -346,7 +346,7 @@ private[ducktape] object PlanConfigurer {
       errors: Accumulator[Plan.Error],
       successes: Accumulator[(Path, Side)],
       warnings: Accumulator[ConfigWarning],
-      context: Context[Fallible]
+      context: Context
     ) = {
       def isReplaceableBy(update: Configuration[F])(using Quotes) =
         update.tpe.repr <:< currentPlan.destPath.currentTpe.repr

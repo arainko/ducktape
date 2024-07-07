@@ -9,7 +9,7 @@ sealed trait WrapperType {
 
 object WrapperType {
 
-  def unapply(using Quotes, Context[Fallible])(tpe: Type[?]) =
+  def unapply(using Quotes, Context)(tpe: Type[?]) =
     PartialFunction.condOpt(Context.current) {
       case ctx: Context.PossiblyFallible[?] => ctx.wrapperType.unapply(tpe)
     }.flatten

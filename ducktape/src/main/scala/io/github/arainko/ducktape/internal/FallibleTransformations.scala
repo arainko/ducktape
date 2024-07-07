@@ -18,7 +18,7 @@ private[ducktape] object FallibleTransformations {
     transformationSite: Expr["transformation" | "definition"],
     configs: Expr[Seq[Field.Fallible[F, A, B] | Case.Fallible[F, A, B]]]
   )(using Quotes): Expr[F[B]] = {
-    given Context.PossiblyFallible[F] = Context.PossiblyFallible(
+    given Context.PossiblyFallible[F](
       WrapperType.Wrapped(Type.of[F]),
       TransformationSite.fromStringExpr(transformationSite),
       Summoner.PossiblyFallible[F],
@@ -28,7 +28,7 @@ private[ducktape] object FallibleTransformations {
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
     val destStruct = Structure.of[B](Path.empty(Type.of[B]))
     val plan = Planner.between(sourceStruct, destStruct)
-    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total, ConfigParser.PossiblyFallible[F]))
+    val config = Configuration.parse(configs, ConfigParser.fallible[F])
 
     val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
     FalliblePlanInterpreter.run[F, A, B](totalPlan, source, Context.current.mode).asExprOf[F[B]]
@@ -49,7 +49,7 @@ private[ducktape] object FallibleTransformations {
     transformationSite: Expr["transformation" | "definition"],
     configs: Expr[Seq[Field.Fallible[F, A, Args] | Case.Fallible[F, A, Args]]]
   )(using Quotes): Expr[F[B]] = {
-    given Context.PossiblyFallible[F] = Context.PossiblyFallible(
+    given Context.PossiblyFallible[F](
       WrapperType.Wrapped(Type.of[F]),
       TransformationSite.fromStringExpr(transformationSite),
       Summoner.PossiblyFallible[F],
@@ -57,7 +57,7 @@ private[ducktape] object FallibleTransformations {
     )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
-    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total, ConfigParser.PossiblyFallible[F]))
+    val config = Configuration.parse(configs, ConfigParser.fallible[F])
 
     Function
       .fromFunctionArguments[Args, Func](function)
@@ -91,7 +91,7 @@ private[ducktape] object FallibleTransformations {
   )(using Quotes): Expr[F[Any]] = {
     import quotes.reflect.*
 
-    given Context.PossiblyFallible[F] = Context.PossiblyFallible(
+    given Context.PossiblyFallible[F](
       WrapperType.Wrapped(Type.of[F]),
       TransformationSite.Transformation,
       Summoner.PossiblyFallible[F],

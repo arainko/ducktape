@@ -11,7 +11,7 @@ import scala.util.boundary
 private[ducktape] object Planner {
   import Structure.*
 
-  def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context[F]) = {
+  def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context.Of[F]) = {
     given Depth = Depth.zero
     recurse(source, dest)
   }
@@ -19,7 +19,7 @@ private[ducktape] object Planner {
   private def recurse[F <: Fallible](
     source: Structure,
     dest: Structure
-  )(using quotes: Quotes, depth: Depth, context: Context[F]): Plan[Erroneous, F] = {
+  )(using quotes: Quotes, depth: Depth, context: Context.Of[F]): Plan[Erroneous, F] = {
     import quotes.reflect.*
     given Depth = Depth.incremented(using depth)
 
@@ -108,7 +108,7 @@ private[ducktape] object Planner {
   private def planProductTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product
-  )(using Quotes, Depth, Context[F]) = {
+  )(using Quotes, Depth, Context.Of[F]) = {
 
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
       val plan =
@@ -132,7 +132,7 @@ private[ducktape] object Planner {
     sourceStruct: Structure,
     source: IndexedSeq[Structure],
     dest: IndexedSeq[Structure]
-  )(using Quotes, Depth, Context[F]): Vector[Plan[Erroneous, F]] = {
+  )(using Quotes, Depth, Context.Of[F]): Vector[Plan[Erroneous, F]] = {
     dest.zipWithIndex.map { (destFieldStruct, index) =>
       source
         .lift(index)
@@ -151,7 +151,7 @@ private[ducktape] object Planner {
   private def planProductFunctionTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function
-  )(using Quotes, Depth, Context[F]) = {
+  )(using Quotes, Depth, Context.Of[F]) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
       val plan =
         source.fields
@@ -175,7 +175,7 @@ private[ducktape] object Planner {
   private def planCoproductTransformation[F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct
-  )(using Quotes, Depth, Context[F]) = {
+  )(using Quotes, Depth, Context.Of[F]) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
 
       dest.children
@@ -196,7 +196,7 @@ private[ducktape] object Planner {
   }
 
   object UserDefinedTransformation {
-    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Depth, Context[F]) = {
+    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Depth, Context.Of[F]) = {
       val (src, dest) = structs
 
       def summonTransformer(using Quotes) =
@@ -214,7 +214,7 @@ private[ducktape] object Planner {
   }
 
   object DerivedTransformation {
-    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Context[F]) = {
+    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Context.Of[F]) = {
       val (src, dest) = structs
 
       (src.tpe -> dest.tpe) match {
@@ -225,7 +225,7 @@ private[ducktape] object Planner {
 
   private def verifyNotSelfReferential(
     plan: Plan.Derived[Fallible] | Plan.UserDefined[Fallible]
-  )(using Context[Fallible], Depth, Quotes): Plan.Error | plan.type = {
+  )(using Context, Depth, Quotes): Plan.Error | plan.type = {
     import quotes.reflect.*
 
     val transformerExpr = plan match

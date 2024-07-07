@@ -8,7 +8,7 @@ private[ducktape] object Backend {
   def refineOrReportErrorsAndAbort[F <: Fallible](
     plan: Plan[Erroneous, F],
     configs: List[Configuration.Instruction[F]]
-  )(using Quotes, Context[Fallible]) = {
+  )(using Quotes, Context) = {
     import quotes.reflect.*
 
     val reconfiguredPlan = plan.configureAll(configs)

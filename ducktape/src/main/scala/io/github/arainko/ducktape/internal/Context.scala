@@ -1,25 +1,31 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
+sealed trait Context {
+  type F <: Fallible
 
-sealed trait Context[+F <: Fallible] {
   def summoner: Summoner[F]
   def transformationSite: TransformationSite
 }
 
 object Context {
-  def current(using ctx: Context[?]): ctx.type = ctx
+  type Of[F0 <: Fallible] = Context { type F = F0 }
+
+  def current(using ctx: Context): ctx.type = ctx
 
   case class PossiblyFallible[G[+x]](
     wrapperType: WrapperType.Wrapped[G],
     transformationSite: TransformationSite,
     summoner: Summoner.PossiblyFallible[G],
     mode: TransformationMode[G]
-  ) extends Context[Fallible] 
+  ) extends Context {
+    type F = Fallible
+  }
 
   case class Total(
     transformationSite: TransformationSite
-  ) extends Context[Nothing] {
+  ) extends Context {
+    type F = Nothing
+
     val summoner: Summoner[Nothing] = Summoner.Total
   }
 }

@@ -110,7 +110,7 @@ private[ducktape] object Configuration {
   def parse[G[+x], A: Type, B: Type, F <: Fallible](
     configs: Expr[Seq[Field.Fallible[G, A, B] | Case.Fallible[G, A, B]]],
     parsers: NonEmptyList[ConfigParser[F]]
-  )(using Quotes, Context[Fallible]): List[Instruction[F]] = {
+  )(using Quotes, Context): List[Instruction[F]] = {
     import quotes.reflect.*
     def fallback(term: quotes.reflect.Term) =
       Configuration.Instruction.Failed(
