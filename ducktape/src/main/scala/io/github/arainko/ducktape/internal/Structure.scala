@@ -60,15 +60,18 @@ private[ducktape] object Structure {
 
   case class ValueClass(tpe: Type[? <: AnyVal], path: Path, paramTpe: Type[?], paramFieldName: String) extends Structure
 
+  case class Wrappped[F[+x]](tpe: Type[F], path: Path, underlying: Structure) extends Structure
+  
+
   case class Lazy private (tpe: Type[?], path: Path, private val deferredStruct: () => Structure) extends Structure {
     lazy val struct: Structure = deferredStruct()
   }
 
   object Lazy {
-    def of[A: Type](path: Path)(using Quotes): Lazy = Lazy(Type.of[A], path, () => Structure.of[A](path))
+    def of[A: Type](path: Path)(using Context[Fallible], Quotes): Lazy = Lazy(Type.of[A], path, () => Structure.of[A](path))
   }
 
-  def fromFunction(function: io.github.arainko.ducktape.internal.Function)(using Quotes): Structure.Function = {
+  def fromFunction(function: io.github.arainko.ducktape.internal.Function)(using Context[Fallible], Quotes): Structure.Function = {
     import quotes.reflect.*
     val path = Path.empty(function.returnTpe)
 
@@ -80,18 +83,25 @@ private[ducktape] object Structure {
     Structure.Function(function.returnTpe, path, args, function)
   }
 
-  def fromTypeRepr(using Quotes)(repr: quotes.reflect.TypeRepr, path: Path): Structure =
+  def fromTypeRepr(using Context[Fallible], Quotes)(repr: quotes.reflect.TypeRepr, path: Path): Structure =
     repr.widen.asType match {
       case '[tpe] => Structure.of[tpe](path)
     }
 
-  def of[A: Type](path: Path)(using Quotes): Structure = {
+  def of[A: Type](path: Path)(using Context[Fallible], Quotes): Structure = {
     import quotes.reflect.*
 
     Logger.loggedInfo("Structure"):
       Type.of[A] match {
         case tpe @ '[Nothing] =>
           Structure.Ordinary(tpe, path)
+
+        case WrapperType(wrapper: WrapperType.Wrapped[f], '[underlying]) =>
+          Structure.Wrappped(
+            wrapper.wrapperTpe,
+            path,
+            Structure.of[underlying](path.appended(Path.Segment.Element(Type.of[underlying])))
+          )
 
         case tpe @ '[Option[param]] =>
           Structure.Optional(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))

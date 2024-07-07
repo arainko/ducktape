@@ -6,9 +6,9 @@ import scala.quoted.runtime.StopMacroExpansion
 private[ducktape] object Backend {
 
   def refineOrReportErrorsAndAbort[F <: Fallible](
-    plan: Plan[Plan.Error, F],
+    plan: Plan[Erroneous, F],
     configs: List[Configuration.Instruction[F]]
-  )(using Quotes) = {
+  )(using Quotes, Context[Fallible]) = {
     import quotes.reflect.*
 
     val reconfiguredPlan = plan.configureAll(configs)

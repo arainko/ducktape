@@ -17,8 +17,9 @@ private[ducktape] object TotalTransformations {
     transformationSite: Expr["transformation" | "definition"],
     configs: Expr[Seq[Field[A, B] | Case[A, B]]]
   )(using Quotes): Expr[B] = {
-    given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
-    given Summoner[Nothing] = Summoner.Total
+    given ctx: Context[Nothing] = Context.Total(
+      TransformationSite.fromStringExpr(transformationSite)
+    )
 
     val plan = Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])))
     val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total))
@@ -40,8 +41,10 @@ private[ducktape] object TotalTransformations {
     value: Expr[A],
     function: Expr[Func]
   )(using Quotes) = {
-    given TransformationSite = TransformationSite.Transformation
-    given Summoner[Nothing] = Summoner.Total
+
+    given Context.Total(
+      TransformationSite.Transformation
+    )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
 
@@ -68,8 +71,9 @@ private[ducktape] object TotalTransformations {
     transformationSite: Expr["transformation" | "definition"],
     configs: Expr[Seq[Field[A, Args] | Case[A, Args]]]
   )(using Quotes) = {
-    given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
-    given Summoner[Nothing] = Summoner.Total
+    given Context.Total(
+      TransformationSite.fromStringExpr(transformationSite)
+    )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
 

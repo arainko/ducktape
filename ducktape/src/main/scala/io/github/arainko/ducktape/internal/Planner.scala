@@ -11,7 +11,7 @@ import scala.util.boundary
 private[ducktape] object Planner {
   import Structure.*
 
-  def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, TransformationSite, Summoner[F]) = {
+  def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context[F]) = {
     given Depth = Depth.zero
     recurse(source, dest)
   }
@@ -19,7 +19,7 @@ private[ducktape] object Planner {
   private def recurse[F <: Fallible](
     source: Structure,
     dest: Structure
-  )(using quotes: Quotes, depth: Depth, transformationSite: TransformationSite, summoner: Summoner[F]): Plan[Plan.Error, F] = {
+  )(using quotes: Quotes, depth: Depth, context: Context[F]): Plan[Erroneous, F] = {
     import quotes.reflect.*
     given Depth = Depth.incremented(using depth)
 
@@ -108,7 +108,7 @@ private[ducktape] object Planner {
   private def planProductTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product
-  )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
+  )(using Quotes, Depth, Context[F]) = {
 
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
       val plan =
@@ -132,7 +132,7 @@ private[ducktape] object Planner {
     sourceStruct: Structure,
     source: IndexedSeq[Structure],
     dest: IndexedSeq[Structure]
-  )(using Quotes, Depth, TransformationSite, Summoner[F]): Vector[Plan[Plan.Error, F]] = {
+  )(using Quotes, Depth, Context[F]): Vector[Plan[Erroneous, F]] = {
     dest.zipWithIndex.map { (destFieldStruct, index) =>
       source
         .lift(index)
@@ -151,7 +151,7 @@ private[ducktape] object Planner {
   private def planProductFunctionTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function
-  )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
+  )(using Quotes, Depth, Context[F]) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
       val plan =
         source.fields
@@ -175,7 +175,7 @@ private[ducktape] object Planner {
   private def planCoproductTransformation[F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct
-  )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
+  )(using Quotes, Depth, Context[F]) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
 
       dest.children
@@ -196,16 +196,16 @@ private[ducktape] object Planner {
   }
 
   object UserDefinedTransformation {
-    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Depth, TransformationSite, Summoner[F]) = {
+    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Depth, Context[F]) = {
       val (src, dest) = structs
 
       def summonTransformer(using Quotes) =
         (src.tpe -> dest.tpe) match {
-          case '[src] -> '[dest] => Summoner[F].summonUserDefined[src, dest]
+          case '[src] -> '[dest] => Context.current.summoner.summonUserDefined[src, dest]
         }
 
       // if current depth is lower or equal to 1 then that means we're most likely referring to ourselves
-      TransformationSite.current match {
+      Context.current.transformationSite match {
         case TransformationSite.Definition if Depth.current <= 1 => None
         case TransformationSite.Definition                       => summonTransformer
         case TransformationSite.Transformation                   => summonTransformer
@@ -214,18 +214,18 @@ private[ducktape] object Planner {
   }
 
   object DerivedTransformation {
-    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Summoner[F]) = {
+    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Context[F]) = {
       val (src, dest) = structs
 
       (src.tpe -> dest.tpe) match {
-        case '[src] -> '[dest] => Summoner[F].summonDerived[src, dest]
+        case '[src] -> '[dest] => Context.current.summoner.summonDerived[src, dest]
       }
     }
   }
 
   private def verifyNotSelfReferential(
     plan: Plan.Derived[Fallible] | Plan.UserDefined[Fallible]
-  )(using TransformationSite, Depth, Quotes): Plan.Error | plan.type = {
+  )(using Context[Fallible], Depth, Quotes): Plan.Error | plan.type = {
     import quotes.reflect.*
 
     val transformerExpr = plan match
@@ -236,7 +236,7 @@ private[ducktape] object Planner {
 
     val transformerSymbol = transformerExpr.asTerm.symbol
 
-    TransformationSite.current match
+    Context.current.transformationSite match
       case TransformationSite.Transformation if Depth.current == 1 =>
         boundary[Plan.Error | plan.type]:
           var owner = Symbol.spliceOwner

@@ -10,7 +10,10 @@ import scala.reflect.TypeTest
 private[ducktape] object Fallible
 private[ducktape] type Fallible = Fallible.type
 
-private[ducktape] sealed trait Plan[+E <: Plan.Error, +F <: Fallible] {
+private[ducktape] object Erroneous
+private[ducktape] type Erroneous = Erroneous.type
+
+private[ducktape] sealed trait Plan[+E <: Erroneous, +F <: Fallible] {
   import Plan.*
 
   def source: Structure
@@ -21,10 +24,10 @@ private[ducktape] sealed trait Plan[+E <: Plan.Error, +F <: Fallible] {
 
   final def destPath: Path = dest.path
 
-  final def narrow[A <: Plan[Plan.Error, Fallible]](using tt: TypeTest[Plan[Plan.Error, Fallible], A]): Option[A] =
+  final def narrow[A <: Plan[Erroneous, Fallible]](using tt: TypeTest[Plan[Erroneous, Fallible], A]): Option[A] =
     tt.unapply(this)
 
-  final def configureAll[FF >: F <: Fallible](configs: List[Configuration.Instruction[FF]])(using Quotes): Plan.Reconfigured[FF] =
+  final def configureAll[FF >: F <: Fallible](configs: List[Configuration.Instruction[FF]])(using Quotes, Context[Fallible]): Plan.Reconfigured[FF] =
     PlanConfigurer.run(this, configs)
 
   final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing, F]] = PlanRefiner.run(this)
@@ -55,13 +58,13 @@ private[ducktape] object Plan {
     span: Span
   ) extends Plan[Nothing, F]
 
-  case class BetweenProductFunction[+E <: Plan.Error, +F <: Fallible](
+  case class BetweenProductFunction[+E <: Erroneous, +F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function,
     argPlans: VectorMap[String, Plan[E, F]]
   ) extends Plan[E, F]
 
-  case class BetweenTupleFunction[+E <: Plan.Error, +F <: Fallible](
+  case class BetweenTupleFunction[+E <: Erroneous, +F <: Fallible](
     source: Structure.Tuple,
     dest: Structure.Function,
     argPlans: VectorMap[String, Plan[E, F]]
@@ -78,54 +81,67 @@ private[ducktape] object Plan {
     fieldName: String
   ) extends Plan[Nothing, Nothing]
 
+  // case class BetweenFallibleNonFallible[+E <: Erroneous](
+  //   source: Structure.Wrappped[?],
+  //   dest: Structure,
+  //   plan: Plan[E, Nothing]
+  // ) extends Plan[E, Fallible]
+
+  // case class BetweenFallibles[+E <: Erroneous, +F <: Fallible](
+  //   source: Structure.Wrappped[?],
+  //   dest: Structure.Wrappped[?],
+  //   mode: TransformationMode.FailFast[?],
+  //   plan: Plan[E, F]
+  // ) extends Plan[E, Fallible]
+
   case class BetweenSingletons(
     source: Structure.Singleton,
     dest: Structure.Singleton
   ) extends Plan[Nothing, Nothing]
 
-  case class BetweenProducts[+E <: Plan.Error, +F <: Fallible](
+  case class BetweenProducts[+E <: Erroneous, +F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product,
     fieldPlans: VectorMap[String, Plan[E, F]]
   ) extends Plan[E, F]
 
-  case class BetweenProductTuple[+E <: Plan.Error, +F <: Fallible](
+  case class BetweenProductTuple[+E <: Erroneous, +F <: Fallible](
     source: Structure.Product,
     dest: Structure.Tuple,
     plans: Vector[Plan[E, F]]
   ) extends Plan[E, F]
 
-  case class BetweenTupleProduct[+E <: Plan.Error, +F <: Fallible](
+  case class BetweenTupleProduct[+E <: Erroneous, +F <: Fallible](
     source: Structure.Tuple,
     dest: Structure.Product,
     plans: VectorMap[String, Plan[E, F]]
   ) extends Plan[E, F]
 
-  case class BetweenTuples[+E <: Plan.Error, +F <: Fallible](
+  case class BetweenTuples[+E <: Erroneous, +F <: Fallible](
     source: Structure.Tuple,
     dest: Structure.Tuple,
     plans: Vector[Plan[E, F]]
   ) extends Plan[E, F]
 
-  case class BetweenCoproducts[+E <: Plan.Error, +F <: Fallible](
+  case class BetweenCoproducts[+E <: Erroneous, +F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct,
     casePlans: Vector[Plan[E, F]]
   ) extends Plan[E, F]
 
-  case class BetweenOptions[+E <: Plan.Error, +F <: Fallible](
+  case class BetweenOptions[+E <: Erroneous, +F <: Fallible](
     source: Structure.Optional,
     dest: Structure.Optional,
     plan: Plan[E, F]
   ) extends Plan[E, F]
 
-  case class BetweenNonOptionOption[+E <: Plan.Error, +F <: Fallible](
+  case class BetweenNonOptionOption[+E <: Erroneous, +F <: Fallible](
     source: Structure,
     dest: Structure.Optional,
     plan: Plan[E, F]
   ) extends Plan[E, F]
 
-  case class BetweenCollections[+E <: Plan.Error, +F <: Fallible](
+  case class BetweenCollections[+E <: Erroneous, +F <: Fallible](
     source: Structure.Collection,
     dest: Structure.Collection,
     plan: Plan[E, F]
@@ -136,10 +152,10 @@ private[ducktape] object Plan {
     dest: Structure,
     message: ErrorMessage,
     suppressed: Option[Plan.Error]
-  ) extends Plan[Plan.Error, Nothing]
+  ) extends Plan[Erroneous, Nothing]
 
   object Error {
-    def from(plan: Plan[Plan.Error, Fallible], message: ErrorMessage, suppressed: Option[Plan.Error]): Plan.Error =
+    def from(plan: Plan[Erroneous, Fallible], message: ErrorMessage, suppressed: Option[Plan.Error]): Plan.Error =
       Plan.Error(
         plan.source,
         plan.dest,
@@ -149,8 +165,8 @@ private[ducktape] object Plan {
   }
 
   object Configured {
-    def from[F <: Fallible](plan: Plan[Plan.Error, F], conf: Configuration[F], instruction: Configuration.Instruction[F])(using
-      Quotes
+    def from[F <: Fallible](plan: Plan[Erroneous, F], conf: Configuration[F], instruction: Configuration.Instruction[F])(using
+      Quotes, Context[Fallible]
     ): Plan.Configured[F] =
       (plan.source.tpe, plan.dest.tpe, conf.tpe) match {
         case ('[src], '[dest], '[confTpe]) =>
@@ -160,13 +176,13 @@ private[ducktape] object Plan {
       }
   }
 
-  given debug: Debug[Plan[Plan.Error, Fallible]] = Debug.derived
+  given debug: Debug[Plan[Erroneous, Fallible]] = Debug.derived
 
   final case class Reconfigured[+F <: Fallible](
     errors: List[Plan.Error],
     successes: List[(Path, Side)],
     warnings: List[ConfigWarning],
-    result: Plan[Plan.Error, F]
+    result: Plan[Erroneous, F]
   )
 
   object Reconfigured {

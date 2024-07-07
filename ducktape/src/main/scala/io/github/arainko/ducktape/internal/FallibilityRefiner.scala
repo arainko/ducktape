@@ -8,12 +8,12 @@ import scala.util.boundary
 import scala.util.boundary.Label
 
 private[ducktape] object FallibilityRefiner {
-  def run[E <: Plan.Error](plan: Plan[E, Fallible]): Plan[E, Nothing] | None.type =
+  def run[E <: Erroneous](plan: Plan[E, Fallible]): Plan[E, Nothing] | None.type =
     recurse(plan) match
       case None    => None
       case b: Unit => plan.asInstanceOf[Plan[E, Nothing]]
 
-  private def recurse[E <: Plan.Error](plan: Plan[E, Fallible]): None.type | Unit =
+  private def recurse[E <: Erroneous](plan: Plan[E, Fallible]): None.type | Unit =
     boundary[None.type | Unit]:
       plan match
         case Upcast(source, dest) => ()
@@ -76,7 +76,7 @@ private[ducktape] object FallibilityRefiner {
 
         case Plan.Error(source, dest, message, suppressed) => ()
 
-  private inline def evaluate(plans: Iterable[Plan[Plan.Error, Fallible]])(using inline label: boundary.Label[None.type | Unit]) =
+  private inline def evaluate(plans: Iterable[Plan[Erroneous, Fallible]])(using inline label: boundary.Label[None.type | Unit]) =
     val iterator = plans.iterator
     while iterator.hasNext do
       recurse(iterator.next()) match {

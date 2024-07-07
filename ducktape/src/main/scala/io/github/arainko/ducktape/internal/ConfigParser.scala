@@ -7,17 +7,17 @@ import scala.quoted.*
 import Configuration.*
 
 private[ducktape] sealed trait ConfigParser[+F <: Fallible] {
-  def apply(using Quotes): PartialFunction[quotes.reflect.Term, Instruction[F]]
+  def apply(using Quotes, Context[Fallible]): PartialFunction[quotes.reflect.Term, Instruction[F]]
 }
 
 private[ducktape] object ConfigParser {
   def combine[F <: Fallible](parsers: NonEmptyList[ConfigParser[F]])(using
-    Quotes
+    Quotes, Context[Fallible]
   ): PartialFunction[quotes.reflect.Term, Instruction[F]] =
     parsers.map(_.apply).reduceLeft(_ orElse _)
 
   object Total extends ConfigParser[Nothing] {
-    def apply(using Quotes): PartialFunction[quotes.reflect.Term, Instruction[Nothing]] = {
+    def apply(using Quotes, Context[Fallible]): PartialFunction[quotes.reflect.Term, Instruction[Nothing]] = {
       import quotes.reflect.*
       {
         case cfg @ Apply(
@@ -35,7 +35,7 @@ private[ducktape] object ConfigParser {
               TypeApply(Select(IdentOfType('[Field.type]), "default"), a :: b :: destFieldTpe :: Nil),
               PathSelector(path) :: Nil
             ) =>
-          def default(parent: Plan[Plan.Error, Fallible] | None.type) =
+          def default(parent: Plan[Erroneous, Fallible] | None.type) =
             for {
               selectedField <-
                 path.segments.lastOption
@@ -44,8 +44,8 @@ private[ducktape] object ConfigParser {
               defaults <-
                 PartialFunction
                   .condOpt(parent) {
-                    case parent: Plan.BetweenProducts[Plan.Error, Fallible]     => parent.dest.defaults
-                    case parent: Plan.BetweenTupleProduct[Plan.Error, Fallible] => parent.dest.defaults
+                    case parent: Plan.BetweenProducts[Erroneous, Fallible]     => parent.dest.defaults
+                    case parent: Plan.BetweenTupleProduct[Erroneous, Fallible] => parent.dest.defaults
                   }
                   .toRight("Selected field's parent is not a product")
               defaultValue <-
@@ -141,7 +141,7 @@ private[ducktape] object ConfigParser {
   }
 
   class PossiblyFallible[F[+x]: Type] extends ConfigParser[Fallible] {
-    def apply(using Quotes): PartialFunction[quotes.reflect.Term, Instruction[Fallible]] = {
+    def apply(using Quotes, Context[Fallible]): PartialFunction[quotes.reflect.Term, Instruction[Fallible]] = {
       import quotes.reflect.*
       {
         case cfg @ Apply(
@@ -195,7 +195,7 @@ private[ducktape] object ConfigParser {
     }
   }
 
-  private def parseAllMatching(using Quotes)(
+  private def parseAllMatching(using Quotes, Context[Fallible])(
     sourceExpr: Expr[Any],
     path: Path,
     fieldSourceTpe: quotes.reflect.TypeRepr,
@@ -208,10 +208,10 @@ private[ducktape] object ConfigParser {
       .map { sourceStruct =>
         val modifier = new FieldModifier:
           def apply(
-            parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible] |
-              Plan.BetweenTupleProduct[Plan.Error, Fallible],
+            parent: Plan.BetweenProductFunction[Erroneous, Fallible] | Plan.BetweenProducts[Erroneous, Fallible] |
+              Plan.BetweenTupleProduct[Erroneous, Fallible],
             field: String,
-            plan: Plan[Plan.Error, Fallible]
+            plan: Plan[Erroneous, Fallible]
           )(using Quotes): Configuration[Nothing] | plan.type =
             sourceStruct.fields.get(field).match {
               case Some(struct) if struct.tpe.repr <:< plan.dest.tpe.repr =>
@@ -237,7 +237,7 @@ private[ducktape] object ConfigParser {
   }
 
   private object DeprecatedConfig {
-    def unapply(using Quotes)(term: quotes.reflect.Term) = {
+    def unapply(using Quotes, Context[Fallible])(term: quotes.reflect.Term) = {
       import quotes.reflect.*
 
       PartialFunction.condOpt(term.asExpr):
