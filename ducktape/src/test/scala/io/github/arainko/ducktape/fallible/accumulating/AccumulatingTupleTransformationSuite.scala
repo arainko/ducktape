@@ -259,4 +259,23 @@ class AccumulatingTupleTransformationSuite extends DucktapeSuite {
       Field.fallibleConst(_.apply(25), transformation(26))
     )
   }
+
+  test("unwrapping works") {
+    // import scala.util.chaining.*
+    // Ok computer, traverse my tuple
+
+    val t = (
+      Left(List("as")),
+      Right(1),
+      Right(List(1))
+    )
+
+    val res = Mode.Accumulating.either[String, List].locally {
+      t.fallibleTo[Tuple.InverseMap[t.type, Mode.current.Self]]
+    }.code
+
+    println(res)
+
+  }
+
 }

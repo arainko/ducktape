@@ -10,6 +10,8 @@ private given Transformer.Mode.Either[String, List] with {}
 """
 )
 sealed trait Mode[F[+x]] {
+  final type Self[+x] = F[x]
+
   def pure[A](value: A): F[A]
   def map[A, B](fa: F[A], f: A => B): F[B]
   def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
@@ -19,6 +21,7 @@ sealed trait Mode[F[+x]] {
 }
 
 object Mode {
+  inline def current(using mode: Mode[?]): mode.type = mode
   extension [F[+x], M <: Mode[F]](self: M) {
     inline def locally[A](inline f: M ?=> A): A = f(using self)
   }
@@ -152,4 +155,20 @@ object Mode {
 
     def either[E]: Mode.FailFast.Either[E] = Mode.FailFast.Either[E]
   }
+}
+
+object test extends App {
+  import scala.util.chaining.*
+
+  val t = (
+    Option(1),
+    Option(2),
+    None
+  )
+
+  val res = Mode.FailFast.option.locally { 
+    t.fallibleTo[Tuple.InverseMap[t.type, Mode.current.Self]]
+  }
+
+  println(res)
 }

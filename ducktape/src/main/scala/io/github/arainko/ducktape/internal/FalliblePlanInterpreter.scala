@@ -69,6 +69,13 @@ private[ducktape] object FalliblePlanInterpreter {
           case plan @ Plan.BetweenTuples(source, dest, plans) =>
             fromTupleTransformation(source, plan, plans, value, F)(ProductConstructor.Tuple)
 
+          case plan @ Plan.BetweenFallibleNonFallible(source, dest, elemPlan) =>
+            (source.underlying.tpe, dest.tpe) match {
+              case '[src] -> '[dest] =>
+                val src = value.asExprOf[F[src]]
+                Value.Wrapped('{ ${ F.value }.map($src, a => ${ PlanInterpreter.recurse(elemPlan, 'a).asExprOf[dest] }) })
+            }
+
           case Plan.BetweenCoproducts(source, dest, casePlans) =>
             dest.tpe match {
               case '[destSupertype] =>

@@ -227,7 +227,7 @@ private[ducktape] object PlanConfigurer {
   private def regional[F <: Fallible](
     plan: Plan[Erroneous, F],
     modifier: Configuration.Instruction.Regional,
-    parent: Plan[Erroneous, F] | None.type
+    parent: Plan[Erroneous, Fallible] | None.type
   )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning], Context): Plan[Erroneous, F] =
     plan match {
       case plan: Upcast => plan
@@ -272,6 +272,9 @@ private[ducktape] object PlanConfigurer {
         plan.copy(plan = regional(plan.plan, modifier, plan))
 
       case plan: BetweenCollections[Erroneous, F] =>
+        plan.copy(plan = regional(plan.plan, modifier, plan))
+
+      case plan: BetweenFallibleNonFallible[Erroneous] =>
         plan.copy(plan = regional(plan.plan, modifier, plan))
 
       case plan: Error =>

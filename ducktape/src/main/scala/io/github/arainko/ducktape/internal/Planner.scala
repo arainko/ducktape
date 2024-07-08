@@ -219,6 +219,7 @@ private[ducktape] object Planner {
       def summonTransformer(using Quotes) =
         (src.tpe -> dest.tpe) match {
           case '[src] -> '[dest] => Context.current.summoner.summonUserDefined[src, dest]
+          case _ => None
         }
 
       // if current depth is lower or equal to 1 then that means we're most likely referring to ourselves
