@@ -81,11 +81,11 @@ private[ducktape] object Plan {
     fieldName: String
   ) extends Plan[Nothing, Nothing]
 
-  // case class BetweenFallibleNonFallible[+E <: Erroneous](
-  //   source: Structure.Wrappped[?],
-  //   dest: Structure,
-  //   plan: Plan[E, Nothing]
-  // ) extends Plan[E, Fallible]
+  case class BetweenFallibleNonFallible[+E <: Erroneous](
+    source: Structure.Wrappped[?],
+    dest: Structure,
+    plan: Plan[E, Nothing]
+  ) extends Plan[E, Fallible]
 
   // case class BetweenFallibles[+E <: Erroneous, +F <: Fallible](
   //   source: Structure.Wrappped[?],

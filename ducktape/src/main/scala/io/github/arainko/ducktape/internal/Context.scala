@@ -5,12 +5,15 @@ sealed trait Context {
 
   def summoner: Summoner[F]
   def transformationSite: TransformationSite
+
+  final def toTotal: Context.Total = Context.Total(transformationSite)
 }
 
 object Context {
   type Of[F0 <: Fallible] = Context { type F = F0 }
 
-  def current(using ctx: Context): ctx.type = ctx
+  inline def current(using ctx: Context): ctx.type = ctx
+
 
   case class PossiblyFallible[G[+x]](
     wrapperType: WrapperType.Wrapped[G],
@@ -18,13 +21,13 @@ object Context {
     summoner: Summoner.PossiblyFallible[G],
     mode: TransformationMode[G]
   ) extends Context {
-    type F = Fallible
+    final type F = Fallible
   }
 
   case class Total(
     transformationSite: TransformationSite
   ) extends Context {
-    type F = Nothing
+    final type F = Nothing
 
     val summoner: Summoner[Nothing] = Summoner.Total
   }

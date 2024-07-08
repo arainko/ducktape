@@ -7,6 +7,9 @@ import io.github.arainko.ducktape.internal.*
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
+import io.github.arainko.ducktape.internal.Context.PossiblyFallible
+import io.github.arainko.ducktape.internal.Context.Total
+import scala.reflect.TypeTest
 
 private[ducktape] object Planner {
   import Structure.*
@@ -41,6 +44,20 @@ private[ducktape] object Planner {
 
         case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
           Plan.Upcast(source, dest)
+
+        case BetweenFallible(plan) =>
+          plan
+
+        // case Context.current(((source @ Wrappped(tpe, path, underlying)) -> dest), c @ given Context.PossiblyFallible[f]) =>
+
+        //   given Context.PossiblyFallible[f] = c
+        //   // val a @ Context.Total(_) = Context.current
+        //   Plan.BetweenFallibleNonFallible(
+        //     source,
+        //     dest,
+        //     ???
+        //     // recurse(underlying, dest)
+        //   )
 
         case (source @ Optional(_, _, srcParamStruct)) -> (dest @ Optional(_, _, destParamStruct)) =>
           Plan.BetweenOptions(
@@ -247,6 +264,29 @@ private[ducktape] object Planner {
           }
           plan
       case _ => plan
+
+  }
+
+  object BetweenFallible {
+    def unapply[F <: Fallible](
+      structs: (Structure, Structure)
+    )(using Quotes, Depth, Context.Of[F]): Option[Plan[Erroneous, F]] =
+      PartialFunction.condOpt(Context.current *: structs) {
+        case (ctx: Context.PossiblyFallible[f], source @ Wrappped(tpe, path, underlying), dest) =>
+          // the compiler needs a bit more encouragement to be sure that the plan we construct has a fallibility of F
+          // Context.PossiblyFallible is defined with a type F = Fallible so we can deduce that ctx.F =:= Fallible =:= F
+          val evidence = summon[Plan[Erroneous, ctx.F] =:= Plan[Erroneous, F]]
+
+          // needed for the recurse call to return Plan[Erroneous, Nothing]
+          given Context.Total = ctx.toTotal
+          val plan = Plan.BetweenFallibleNonFallible(
+            source,
+            dest,
+            recurse(underlying, dest)
+          )
+
+          evidence(plan)
+      }
 
   }
 }
