@@ -45,6 +45,8 @@ private[ducktape] trait PlanTraverser[A] {
               recurse(next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenFallibleNonFallible(_, _, elemPlan) =>
               recurse(elemPlan :: next, foldOver(plan, accumulator))
+            case plan @ Plan.BetweenFallibles(_, _, _, elemPlan) =>
+              recurse(elemPlan :: next, foldOver(plan, accumulator))
             case plan: Plan.Error =>
               recurse(next, foldOver(plan, accumulator))
           }

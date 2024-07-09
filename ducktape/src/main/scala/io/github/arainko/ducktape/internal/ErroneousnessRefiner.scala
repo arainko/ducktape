@@ -1,6 +1,6 @@
 package io.github.arainko.ducktape.internal
 
-private[ducktape] object PlanRefiner {
+private[ducktape] object ErroneousnessRefiner {
   private object ErrorCollector extends PlanTraverser[List[Plan.Error]] {
     protected def foldOver(plan: Plan[Erroneous, Fallible], accumulator: List[Plan.Error]): List[Plan.Error] =
       plan match {

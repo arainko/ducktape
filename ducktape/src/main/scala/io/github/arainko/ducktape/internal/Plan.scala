@@ -27,10 +27,10 @@ private[ducktape] sealed trait Plan[+E <: Erroneous, +F <: Fallible] {
   final def narrow[A <: Plan[Erroneous, Fallible]](using tt: TypeTest[Plan[Erroneous, Fallible], A]): Option[A] =
     tt.unapply(this)
 
-  final def configureAll[FF >: F <: Fallible](configs: List[Configuration.Instruction[FF]])(using Quotes, Context): Plan.Reconfigured[FF] =
+  final def configureAll[FF >: F <: Fallible](configs: List[Configuration.Instruction[FF]])(using Quotes, Context.Of[FF]): Plan.Reconfigured[FF] =
     PlanConfigurer.run(this, configs)
 
-  final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing, F]] = PlanRefiner.run(this)
+  final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing, F]] = ErroneousnessRefiner.run(this)
 }
 
 private[ducktape] object Plan {
@@ -87,12 +87,12 @@ private[ducktape] object Plan {
     plan: Plan[E, Nothing]
   ) extends Plan[E, Fallible]
 
-  // case class BetweenFallibles[+E <: Erroneous, +F <: Fallible](
-  //   source: Structure.Wrappped[?],
-  //   dest: Structure.Wrappped[?],
-  //   mode: TransformationMode.FailFast[?],
-  //   plan: Plan[E, F]
-  // ) extends Plan[E, Fallible]
+  case class BetweenFallibles[+E <: Erroneous, +F <: Fallible](
+    source: Structure.Wrappped[?],
+    dest: Structure,
+    mode: TransformationMode.FailFast[?],
+    plan: Plan[E, F]
+  ) extends Plan[E, Fallible]
 
   case class BetweenSingletons(
     source: Structure.Singleton,

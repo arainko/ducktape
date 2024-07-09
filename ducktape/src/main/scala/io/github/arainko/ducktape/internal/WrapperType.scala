@@ -10,9 +10,10 @@ sealed trait WrapperType {
 object WrapperType {
 
   def unapply(using Quotes, Context)(tpe: Type[?]) =
-    PartialFunction.condOpt(Context.current) {
+    Context.current match {
       case ctx: Context.PossiblyFallible[?] => ctx.wrapperType.unapply(tpe)
-    }.flatten
+      case Context.Total(_) => None
+    }
 
   case object Absent extends WrapperType {
     override def unapply(tpe: Type[? <: AnyKind])(using Quotes): Option[(WrapperType, Type[?])] = None

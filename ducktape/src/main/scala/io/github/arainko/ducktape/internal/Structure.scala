@@ -8,6 +8,7 @@ import scala.collection.immutable.VectorMap
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.TypeTest
+import scala.annotation.unused
 
 private[ducktape] sealed trait Structure derives Debug {
   def tpe: Type[?]
@@ -60,7 +61,7 @@ private[ducktape] object Structure {
 
   case class ValueClass(tpe: Type[? <: AnyVal], path: Path, paramTpe: Type[?], paramFieldName: String) extends Structure
 
-  case class Wrappped[F[+x]](tpe: Type[F], path: Path, underlying: Structure) extends Structure
+  case class Wrappped[F[+x]](tpe: Type[? <: F[Any]], path: Path, underlying: Structure) extends Structure
   
 
   case class Lazy private (tpe: Type[?], path: Path, private val deferredStruct: () => Structure) extends Structure {
@@ -97,8 +98,9 @@ private[ducktape] object Structure {
           Structure.Ordinary(tpe, path)
 
         case WrapperType(wrapper: WrapperType.Wrapped[f], '[underlying]) =>
+          @unused given Type[f] = wrapper.wrapperTpe
           Structure.Wrappped(
-            wrapper.wrapperTpe,
+            Type.of[f[underlying]],
             path,
             Structure.of[underlying](path.appended(Path.Segment.Element(Type.of[underlying])))
           )

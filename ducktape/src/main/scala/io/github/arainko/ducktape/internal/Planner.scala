@@ -10,6 +10,8 @@ import scala.util.boundary
 import io.github.arainko.ducktape.internal.Context.PossiblyFallible
 import io.github.arainko.ducktape.internal.Context.Total
 import scala.reflect.TypeTest
+import io.github.arainko.ducktape.Mode
+import scala.annotation.unused
 
 private[ducktape] object Planner {
   import Structure.*
@@ -45,19 +47,9 @@ private[ducktape] object Planner {
         case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
           Plan.Upcast(source, dest)
 
-        case BetweenFallible(plan) =>
-          plan
+        case BetweenFallibles(plan) => plan
 
-        // case Context.current(((source @ Wrappped(tpe, path, underlying)) -> dest), c @ given Context.PossiblyFallible[f]) =>
-
-        //   given Context.PossiblyFallible[f] = c
-        //   // val a @ Context.Total(_) = Context.current
-        //   Plan.BetweenFallibleNonFallible(
-        //     source,
-        //     dest,
-        //     ???
-        //     // recurse(underlying, dest)
-        //   )
+        case BetweenFallibleNonFallible(plan) => plan
 
         case (source @ Optional(_, _, srcParamStruct)) -> (dest @ Optional(_, _, destParamStruct)) =>
           Plan.BetweenOptions(
@@ -219,7 +211,6 @@ private[ducktape] object Planner {
       def summonTransformer(using Quotes) =
         (src.tpe -> dest.tpe) match {
           case '[src] -> '[dest] => Context.current.summoner.summonUserDefined[src, dest]
-          case _ => None
         }
 
       // if current depth is lower or equal to 1 then that means we're most likely referring to ourselves
@@ -268,7 +259,7 @@ private[ducktape] object Planner {
 
   }
 
-  object BetweenFallible {
+  object BetweenFallibleNonFallible {
     def unapply[F <: Fallible](
       structs: (Structure, Structure)
     )(using Quotes, Depth, Context.Of[F]): Option[Plan[Erroneous, F]] =
@@ -289,5 +280,50 @@ private[ducktape] object Planner {
           evidence(plan)
       }
 
+  }
+
+  object BetweenFallibles {
+    def unapply[F <: Fallible](
+      structs: (Structure, Structure)
+    )(using Quotes, Depth, Context.Of[F]): Option[Plan[Erroneous, F]] =
+      (Context.current *: structs) match {
+        case (
+              ctx @ Context.PossiblyFallible(_, _, _, mode: TransformationMode.FailFast[f]),
+              source @ Wrappped(tpe, path, underlying),
+              dest
+            ) =>
+          val evidence = summon[Plan[Erroneous, ctx.F] =:= Plan[Erroneous, F]]
+
+          Some(
+            Plan.BetweenFallibles(
+              source,
+              dest,
+              mode,
+              recurse(underlying, dest)
+            )
+          ).map(evidence)
+
+        case (
+              ctx @ Context.PossiblyFallible(wrapperType, _, _, mode: TransformationMode.Accumulating[f]),
+              source @ Wrappped(tpe, path, underlying),
+              dest
+            ) =>
+
+          val evidence = summon[Plan[Erroneous, ctx.F] =:= Plan[Erroneous, F]]
+          @unused given Type[f] = wrapperType.wrapperTpe
+          Expr
+            .summon[Mode.FailFast[f]] // summon a fallback FF mode to use for the transformation step
+            .map { mode =>
+              Plan.BetweenFallibles(
+                source,
+                dest,
+                TransformationMode.FailFast(mode),
+                recurse(underlying, dest)
+              )
+            }
+            .map(evidence)
+            
+        case _ => None
+      }
   }
 }

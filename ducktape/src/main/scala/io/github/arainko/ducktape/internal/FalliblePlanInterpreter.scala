@@ -6,6 +6,7 @@ import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransf
 import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
+import io.github.arainko.ducktape.Mode
 
 private[ducktape] object FalliblePlanInterpreter {
   def run[F[+x]: Type, A: Type, B: Type](
@@ -74,6 +75,21 @@ private[ducktape] object FalliblePlanInterpreter {
               case '[src] -> '[dest] =>
                 val src = value.asExprOf[F[src]]
                 Value.Wrapped('{ ${ F.value }.map($src, a => ${ PlanInterpreter.recurse(elemPlan, 'a).asExprOf[dest] }) })
+            }
+
+          case plan @ Plan.BetweenFallibles(source, dest, mode, elemPlan) =>
+            FallibilityRefiner.run(elemPlan) match {
+              case plan: Plan[Nothing, Nothing] =>
+                val simplified = Plan.BetweenFallibleNonFallible(source, dest, plan)
+                recurse(simplified, value, F)
+              case None =>
+                (source.underlying.tpe, dest.tpe) match {
+                  case '[src] -> '[dest] =>
+                    val localMode = mode.value.asExprOf[Mode.FailFast[F]]
+                    val src = value.asExprOf[F[src]]
+
+                    Value.Wrapped('{ $localMode.flatMap($src, a => ${ recurse(elemPlan, 'a, F).wrapped(F, Type.of[dest]) }) })   
+                }
             }
 
           case Plan.BetweenCoproducts(source, dest, casePlans) =>

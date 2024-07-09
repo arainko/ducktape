@@ -82,9 +82,9 @@ private[ducktape] object Configuration {
     case Dynamic(
       path: Path,
       side: Side,
-      config: Plan[Erroneous, Fallible] | None.type => Either[String, Configuration[F]],
+      config: Plan[Erroneous, Fallible] | None.type => Either[String, Configuration[Nothing]],
       span: Span
-    ) extends Instruction[F]
+    ) extends Instruction[Nothing]
 
     case Bulk(
       path: Path,

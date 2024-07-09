@@ -6,6 +6,8 @@ sealed trait Context {
   def summoner: Summoner[F]
   def transformationSite: TransformationSite
 
+  final def reify[FF <: Fallible, G[x]](value: G[FF])(using ev: G[FF] =:= G[F]): G[F] = ev(value)
+
   final def toTotal: Context.Total = Context.Total(transformationSite)
 }
 
@@ -13,7 +15,6 @@ object Context {
   type Of[F0 <: Fallible] = Context { type F = F0 }
 
   inline def current(using ctx: Context): ctx.type = ctx
-
 
   case class PossiblyFallible[G[+x]](
     wrapperType: WrapperType.Wrapped[G],
