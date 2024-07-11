@@ -203,7 +203,7 @@
 //     Card(
 //       name = &quot;J. Doe&quot;,
 //       digits = 12345L,
-//       expires = 2024-07-09T09:20:07.858662766Z
+//       expires = 2024-07-11T20:16:34.056288103Z
 //     )
 //   ),
 //   updatedAt = Some(value = 1970-01-01T00:00:00Z)
@@ -289,8 +289,10 @@
         </div>
         <p>...and when you try to transform between these two representations the compiler now yells at you.</p>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">val</span><span> </span><span class="identifier">domainPerson</span><span> = </span><span class="identifier">wirePerson</span><span>.</span><span class="identifier">to</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">Person</span><span>]
-</span><span class="comment">// error: 
-// No field &#39;name&#39; found in MdocApp0.this.wire.PaymentMethod.Card @ Person.paymentMethods.element.at[MdocApp0.this.domain.Payment.Card].name</span></code></pre>
+</span><span class="comment">// error:
+// No field &#39;name&#39; found in MdocApp0.this.wire.PaymentMethod.Card @ Person.paymentMethods.element.at[MdocApp0.this.domain.Payment.Card].name
+// val domainPerson = wirePerson.to[domain.Person]
+//                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^</span></code></pre>
         <p>Now onto dealing with that, let&#39;s first examine the error message:</p>
         <p class="long-quote"><code>No field &#39;name&#39; found in MdocApp0.this.wire.PaymentMethod.Card @ Person.paymentMethods.element.at[MdocApp0.this.domain.Payment.Card].name</code></p>
         <p>especially the part after <code>@</code>:</p>
@@ -316,7 +318,7 @@
 //     Card(
 //       name = &quot;CONST NAME&quot;,
 //       digits = 12345L,
-//       expires = 2024-07-09T09:20:07.863728303Z
+//       expires = 2024-07-11T20:16:34.061495549Z
 //     )
 //   ),
 //   updatedAt = Some(value = 1970-01-01T00:00:00Z)

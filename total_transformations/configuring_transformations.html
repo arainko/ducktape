@@ -162,8 +162,8 @@
 </span><span class="comment">// error:
 // No child named &#39;Transfer&#39; found in repl.MdocSession.MdocApp.domain.PaymentMethod @ Person.paymentMethods.element.at[repl.MdocSession.MdocApp.wire.PaymentMethod.Transfer]
 // No field &#39;age&#39; found in repl.MdocSession.MdocApp.wire.Person @ Person.age
-// wirePerson
-// ^</span></code></pre>
+// wirePerson.to[domain.Person]
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^</span></code></pre>
         <p>The newly added field (<code>age</code>) and enum case (<code>PaymentMethod.Transfer</code>) do not have a corresponding mapping, let&#39;s say we want to set the age field to a constant value of 24 and when a <code>PaymentMethod.Transfer</code> is encountered we map it to <code>Cash</code> instead.</p>
         <div class="tab-container" data-tab-group="underlying-code-1">
           <ul class="tab-group">
