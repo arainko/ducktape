@@ -87,11 +87,11 @@ private[ducktape] object Plan {
     plan: Plan[E, Nothing]
   ) extends Plan[E, Fallible]
 
-  case class BetweenFallibles[+E <: Erroneous, +F <: Fallible](
+  case class BetweenFallibles[+E <: Erroneous](
     source: Structure.Wrappped[?],
     dest: Structure,
     mode: TransformationMode.FailFast[?],
-    plan: Plan[E, F]
+    plan: Plan[E, Fallible]
   ) extends Plan[E, Fallible]
 
   case class BetweenSingletons(

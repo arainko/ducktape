@@ -22,9 +22,23 @@ private[ducktape] object PlanConfigurer {
         parent: Plan[Erroneous, Fallible] | None.type,
         config: Configuration.Instruction[F]
       )(using Quotes): Plan[Erroneous, F] = {
+        def traverseBetweenNotFallible(parent: BetweenFallibleNonFallible[Erroneous], plan: Plan[Erroneous, Nothing], tail: List[Path.Segment]) =
+          ConfigInstructionRefiner.run(config) match
+            case None => 
+              Plan.Error.from(parent, ErrorMessage.FallibleConfigNotPermitted(config.span, config.side), None)
+            case nonFallible: Configuration.Instruction[Nothing] =>
+              parent.copy(plan = recurse(plan, tail, parent, nonFallible))
+
         segments match {
           case (segment @ Path.Segment.Field(_, fieldName)) :: tail =>
             current match {
+              // passthrough BetweenFallibles, the dest is just a normal field in this case
+              case parent @ BetweenFallibleNonFallible(source, dest, plan) if config.side.isDest =>
+                traverseBetweenNotFallible(parent, plan, segments)
+
+              // passthrough BetweenFallibles, the dest is just a normal field in this case
+              case parent @ BetweenFallibles(source, dest, mode, plan) if config.side.isDest =>
+                parent.copy(plan = recurse(plan, segments, parent, config))
 
               case parent @ BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
                 val fieldPlan =
@@ -72,6 +86,14 @@ private[ducktape] object PlanConfigurer {
             Logger.debug(s"Matched tupleElement with index of $index")
 
             current match {
+              // passthrough BetweenFallibles, the dest is just a tuple elem in this case
+              case parent @ BetweenFallibleNonFallible(source, dest, plan) if config.side.isDest =>
+                traverseBetweenNotFallible(parent, plan, segments)
+
+              // passthrough BetweenFallibles, the dest is just a tuple elem in this case
+              case parent @ BetweenFallibles(source, dest, mode, plan) if config.side.isDest =>
+                parent.copy(plan = recurse(plan, segments, parent, config))
+
               case parent @ BetweenTuples(source, dest, plans) =>
                 Logger.debug(ds"Matched $parent")
                 plans
@@ -147,11 +169,7 @@ private[ducktape] object PlanConfigurer {
                 parent.copy(plan = recurse(plan, tail, parent, config))
 
               case parent @ BetweenFallibleNonFallible(source, dest, plan) if config.side.isSource =>
-                ConfigInstructionRefiner.run(config) match
-                  case None => 
-                    Plan.Error.from(parent, ErrorMessage.FallibleConfigNotPermitted(config.span, config.side), None)
-                  case nonFallible: Configuration.Instruction[Nothing] =>
-                    parent.copy(plan = recurse(plan, tail, parent, nonFallible))
+                traverseBetweenNotFallible(parent, plan, tail)
 
               case parent @ BetweenFallibles(source, dest, mode, plan) if config.side.isSource =>
                 parent.copy(plan = recurse(plan, tail, parent, config))

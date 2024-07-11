@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.fallible
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.fallible.model.Positive
+import scala.annotation.unused
 
 class FUnwrappingSuite extends DucktapeSuite {
 
@@ -88,19 +89,20 @@ class FUnwrappingSuite extends DucktapeSuite {
     val source =
       (
         Right(Source.One),
-        Right(Source.Two)
+        Right((Source.One, Source.Two))
       )
 
-    case class DestToplevel(field1: Dest, field2: Dest)
+    case class DestToplevel(field1: Dest, field2: (Dest, Dest))
 
     Mode.Accumulating.either[String, List].locally {
-      val expected = DestToplevel(Dest.One, Dest.Three)
+      val expected = DestToplevel(Dest.One, (Dest.One, Dest.Three))
 
       assertTransformsFallibleConfigured(
         source,
         Right(expected)
       )(
-        Case.const(_.apply(1).element.at[Source.Two.type], Dest.Three),
+        Field.const(_.field2.apply(0), Dest.One),
+        Field.const(_.field2.apply(1), Dest.Three),
         Case.const(_.apply(0).element.at[Source.Two.type], Dest.Three)
       )
     }
@@ -118,33 +120,61 @@ class FUnwrappingSuite extends DucktapeSuite {
       case Three
     }
 
-    val source =
-      (
-        Right(Source.One),
-        Right(Source.Two)
-      )
+    @unused val source =
+      Tuple1(Right(Source.One))
 
-    case class DestToplevel(field1: Dest)
+    @unused case class DestToplevel(field1: Dest)
 
     Mode.Accumulating.either[String, List].locally {
-      val expected = DestToplevel(Dest.One, Dest.Three)
 
-      assertFailsToCompile {
+      assertFailsToCompileWith {
         """
-        
+        Mode.Accumulating.either[String, List].locally {
+          source.into[DestToplevel].fallible.transform(
+            Case.fallibleConst(_.apply(0).element.at[Source.Two.type], Left(List("welp"))),
+          )
+        }
         """
-      }
-
-      assertTransformsFallibleConfigured(
-        source,
-        Right(expected)
-      )(
-        Case.fallibleConst(_.apply(1).element.at[Source.Two.type], Left(List("welp"))),
-        Case.const(_.apply(0).element.at[Source.Two.type], Dest.Three)
-
+      }(
+        """Fallible configuration is not supported for F-unwrapped transformations with Mode.Accumulating.
+You can make this work if you supply a deprioritized instance of Mode.FailFast for the same wrapper type. @ Tuple1[Right[Nothing, Source]].apply(0)""",
+        "No child named 'Two' found in Dest @ Tuple1[Right[Nothing, Source]].apply(0).element.at[Source.Two.type]"
       )
     }
   }
 
-  test("F-unwrapped transformations with a non-fallible transformation underneath can be configured") {}
+  test("F-unwrapped transformations with a fallible transformation underneath can be configured") {
+    enum Source {
+      case One
+      case Two
+    }
+
+    enum Dest {
+      case One
+      case Three
+    }
+
+    val source =
+      (
+        Right(Source.One),
+        Right((Source.One, Source.Two))
+      )
+
+    case class DestToplevel(field1: Dest, field2: (Dest, Dest))
+
+    Mode.FailFast.either[List[String]].locally {
+      Mode.Accumulating.either[String, List].locally {
+        val expected = DestToplevel(Dest.One, (Dest.One, Dest.Three))
+
+        assertTransformsFallibleConfigured(
+          source,
+          Right(expected)
+        )(
+          Field.fallibleConst(_.field2.apply(0), Right(Dest.One)),
+          Field.fallibleConst(_.field2.apply(1), Right(Dest.Three)),
+          Case.fallibleConst(_.apply(0).element.at[Source.Two.type], Right(Dest.Three))
+        )
+      }
+    }
+  }
 }
