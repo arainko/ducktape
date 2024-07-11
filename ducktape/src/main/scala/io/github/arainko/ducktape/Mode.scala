@@ -161,9 +161,6 @@ object test extends App {
   import scala.util.chaining.*
   case class Pos(int: Int)
 
-  object Pos {
-  }
-
   val t = (
     Right(-1),
     Right(2),
@@ -172,25 +169,30 @@ object test extends App {
 
   type Dest = (Pos, Pos, Pos)
 
-  given ft: Transformer.Fallible[[a] =>> Either[List[String], a], Int, Pos] = value => if value <= 0 then Left(List("fock")) else Right(Pos(value))
+  given ft: Transformer.Fallible[[a] =>> Either[List[String], a], Int, Pos] = value =>
+    if value <= 0 then Left(List("fock")) else Right(Pos(value))
 
-  // val des = for {
-  //   _1 <- t(0).flatMap(ft.transform)
-  //   _2 <- t(1).flatMap(ft.transform)
-  //   _3 <- t(2).flatMap(ft.transform)
-  // } yield (_1, _2, _3)
-
-  val prio = 
+  val prio =
     Mode.FailFast.option.locally:
-      Mode.FailFast.either[String].locally:
-        Mode.current
+      Mode.FailFast
+        .either[String]
+        .locally:
+          Mode.current
 
-  val res = 
-    internal.CodePrinter.code:
-      Mode.FailFast.either[List[String]].locally:
-        Mode.Accumulating.either[String, List].locally { 
-          t.fallibleTo[Dest]
-        }
+  // val res =
+  //   // internal.CodePrinter.code:
+  //   Mode.FailFast
+  //     .either[List[String]]
+  //     .locally:
+  //       Mode.Accumulating.either[String, List].locally {
+  //         t
+  //           .into[Dest]
+  //           .fallible
+  //           .transform(
+  //             Case.const(_.apply(0).element, 1),
+  //             Case.const(_.apply(0).element, 1)
+  //           )
+  //       }
 
-  println(res)
+  // println(res)
 }

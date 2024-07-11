@@ -271,8 +271,11 @@ class AccumulatingTupleTransformationSuite extends DucktapeSuite {
     )
 
     val res = Mode.Accumulating.either[String, List].locally {
-      t.fallibleTo[Tuple.InverseMap[t.type, Mode.current.Self]]
-    }.code
+      t
+        .into[Tuple.InverseMap[t.type, Mode.current.Self]]
+        .fallible
+        .transform()
+    }
 
     println(res)
 

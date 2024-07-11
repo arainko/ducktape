@@ -25,6 +25,7 @@ private[ducktape] object PlanConfigurer {
         segments match {
           case (segment @ Path.Segment.Field(_, fieldName)) :: tail =>
             current match {
+
               case parent @ BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
                 val fieldPlan =
                   fieldPlans

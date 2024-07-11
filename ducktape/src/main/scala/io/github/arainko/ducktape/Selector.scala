@@ -5,5 +5,5 @@ sealed trait Selector {
 
   extension [Elem](self: Iterable[Elem] | Option[Elem]) def element: Elem
 
-  extension [Elem, F[+x]](self: F[Elem]) def element(using Mode[F]): Elem
+  extension [Elem, F[+x]](using Mode[F])(self: F[Elem]) def element: Elem
 }
