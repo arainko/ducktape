@@ -49,6 +49,9 @@ lazy val ducktape =
       scalacOptions ++= List("-deprecation", "-Wunused:all"),
       Test / scalacOptions --= List("-deprecation"),
       Test / scalacOptions ++= List("-Werror", "-Wconf:cat=deprecation:s"),
+      mimaBinaryIssueFilters += 
+        //Selector only exists at compiletime
+        ProblemFilters.exclude[ReversedMissingMethodProblem]("io.github.arainko.ducktape.Selector.element"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0" % Test
     )
     .nativeSettings(tlMimaPreviousVersions := Set.empty)
