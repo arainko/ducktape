@@ -1,12 +1,11 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
+import io.github.arainko.ducktape.{ Mode, Transformer }
 
 import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
-import io.github.arainko.ducktape.Mode
 
 private[ducktape] object FalliblePlanInterpreter {
   def run[F[+x]: Type, A: Type, B: Type](
@@ -88,7 +87,7 @@ private[ducktape] object FalliblePlanInterpreter {
                     val localMode = mode.value.asExprOf[Mode.FailFast[F]]
                     val src = value.asExprOf[F[src]]
 
-                    Value.Wrapped('{ $localMode.flatMap($src, a => ${ recurse(elemPlan, 'a, F).wrapped(F, Type.of[dest]) }) })   
+                    Value.Wrapped('{ $localMode.flatMap($src, a => ${ recurse(elemPlan, 'a, F).wrapped(F, Type.of[dest]) }) })
                 }
             }
 

@@ -27,7 +27,9 @@ private[ducktape] sealed trait Plan[+E <: Erroneous, +F <: Fallible] {
   final def narrow[A <: Plan[Erroneous, Fallible]](using tt: TypeTest[Plan[Erroneous, Fallible], A]): Option[A] =
     tt.unapply(this)
 
-  final def configureAll[FF >: F <: Fallible](configs: List[Configuration.Instruction[FF]])(using Quotes, Context.Of[FF]): Plan.Reconfigured[FF] =
+  final def configureAll[FF >: F <: Fallible](
+    configs: List[Configuration.Instruction[FF]]
+  )(using Quotes, Context.Of[FF]): Plan.Reconfigured[FF] =
     PlanConfigurer.run(this, configs)
 
   final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing, F]] = ErroneousnessRefiner.run(this)
@@ -166,7 +168,8 @@ private[ducktape] object Plan {
 
   object Configured {
     def from[F <: Fallible](plan: Plan[Erroneous, F], conf: Configuration[F], instruction: Configuration.Instruction[F])(using
-      Quotes, Context
+      Quotes,
+      Context
     ): Plan.Configured[F] =
       (plan.source.tpe, plan.dest.tpe, conf.tpe) match {
         case ('[src], '[dest], '[confTpe]) =>

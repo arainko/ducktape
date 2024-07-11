@@ -1,7 +1,7 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
 import scala.annotation.unused
+import scala.quoted.*
 
 sealed trait WrapperType {
   def unapply(tpe: Type[?])(using Quotes): Option[(WrapperType, Type[?])]
@@ -12,7 +12,7 @@ object WrapperType {
   def unapply(using Quotes, Context)(tpe: Type[?]) =
     Context.current match {
       case ctx: Context.PossiblyFallible[?] => ctx.wrapperType.unapply(tpe)
-      case Context.Total(_) => None
+      case Context.Total(_)                 => None
     }
 
   case object Absent extends WrapperType {
@@ -24,8 +24,8 @@ object WrapperType {
       @unused given Type[F] = wrapperTpe
       tpe match
         case '[F[underlying]] => Some(this -> Type.of[underlying])
-        case _ => None
-      
+        case _                => None
+
     }
-  } 
+  }
 }

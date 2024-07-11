@@ -44,7 +44,7 @@ private[ducktape] object PathSelector {
         case select @ Select(tree, name) =>
           Logger.debug(s"Matched 'Select' (matching field access) with name = $name")
           recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, name)), tree)
-          
+
         case TypeApply(Apply(TypeApply(Select(Ident(_), "at"), _), tree :: Nil), tpe :: Nil) =>
           Logger.debug(s"Matched 'TypeApply' (matching '.at')", tpe.tpe.asType)
           recurse(acc.prepended(Path.Segment.Case(tpe.tpe.asType)), tree)
@@ -54,12 +54,12 @@ private[ducktape] object PathSelector {
           recurse(acc.prepended(Path.Segment.Element(elemTpe.tpe.asType)), tree)
 
         case Apply(
-          Apply(
-            TypeApply(Select(Ident(_), "element"), elemTpe :: _ :: Nil),
-            Ident(_) :: Nil
-          ),
-          tree :: Nil
-        ) => 
+              Apply(
+                TypeApply(Select(Ident(_), "element"), elemTpe :: _ :: Nil),
+                Ident(_) :: Nil
+              ),
+              tree :: Nil
+            ) =>
           Logger.debug(s"Matched 'element' of F[Elem] selection", elemTpe.tpe.asType)
           recurse(acc.prepended(Path.Segment.Element(elemTpe.tpe.asType)), tree)
 

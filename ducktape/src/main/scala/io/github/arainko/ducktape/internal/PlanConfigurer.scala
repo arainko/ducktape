@@ -22,9 +22,13 @@ private[ducktape] object PlanConfigurer {
         parent: Plan[Erroneous, Fallible] | None.type,
         config: Configuration.Instruction[F]
       )(using Quotes): Plan[Erroneous, F] = {
-        def traverseBetweenNotFallible(parent: BetweenFallibleNonFallible[Erroneous], plan: Plan[Erroneous, Nothing], tail: List[Path.Segment]) =
+        def traverseBetweenNotFallible(
+          parent: BetweenFallibleNonFallible[Erroneous],
+          plan: Plan[Erroneous, Nothing],
+          tail: List[Path.Segment]
+        ) =
           ConfigInstructionRefiner.run(config) match
-            case None => 
+            case None =>
               Plan.Error.from(parent, ErrorMessage.FallibleConfigNotPermitted(config.span, config.side), None)
             case nonFallible: Configuration.Instruction[Nothing] =>
               parent.copy(plan = recurse(plan, tail, parent, nonFallible))
@@ -151,7 +155,9 @@ private[ducktape] object PlanConfigurer {
 
                 casePlans.zipWithIndex
                   .find((plan, _) => tpe.repr =:= sideTpe(plan))
-                  .map((casePlan, idx) => parent.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail, parent, config))))
+                  .map((casePlan, idx) =>
+                    parent.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail, parent, config)))
+                  )
                   .getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidCaseAccessor(tpe, config.span), None))
 
               case other => invalidPathSegment(config, other, segment)

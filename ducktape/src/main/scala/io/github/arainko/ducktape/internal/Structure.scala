@@ -3,12 +3,11 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.internal.Structure.*
 import io.github.arainko.ducktape.internal.*
 
-import scala.annotation.tailrec
+import scala.annotation.{ tailrec, unused }
 import scala.collection.immutable.VectorMap
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.TypeTest
-import scala.annotation.unused
 
 private[ducktape] sealed trait Structure derives Debug {
   def tpe: Type[?]
@@ -62,7 +61,6 @@ private[ducktape] object Structure {
   case class ValueClass(tpe: Type[? <: AnyVal], path: Path, paramTpe: Type[?], paramFieldName: String) extends Structure
 
   case class Wrappped[F[+x]](tpe: Type[? <: F[Any]], path: Path, underlying: Structure) extends Structure
-  
 
   case class Lazy private (tpe: Type[?], path: Path, private val deferredStruct: () => Structure) extends Structure {
     lazy val struct: Structure = deferredStruct()

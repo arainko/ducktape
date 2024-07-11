@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.internal.Configuration.Instruction
 import io.github.arainko.ducktape.internal.Configuration.*
 
 private[ducktape] object ConfigInstructionRefiner {

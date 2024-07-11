@@ -1,17 +1,15 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.Mode
+import io.github.arainko.ducktape.internal.Context.{ PossiblyFallible, Total }
 import io.github.arainko.ducktape.internal.Plan.{ Derived, UserDefined }
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
 import io.github.arainko.ducktape.internal.*
 
+import scala.annotation.unused
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
-import io.github.arainko.ducktape.internal.Context.PossiblyFallible
-import io.github.arainko.ducktape.internal.Context.Total
-import scala.reflect.TypeTest
-import io.github.arainko.ducktape.Mode
-import scala.annotation.unused
 
 private[ducktape] object Planner {
   import Structure.*
@@ -308,7 +306,6 @@ private[ducktape] object Planner {
               source @ Wrappped(tpe, path, underlying),
               dest
             ) =>
-
           val evidence = summon[Plan[Erroneous, ctx.F] =:= Plan[Erroneous, F]]
           @unused given Type[f] = wrapperType.wrapperTpe
           Expr
@@ -322,7 +319,7 @@ private[ducktape] object Planner {
               )
             }
             .map(evidence)
-            
+
         case _ => None
       }
   }

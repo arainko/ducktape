@@ -112,8 +112,9 @@ private[ducktape] object ErrorMessage {
   }
 
   final case class FallibleConfigNotPermitted(span: Span, side: Side) extends ErrorMessage {
-    def render(using Quotes): String = """Fallible configuration is not supported for F-unwrapped transformations with Mode.Accumulating.
+    def render(using Quotes): String =
+      """Fallible configuration is not supported for F-unwrapped transformations with Mode.Accumulating.
     |You can make this work if you supply a deprioritized instance of Mode.FailFast for the same wrapper type.""".stripMargin
-  } 
+  }
 
 }

@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.fallible
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.fallible.model.Positive
+
 import scala.annotation.unused
 
 class FUnwrappingSuite extends DucktapeSuite {

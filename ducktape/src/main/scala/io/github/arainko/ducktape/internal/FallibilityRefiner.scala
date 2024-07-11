@@ -74,10 +74,10 @@ private[ducktape] object FallibilityRefiner {
         case BetweenCollections(source, dest, plan) =>
           recurse(plan)
 
-        case BetweenFallibleNonFallible(source, dest, plan) => 
+        case BetweenFallibleNonFallible(source, dest, plan) =>
           boundary.break(None)
 
-        case BetweenFallibles(_, _, _, _) => 
+        case BetweenFallibles(_, _, _, _) =>
           boundary.break(None)
 
         case Plan.Error(source, dest, message, suppressed) => ()
