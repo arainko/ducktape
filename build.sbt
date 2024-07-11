@@ -22,7 +22,9 @@ ThisBuild / semanticdbEnabled := true
 ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
 
 ThisBuild / mimaBinaryIssueFilters ++= Seq(
-  ProblemFilters.exclude[Problem]("io.github.arainko.ducktape.internal.*")
+  ProblemFilters.exclude[Problem]("io.github.arainko.ducktape.internal.*"),
+  // Selector only exists at compiletime
+  ProblemFilters.exclude[ReversedMissingMethodProblem]("io.github.arainko.ducktape.Selector.element")
 )
 
 ThisBuild / tlCiReleaseBranches := Seq("series/0.1.x", "series/0.2.x")
@@ -49,9 +51,6 @@ lazy val ducktape =
       scalacOptions ++= List("-deprecation", "-Wunused:all"),
       Test / scalacOptions --= List("-deprecation"),
       Test / scalacOptions ++= List("-Werror", "-Wconf:cat=deprecation:s"),
-      mimaBinaryIssueFilters += 
-        //Selector only exists at compiletime
-        ProblemFilters.exclude[ReversedMissingMethodProblem]("io.github.arainko.ducktape.Selector.element"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0" % Test
     )
     .nativeSettings(tlMimaPreviousVersions := Set.empty)
