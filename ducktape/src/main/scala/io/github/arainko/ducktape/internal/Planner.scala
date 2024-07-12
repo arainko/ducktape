@@ -1,12 +1,10 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.Mode
 import io.github.arainko.ducktape.internal.Context.{ PossiblyFallible, Total }
 import io.github.arainko.ducktape.internal.Plan.{ Derived, UserDefined }
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
 import io.github.arainko.ducktape.internal.*
 
-import scala.annotation.unused
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
@@ -263,10 +261,6 @@ private[ducktape] object Planner {
     )(using Quotes, Depth, Context.Of[F]): Option[Plan[Erroneous, F]] =
       PartialFunction.condOpt(Context.current *: structs) {
         case (ctx: Context.PossiblyFallible[f], source @ Wrappped(tpe, path, underlying), dest) =>
-          // the compiler needs a bit more encouragement to be sure that the plan we construct has a fallibility of F
-          // Context.PossiblyFallible is defined with a type F = Fallible so we can deduce that ctx.F =:= Fallible =:= F
-          val evidence = summon[Plan[Erroneous, ctx.F] =:= Plan[Erroneous, F]]
-
           // needed for the recurse call to return Plan[Erroneous, Nothing]
           given Context.Total = ctx.toTotal
           val plan = Plan.BetweenFallibleNonFallible(
@@ -275,7 +269,9 @@ private[ducktape] object Planner {
             recurse(underlying, dest)
           )
 
-          evidence(plan)
+          // the compiler needs a bit more encouragement to be sure that the plan we construct has a fallibility of F
+          // Context.PossiblyFallible is defined with a type F = Fallible so we can deduce that ctx.F =:= Fallible =:= F
+          ctx.reifyPlan[F](plan)
       }
 
   }
@@ -284,43 +280,40 @@ private[ducktape] object Planner {
     def unapply[F <: Fallible](
       structs: (Structure, Structure)
     )(using Quotes, Depth, Context.Of[F]): Option[Plan[Erroneous, F]] =
-      (Context.current *: structs) match {
+      PartialFunction.condOpt(Context.current *: structs) {
         case (
               ctx @ Context.PossiblyFallible(_, _, _, mode: TransformationMode.FailFast[f]),
               source @ Wrappped(tpe, path, underlying),
               dest
             ) =>
-          val evidence = summon[Plan[Erroneous, ctx.F] =:= Plan[Erroneous, F]]
-
-          Some(
+          ctx.reifyPlan[F] {
             Plan.BetweenFallibles(
               source,
               dest,
               mode,
               recurse(underlying, dest)
             )
-          ).map(evidence)
+          }
 
         case (
-              ctx @ Context.PossiblyFallible(wrapperType, _, _, mode: TransformationMode.Accumulating[f]),
+              ctx @ Context.PossiblyFallible(
+                WrapperType.Wrapped(given Type[f]),
+                _,
+                _,
+                TransformationMode.Accumulating(mode, Some(localMode))
+              ),
               source @ Wrappped(tpe, path, underlying),
               dest
             ) =>
-          val evidence = summon[Plan[Erroneous, ctx.F] =:= Plan[Erroneous, F]]
-          @unused given Type[f] = wrapperType.wrapperTpe
-          Expr
-            .summon[Mode.FailFast[f]] // summon a fallback FF mode to use for the transformation step
-            .map { mode =>
-              Plan.BetweenFallibles(
-                source,
-                dest,
-                TransformationMode.FailFast(mode),
-                recurse(underlying, dest)
-              )
-            }
-            .map(evidence)
+          ctx.reifyPlan[F] {
+            Plan.BetweenFallibles(
+              source,
+              dest,
+              TransformationMode.FailFast(localMode),
+              recurse(underlying, dest)
+            )
+          }
 
-        case _ => None
       }
   }
 }

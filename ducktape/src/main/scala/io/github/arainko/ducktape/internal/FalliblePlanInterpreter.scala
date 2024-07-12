@@ -243,7 +243,7 @@ private[ducktape] object FalliblePlanInterpreter {
     plan.dest.tpe match {
       case '[dest] =>
         F match {
-          case TransformationMode.Accumulating(f) =>
+          case TransformationMode.Accumulating(f, _) =>
             NonEmptyList
               .fromList(wrapped.toList)
               .map { wrappeds =>
@@ -303,7 +303,7 @@ private[ducktape] object FalliblePlanInterpreter {
     plan.dest.tpe match {
       case '[dest] =>
         F match {
-          case TransformationMode.Accumulating(f) =>
+          case TransformationMode.Accumulating(f, _) =>
             NonEmptyList
               .fromList(wrapped.toList)
               .map { wrappeds =>
