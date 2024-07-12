@@ -1,9 +1,12 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.Mode
+import io.github.arainko.ducktape.internal.Context.{ PossiblyFallible, Total }
 import io.github.arainko.ducktape.internal.Plan.{ Derived, UserDefined }
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
 import io.github.arainko.ducktape.internal.*
 
+import scala.annotation.unused
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
@@ -11,7 +14,7 @@ import scala.util.boundary
 private[ducktape] object Planner {
   import Structure.*
 
-  def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, TransformationSite, Summoner[F]) = {
+  def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context.Of[F]) = {
     given Depth = Depth.zero
     recurse(source, dest)
   }
@@ -19,7 +22,7 @@ private[ducktape] object Planner {
   private def recurse[F <: Fallible](
     source: Structure,
     dest: Structure
-  )(using quotes: Quotes, depth: Depth, transformationSite: TransformationSite, summoner: Summoner[F]): Plan[Plan.Error, F] = {
+  )(using quotes: Quotes, depth: Depth, context: Context.Of[F]): Plan[Erroneous, F] = {
     import quotes.reflect.*
     given Depth = Depth.incremented(using depth)
 
@@ -41,6 +44,10 @@ private[ducktape] object Planner {
 
         case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
           Plan.Upcast(source, dest)
+
+        case BetweenFallibles(plan) => plan
+
+        case BetweenFallibleNonFallible(plan) => plan
 
         case (source @ Optional(_, _, srcParamStruct)) -> (dest @ Optional(_, _, destParamStruct)) =>
           Plan.BetweenOptions(
@@ -108,7 +115,7 @@ private[ducktape] object Planner {
   private def planProductTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product
-  )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
+  )(using Quotes, Depth, Context.Of[F]) = {
 
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
       val plan =
@@ -132,7 +139,7 @@ private[ducktape] object Planner {
     sourceStruct: Structure,
     source: IndexedSeq[Structure],
     dest: IndexedSeq[Structure]
-  )(using Quotes, Depth, TransformationSite, Summoner[F]): Vector[Plan[Plan.Error, F]] = {
+  )(using Quotes, Depth, Context.Of[F]): Vector[Plan[Erroneous, F]] = {
     dest.zipWithIndex.map { (destFieldStruct, index) =>
       source
         .lift(index)
@@ -151,7 +158,7 @@ private[ducktape] object Planner {
   private def planProductFunctionTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function
-  )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
+  )(using Quotes, Depth, Context.Of[F]) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
       val plan =
         source.fields
@@ -175,7 +182,7 @@ private[ducktape] object Planner {
   private def planCoproductTransformation[F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct
-  )(using Quotes, Depth, TransformationSite, Summoner[F]) = {
+  )(using Quotes, Depth, Context.Of[F]) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
 
       dest.children
@@ -196,16 +203,16 @@ private[ducktape] object Planner {
   }
 
   object UserDefinedTransformation {
-    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Depth, TransformationSite, Summoner[F]) = {
+    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Depth, Context.Of[F]) = {
       val (src, dest) = structs
 
       def summonTransformer(using Quotes) =
         (src.tpe -> dest.tpe) match {
-          case '[src] -> '[dest] => Summoner[F].summonUserDefined[src, dest]
+          case '[src] -> '[dest] => Context.current.summoner.summonUserDefined[src, dest]
         }
 
       // if current depth is lower or equal to 1 then that means we're most likely referring to ourselves
-      TransformationSite.current match {
+      Context.current.transformationSite match {
         case TransformationSite.Definition if Depth.current <= 1 => None
         case TransformationSite.Definition                       => summonTransformer
         case TransformationSite.Transformation                   => summonTransformer
@@ -214,18 +221,18 @@ private[ducktape] object Planner {
   }
 
   object DerivedTransformation {
-    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Summoner[F]) = {
+    def unapply[F <: Fallible](structs: (Structure, Structure))(using Quotes, Context.Of[F]) = {
       val (src, dest) = structs
 
       (src.tpe -> dest.tpe) match {
-        case '[src] -> '[dest] => Summoner[F].summonDerived[src, dest]
+        case '[src] -> '[dest] => Context.current.summoner.summonDerived[src, dest]
       }
     }
   }
 
   private def verifyNotSelfReferential(
     plan: Plan.Derived[Fallible] | Plan.UserDefined[Fallible]
-  )(using TransformationSite, Depth, Quotes): Plan.Error | plan.type = {
+  )(using Context, Depth, Quotes): Plan.Error | plan.type = {
     import quotes.reflect.*
 
     val transformerExpr = plan match
@@ -236,7 +243,7 @@ private[ducktape] object Planner {
 
     val transformerSymbol = transformerExpr.asTerm.symbol
 
-    TransformationSite.current match
+    Context.current.transformationSite match
       case TransformationSite.Transformation if Depth.current == 1 =>
         boundary[Plan.Error | plan.type]:
           var owner = Symbol.spliceOwner
@@ -248,5 +255,72 @@ private[ducktape] object Planner {
           plan
       case _ => plan
 
+  }
+
+  object BetweenFallibleNonFallible {
+    def unapply[F <: Fallible](
+      structs: (Structure, Structure)
+    )(using Quotes, Depth, Context.Of[F]): Option[Plan[Erroneous, F]] =
+      PartialFunction.condOpt(Context.current *: structs) {
+        case (ctx: Context.PossiblyFallible[f], source @ Wrappped(tpe, path, underlying), dest) =>
+          // the compiler needs a bit more encouragement to be sure that the plan we construct has a fallibility of F
+          // Context.PossiblyFallible is defined with a type F = Fallible so we can deduce that ctx.F =:= Fallible =:= F
+          val evidence = summon[Plan[Erroneous, ctx.F] =:= Plan[Erroneous, F]]
+
+          // needed for the recurse call to return Plan[Erroneous, Nothing]
+          given Context.Total = ctx.toTotal
+          val plan = Plan.BetweenFallibleNonFallible(
+            source,
+            dest,
+            recurse(underlying, dest)
+          )
+
+          evidence(plan)
+      }
+
+  }
+
+  object BetweenFallibles {
+    def unapply[F <: Fallible](
+      structs: (Structure, Structure)
+    )(using Quotes, Depth, Context.Of[F]): Option[Plan[Erroneous, F]] =
+      (Context.current *: structs) match {
+        case (
+              ctx @ Context.PossiblyFallible(_, _, _, mode: TransformationMode.FailFast[f]),
+              source @ Wrappped(tpe, path, underlying),
+              dest
+            ) =>
+          val evidence = summon[Plan[Erroneous, ctx.F] =:= Plan[Erroneous, F]]
+
+          Some(
+            Plan.BetweenFallibles(
+              source,
+              dest,
+              mode,
+              recurse(underlying, dest)
+            )
+          ).map(evidence)
+
+        case (
+              ctx @ Context.PossiblyFallible(wrapperType, _, _, mode: TransformationMode.Accumulating[f]),
+              source @ Wrappped(tpe, path, underlying),
+              dest
+            ) =>
+          val evidence = summon[Plan[Erroneous, ctx.F] =:= Plan[Erroneous, F]]
+          @unused given Type[f] = wrapperType.wrapperTpe
+          Expr
+            .summon[Mode.FailFast[f]] // summon a fallback FF mode to use for the transformation step
+            .map { mode =>
+              Plan.BetweenFallibles(
+                source,
+                dest,
+                TransformationMode.FailFast(mode),
+                recurse(underlying, dest)
+              )
+            }
+            .map(evidence)
+
+        case _ => None
+      }
   }
 }

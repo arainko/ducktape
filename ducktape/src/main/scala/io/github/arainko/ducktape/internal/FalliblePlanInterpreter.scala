@@ -1,7 +1,7 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.Transformer
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
+import io.github.arainko.ducktape.{ Mode, Transformer }
 
 import scala.collection.Factory
 import scala.collection.immutable.VectorMap
@@ -68,6 +68,28 @@ private[ducktape] object FalliblePlanInterpreter {
 
           case plan @ Plan.BetweenTuples(source, dest, plans) =>
             fromTupleTransformation(source, plan, plans, value, F)(ProductConstructor.Tuple)
+
+          case plan @ Plan.BetweenFallibleNonFallible(source, dest, elemPlan) =>
+            (source.underlying.tpe, dest.tpe) match {
+              case '[src] -> '[dest] =>
+                val src = value.asExprOf[F[src]]
+                Value.Wrapped('{ ${ F.value }.map($src, a => ${ PlanInterpreter.recurse(elemPlan, 'a).asExprOf[dest] }) })
+            }
+
+          case plan @ Plan.BetweenFallibles(source, dest, mode, elemPlan) =>
+            FallibilityRefiner.run(elemPlan) match {
+              case plan: Plan[Nothing, Nothing] =>
+                val simplified = Plan.BetweenFallibleNonFallible(source, dest, plan)
+                recurse(simplified, value, F)
+              case None =>
+                (source.underlying.tpe, dest.tpe) match {
+                  case '[src] -> '[dest] =>
+                    val localMode = mode.value.asExprOf[Mode.FailFast[F]]
+                    val src = value.asExprOf[F[src]]
+
+                    Value.Wrapped('{ $localMode.flatMap($src, a => ${ recurse(elemPlan, 'a, F).wrapped(F, Type.of[dest]) }) })
+                }
+            }
 
           case Plan.BetweenCoproducts(source, dest, casePlans) =>
             dest.tpe match {

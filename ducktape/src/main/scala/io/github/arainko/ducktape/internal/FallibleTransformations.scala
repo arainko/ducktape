@@ -18,24 +18,20 @@ private[ducktape] object FallibleTransformations {
     transformationSite: Expr["transformation" | "definition"],
     configs: Expr[Seq[Field.Fallible[F, A, B] | Case.Fallible[F, A, B]]]
   )(using Quotes): Expr[F[B]] = {
-    given Summoner[Fallible] = Summoner.PossiblyFallible[F]
-    given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
+    given Context.PossiblyFallible[F](
+      WrapperType.Wrapped(Type.of[F]),
+      TransformationSite.fromStringExpr(transformationSite),
+      Summoner.PossiblyFallible[F],
+      TransformationMode.create(F)
+    )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
     val destStruct = Structure.of[B](Path.empty(Type.of[B]))
     val plan = Planner.between(sourceStruct, destStruct)
-    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total, ConfigParser.PossiblyFallible[F]))
+    val config = Configuration.parse(configs, ConfigParser.fallible[F])
 
-    TransformationMode
-      .create(F)
-      .toRight(Plan.Error(sourceStruct, destStruct, ErrorMessage.UndeterminedTransformationMode(Span.fromExpr(F)), None))
-      .match {
-        case Left(error) =>
-          Backend.reportErrorsAndAbort(NonEmptyList(error), Nil)
-        case Right(mode) =>
-          val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
-          FalliblePlanInterpreter.run[F, A, B](totalPlan, source, mode).asExprOf[F[B]]
-      }
+    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
+    FalliblePlanInterpreter.run[F, A, B](totalPlan, source, Context.current.mode).asExprOf[F[B]]
   }
 
   inline def via[F[+x], A, B, Func, Args <: FunctionArguments](
@@ -53,11 +49,15 @@ private[ducktape] object FallibleTransformations {
     transformationSite: Expr["transformation" | "definition"],
     configs: Expr[Seq[Field.Fallible[F, A, Args] | Case.Fallible[F, A, Args]]]
   )(using Quotes): Expr[F[B]] = {
-    given Summoner[Fallible] = Summoner.PossiblyFallible[F]
-    given TransformationSite = TransformationSite.fromStringExpr(transformationSite)
+    given Context.PossiblyFallible[F](
+      WrapperType.Wrapped(Type.of[F]),
+      TransformationSite.fromStringExpr(transformationSite),
+      Summoner.PossiblyFallible[F],
+      TransformationMode.create(F)
+    )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
-    val config = Configuration.parse(configs, NonEmptyList(ConfigParser.Total, ConfigParser.PossiblyFallible[F]))
+    val config = Configuration.parse(configs, ConfigParser.fallible[F])
 
     Function
       .fromFunctionArguments[Args, Func](function)
@@ -69,18 +69,15 @@ private[ducktape] object FallibleTransformations {
           None
         )
       )
-      .flatMap { func =>
+      .map { func =>
         val destStruct = Structure.fromFunction(func)
-        TransformationMode
-          .create(F)
-          .toRight(Plan.Error(sourceStruct, destStruct, ErrorMessage.UndeterminedTransformationMode(Span.fromExpr(F)), None))
-          .map(mode => Planner.between(sourceStruct, destStruct) -> mode)
+        Planner.between(sourceStruct, destStruct)
       }
       .match {
         case Left(error) => Backend.reportErrorsAndAbort(NonEmptyList(error), config)
-        case Right(plan, mode) =>
+        case Right(plan) =>
           val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
-          FalliblePlanInterpreter.run[F, A, B](totalPlan, value, mode).asExprOf[F[B]]
+          FalliblePlanInterpreter.run[F, A, B](totalPlan, value, Context.current.mode).asExprOf[F[B]]
       }
   }
 
@@ -94,8 +91,12 @@ private[ducktape] object FallibleTransformations {
   )(using Quotes): Expr[F[Any]] = {
     import quotes.reflect.*
 
-    given Summoner[Fallible] = Summoner.PossiblyFallible[F]
-    given TransformationSite = TransformationSite.Transformation
+    given Context.PossiblyFallible[F](
+      WrapperType.Wrapped(Type.of[F]),
+      TransformationSite.Transformation,
+      Summoner.PossiblyFallible[F],
+      TransformationMode.create(F)
+    )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
 
@@ -109,20 +110,17 @@ private[ducktape] object FallibleTransformations {
           None
         )
       )
-      .flatMap { func =>
+      .map { func =>
         val destStruct = Structure.fromFunction(func)
-        TransformationMode
-          .create(F)
-          .toRight(Plan.Error(sourceStruct, destStruct, ErrorMessage.UndeterminedTransformationMode(Span.fromExpr(F)), None))
-          .map(mode => Planner.between(sourceStruct, destStruct) -> mode)
+        Planner.between(sourceStruct, destStruct)
       }
       .match {
         case Left(error) => Backend.reportErrorsAndAbort(NonEmptyList(error), Nil)
-        case Right(plan, mode) =>
+        case Right(plan) =>
           plan.dest.tpe match {
             case '[dest] =>
               val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, Nil)
-              FalliblePlanInterpreter.run[F, A, dest](totalPlan, value, mode).asExprOf[F[dest]]
+              FalliblePlanInterpreter.run[F, A, dest](totalPlan, value, Context.current.mode).asExprOf[F[dest]]
           }
       }
   }

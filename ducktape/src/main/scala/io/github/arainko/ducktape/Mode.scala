@@ -6,10 +6,12 @@ import scala.collection.Factory
 @implicitNotFound(
   """ducktape needs an instance of either Mode.Accumulating[F] or Mode.FailFast[F] in implicit scope to infer the wrapper type F and determine the mode of fallible transformations.
 For example, if you want your fallible transformations to accumulate errors and to return an Either[List[String], A] for some type A you can do this:
-private given Transformer.Mode.Either[String, List] with {}
+private given Mode.Accumulating.Either[String, List]()
 """
 )
 sealed trait Mode[F[+x]] {
+  final type Self[+x] = F[x]
+
   def pure[A](value: A): F[A]
   def map[A, B](fa: F[A], f: A => B): F[B]
   def traverseCollection[A, B, AColl <: Iterable[A], BColl <: Iterable[B]](
@@ -19,6 +21,8 @@ sealed trait Mode[F[+x]] {
 }
 
 object Mode {
+  inline def current(using mode: Mode[?]): mode.type = mode
+
   extension [F[+x], M <: Mode[F]](self: M) {
     inline def locally[A](inline f: M ?=> A): A = f(using self)
   }

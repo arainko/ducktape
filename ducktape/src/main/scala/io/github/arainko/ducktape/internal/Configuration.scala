@@ -21,14 +21,14 @@ private[ducktape] object Configuration {
   given debug: Debug[Configuration[Fallible]] = Debug.derived
 
   trait ErrorModifier {
-    def apply(parent: Plan[Plan.Error, Fallible] | None.type, plan: Plan.Error)(using Quotes): Configuration[Nothing] | plan.type
+    def apply(parent: Plan[Erroneous, Fallible] | None.type, plan: Plan.Error)(using Quotes): Configuration[Nothing] | plan.type
   }
 
   object ErrorModifier {
     given Debug[ErrorModifier] = Debug.nonShowable
 
     val substituteOptionsWithNone = new ErrorModifier:
-      def apply(parent: Plan[Plan.Error, Fallible] | None.type, plan: Plan.Error)(using
+      def apply(parent: Plan[Erroneous, Fallible] | None.type, plan: Plan.Error)(using
         Quotes
       ): Configuration[Nothing] | plan.type =
         plan.dest.tpe match {
@@ -37,7 +37,7 @@ private[ducktape] object Configuration {
         }
 
     val substituteWithDefaults = new ErrorModifier:
-      def apply(parent: Plan[Plan.Error, Fallible] | None.type, plan: Plan.Error)(using
+      def apply(parent: Plan[Erroneous, Fallible] | None.type, plan: Plan.Error)(using
         Quotes
       ): Configuration[Nothing] | plan.type =
         PartialFunction
@@ -61,10 +61,10 @@ private[ducktape] object Configuration {
 
   trait FieldModifier {
     def apply(
-      parent: Plan.BetweenProductFunction[Plan.Error, Fallible] | Plan.BetweenProducts[Plan.Error, Fallible] |
-        Plan.BetweenTupleProduct[Plan.Error, Fallible],
+      parent: Plan.BetweenProductFunction[Erroneous, Fallible] | Plan.BetweenProducts[Erroneous, Fallible] |
+        Plan.BetweenTupleProduct[Erroneous, Fallible],
       field: String,
-      plan: Plan[Plan.Error, Fallible]
+      plan: Plan[Erroneous, Fallible]
     )(using Quotes): Configuration[Nothing] | plan.type
   }
 
@@ -82,9 +82,9 @@ private[ducktape] object Configuration {
     case Dynamic(
       path: Path,
       side: Side,
-      config: Plan[Plan.Error, Fallible] | None.type => Either[String, Configuration[F]],
+      config: Plan[Erroneous, Fallible] | None.type => Either[String, Configuration[Nothing]],
       span: Span
-    ) extends Instruction[F]
+    ) extends Instruction[Nothing]
 
     case Bulk(
       path: Path,
@@ -110,7 +110,7 @@ private[ducktape] object Configuration {
   def parse[G[+x], A: Type, B: Type, F <: Fallible](
     configs: Expr[Seq[Field.Fallible[G, A, B] | Case.Fallible[G, A, B]]],
     parsers: NonEmptyList[ConfigParser[F]]
-  )(using Quotes): List[Instruction[F]] = {
+  )(using Quotes, Context): List[Instruction[F]] = {
     import quotes.reflect.*
     def fallback(term: quotes.reflect.Term) =
       Configuration.Instruction.Failed(

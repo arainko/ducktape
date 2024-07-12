@@ -90,12 +90,6 @@ private[ducktape] object ErrorMessage {
     val side: Side = Side.Dest
   }
 
-  final case class UndeterminedTransformationMode(span: Span) extends ErrorMessage {
-    def render(using Quotes): String =
-      "Couldn't determine the transformation mode, make sure an instance of either Mode.FailFast[F] or Mode.Accumulating[F] is in implicit scope"
-    val side: Side = Side.Dest
-  }
-
   final case class SourceConfigDoesntEndWithCaseSegment(span: Span) extends ErrorMessage {
     def render(using Quotes): String =
       "Case config's path should always end with an `.at` segment"
@@ -115,6 +109,12 @@ private[ducktape] object ErrorMessage {
     def render(using Quotes): String = s"No field at index $fieldIndex found in ${sourceTpe.repr.show}"
     val span = None
     val side = Side.Dest
+  }
+
+  final case class FallibleConfigNotPermitted(span: Span, side: Side) extends ErrorMessage {
+    def render(using Quotes): String =
+      """Fallible configuration is not supported for F-unwrapped transformations with Mode.Accumulating.
+    |You can make this work if you supply a deprioritized instance of Mode.FailFast for the same wrapper type.""".stripMargin
   }
 
 }

@@ -3,9 +3,9 @@ package io.github.arainko.ducktape.internal
 import scala.annotation.tailrec
 
 private[ducktape] trait PlanTraverser[A] {
-  final def run(plan: Plan[Plan.Error, Fallible], initial: A): A = {
+  final def run(plan: Plan[Erroneous, Fallible], initial: A): A = {
     @tailrec
-    def recurse(stack: List[Plan[Plan.Error, Fallible]], accumulator: A): A =
+    def recurse(stack: List[Plan[Erroneous, Fallible]], accumulator: A): A =
       stack match {
         case head :: next =>
           head match {
@@ -43,6 +43,10 @@ private[ducktape] trait PlanTraverser[A] {
               recurse(next, foldOver(plan, accumulator))
             case plan: Plan.BetweenUnwrappedWrapped =>
               recurse(next, foldOver(plan, accumulator))
+            case plan @ Plan.BetweenFallibleNonFallible(_, _, elemPlan) =>
+              recurse(elemPlan :: next, foldOver(plan, accumulator))
+            case plan @ Plan.BetweenFallibles(_, _, _, elemPlan) =>
+              recurse(elemPlan :: next, foldOver(plan, accumulator))
             case plan: Plan.Error =>
               recurse(next, foldOver(plan, accumulator))
           }
@@ -52,5 +56,5 @@ private[ducktape] trait PlanTraverser[A] {
     recurse(plan :: Nil, initial)
   }
 
-  protected def foldOver(plan: Plan[Plan.Error, Fallible], accumulator: A): A
+  protected def foldOver(plan: Plan[Erroneous, Fallible], accumulator: A): A
 }

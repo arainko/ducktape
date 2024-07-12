@@ -23,15 +23,19 @@ private[ducktape] object PathSelector {
               Typed(term, tpe @ Applied(TypeIdent("Elem"), _))
             ) =>
           recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.asType, index)), tree)
+
         case Inlined(_, _, tree) =>
           Logger.debug("Matched 'Inlined', recursing...")
           recurse(acc, tree)
+
         case Lambda(_, tree) =>
           Logger.debug("Matched 'Lambda', recursing...")
           recurse(acc, tree)
+
         case Block(_, tree) =>
           Logger.debug("Matched 'Block', recursing...")
           recurse(acc, tree)
+
         case select @ Select(tree, name @ TupleField(index)) =>
           Logger.debug(s"Matched 'Select' (matching a tuple field) with name = $name")
           if tree.tpe <:< TypeRepr.of[Tuple] then recurse(acc.prepended(Path.Segment.TupleElement(tree.tpe.asType, index)), tree)
@@ -40,12 +44,25 @@ private[ducktape] object PathSelector {
         case select @ Select(tree, name) =>
           Logger.debug(s"Matched 'Select' (matching field access) with name = $name")
           recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, name)), tree)
+
         case TypeApply(Apply(TypeApply(Select(Ident(_), "at"), _), tree :: Nil), tpe :: Nil) =>
           Logger.debug(s"Matched 'TypeApply' (matching '.at')", tpe.tpe.asType)
           recurse(acc.prepended(Path.Segment.Case(tpe.tpe.asType)), tree)
+
         case Apply(TypeApply(Select(Ident(_), "element"), elemTpe :: Nil), tree :: Nil) =>
           Logger.debug(s"Matched 'Apply(TypeApply(...)) (matching .element)'", elemTpe.tpe.asType)
           recurse(acc.prepended(Path.Segment.Element(elemTpe.tpe.asType)), tree)
+
+        case Apply(
+              Apply(
+                TypeApply(Select(Ident(_), "element"), elemTpe :: _ :: Nil),
+                Ident(_) :: Nil
+              ),
+              tree :: Nil
+            ) =>
+          Logger.debug(s"Matched 'element' of F[Elem] selection", elemTpe.tpe.asType)
+          recurse(acc.prepended(Path.Segment.Element(elemTpe.tpe.asType)), tree)
+
         // Function arg selection can only happen as the first selection (aka the last one to be parsed) so this not being recursive is fine (?)
         case TypeApply(
               Select(Apply(Select(ident @ Ident(_), "selectDynamic"), Literal(StringConstant(argName)) :: Nil), "$asInstanceOf$"),
@@ -53,9 +70,11 @@ private[ducktape] object PathSelector {
             ) =>
           Logger.debug(s"Matched 'selectDynamic' (matching a function arg selector) with name = $argName")
           Path(ident.tpe.asType, acc.prepended(Path.Segment.Field(argTpe.tpe.asType, argName)).toVector)
+
         case ident @ Ident(_) =>
           Logger.debug(s"Matched 'Ident', returning...")
           Path(ident.tpe.asType, acc.toVector)
+
         case other =>
           Logger.debug(s"Matched an unexpected term")
           report.errorAndAbort(s"Couldn't parse an unexpected config option: ${other.show(using Printer.TreeShortCode)}")
