@@ -3,11 +3,11 @@ package io.github.arainko.ducktape.internal
 import scala.annotation.unused
 import scala.quoted.*
 
-sealed trait WrapperType {
+private[ducktape] sealed trait WrapperType {
   def unapply(tpe: Type[?])(using Quotes): Option[(WrapperType, Type[?])]
 }
 
-object WrapperType {
+private[ducktape] object WrapperType {
 
   def unapply(using Quotes, Context)(tpe: Type[?]) =
     Context.current match {

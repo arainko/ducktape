@@ -1,6 +1,6 @@
 package io.github.arainko.ducktape.internal
 
-sealed trait Context {
+private[ducktape] sealed trait Context {
   type F <: Fallible
 
   def summoner: Summoner[F]
@@ -12,7 +12,7 @@ sealed trait Context {
   final def toTotal: Context.Total = Context.Total(transformationSite)
 }
 
-object Context {
+private[ducktape] object Context {
   type Of[F0 <: Fallible] = Context { type F = F0 }
 
   inline def current(using ctx: Context): ctx.type = ctx
