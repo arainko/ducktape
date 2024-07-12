@@ -19,7 +19,7 @@ object WrapperType {
     override def unapply(tpe: Type[? <: AnyKind])(using Quotes): Option[(WrapperType, Type[?])] = None
   }
 
-  final class Wrapped[F[+x]](val wrapperTpe: Type[F]) extends WrapperType {
+  final case class Wrapped[F[+x]](wrapperTpe: Type[F]) extends WrapperType {
     override def unapply(tpe: Type[? <: AnyKind])(using Quotes): Option[(WrapperType, Type[?])] = {
       @unused given Type[F] = wrapperTpe
       tpe match

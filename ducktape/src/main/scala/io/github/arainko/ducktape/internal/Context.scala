@@ -6,7 +6,8 @@ sealed trait Context {
   def summoner: Summoner[F]
   def transformationSite: TransformationSite
 
-  final def reify[FF <: Fallible, G[x]](value: G[FF])(using ev: G[FF] =:= G[F]): G[F] = ev(value)
+  final def reifyPlan[FF <: Fallible](value: Plan[Erroneous, F])(using ev: Plan[Erroneous, F] =:= Plan[Erroneous, FF]) =
+    ev(value)
 
   final def toTotal: Context.Total = Context.Total(transformationSite)
 }
