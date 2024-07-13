@@ -105,7 +105,7 @@ These will be used interchangably throughout the examples below, but if you want
 @:select(underlying-code-1)
 @:choice(visible)
 ```scala mdoc
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 wirePerson.fallibleTo[domain.Person]
 ```
@@ -124,7 +124,7 @@ Read more about the rules under which the transformations are generated in a cha
 @:select(underlying-code-2)
 @:choice(visible)
 ```scala mdoc:nest
-given Mode.FailFast.Either[String] with {}
+given Mode.FailFast.Either[String]()
 
 wirePerson
   .into[domain.Person]
@@ -161,7 +161,7 @@ Read more in the section about [configuring fallible transformations](configurin
 @:select(underlying-code-3)
 @:choice(visible)
 ```scala mdoc:nest
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 wirePerson.fallibleVia(domain.Person.apply)
 ```
@@ -178,7 +178,7 @@ Docs.printCode(wirePerson.fallibleVia(domain.Person.apply))
 @:select(underlying-code-4)
 @:choice(visible)
 ```scala mdoc:nest
-given Mode.FailFast.Either[String] with {}
+given Mode.FailFast.Either[String]()
 
 wirePerson
   .intoVia(domain.Person.apply)

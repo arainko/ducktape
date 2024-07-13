@@ -7,7 +7,7 @@ import io.github.arainko.ducktape.internal.*
 import scala.annotation.nowarn
 
 class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
-  private given F: Mode.Accumulating.Either[String, List] with {}
+  private given F: Mode.Accumulating.Either[String, List]()
 
   def fallibleComputation(value: Int) = Positive.accTransformer.transform(value)
 

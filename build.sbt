@@ -79,7 +79,7 @@ lazy val docs =
             ) ++ (
               // Going overboard with this since all selections are connected to each other (eg. you pick an option on of them)
               // then all of them will change, this caused screen jumps when looking at the generated code
-              (1 to 15).map(num =>
+              (1 to 25).map(num =>
                 SelectionConfig(
                   s"underlying-code-$num",
                   ChoiceConfig("visible", "User visible code"),

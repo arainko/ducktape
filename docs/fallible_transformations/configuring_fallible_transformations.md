@@ -87,7 +87,7 @@ val good = wire.Person(name = "ValidName", age = 24, socialSecurityNo = "SOCIALN
 ```scala mdoc:nest
 import io.github.arainko.ducktape.*
 
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 bad
   .into[domain.Person]
@@ -119,7 +119,7 @@ Docs.printCode(
 @:select(underlying-code-2)
 @:choice(visible)
 ```scala mdoc:nest
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 bad
   .into[domain.Person]
@@ -161,7 +161,7 @@ object domain:
 @:select(underlying-code-3)
 @:choice(visible)
 ```scala mdoc:nest
-given Mode.FailFast.Either[String] with {}
+given Mode.FailFast.Either[String]()
 
 wire.ReleaseKind.Single
   .into[domain.ReleaseKind]
@@ -188,7 +188,7 @@ Docs.printCode(
 @:select(underlying-code-4)
 @:choice(visible)
 ```scala mdoc:nest
-given Mode.FailFast.Either[String] with {}
+given Mode.FailFast.Either[String]()
 
 // Type inference is tricky with this one. The function being passed in needs to be typed with the exact expected type.
 def handleSingle(value: wire.ReleaseKind): Either[String, domain.ReleaseKind] =
@@ -230,7 +230,7 @@ object domain:
 @:select(underlying-code-5)
 @:choice(visible)
 ```scala mdoc:nest:silent
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 val customAccumulating =
   Transformer
@@ -258,7 +258,7 @@ And for the ones that are not keen on writing out method arguments:
 @:select(underlying-code-6)
 @:choice(visible)
 ```scala mdoc:nest:silent
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 val customAccumulatingVia =
   Transformer
