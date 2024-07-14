@@ -80,6 +80,13 @@ val good = wire.Person(name = "ValidName", age = 24, socialSecurityNo = "SOCIALN
 
 ### Product configurations
 
+|   **Name**  | **Description** |
+|:-----------------:|:-------------------:|
+|     `Field.fallibleConst`   |      a fallible variant of `Field.const` that allows for supplying values wrapped in an `F`     |
+|     `Field.fallibleComputed`   |      a fallible variant of `Field.computed` that allows for supplying functions that return values wrapped in an `F`    |
+
+---
+
 * `Field.fallibleConst` - a fallible variant of `Field.const` that allows for supplying values wrapped in an `F`
 
 @:select(underlying-code-1)
@@ -144,6 +151,13 @@ Docs.printCode(
 @:@
 
 ### Coproduct configurations
+
+|   **Name**  | **Description** |
+|:-----------------:|:-------------------:|
+|     `Case.fallibleConst`   |      a fallible variant of `Case.const` that allows for supplying values wrapped in an `F`    |
+|     `Case.fallibleComputed`   |      a fallible variant of `Case.computed` that allows for supplying functions that return values wrapped in an `F`   |
+
+---
 
 Let's define a wire enum (pretend that it's coming from... somewhere) and a domain enum that doesn't exactly align with the wire one.
 ```scala mdoc:nest

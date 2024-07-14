@@ -4,7 +4,7 @@
 
 *ducktape* is a library for boilerplate-less and configurable transformations between case classes and enums/sealed traits for Scala 3. Directly inspired by [chimney](https://github.com/scalalandio/chimney).
 
-If this project interests you, please drop a 🌟 - these things are worthless but give me a dopamine rush nonetheless.
+If this project interests you, please [drop a 🌟](https://github.com/arainko/ducktape) - these things are worthless but give me a dopamine rush nonetheless.
 
 ## Installation
 ```scala
@@ -231,3 +231,5 @@ Docs.printCode(
 @:@
 
 Read more in the chapter dedicated to [configuring transformations](total_transformations/configuring_transformations.md).
+
+To get an idea of what transformations are actually supported head on over to [transformation rules](../transformation_rules.md).

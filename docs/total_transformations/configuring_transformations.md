@@ -192,6 +192,17 @@ What's worth noting is that any of the configuration options are purely a compil
 
 ### Product configurations
 
+|   **Name**  | **Description** |
+|:-----------------:|:-------------------:|
+|     `Field.const`   |      allows to supply a constant value for a given field     |
+|   `Field.computed`  |   allows to compute a value with a function the shape of `Dest => FieldTpe`   |
+|   `Field.default`  |   only works when a field's got a default value defined (defaults are not taken into consideration by default)   |
+|   `Field.allMatching`  |   allow to supply a field source whose fields will replace all matching fields in the destination (given that the names and the types match up)   |
+|   `Field.fallbackToDefault`  |   falls back to default field values but ONLY in case a transformation cannot be created   |
+|   `Field.fallbackToNone`  |   falls back to `None` for `Option` fields for which a transformation cannot be created  |
+
+---
+
 Let's introduce another payment method (not part of any of the previous payment method ADTs, just a standalone case class).
 
 ```scala mdoc:silent
@@ -420,6 +431,13 @@ Docs.printCode(
 
 ### Coproduct configurations
 
+|   **Name**  | **Description** |
+|:-----------------:|:-------------------:|
+|     `Case.const`   |      allows to supply a constant value for a given subtype of a coproduct     |
+|     `Case.computed`   |      allows to supply a function of the selected source type to the expected destination type    |
+
+---
+
 ```scala mdoc
 val transfer = wire.PaymentMethod.Transfer("2764262")
 ```
@@ -446,7 +464,7 @@ Docs.printCode(
 ``` 
 @:@
 
-* `Case.computed` - allow to supply a function of the selected source type to the expected destination type
+* `Case.computed` - allows to supply a function of the selected source type to the expected destination type
 
 @:select(underlying-code-12)
 @:choice(visible)
