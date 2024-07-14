@@ -1,8 +1,10 @@
 ## Configuring transformations
 
-### Introduction and explanation
+### Introduction
 
 More often than not the models we work with daily do not map one-to-one with one another - let's define a wire/domain model pair that we'd like to transform.
+
+#### Case classes and enums/sealed traits
 
 @:select(model)
 @:choice(wire)
@@ -110,6 +112,48 @@ Case.const(_.paymentMethods.element.at[wire.PaymentMethod.Transfer], domain.Paym
               path expressions are not limited to a single field, we can use these to dive as deep as we need for our config to be (paths inside Case configs operate on the source type)
 ```
 
+#### Tuples
+
+Additionally, if we were to define a transformation that uses tuples and wanted to configure one of the tuple elements we can do this in two ways - either use `.apply(N)` or `._(N + 1)` (like `._1` for the 0th element of the tuple) where N is the index of the tuple element:
+
+@:select(underlying-code-2)
+@:choice(visible)
+```scala mdoc
+// using `.apply` to select the element
+(1, List(2, 2, 2), 3, 4).into[(Int, Vector[Int], Int)].transform(Field.const(_.apply(2), 10))
+
+// using the legacy accessors
+(1, List(2, 2, 2), 3, 4).into[(Int, Vector[Int], Int)].transform(Field.const(_._3, 10))
+```
+@:choice(generated)
+```scala mdoc:passthrough
+Docs.printCode {
+  val source = (1, List(2, 2, 2), 3, 4)
+
+// using `.apply` to select the element
+source.into[(Int, Vector[Int], Int)].transform(Field.const(_.apply(2), 10))
+
+// using the legacy accessors
+source.into[(Int, Vector[Int], Int)].transform(Field.const(_._3, 10))
+}
+```
+@:@
+
+For all intents and purposes these two ways of accessing tuple elements are equivalent with the exception of XXL tuples (i.e. tuples with more than 22 elements), these do not have legacy accessors and can only be configured with `.apply`.
+
+TL;DR here's the cheat sheet of the configuration path DSL:
+
+|   **Input type**  | **Config accessor** |
+|:-----------------:|:-------------------:|
+|     Case class    |      `.fieldName`     |
+|   Tuple (plain)   |   `._N / .apply(N)`   |
+|    Tuple (XXL)    |      `.apply(N)`      |
+| Option/Collection |       `.element`      |
+|  F-wrapped value  |       `.element`      |
+| Enum/sealed trait |     `.at[Subtype]`    |
+
+### Explanation
+
 So, is `.at` and `.element` another one of those extensions that will always pollute the namespace? Thankfully, no - let's look at how `Field.const` and `Case.const` are actually defined in the code:
 
 ```scala
@@ -142,7 +186,7 @@ sealed trait Selector {
 }
 ```
 
-Which means that for a context function such as `Selector ?=> Dest => DestFieldTpe` the `Selector` brings in the neccessary extensions that allow us to pick and configure subtypes and elements under a collection or an `Option`, but only in the scope of that context function and not anywhere outside which means we do not pollute the outside world's namespace with these.
+Which means that for a context function such as `Selector ?=> Dest => DestFieldTpe` the `Selector` brings in the neccessary extensions that allow us to pick and configure subtypes and elements under a collection or an `Option`(or any wrapper type `F[_]` given that it has an instance of `Mode[F]`), but only in the scope of that context function and not anywhere outside which means we do not pollute the outside world's namespace with these.
 
 What's worth noting is that any of the configuration options are purely a compiletime construct and are completely erased from the runtime representation (i.e. it's not possible to implement an instance of a `Selector` in a sane way since such an implementation would throw exceptions left and right but using it as a sort of a DSL for picking and choosing is completely fair game since it doesn't exist at runtime).
 
@@ -159,7 +203,7 @@ val card: wire.PaymentMethod.Card =
 
 * `Field.const` - allows to supply a constant value for a given field
 
-@:select(underlying-code-2)
+@:select(underlying-code-3)
 @:choice(visible)
 ```scala mdoc
 card
@@ -180,7 +224,7 @@ Docs.printCode(
 
 * `Field.computed` - allows to compute a value with a function the shape of `Dest => FieldTpe`
 
-@:select(underlying-code-3)
+@:select(underlying-code-4)
 @:choice(visible)
 ```scala mdoc
 card
@@ -205,7 +249,7 @@ Docs.printCode(
 
 * `Field.default` - only works when a field's got a default value defined (defaults are not taken into consideration by default)
 
-@:select(underlying-code-4)
+@:select(underlying-code-5)
 @:choice(visible)
 ```scala mdoc
 card
@@ -231,7 +275,7 @@ case class FieldSource(color: String, digits: Long, extra: Int)
 val source = FieldSource("magenta", 123445678, 23)
 ```
 
-@:select(underlying-code-5)
+@:select(underlying-code-6)
 @:choice(visible)
 ```scala mdoc
 card
@@ -262,7 +306,7 @@ case class DestLevel1(extra: String = "level1", str: String)
 val source = SourceToplevel(SourceLevel1("str"), 400)
 ```
 
-@:select(underlying-code-6)
+@:select(underlying-code-7)
 @:choice(visible)
 ```scala mdoc
 source
@@ -284,7 +328,7 @@ Docs.printCode(
 
 `Field.fallbackToDefault` is a `regional` config, which means that you can control the scope where it applies:
 
-@:select(underlying-code-7)
+@:select(underlying-code-8)
 @:choice(visible)
 ```scala mdoc
 source
@@ -325,7 +369,7 @@ case class DestLevel1(extra: Option[String], str: String)
 val source = SourceToplevel(SourceLevel1("str"), Some(400))
 ```
 
-@:select(underlying-code-8)
+@:select(underlying-code-9)
 @:choice(visible)
 ```scala mdoc
 source
@@ -347,7 +391,7 @@ Docs.printCode(
 
 `Field.fallbackToNone` is a `regional` config, which means that you can control the scope where it applies:
 
-@:select(underlying-code-9)
+@:select(underlying-code-10)
 @:choice(visible)
 ```scala mdoc
 source
@@ -382,7 +426,7 @@ val transfer = wire.PaymentMethod.Transfer("2764262")
 
 * `Case.const` - allows to supply a constant value for a given subtype of a coproduct
 
-@:select(underlying-code-10)
+@:select(underlying-code-11)
 @:choice(visible)
 ```scala mdoc
 transfer
@@ -404,7 +448,7 @@ Docs.printCode(
 
 * `Case.computed` - allow to supply a function of the selected source type to the expected destination type
 
-@:select(underlying-code-11)
+@:select(underlying-code-12)
 @:choice(visible)
 ```scala mdoc
 transfer

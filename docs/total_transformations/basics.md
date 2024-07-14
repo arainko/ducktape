@@ -145,3 +145,5 @@ Docs.printCode(
 @:@
 
 Read more in the section about [configuring transformations](configuring_transformations.md).
+
+To get an idea of what transformations are actually supported head on over to [transformation rules](../transformation_rules.md).
