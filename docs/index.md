@@ -232,4 +232,4 @@ Docs.printCode(
 
 Read more in the chapter dedicated to [configuring transformations](total_transformations/configuring_transformations.md).
 
-To get an idea of what transformations are actually supported head on over to [transformation rules](../transformation_rules.md).
+To get an idea of what transformations are actually supported head on over to [transformation rules](transformation_rules.md).
