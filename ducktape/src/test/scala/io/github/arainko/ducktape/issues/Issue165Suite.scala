@@ -30,7 +30,7 @@ class Issue165Suite extends DucktapeSuite {
   test("rejects _.falibleTo in given Trasformer.Fallible definitions") {
     assertFailsToCompileWith {
       """
-      given Mode.FailFast.Option with {}
+      given Mode.FailFast.Option()
 
       case class A(a: Int)
       case class B(b: Int)
@@ -44,7 +44,7 @@ class Issue165Suite extends DucktapeSuite {
   test("rejects _.into.falible in given Trasformer.Fallible definitions") {
     assertFailsToCompileWith {
       """
-      given Mode.FailFast.Option with {}
+      given Mode.FailFast.Option()
 
       case class A(a: Int)
       case class B(b: Int)

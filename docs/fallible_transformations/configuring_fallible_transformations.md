@@ -80,6 +80,13 @@ val good = wire.Person(name = "ValidName", age = 24, socialSecurityNo = "SOCIALN
 
 ### Product configurations
 
+|   **Name**  | **Description** |
+|:-----------------:|:-------------------:|
+|     `Field.fallibleConst`   |      a fallible variant of `Field.const` that allows for supplying values wrapped in an `F`     |
+|     `Field.fallibleComputed`   |      a fallible variant of `Field.computed` that allows for supplying functions that return values wrapped in an `F`    |
+
+---
+
 * `Field.fallibleConst` - a fallible variant of `Field.const` that allows for supplying values wrapped in an `F`
 
 @:select(underlying-code-1)
@@ -87,7 +94,7 @@ val good = wire.Person(name = "ValidName", age = 24, socialSecurityNo = "SOCIALN
 ```scala mdoc:nest
 import io.github.arainko.ducktape.*
 
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 bad
   .into[domain.Person]
@@ -119,7 +126,7 @@ Docs.printCode(
 @:select(underlying-code-2)
 @:choice(visible)
 ```scala mdoc:nest
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 bad
   .into[domain.Person]
@@ -145,6 +152,13 @@ Docs.printCode(
 
 ### Coproduct configurations
 
+|   **Name**  | **Description** |
+|:-----------------:|:-------------------:|
+|     `Case.fallibleConst`   |      a fallible variant of `Case.const` that allows for supplying values wrapped in an `F`    |
+|     `Case.fallibleComputed`   |      a fallible variant of `Case.computed` that allows for supplying functions that return values wrapped in an `F`   |
+
+---
+
 Let's define a wire enum (pretend that it's coming from... somewhere) and a domain enum that doesn't exactly align with the wire one.
 ```scala mdoc:nest
 object wire:
@@ -161,7 +175,7 @@ object domain:
 @:select(underlying-code-3)
 @:choice(visible)
 ```scala mdoc:nest
-given Mode.FailFast.Either[String] with {}
+given Mode.FailFast.Either[String]()
 
 wire.ReleaseKind.Single
   .into[domain.ReleaseKind]
@@ -188,7 +202,7 @@ Docs.printCode(
 @:select(underlying-code-4)
 @:choice(visible)
 ```scala mdoc:nest
-given Mode.FailFast.Either[String] with {}
+given Mode.FailFast.Either[String]()
 
 // Type inference is tricky with this one. The function being passed in needs to be typed with the exact expected type.
 def handleSingle(value: wire.ReleaseKind): Either[String, domain.ReleaseKind] =
@@ -230,7 +244,7 @@ object domain:
 @:select(underlying-code-5)
 @:choice(visible)
 ```scala mdoc:nest:silent
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 val customAccumulating =
   Transformer
@@ -258,7 +272,7 @@ And for the ones that are not keen on writing out method arguments:
 @:select(underlying-code-6)
 @:choice(visible)
 ```scala mdoc:nest:silent
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 val customAccumulatingVia =
   Transformer

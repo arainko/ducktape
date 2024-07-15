@@ -64,7 +64,7 @@ Fallible transformations wrapped in some type `F` are derived automatically for 
 @:select(underlying-code-1)
 @:choice(visible)
 ```scala mdoc
-given Mode.Accumulating.Either[String, List] with {}
+given Mode.Accumulating.Either[String, List]()
 
 bad.fallibleTo[Person]
 good.fallibleTo[Person]
@@ -82,7 +82,7 @@ Same goes for instances that do fail fast transformations (you need `Mode.FailFa
 @:select(underlying-code-2)
 @:choice(visible)
 ```scala mdoc:nest
-given Mode.FailFast.Either[String] with {}
+given Mode.FailFast.Either[String]()
 
 bad.fallibleTo[Person]
 good.fallibleTo[Person]

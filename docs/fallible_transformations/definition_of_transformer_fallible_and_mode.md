@@ -11,6 +11,8 @@ So a `Fallible` transformer takes a `Source` and gives back a `Dest` wrapped in 
 
 ```scala
 sealed trait Mode[F[+x]] {
+  type Self[+A] = F[A]
+
   def pure[A](value: A): F[A]
 
   def map[A, B](fa: F[A], f: A => B): F[B]
@@ -19,6 +21,14 @@ sealed trait Mode[F[+x]] {
     collection: AColl,
     transformation: A => F[B]
   )(using factory: Factory[B, BColl]): F[BColl]
+}
+
+object Mode {
+  inline def current(using mode: Mode[?]): mode.type = mode
+
+  extension [F[+x], M <: Mode[F]](self: M) {
+    inline def locally[A](inline f: M ?=> A): A = f(using self)
+  }
 }
 ```
 
@@ -48,3 +58,23 @@ Each one of these exposes one operation that dictates its approach to errors, `f
 For accumulating transformations `ducktape` provides instances for `Either` with any subtype of `Iterable` on the left side, so that eg. `Mode.Accumulating[[A] =>> Either[List[String], A]]` is available out of the box (under the subclass of `Mode.Accumulating.Either[String, List]`).
 
 For fail fast transformations, instances for `Option` (`Mode.FailFast.Option`) and `Either` (`Mode.FailFast.Either`) are avaiable out of the box.
+
+As for the purpose of the `Self[+A]` type member, it's to enable use cases like these:
+
+```scala mdoc
+import io.github.arainko.ducktape.*
+
+val source =
+  (
+    Right(1),
+    Right("str"),
+    Right(List(3, 3, 3)),
+    Right(4)
+  )
+
+Mode.Accumulating.either[String, List].locally {
+  source.fallibleTo[Tuple.InverseMap[source.type, Mode.current.Self]]
+}
+```
+
+...where repeatedly referring to the `F` wrapper becomes really unwieldly - that type is known to the compiler at each call site so we make it work for us in conjunction with `Mode.current` which summons the `Mode[F]` instance in the current implicit scope.

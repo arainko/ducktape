@@ -7,7 +7,7 @@ import io.github.arainko.ducktape.internal.*
 import scala.annotation.nowarn
 
 class FailFastNestedConfigurationSuite extends DucktapeSuite {
-  private given F: Mode.FailFast.Either[List[String]] with {}
+  private given F: Mode.FailFast.Either[List[String]]()
 
   def fallibleComputation(value: Int) = Positive.accTransformer.transform(value)
 
