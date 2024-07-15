@@ -80,7 +80,7 @@ private[ducktape] object ProductZipper {
   private def unpackRight(expr: Expr[Any], times: Int)(using Quotes): quotes.reflect.Term = {
     import quotes.reflect.*
 
-    if (times == 0) expr.asTerm
+    if times == 0 then expr.asTerm
     else Select.unique(unpackRight(expr, times - 1), "_2")
   }
 

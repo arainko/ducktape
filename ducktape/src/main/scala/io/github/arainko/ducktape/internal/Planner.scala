@@ -245,7 +245,7 @@ private[ducktape] object Planner {
       case TransformationSite.Transformation if Depth.current == 1 =>
         boundary[Plan.Error | plan.type]:
           var owner = Symbol.spliceOwner
-          while (!owner.isNoSymbol) {
+          while !owner.isNoSymbol do {
             if owner == transformerSymbol then
               boundary.break(Plan.Error.from(plan, ErrorMessage.LoopingTransformerDetected, None))
             owner = owner.maybeOwner

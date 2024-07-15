@@ -12,7 +12,7 @@ object Positive {
   given Ordering[Positive] = Ordering.by(_.value)
 
   given accTransformer: FallibleTransformer[AccumulatingFailure, Int, Positive] =
-    int => if (int > 0) Right(Positive(int)) else Left(s"$int" :: Nil)
+    int => if int > 0 then Right(Positive(int)) else Left(s"$int" :: Nil)
 
   given failFastTransformer: FallibleTransformer[FailFastFailure, Int, Positive] =
     int => accTransformer.transform(int).left.map(_.head)

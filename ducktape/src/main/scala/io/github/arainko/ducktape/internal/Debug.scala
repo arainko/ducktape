@@ -168,7 +168,7 @@ private[ducktape] object Debug extends LowPriorityDebug {
           case Empty       => ""
           case Text(value) => value
           case p @ Product(name, fields) =>
-            if (p.length >= 80) {
+            if p.length >= 80 then {
               s"$name(".bold + Separator +
                 fields.map { (name, ast) =>
                   ident(depth + 1) + name.yellow + " = ".yellow + recurse(ast, depth + 1)
@@ -180,7 +180,7 @@ private[ducktape] object Debug extends LowPriorityDebug {
             }
 
           case c @ Collection(name, values) =>
-            if (c.length >= 80) {
+            if c.length >= 80 then {
               s"$name(".bold + Separator +
                 values.map(value => ident(depth + 1) + recurse(value, depth + 1)).mkString("," + Separator) + Separator + ident(
                   depth

@@ -151,7 +151,7 @@ private[ducktape] object PlanConfigurer {
 
               case parent @ BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
                 def sideTpe(plan: Plan[Erroneous, Fallible]) =
-                  if (config.side.isSource) plan.source.tpe.repr else plan.dest.tpe.repr
+                  if config.side.isSource then plan.source.tpe.repr else plan.dest.tpe.repr
 
                 casePlans.zipWithIndex
                   .find((plan, _) => tpe.repr =:= sideTpe(plan))

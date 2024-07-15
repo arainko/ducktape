@@ -227,7 +227,7 @@ are being overriden by Field.allMatching(fieldSource)""")
       value
         .into[MoreCases]
         .transform(
-          Case.computed[NotEnumMoreCases.Case4](case4 => if (case4.value == 1) MoreCases.Case1 else MoreCases.Case4)
+          Case.computed[NotEnumMoreCases.Case4](case4 => if case4.value == 1 then MoreCases.Case1 else MoreCases.Case4)
         )
 
     val expectedForValue1 = MoreCases.Case1

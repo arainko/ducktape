@@ -57,7 +57,7 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
 
     val printedRoot = root.repr.widen.show(using Printer.TypeReprShortCode)
 
-    if (self.segments.isEmpty) printedRoot
+    if self.segments.isEmpty then printedRoot
     else
       self.segments.map {
         case Path.Segment.Field(_, name)    => name
@@ -65,7 +65,7 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
         case Path.Segment.Element(_)        => "element"
         case Path.Segment.Case(tpe) =>
           val repr = tpe.repr
-          val suffix = if (repr.isSingleton) ".type" else ""
+          val suffix = if repr.isSingleton then ".type" else ""
           s"at[${tpe.repr.show(using Printer.TypeReprAnsiCode)}${suffix}]"
       }.mkString(s"$printedRoot.", ".", "")
   }
