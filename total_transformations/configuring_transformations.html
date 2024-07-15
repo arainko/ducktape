@@ -94,7 +94,10 @@
   <p class="header"><a href="#">Configuring transformations</a></p>
 
   <ul class="nav-list">
-    <li class="level1 nav-leaf"><a href="#introduction-and-explanation">Introduction and explanation</a></li>
+    <li class="level1 nav-node"><a href="#introduction">Introduction</a></li>
+    <li class="level2 nav-leaf"><a href="#case-classes-and-enums-sealed-traits">Case classes and enums/sealed traits</a></li>
+    <li class="level2 nav-leaf"><a href="#tuples">Tuples</a></li>
+    <li class="level1 nav-leaf"><a href="#explanation">Explanation</a></li>
     <li class="level1 nav-leaf"><a href="#product-configurations">Product configurations</a></li>
     <li class="level1 nav-leaf"><a href="#coproduct-configurations">Coproduct configurations</a></li>
     <li class="level1 nav-leaf"><a href="#specifics-and-limitations">Specifics and limitations</a></li>
@@ -108,8 +111,10 @@
 
         <h1 id="configuring-transformations" class="title">Configuring transformations</h1>
         
-        <h3 id="introduction-and-explanation" class="section"><a class="anchor-link left" href="#introduction-and-explanation"><i class="icofont-laika link">&#xef71;</i></a>Introduction and explanation</h3>
+        <h3 id="introduction" class="section"><a class="anchor-link left" href="#introduction"><i class="icofont-laika link">&#xef71;</i></a>Introduction</h3>
         <p>More often than not the models we work with daily do not map one-to-one with one another - let&#39;s define a wire/domain model pair that we&#39;d like to transform.</p>
+        
+        <h4 id="case-classes-and-enums-sealed-traits" class="section"><a class="anchor-link left" href="#case-classes-and-enums-sealed-traits"><i class="icofont-laika link">&#xef71;</i></a>Case classes and enums/sealed traits</h4>
         <div class="tab-container" data-tab-group="model">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="wire"><a href="#">Wire model</a></li>
@@ -225,6 +230,87 @@
               |             |       &#39;.</span><span class="identifier">at</span><span>&#39; </span><span class="identifier">is</span><span> </span><span class="identifier">another</span><span> </span><span class="identifier">special</span><span> </span><span class="keyword">case</span><span> </span><span class="identifier">used</span><span> </span><span class="identifier">to</span><span> </span><span class="identifier">pick</span><span> </span><span class="identifier">a</span><span> </span><span class="identifier">subtype</span><span> </span><span class="identifier">of</span><span> </span><span class="identifier">an</span><span> </span><span class="keyword">enum</span><span>/</span><span class="keyword">sealed</span><span> </span><span class="keyword">trait</span><span>
               |             &#39;.</span><span class="identifier">element</span><span>&#39; </span><span class="identifier">is</span><span> </span><span class="identifier">a</span><span> </span><span class="identifier">special</span><span> </span><span class="identifier">extension</span><span> </span><span class="identifier">method</span><span> </span><span class="identifier">that</span><span> </span><span class="identifier">allows</span><span> </span><span class="identifier">us</span><span> </span><span class="identifier">to</span><span> </span><span class="identifier">configure</span><span> </span><span class="identifier">the</span><span> </span><span class="keyword">type</span><span> </span><span class="identifier">inside</span><span> </span><span class="identifier">a</span><span> </span><span class="identifier">collection</span><span> </span><span class="identifier">or</span><span> </span><span class="identifier">an</span><span> </span><span class="type-name">Option</span><span>
               </span><span class="identifier">path</span><span> </span><span class="identifier">expressions</span><span> </span><span class="identifier">are</span><span> </span><span class="identifier">not</span><span> </span><span class="identifier">limited</span><span> </span><span class="identifier">to</span><span> </span><span class="identifier">a</span><span> </span><span class="identifier">single</span><span> </span><span class="identifier">field</span><span>, </span><span class="identifier">we</span><span> </span><span class="identifier">can</span><span> </span><span class="identifier">use</span><span> </span><span class="identifier">these</span><span> </span><span class="identifier">to</span><span> </span><span class="identifier">dive</span><span> </span><span class="keyword">as</span><span> </span><span class="identifier">deep</span><span> </span><span class="keyword">as</span><span> </span><span class="identifier">we</span><span> </span><span class="identifier">need</span><span> </span><span class="keyword">for</span><span> </span><span class="identifier">our</span><span> </span><span class="identifier">config</span><span> </span><span class="identifier">to</span><span> </span><span class="identifier">be</span><span> (</span><span class="identifier">paths</span><span> </span><span class="identifier">inside</span><span> </span><span class="type-name">Case</span><span> </span><span class="identifier">configs</span><span> </span><span class="identifier">operate</span><span> </span><span class="identifier">on</span><span> </span><span class="identifier">the</span><span> </span><span class="identifier">source</span><span> </span><span class="keyword">type</span><span>)</span></code></pre>
+        
+        <h4 id="tuples" class="section"><a class="anchor-link left" href="#tuples"><i class="icofont-laika link">&#xef71;</i></a>Tuples</h4>
+        <p>Additionally, if we were to define a transformation that uses tuples and wanted to configure one of the tuple elements we can do this in two ways - either use <code>.apply(N)</code> or <code>._(N + 1)</code> (like <code>._1</code> for the 0th element of the tuple) where N is the index of the tuple element:</p>
+        <div class="tab-container" data-tab-group="underlying-code-2">
+          <ul class="tab-group">
+            <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
+            <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
+          </ul>
+          <div class="tab-content active" data-choice-name="visible">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="comment">// using `.apply` to select the element
+</span><span>(</span><span class="number-literal">1</span><span>, </span><span class="type-name">List</span><span>(</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>).</span><span class="identifier">into</span><span>[(</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>)].</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">apply</span><span>(</span><span class="number-literal">2</span><span>), </span><span class="number-literal">10</span><span>))
+</span><span class="comment">// res3: Tuple3[Int, Vector[Int], Int] = (1, Vector(2, 2, 2), 10)
+</span><span>
+</span><span class="comment">// using the legacy accessors
+</span><span>(</span><span class="number-literal">1</span><span>, </span><span class="type-name">List</span><span>(</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>).</span><span class="identifier">into</span><span>[(</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>)].</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span class="number-literal">._3</span><span>, </span><span class="number-literal">10</span><span>))
+</span><span class="comment">// res4: Tuple3[Int, Vector[Int], Int] = (1, Vector(2, 2, 2), 10)</span></code></pre>
+          </div>
+          <div class="tab-content" data-choice-name="generated">
+            <pre><code class="nohighlight"><span>{
+  </span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span>: </span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>] = </span><span class="type-name">Tuple4</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>](</span><span class="number-literal">1</span><span>, </span><span class="type-name">List</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>)
+  </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>], </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]] =
+    </span><span class="identifier">into</span><span>[</span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>]](</span><span class="identifier">source</span><span>)[</span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]]
+  {
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy6</span><span>: </span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>] = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="type-name">Tuple3</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="identifier">_1</span><span>.</span><span class="keyword">type</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="number-literal">10</span><span>](
+      </span><span class="identifier">value$proxy6</span><span class="number-literal">._1</span><span>,
+      </span><span class="identifier">value$proxy6</span><span class="number-literal">._2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">Int</span><span>]((</span><span class="identifier">src</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="identifier">src</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="identifier">iterableFactory</span><span>[</span><span class="type-name">Int</span><span>]),
+      </span><span class="number-literal">10</span><span>
+    ): </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]
+  }: </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]
+  </span><span class="keyword">val</span><span> </span><span class="identifier">`AppliedBuilder_this₂`</span><span> : </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>], </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]] =
+    </span><span class="identifier">into</span><span>[</span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>]](</span><span class="identifier">source</span><span>)[</span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]]
+  {
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy7</span><span>: </span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>] = </span><span class="identifier">`AppliedBuilder_this₂`</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="type-name">Tuple3</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="identifier">_1</span><span>.</span><span class="keyword">type</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="number-literal">10</span><span>](
+      </span><span class="identifier">value$proxy7</span><span class="number-literal">._1</span><span>,
+      </span><span class="identifier">value$proxy7</span><span class="number-literal">._2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">Int</span><span>]((</span><span class="identifier">`src₂`</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="identifier">`src₂`</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="identifier">iterableFactory</span><span>[</span><span class="type-name">Int</span><span>]),
+      </span><span class="number-literal">10</span><span>
+    ): </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]
+  }: </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]
+}</span></code></pre>
+          </div>
+        </div>
+        <p>For all intents and purposes these two ways of accessing tuple elements are equivalent with the exception of XXL tuples (i.e. tuples with more than 22 elements), these do not have legacy accessors and can only be configured with <code>.apply</code>.</p>
+        <p>TL;DR here&#39;s the cheat sheet of the configuration path DSL:</p>
+        <table>
+          <thead>
+            <tr>
+              <th><strong>Input type</strong></th>
+              <th><strong>Config accessor</strong></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Case class</td>
+              <td><code>.fieldName</code></td>
+            </tr>
+            <tr>
+              <td>Tuple (plain)</td>
+              <td><code>._N / .apply(N)</code></td>
+            </tr>
+            <tr>
+              <td>Tuple (XXL)</td>
+              <td><code>.apply(N)</code></td>
+            </tr>
+            <tr>
+              <td>Option/Collection</td>
+              <td><code>.element</code></td>
+            </tr>
+            <tr>
+              <td>F-wrapped value</td>
+              <td><code>.element</code></td>
+            </tr>
+            <tr>
+              <td>Enum/sealed trait</td>
+              <td><code>.at[Subtype]</code></td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <h3 id="explanation" class="section"><a class="anchor-link left" href="#explanation"><i class="icofont-laika link">&#xef71;</i></a>Explanation</h3>
         <p>So, is <code>.at</code> and <code>.element</code> another one of those extensions that will always pollute the namespace? Thankfully, no - let&#39;s look at how <code>Field.const</code> and <code>Case.const</code> are actually defined in the code:</p>
         <pre><code class="nohighlight"><span class="keyword">opaque</span><span> </span><span class="keyword">type</span><span> </span><span class="type-name">Field</span><span>[</span><span class="type-name">Source</span><span>, </span><span class="type-name">Dest</span><span>] = </span><span class="type-name">Unit</span><span>
 
@@ -245,11 +331,48 @@
   </span><span class="keyword">extension</span><span> [</span><span class="type-name">A</span><span>](</span><span class="identifier">self</span><span>: </span><span class="type-name">A</span><span>) </span><span class="keyword">def</span><span> </span><span class="declaration-name">at</span><span>[</span><span class="type-name">B</span><span> &lt;: </span><span class="type-name">A</span><span>]: </span><span class="type-name">B</span><span>
 
   </span><span class="keyword">extension</span><span> [</span><span class="type-name">Elem</span><span>](</span><span class="identifier">self</span><span>: </span><span class="type-name">Iterable</span><span>[</span><span class="type-name">Elem</span><span>] | </span><span class="type-name">Option</span><span>[</span><span class="type-name">Elem</span><span>]) </span><span class="keyword">def</span><span> </span><span class="declaration-name">element</span><span>: </span><span class="type-name">Elem</span><span>
+
+  </span><span class="keyword">extension</span><span> [</span><span class="type-name">Elem</span><span>, </span><span class="type-name">F</span><span>[+</span><span class="identifier">x</span><span>]](</span><span class="keyword">using</span><span> </span><span class="type-name">Mode</span><span>[</span><span class="type-name">F</span><span>])(</span><span class="identifier">self</span><span>: </span><span class="type-name">F</span><span>[</span><span class="type-name">Elem</span><span>]) </span><span class="keyword">def</span><span> </span><span class="declaration-name">element</span><span>: </span><span class="type-name">Elem</span><span>
 }</span></code></pre>
-        <p>Which means that for a context function such as <code>Selector ?=&gt; Dest =&gt; DestFieldTpe</code> the <code>Selector</code> brings in the neccessary extensions that allow us to pick and configure subtypes and elements under a collection or an <code>Option</code>, but only in the scope of that context function and not anywhere outside which means we do not pollute the outside world&#39;s namespace with these.</p>
+        <p>Which means that for a context function such as <code>Selector ?=&gt; Dest =&gt; DestFieldTpe</code> the <code>Selector</code> brings in the neccessary extensions that allow us to pick and configure subtypes and elements under a collection or an <code>Option</code>(or any wrapper type <code>F[_]</code> given that it has an instance of <code>Mode[F]</code>), but only in the scope of that context function and not anywhere outside which means we do not pollute the outside world&#39;s namespace with these.</p>
         <p>What&#39;s worth noting is that any of the configuration options are purely a compiletime construct and are completely erased from the runtime representation (i.e. it&#39;s not possible to implement an instance of a <code>Selector</code> in a sane way since such an implementation would throw exceptions left and right but using it as a sort of a DSL for picking and choosing is completely fair game since it doesn&#39;t exist at runtime).</p>
         
         <h3 id="product-configurations" class="section"><a class="anchor-link left" href="#product-configurations"><i class="icofont-laika link">&#xef71;</i></a>Product configurations</h3>
+        <table>
+          <thead>
+            <tr>
+              <th><strong>Name</strong></th>
+              <th><strong>Description</strong></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Field.const</code></td>
+              <td>allows to supply a constant value for a given field</td>
+            </tr>
+            <tr>
+              <td><code>Field.computed</code></td>
+              <td>allows to compute a value with a function the shape of <code>Dest =&gt; FieldTpe</code></td>
+            </tr>
+            <tr>
+              <td><code>Field.default</code></td>
+              <td>only works when a field&#39;s got a default value defined (defaults are not taken into consideration by default)</td>
+            </tr>
+            <tr>
+              <td><code>Field.allMatching</code></td>
+              <td>allow to supply a field source whose fields will replace all matching fields in the destination (given that the names and the types match up)</td>
+            </tr>
+            <tr>
+              <td><code>Field.fallbackToDefault</code></td>
+              <td>falls back to default field values but ONLY in case a transformation cannot be created</td>
+            </tr>
+            <tr>
+              <td><code>Field.fallbackToNone</code></td>
+              <td>falls back to <code>None</code> for <code>Option</code> fields for which a transformation cannot be created</td>
+            </tr>
+          </tbody>
+        </table>
+        <hr>
         <p>Let&#39;s introduce another payment method (not part of any of the previous payment method ADTs, just a standalone case class).</p>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">PaymentBand</span><span>(</span><span class="identifier">name</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">digits</span><span>: </span><span class="type-name">Long</span><span>, </span><span class="identifier">color</span><span>: </span><span class="type-name">String</span><span> = </span><span class="string-literal">&quot;red&quot;</span><span>)
 
@@ -258,7 +381,7 @@
         <ul>
           <li><code>Field.const</code> - allows to supply a constant value for a given field</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code-2">
+        <div class="tab-container" data-tab-group="underlying-code-3">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -267,7 +390,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">card</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">PaymentBand</span><span>]
   .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">color</span><span>, </span><span class="string-literal">&quot;blue&quot;</span><span>))
-</span><span class="comment">// res3: PaymentBand = PaymentBand(
+</span><span class="comment">// res6: PaymentBand = PaymentBand(
 //   name = &quot;J. Doe&quot;,
 //   digits = 213712345L,
 //   color = &quot;blue&quot;
@@ -277,8 +400,8 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Card</span><span>, </span><span class="type-name">PaymentBand</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Card</span><span>](</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">card</span><span>)[</span><span class="type-name">PaymentBand</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy5</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy5</span><span>.</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy5</span><span>.</span><span class="identifier">digits</span><span>, </span><span class="identifier">color</span><span> = </span><span class="string-literal">&quot;blue&quot;</span><span>): </span><span class="type-name">PaymentBand</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy10</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy10</span><span>.</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy10</span><span>.</span><span class="identifier">digits</span><span>, </span><span class="identifier">color</span><span> = </span><span class="string-literal">&quot;blue&quot;</span><span>): </span><span class="type-name">PaymentBand</span><span>
   }: </span><span class="type-name">PaymentBand</span><span>
 }</span></code></pre>
           </div>
@@ -286,7 +409,7 @@
         <ul>
           <li><code>Field.computed</code> - allows to compute a value with a function the shape of <code>Dest =&gt; FieldTpe</code></li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code-3">
+        <div class="tab-container" data-tab-group="underlying-code-4">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -297,7 +420,7 @@
   .</span><span class="identifier">transform</span><span>(
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">computed</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">color</span><span>, </span><span class="identifier">card</span><span> =&gt; </span><span class="keyword">if</span><span> (</span><span class="identifier">card</span><span>.</span><span class="identifier">digits</span><span> % </span><span class="number-literal">2</span><span> == </span><span class="number-literal">0</span><span>) </span><span class="string-literal">&quot;green&quot;</span><span> </span><span class="keyword">else</span><span> </span><span class="string-literal">&quot;yellow&quot;</span><span>)
   )
-</span><span class="comment">// res5: PaymentBand = PaymentBand(
+</span><span class="comment">// res8: PaymentBand = PaymentBand(
 //   name = &quot;J. Doe&quot;,
 //   digits = 213712345L,
 //   color = &quot;yellow&quot;
@@ -307,11 +430,11 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Card</span><span>, </span><span class="type-name">PaymentBand</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Card</span><span>](</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">card</span><span>)[</span><span class="type-name">PaymentBand</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy8</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy13</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(
-      </span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy8</span><span>.</span><span class="identifier">name</span><span>,
-      </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy8</span><span>.</span><span class="identifier">digits</span><span>,
-      </span><span class="identifier">color</span><span> = </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy8</span><span>.</span><span class="identifier">digits</span><span>.%(</span><span class="number-literal">2</span><span>).==(</span><span class="number-literal">0</span><span>)) </span><span class="string-literal">&quot;green&quot;</span><span> </span><span class="keyword">else</span><span> </span><span class="string-literal">&quot;yellow&quot;</span><span>
+      </span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy13</span><span>.</span><span class="identifier">name</span><span>,
+      </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy13</span><span>.</span><span class="identifier">digits</span><span>,
+      </span><span class="identifier">color</span><span> = </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy13</span><span>.</span><span class="identifier">digits</span><span>.%(</span><span class="number-literal">2</span><span>).==(</span><span class="number-literal">0</span><span>)) </span><span class="string-literal">&quot;green&quot;</span><span> </span><span class="keyword">else</span><span> </span><span class="string-literal">&quot;yellow&quot;</span><span>
     ): </span><span class="type-name">PaymentBand</span><span>
   }: </span><span class="type-name">PaymentBand</span><span>
 }</span></code></pre>
@@ -320,7 +443,7 @@
         <ul>
           <li><code>Field.default</code> - only works when a field&#39;s got a default value defined (defaults are not taken into consideration by default)</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code-4">
+        <div class="tab-container" data-tab-group="underlying-code-5">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -329,7 +452,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">card</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">PaymentBand</span><span>]
   .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">default</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">color</span><span>))
-</span><span class="comment">// res7: PaymentBand = PaymentBand(
+</span><span class="comment">// res10: PaymentBand = PaymentBand(
 //   name = &quot;J. Doe&quot;,
 //   digits = 213712345L,
 //   color = &quot;red&quot;
@@ -339,10 +462,10 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Card</span><span>, </span><span class="type-name">PaymentBand</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Card</span><span>](</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">card</span><span>)[</span><span class="type-name">PaymentBand</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy11</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy16</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(
-      </span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy11</span><span>.</span><span class="identifier">name</span><span>,
-      </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy11</span><span>.</span><span class="identifier">digits</span><span>,
+      </span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy16</span><span>.</span><span class="identifier">name</span><span>,
+      </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy16</span><span>.</span><span class="identifier">digits</span><span>,
       </span><span class="identifier">color</span><span> = </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="type-name">PaymentBand</span><span>.</span><span class="identifier">$lessinit$greater$default$3</span><span>
     ): </span><span class="type-name">PaymentBand</span><span>
   }: </span><span class="type-name">PaymentBand</span><span>
@@ -354,7 +477,7 @@
         </ul>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">FieldSource</span><span>(</span><span class="identifier">color</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">digits</span><span>: </span><span class="type-name">Long</span><span>, </span><span class="identifier">extra</span><span>: </span><span class="type-name">Int</span><span>)
 </span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span> = </span><span class="type-name">FieldSource</span><span>(</span><span class="string-literal">&quot;magenta&quot;</span><span>, </span><span class="number-literal">123445678</span><span>, </span><span class="number-literal">23</span><span>)</span></code></pre>
-        <div class="tab-container" data-tab-group="underlying-code-5">
+        <div class="tab-container" data-tab-group="underlying-code-6">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -363,7 +486,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">card</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">PaymentBand</span><span>]
   .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">allMatching</span><span>(</span><span class="identifier">paymentBand</span><span> =&gt; </span><span class="identifier">paymentBand</span><span>, </span><span class="identifier">source</span><span>))
-</span><span class="comment">// res9: PaymentBand = PaymentBand(
+</span><span class="comment">// res12: PaymentBand = PaymentBand(
 //   name = &quot;J. Doe&quot;,
 //   digits = 123445678L,
 //   color = &quot;magenta&quot;
@@ -373,9 +496,9 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Card</span><span>, </span><span class="type-name">PaymentBand</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Card</span><span>](</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">card</span><span>)[</span><span class="type-name">PaymentBand</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy14</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy19</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(
-      </span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy14</span><span>.</span><span class="identifier">name</span><span>,
+      </span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy19</span><span>.</span><span class="identifier">name</span><span>,
       </span><span class="identifier">digits</span><span> = </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">source</span><span>.</span><span class="identifier">digits</span><span>,
       </span><span class="identifier">color</span><span> = </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">source</span><span>.</span><span class="identifier">color</span><span>
     ): </span><span class="type-name">PaymentBand</span><span>
@@ -393,7 +516,7 @@
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span>: </span><span class="type-name">String</span><span> = </span><span class="string-literal">&quot;level1&quot;</span><span>, </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>)
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span> = </span><span class="type-name">SourceToplevel</span><span>(</span><span class="type-name">SourceLevel1</span><span>(</span><span class="string-literal">&quot;str&quot;</span><span>), </span><span class="number-literal">400</span><span>)</span></code></pre>
-        <div class="tab-container" data-tab-group="underlying-code-6">
+        <div class="tab-container" data-tab-group="underlying-code-7">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -402,7 +525,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">source</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">DestToplevel</span><span>]
   .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">fallbackToDefault</span><span>)
-</span><span class="comment">// res11: DestToplevel = DestToplevel(
+</span><span class="comment">// res14: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(extra = &quot;level1&quot;, str = &quot;str&quot;),
 //   extra = 111,
 //   transformableButWithDefault = 400
@@ -412,18 +535,18 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy17</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy22</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy17</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy22</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
       </span><span class="identifier">extra</span><span> = </span><span class="type-name">DestToplevel</span><span>.</span><span class="identifier">$lessinit$greater$default$2</span><span>,
-      </span><span class="identifier">transformableButWithDefault</span><span> = </span><span class="identifier">value$proxy17</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
+      </span><span class="identifier">transformableButWithDefault</span><span> = </span><span class="identifier">value$proxy22</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
     ): </span><span class="type-name">DestToplevel</span><span>
   }: </span><span class="type-name">DestToplevel</span><span>
 }</span></code></pre>
           </div>
         </div>
         <p><code>Field.fallbackToDefault</code> is a <code>regional</code> config, which means that you can control the scope where it applies:</p>
-        <div class="tab-container" data-tab-group="underlying-code-7">
+        <div class="tab-container" data-tab-group="underlying-code-8">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -437,7 +560,7 @@
     ), </span><span class="comment">// &lt;-- we&#39;re applying the config starting on the `.level1` field and below, it&#39;ll be also applied to other transformations nested inside
 </span><span>    </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">extra</span><span>, </span><span class="number-literal">123</span><span>) </span><span class="comment">// &lt;-- note that this field now needs to be configured manually
 </span><span>  )
-</span><span class="comment">// res13: DestToplevel = DestToplevel(
+</span><span class="comment">// res16: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(extra = &quot;level1&quot;, str = &quot;str&quot;),
 //   extra = 123,
 //   transformableButWithDefault = 400
@@ -447,11 +570,11 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy20</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy25</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy20</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy25</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
       </span><span class="identifier">extra</span><span> = </span><span class="number-literal">123</span><span>,
-      </span><span class="identifier">transformableButWithDefault</span><span> = </span><span class="identifier">value$proxy20</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
+      </span><span class="identifier">transformableButWithDefault</span><span> = </span><span class="identifier">value$proxy25</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
     ): </span><span class="type-name">DestToplevel</span><span>
   }: </span><span class="type-name">DestToplevel</span><span>
 }</span></code></pre>
@@ -467,7 +590,7 @@
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span>: </span><span class="type-name">Option</span><span>[</span><span class="type-name">String</span><span>], </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>)
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span> = </span><span class="type-name">SourceToplevel</span><span>(</span><span class="type-name">SourceLevel1</span><span>(</span><span class="string-literal">&quot;str&quot;</span><span>), </span><span class="type-name">Some</span><span>(</span><span class="number-literal">400</span><span>))</span></code></pre>
-        <div class="tab-container" data-tab-group="underlying-code-8">
+        <div class="tab-container" data-tab-group="underlying-code-9">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -476,7 +599,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">source</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">DestToplevel</span><span>]
   .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">fallbackToNone</span><span>)
-</span><span class="comment">// res15: DestToplevel = DestToplevel(
+</span><span class="comment">// res18: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(extra = None, str = &quot;str&quot;),
 //   extra = None,
 //   transformable = Some(value = 400)
@@ -486,18 +609,18 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy23</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy28</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy23</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy28</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
       </span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>,
-      </span><span class="identifier">transformable</span><span> = </span><span class="identifier">value$proxy23</span><span>.</span><span class="identifier">transformable</span><span>
+      </span><span class="identifier">transformable</span><span> = </span><span class="identifier">value$proxy28</span><span>.</span><span class="identifier">transformable</span><span>
     ): </span><span class="type-name">DestToplevel</span><span>
   }: </span><span class="type-name">DestToplevel</span><span>
 }</span></code></pre>
           </div>
         </div>
         <p><code>Field.fallbackToNone</code> is a <code>regional</code> config, which means that you can control the scope where it applies:</p>
-        <div class="tab-container" data-tab-group="underlying-code-9">
+        <div class="tab-container" data-tab-group="underlying-code-10">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -511,7 +634,7 @@
     ), </span><span class="comment">// &lt;-- we&#39;re applying the config starting on the `.level1` field and below, it&#39;ll be also applied to other transformations nested inside
 </span><span>    </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">extra</span><span>, </span><span class="type-name">Some</span><span>(</span><span class="number-literal">123</span><span>)) </span><span class="comment">// &lt;-- note that this field now needs to be configured manually
 </span><span>  )
-</span><span class="comment">// res17: DestToplevel = DestToplevel(
+</span><span class="comment">// res20: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(extra = None, str = &quot;str&quot;),
 //   extra = Some(value = 123),
 //   transformable = Some(value = 400)
@@ -521,11 +644,11 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy26</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy31</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy26</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy31</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
       </span><span class="identifier">extra</span><span> = </span><span class="type-name">Some</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="number-literal">123</span><span>),
-      </span><span class="identifier">transformable</span><span> = </span><span class="identifier">value$proxy26</span><span>.</span><span class="identifier">transformable</span><span>
+      </span><span class="identifier">transformable</span><span> = </span><span class="identifier">value$proxy31</span><span>.</span><span class="identifier">transformable</span><span>
     ): </span><span class="type-name">DestToplevel</span><span>
   }: </span><span class="type-name">DestToplevel</span><span>
 }</span></code></pre>
@@ -533,12 +656,31 @@
         </div>
         
         <h3 id="coproduct-configurations" class="section"><a class="anchor-link left" href="#coproduct-configurations"><i class="icofont-laika link">&#xef71;</i></a>Coproduct configurations</h3>
+        <table>
+          <thead>
+            <tr>
+              <th><strong>Name</strong></th>
+              <th><strong>Description</strong></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Case.const</code></td>
+              <td>allows to supply a constant value for a given subtype of a coproduct</td>
+            </tr>
+            <tr>
+              <td><code>Case.computed</code></td>
+              <td>allows to supply a function of the selected source type to the expected destination type</td>
+            </tr>
+          </tbody>
+        </table>
+        <hr>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">val</span><span> </span><span class="identifier">transfer</span><span> = </span><span class="identifier">wire</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Transfer</span><span>(</span><span class="string-literal">&quot;2764262&quot;</span><span>)
 </span><span class="comment">// transfer: PaymentMethod = Transfer(accountNo = &quot;2764262&quot;)</span></code></pre>
         <ul>
           <li><code>Case.const</code> - allows to supply a constant value for a given subtype of a coproduct</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code-10">
+        <div class="tab-container" data-tab-group="underlying-code-11">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -547,28 +689,28 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">transfer</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
   .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Case</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">at</span><span>[</span><span class="identifier">wire</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Transfer</span><span>], </span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>))
-</span><span class="comment">// res19: PaymentMethod = Cash</span></code></pre>
+</span><span class="comment">// res22: PaymentMethod = Cash</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">PaymentMethod</span><span>, </span><span class="type-name">PaymentMethod</span><span>] =
     </span><span class="identifier">into</span><span>[</span><span class="type-name">PaymentMethod</span><span>](</span><span class="identifier">transfer</span><span>)[</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy29</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy29</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>])
-      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy29</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy29</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy29</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>]) </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">value$proxy29</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy29</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>]) </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy29</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>]) </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy34</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>])
+      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>]) </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>]) </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>]) </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
     </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">PaymentMethod</span><span>
   }: </span><span class="type-name">PaymentMethod</span><span>
 }</span></code></pre>
           </div>
         </div>
         <ul>
-          <li><code>Case.computed</code> - allow to supply a function of the selected source type to the expected destination type</li>
+          <li><code>Case.computed</code> - allows to supply a function of the selected source type to the expected destination type</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code-11">
+        <div class="tab-container" data-tab-group="underlying-code-12">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -579,20 +721,20 @@
   .</span><span class="identifier">transform</span><span>(
     </span><span class="type-name">Case</span><span>.</span><span class="identifier">computed</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">at</span><span>[</span><span class="identifier">wire</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Transfer</span><span>], </span><span class="identifier">transfer</span><span> =&gt; </span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Card</span><span>(</span><span class="string-literal">&quot;J. Doe&quot;</span><span>, </span><span class="identifier">transfer</span><span>.</span><span class="identifier">accountNo</span><span>.</span><span class="identifier">toLong</span><span>))
   )
-</span><span class="comment">// res21: PaymentMethod = Card(name = &quot;J. Doe&quot;, digits = 2764262L)</span></code></pre>
+</span><span class="comment">// res24: PaymentMethod = Card(name = &quot;J. Doe&quot;, digits = 2764262L)</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">PaymentMethod</span><span>, </span><span class="type-name">PaymentMethod</span><span>] =
     </span><span class="identifier">into</span><span>[</span><span class="type-name">PaymentMethod</span><span>](</span><span class="identifier">transfer</span><span>)[</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy32</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy32</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>])
-      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy32</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy32</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy32</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>]) </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">value$proxy32</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy32</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>]) </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy32</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>]) {
-      </span><span class="keyword">val</span><span> </span><span class="identifier">`transfer₂`</span><span> : </span><span class="type-name">Transfer</span><span> = </span><span class="identifier">value$proxy32</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>]
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy37</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>])
+      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>]) </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>]) </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>]) {
+      </span><span class="keyword">val</span><span> </span><span class="identifier">`transfer₂`</span><span> : </span><span class="type-name">Transfer</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>]
       </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Card</span><span>.</span><span class="identifier">apply</span><span>(</span><span class="string-literal">&quot;J. Doe&quot;</span><span>, </span><span class="identifier">augmentString</span><span>(</span><span class="identifier">`transfer₂`</span><span>.</span><span class="identifier">accountNo</span><span>).</span><span class="identifier">toLong</span><span>): </span><span class="type-name">PaymentMethod</span><span>
     } </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">PaymentMethod</span><span>
   }: </span><span class="type-name">PaymentMethod</span><span>
@@ -611,7 +753,7 @@
     </span><span class="type-name">Case</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">paymentMethods</span><span>.</span><span class="identifier">element</span><span>.</span><span class="identifier">at</span><span>[</span><span class="identifier">wire</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Transfer</span><span>], </span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>),
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">paymentMethods</span><span>.</span><span class="identifier">element</span><span>, </span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>) </span><span class="comment">// &lt;-- override all payment methods to `Cash`
 </span><span>  )
-</span><span class="comment">// res23: Person = Person(
+</span><span class="comment">// res26: Person = Person(
 //   firstName = &quot;John&quot;,
 //   lastName = &quot;Doe&quot;,
 //   age = 24,
@@ -627,7 +769,7 @@
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">age</span><span>, </span><span class="number-literal">24</span><span>),
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">age</span><span>, </span><span class="number-literal">50</span><span>) </span><span class="comment">// &lt;-- override the previously configured &#39;age&#39; field`
 </span><span>  )
-</span><span class="comment">// res24: Person = Person(
+</span><span class="comment">// res27: Person = Person(
 //   firstName = &quot;John&quot;,
 //   lastName = &quot;Doe&quot;,
 //   age = 50,
@@ -652,7 +794,7 @@
       </span><span class="type-name">Vector</span><span>.</span><span class="identifier">empty</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
     ) </span><span class="comment">// &lt;-- also override the &#39;parent&#39; of &#39;_.paymentMethods.element&#39; so now payment methods are just empty
 </span><span>  )
-</span><span class="comment">// res25: Person = Person(
+</span><span class="comment">// res28: Person = Person(
 //   firstName = &quot;John&quot;,
 //   lastName = &quot;Doe&quot;,
 //   age = 24,

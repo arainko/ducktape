@@ -176,6 +176,25 @@
 </span><span class="keyword">val</span><span> </span><span class="identifier">good</span><span> = </span><span class="identifier">wire</span><span>.</span><span class="type-name">Person</span><span>(</span><span class="identifier">name</span><span> = </span><span class="string-literal">&quot;ValidName&quot;</span><span>, </span><span class="identifier">age</span><span> = </span><span class="number-literal">24</span><span>, </span><span class="identifier">socialSecurityNo</span><span> = </span><span class="string-literal">&quot;SOCIALNO&quot;</span><span>)</span></code></pre>
         
         <h3 id="product-configurations" class="section"><a class="anchor-link left" href="#product-configurations"><i class="icofont-laika link">&#xef71;</i></a>Product configurations</h3>
+        <table>
+          <thead>
+            <tr>
+              <th><strong>Name</strong></th>
+              <th><strong>Description</strong></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Field.fallibleConst</code></td>
+              <td>a fallible variant of <code>Field.const</code> that allows for supplying values wrapped in an <code>F</code></td>
+            </tr>
+            <tr>
+              <td><code>Field.fallibleComputed</code></td>
+              <td>a fallible variant of <code>Field.computed</code> that allows for supplying functions that return values wrapped in an <code>F</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <hr>
         <ul>
           <li><code>Field.fallibleConst</code> - a fallible variant of <code>Field.const</code> that allows for supplying values wrapped in an <code>F</code></li>
         </ul>
@@ -187,7 +206,7 @@
           <div class="tab-content active" data-choice-name="visible">
             <pre><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">io</span><span>.</span><span class="identifier">github</span><span>.</span><span class="identifier">arainko</span><span>.</span><span class="identifier">ducktape</span><span>.*
 
-</span><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>] </span><span class="keyword">with</span><span> {}
+</span><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>]()
 
 </span><span class="identifier">bad</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">Person</span><span>]
@@ -235,7 +254,7 @@
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>] </span><span class="keyword">with</span><span> {}
+            <pre><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>]()
 
 </span><span class="identifier">bad</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">Person</span><span>]
@@ -276,6 +295,25 @@
         </div>
         
         <h3 id="coproduct-configurations" class="section"><a class="anchor-link left" href="#coproduct-configurations"><i class="icofont-laika link">&#xef71;</i></a>Coproduct configurations</h3>
+        <table>
+          <thead>
+            <tr>
+              <th><strong>Name</strong></th>
+              <th><strong>Description</strong></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Case.fallibleConst</code></td>
+              <td>a fallible variant of <code>Case.const</code> that allows for supplying values wrapped in an <code>F</code></td>
+            </tr>
+            <tr>
+              <td><code>Case.fallibleComputed</code></td>
+              <td>a fallible variant of <code>Case.computed</code> that allows for supplying functions that return values wrapped in an <code>F</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <hr>
         <p>Let&#39;s define a wire enum (pretend that it&#39;s coming from... somewhere) and a domain enum that doesn&#39;t exactly align with the wire one.</p>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">object</span><span> </span><span class="identifier">wire</span><span>:
   </span><span class="keyword">enum</span><span> </span><span class="type-name">ReleaseKind</span><span>:
@@ -293,7 +331,7 @@
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">FailFast</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>] </span><span class="keyword">with</span><span> {}
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">FailFast</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>]()
 
 </span><span class="identifier">wire</span><span>.</span><span class="type-name">ReleaseKind</span><span>.</span><span class="type-name">Single</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">ReleaseKind</span><span>]
@@ -328,7 +366,7 @@
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">FailFast</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>] </span><span class="keyword">with</span><span> {}
+            <pre><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">FailFast</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>]()
 
 </span><span class="comment">// Type inference is tricky with this one. The function being passed in needs to be typed with the exact expected type.
 </span><span class="keyword">def</span><span> </span><span class="declaration-name">handleSingle</span><span>(</span><span class="identifier">value</span><span>: </span><span class="identifier">wire</span><span>.</span><span class="type-name">ReleaseKind</span><span>): </span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="identifier">domain</span><span>.</span><span class="type-name">ReleaseKind</span><span>] =
@@ -372,7 +410,7 @@
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>] </span><span class="keyword">with</span><span> {}
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>]()
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">customAccumulating</span><span> =
   </span><span class="type-name">Transformer</span><span>
@@ -411,7 +449,7 @@
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>] </span><span class="keyword">with</span><span> {}
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>]()
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">customAccumulatingVia</span><span> =
   </span><span class="type-name">Transformer</span><span>

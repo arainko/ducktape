@@ -109,7 +109,9 @@
   }
 }</span></code></pre>
         <p>So a <code>Fallible</code> transformer takes a <code>Source</code> and gives back a <code>Dest</code> wrapped in an <code>F</code> where <code>F</code> is the wrapper type for our transformations eg. if <code>F[+x]</code> = <code>Either[List[String], x]</code> then the <code>transform</code> method will return an <code>Either[List[String], Dest]</code>.</p>
-        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">sealed</span><span> </span><span class="keyword">trait</span><span> </span><span class="type-name">Mode</span><span>[</span><span class="type-name">F</span><span>[+</span><span class="identifier">x</span><span>]] {
+        <pre><code class="nohighlight"><span class="keyword">sealed</span><span> </span><span class="keyword">trait</span><span> </span><span class="type-name">Mode</span><span>[</span><span class="type-name">F</span><span>[+</span><span class="identifier">x</span><span>]] {
+  </span><span class="keyword">type</span><span> </span><span class="type-name">Self</span><span>[+</span><span class="type-name">A</span><span>] = </span><span class="type-name">F</span><span>[</span><span class="type-name">A</span><span>]
+
   </span><span class="keyword">def</span><span> </span><span class="declaration-name">pure</span><span>[</span><span class="type-name">A</span><span>](</span><span class="identifier">value</span><span>: </span><span class="type-name">A</span><span>): </span><span class="type-name">F</span><span>[</span><span class="type-name">A</span><span>]
 
   </span><span class="keyword">def</span><span> </span><span class="declaration-name">map</span><span>[</span><span class="type-name">A</span><span>, </span><span class="type-name">B</span><span>](</span><span class="identifier">fa</span><span>: </span><span class="type-name">F</span><span>[</span><span class="type-name">A</span><span>], </span><span class="identifier">f</span><span>: </span><span class="type-name">A</span><span> =&gt; </span><span class="type-name">B</span><span>): </span><span class="type-name">F</span><span>[</span><span class="type-name">B</span><span>]
@@ -118,6 +120,14 @@
     </span><span class="identifier">collection</span><span>: </span><span class="type-name">AColl</span><span>,
     </span><span class="identifier">transformation</span><span>: </span><span class="type-name">A</span><span> =&gt; </span><span class="type-name">F</span><span>[</span><span class="type-name">B</span><span>]
   )(</span><span class="keyword">using</span><span> </span><span class="identifier">factory</span><span>: </span><span class="type-name">Factory</span><span>[</span><span class="type-name">B</span><span>, </span><span class="type-name">BColl</span><span>]): </span><span class="type-name">F</span><span>[</span><span class="type-name">BColl</span><span>]
+}
+
+</span><span class="keyword">object</span><span> </span><span class="type-name">Mode</span><span> {
+  </span><span class="keyword">inline</span><span> </span><span class="keyword">def</span><span> </span><span class="declaration-name">current</span><span>(</span><span class="keyword">using</span><span> </span><span class="identifier">mode</span><span>: </span><span class="type-name">Mode</span><span>[?]): </span><span class="identifier">mode</span><span>.</span><span class="keyword">type</span><span> = </span><span class="identifier">mode</span><span>
+
+  </span><span class="keyword">extension</span><span> [</span><span class="type-name">F</span><span>[+</span><span class="identifier">x</span><span>], </span><span class="type-name">M</span><span> &lt;: </span><span class="type-name">Mode</span><span>[</span><span class="type-name">F</span><span>]](</span><span class="identifier">self</span><span>: </span><span class="type-name">M</span><span>) {
+    </span><span class="keyword">inline</span><span> </span><span class="keyword">def</span><span> </span><span class="declaration-name">locally</span><span>[</span><span class="type-name">A</span><span>](</span><span class="identifier">inline</span><span> </span><span class="identifier">f</span><span>: </span><span class="type-name">M</span><span> ?=&gt; </span><span class="type-name">A</span><span>): </span><span class="type-name">A</span><span> = </span><span class="identifier">f</span><span>(</span><span class="keyword">using</span><span> </span><span class="identifier">self</span><span>)
+  }
 }</span></code></pre>
         <p>Moving on to <code>Mode</code>, what exactly is it and why do we need it? So a <code>Mode[F]</code> is typeclass that gives us two bits of information:</p>
         <ul>
@@ -146,6 +156,30 @@
         <p>Each one of these exposes one operation that dictates its approach to errors, <code>flatMap</code> entails a dependency between fallible transformations so if we chain multiple <code>flatMaps</code> together our transformation will stop at the very first error - contrary to this, <code>Mode.Accumulating</code> exposes a <code>product</code> operation that given two independent transformations wrapped in an <code>F</code> gives us back a tuple wrapped in an <code>F</code>. What that really means is that each transformation is independent from one another so we&#39;re able to accumulate all of the errors produced by these.</p>
         <p>For accumulating transformations <code>ducktape</code> provides instances for <code>Either</code> with any subtype of <code>Iterable</code> on the left side, so that eg. <code>Mode.Accumulating[[A] =&gt;&gt; Either[List[String], A]]</code> is available out of the box (under the subclass of <code>Mode.Accumulating.Either[String, List]</code>).</p>
         <p>For fail fast transformations, instances for <code>Option</code> (<code>Mode.FailFast.Option</code>) and <code>Either</code> (<code>Mode.FailFast.Either</code>) are avaiable out of the box.</p>
+        <p>As for the purpose of the <code>Self[+A]</code> type member, it&#39;s to enable use cases like these:</p>
+        <pre><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">io</span><span>.</span><span class="identifier">github</span><span>.</span><span class="identifier">arainko</span><span>.</span><span class="identifier">ducktape</span><span>.*
+
+</span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span> =
+  (
+    </span><span class="type-name">Right</span><span>(</span><span class="number-literal">1</span><span>),
+    </span><span class="type-name">Right</span><span>(</span><span class="string-literal">&quot;str&quot;</span><span>),
+    </span><span class="type-name">Right</span><span>(</span><span class="type-name">List</span><span>(</span><span class="number-literal">3</span><span>, </span><span class="number-literal">3</span><span>, </span><span class="number-literal">3</span><span>)),
+    </span><span class="type-name">Right</span><span>(</span><span class="number-literal">4</span><span>)
+  )
+</span><span class="comment">// source: Tuple4[Right[Nothing, Int], Right[Nothing, String], Right[Nothing, List[Int]], Right[Nothing, Int]] = (
+//   Right(value = 1),
+//   Right(value = &quot;str&quot;),
+//   Right(value = List(3, 3, 3)),
+//   Right(value = 4)
+// )
+</span><span>
+</span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="identifier">either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>].</span><span class="identifier">locally</span><span> {
+  </span><span class="identifier">source</span><span>.</span><span class="identifier">fallibleTo</span><span>[</span><span class="type-name">Tuple</span><span>.</span><span class="type-name">InverseMap</span><span>[</span><span class="identifier">source</span><span>.</span><span class="keyword">type</span><span>, </span><span class="type-name">Mode</span><span>.</span><span class="identifier">current</span><span>.</span><span class="type-name">Self</span><span>]]
+}
+</span><span class="comment">// res0: Either[List[String], *:[Int, *:[String, *:[List[Int], *:[Int, EmptyTuple]]]]] = Right(
+//   value = (1, &quot;str&quot;, List(3, 3, 3), 4)
+// )</span></code></pre>
+        <p>...where repeatedly referring to the <code>F</code> wrapper becomes really unwieldly - that type is known to the compiler at each call site so we make it work for us in conjunction with <code>Mode.current</code> which summons the <code>Mode[F]</code> instance in the current implicit scope.</p>
 
         
 

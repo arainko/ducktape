@@ -96,15 +96,20 @@
   <ul class="nav-list">
     <li class="level1 nav-leaf"><a href="#_1-user-supplied-transformers">1. User supplied <code>Transformers</code></a></li>
     <li class="level1 nav-leaf"><a href="#_2-upcasting">2. Upcasting</a></li>
-    <li class="level1 nav-leaf"><a href="#_3-mapping-over-an-option">3. Mapping over an <code>Option</code></a></li>
-    <li class="level1 nav-leaf"><a href="#_4-transforming-and-wrapping-in-an-option">4. Transforming and wrapping in an <code>Option</code></a></li>
-    <li class="level1 nav-leaf"><a href="#_5-mapping-over-and-changing-the-collection-type">5. Mapping over and changing the collection type</a></li>
-    <li class="level1 nav-leaf"><a href="#_6-transforming-between-case-classes">6. Transforming between case classes</a></li>
-    <li class="level1 nav-leaf"><a href="#_7-transforming-between-enums-sealed-traits">7. Transforming between enums/sealed traits</a></li>
-    <li class="level1 nav-leaf"><a href="#_8-same-named-singletons">8. Same named singletons</a></li>
-    <li class="level1 nav-leaf"><a href="#_9-unwrapping-a-value-class">9. Unwrapping a value class</a></li>
-    <li class="level1 nav-leaf"><a href="#_10-wrapping-a-value-class">10. Wrapping a value class</a></li>
-    <li class="level1 nav-leaf"><a href="#_11-automatically-derived-transformer-derived">11. Automatically derived <code>Transformer.Derived</code></a></li>
+    <li class="level1 nav-leaf"><a href="#_3-flatmapping-over-an-arbitrary-f-_-with-a-fallible-transformation-underneath-fallible-transformations-only">3. Flatmapping over an arbitrary <code>F[_]</code> with a fallible transformation underneath (fallible transformations only)</a></li>
+    <li class="level1 nav-leaf"><a href="#_4-mapping-over-an-arbitrary-f-_-fallible-transformations-only">4. Mapping over an arbitrary <code>F[_]</code> (fallible transformations only)</a></li>
+    <li class="level1 nav-leaf"><a href="#_5-mapping-over-an-option">5. Mapping over an <code>Option</code></a></li>
+    <li class="level1 nav-leaf"><a href="#_6-transforming-and-wrapping-in-an-option">6. Transforming and wrapping in an <code>Option</code></a></li>
+    <li class="level1 nav-leaf"><a href="#_7-mapping-over-and-changing-the-collection-type">7. Mapping over and changing the collection type</a></li>
+    <li class="level1 nav-leaf"><a href="#_8-transforming-between-case-classes">8. Transforming between case classes</a></li>
+    <li class="level1 nav-leaf"><a href="#_9-transforming-between-case-classes-and-tuples">9. Transforming between case classes and tuples</a></li>
+    <li class="level1 nav-leaf"><a href="#_10-transforming-between-tuples-and-case-classes">10. Transforming between tuples and case classes</a></li>
+    <li class="level1 nav-leaf"><a href="#_11-transforming-between-tuples">11. Transforming between tuples</a></li>
+    <li class="level1 nav-leaf"><a href="#_12-transforming-between-enums-sealed-traits">12. Transforming between enums/sealed traits</a></li>
+    <li class="level1 nav-leaf"><a href="#_13-same-named-singletons">13. Same named singletons</a></li>
+    <li class="level1 nav-leaf"><a href="#_14-unwrapping-a-value-class">14. Unwrapping a value class</a></li>
+    <li class="level1 nav-leaf"><a href="#_15-wrapping-a-value-class">15. Wrapping a value class</a></li>
+    <li class="level1 nav-leaf"><a href="#_16-automatically-derived-transformer-derived">16. Automatically derived <code>Transformer.Derived</code></a></li>
   </ul>
 
   <p class="footer"></p>
@@ -153,9 +158,78 @@
           </div>
         </div>
         
-        <h3 id="_3-mapping-over-an-option" class="section"><a class="anchor-link left" href="#_3-mapping-over-an-option"><i class="icofont-laika link">&#xef71;</i></a>3. Mapping over an <code>Option</code></h3>
-        <p>Transforming between options comes down to mapping over it and recursively deriving a transformation for the value inside.</p>
+        <h3 id="_3-flatmapping-over-an-arbitrary-f-_-with-a-fallible-transformation-underneath-fallible-transformations-only" class="section"><a class="anchor-link left" href="#_3-flatmapping-over-an-arbitrary-f-_-with-a-fallible-transformation-underneath-fallible-transformations-only"><i class="icofont-laika link">&#xef71;</i></a>3. Flatmapping over an arbitrary <code>F[_]</code> with a fallible transformation underneath (fallible transformations only)</h3>
+        <p>A value wrapped in an arbitrary <code>F[_]</code> can be flatmapped over given that:</p>
+        <ul>
+          <li>an instance of <code>Mode.FailFast[F]</code> is in scope,</li>
+          <li>a fallible transformation can be derived for the type being wrapped</li>
+        </ul>
         <div class="tab-container" data-tab-group="underlying-code-3">
+          <ul class="tab-group">
+            <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
+            <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
+          </ul>
+          <div class="tab-content active" data-choice-name="visible">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Positive</span><span> </span><span class="keyword">private</span><span> (</span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span>)
+
+</span><span class="keyword">object</span><span> </span><span class="type-name">Positive</span><span> {
+  </span><span class="keyword">given</span><span> </span><span class="type-name">Transformer</span><span>.</span><span class="type-name">Fallible</span><span>[[</span><span class="identifier">a</span><span>] =&gt;&gt; </span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="identifier">a</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Positive</span><span>] = 
+    </span><span class="identifier">int</span><span> =&gt; </span><span class="keyword">if</span><span> (</span><span class="identifier">int</span><span> &lt; </span><span class="number-literal">0</span><span>) </span><span class="type-name">Left</span><span>(</span><span class="string-literal">&quot;Lesser or equal to 0&quot;</span><span>) </span><span class="keyword">else</span><span> </span><span class="type-name">Right</span><span>(</span><span class="type-name">Positive</span><span>(</span><span class="identifier">int</span><span>))
+}
+
+</span><span class="type-name">Mode</span><span>.</span><span class="type-name">FailFast</span><span>.</span><span class="identifier">either</span><span>[</span><span class="type-name">String</span><span>].</span><span class="identifier">locally</span><span> {
+  </span><span class="type-name">Right</span><span>(</span><span class="number-literal">1</span><span>).</span><span class="identifier">fallibleTo</span><span>[</span><span class="type-name">Positive</span><span>]
+}
+</span><span class="comment">// res4: Either[String, Positive] = Right(value = Positive(value = 1))</span></code></pre>
+          </div>
+          <div class="tab-content" data-choice-name="generated">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
+  </span><span class="keyword">val</span><span> </span><span class="identifier">self$proxy2</span><span>: </span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>] = </span><span class="type-name">Mode</span><span>.</span><span class="type-name">FailFast</span><span>.</span><span class="identifier">either</span><span>[</span><span class="type-name">String</span><span>]
+  {
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy4</span><span>: </span><span class="type-name">Right</span><span>[</span><span class="type-name">Nothing</span><span>, </span><span class="type-name">Int</span><span>] = </span><span class="type-name">Right</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Nothing</span><span>, </span><span class="type-name">Int</span><span>](</span><span class="number-literal">1</span><span>)
+    (</span><span class="identifier">self$proxy2</span><span>.</span><span class="identifier">flatMap</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Positive</span><span>](
+      </span><span class="identifier">value$proxy4</span><span>,
+      (</span><span class="identifier">a</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="type-name">Positive</span><span>.</span><span class="keyword">given</span><span>_</span><span class="type-name">Fallible_Either_Int_Positive</span><span>.</span><span class="identifier">transform</span><span>(</span><span class="identifier">a</span><span>)
+    ): </span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">Positive</span><span>]): </span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">Positive</span><span>]
+  }: </span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">Positive</span><span>]
+}</span></code></pre>
+          </div>
+        </div>
+        
+        <h3 id="_4-mapping-over-an-arbitrary-f-_-fallible-transformations-only" class="section"><a class="anchor-link left" href="#_4-mapping-over-an-arbitrary-f-_-fallible-transformations-only"><i class="icofont-laika link">&#xef71;</i></a>4. Mapping over an arbitrary <code>F[_]</code> (fallible transformations only)</h3>
+        <p>A value wrapped in an arbitrary <code>F[_]</code> can be mapped over given that:</p>
+        <ul>
+          <li>an instance of <code>Mode[F]</code> is in scope,</li>
+          <li>a transformation can be derived for the type being wrapped</li>
+        </ul>
+        <div class="tab-container" data-tab-group="underlying-code-4">
+          <ul class="tab-group">
+            <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
+            <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
+          </ul>
+          <div class="tab-content active" data-choice-name="visible">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="type-name">Mode</span><span>.</span><span class="type-name">FailFast</span><span>.</span><span class="identifier">either</span><span>[</span><span class="type-name">String</span><span>].</span><span class="identifier">locally</span><span> {
+  </span><span class="type-name">Right</span><span>(</span><span class="number-literal">1</span><span>).</span><span class="identifier">fallibleTo</span><span>[</span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]]
+}
+</span><span class="comment">// res6: Either[String, Option[Int]] = Right(value = Some(value = 1))</span></code></pre>
+          </div>
+          <div class="tab-content" data-choice-name="generated">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
+  </span><span class="keyword">val</span><span> </span><span class="identifier">self$proxy4</span><span>: </span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>] = </span><span class="type-name">Mode</span><span>.</span><span class="type-name">FailFast</span><span>.</span><span class="identifier">either</span><span>[</span><span class="type-name">String</span><span>]
+  {
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy7</span><span>: </span><span class="type-name">Right</span><span>[</span><span class="type-name">Nothing</span><span>, </span><span class="type-name">Int</span><span>] = </span><span class="type-name">Right</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Nothing</span><span>, </span><span class="type-name">Int</span><span>](</span><span class="number-literal">1</span><span>)
+    (</span><span class="identifier">self$proxy4</span><span>
+      .</span><span class="identifier">map</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="identifier">value$proxy7</span><span>, (</span><span class="identifier">a</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="type-name">Some</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="identifier">a</span><span>)): </span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]]): </span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">Option</span><span>[
+      </span><span class="type-name">Int</span><span>
+    ]]
+  }: </span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]]
+}</span></code></pre>
+          </div>
+        </div>
+        
+        <h3 id="_5-mapping-over-an-option" class="section"><a class="anchor-link left" href="#_5-mapping-over-an-option"><i class="icofont-laika link">&#xef71;</i></a>5. Mapping over an <code>Option</code></h3>
+        <p>Transforming between options comes down to mapping over it and recursively deriving a transformation for the value inside.</p>
+        <div class="tab-container" data-tab-group="underlying-code-5">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -164,7 +238,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Transformer</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">String</span><span>] = </span><span class="identifier">int</span><span> =&gt; </span><span class="identifier">int</span><span>.</span><span class="identifier">toString</span><span>
 
 </span><span class="type-name">Option</span><span>(</span><span class="number-literal">1</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">Option</span><span>[</span><span class="type-name">String</span><span>]]
-</span><span class="comment">// res4: Option[String] = Some(value = &quot;1&quot;)</span></code></pre>
+</span><span class="comment">// res8: Option[String] = Some(value = &quot;1&quot;)</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
@@ -175,24 +249,24 @@
           </div>
         </div>
         
-        <h3 id="_4-transforming-and-wrapping-in-an-option" class="section"><a class="anchor-link left" href="#_4-transforming-and-wrapping-in-an-option"><i class="icofont-laika link">&#xef71;</i></a>4. Transforming and wrapping in an <code>Option</code></h3>
+        <h3 id="_6-transforming-and-wrapping-in-an-option" class="section"><a class="anchor-link left" href="#_6-transforming-and-wrapping-in-an-option"><i class="icofont-laika link">&#xef71;</i></a>6. Transforming and wrapping in an <code>Option</code></h3>
         <p>If a transformation between two types is possible then transforming between the source type and an <code>Option</code> of the destination type is just wrapping the transformation result in a <code>Some</code>.</p>
-        <div class="tab-container" data-tab-group="underlying-code-4">
+        <div class="tab-container" data-tab-group="underlying-code-6">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="number-literal">1</span><span>.</span><span class="identifier">to</span><span>[</span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>]]
-</span><span class="comment">// res6: Option[Int | String] = Some(value = 1)</span></code></pre>
+</span><span class="comment">// res10: Option[Int | String] = Some(value = 1)</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>((</span><span class="type-name">Some</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>](</span><span class="number-literal">1</span><span>): </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>]): </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>])</span></code></pre>
           </div>
         </div>
         
-        <h3 id="_5-mapping-over-and-changing-the-collection-type" class="section"><a class="anchor-link left" href="#_5-mapping-over-and-changing-the-collection-type"><i class="icofont-laika link">&#xef71;</i></a>5. Mapping over and changing the collection type</h3>
-        <div class="tab-container" data-tab-group="underlying-code-5">
+        <h3 id="_7-mapping-over-and-changing-the-collection-type" class="section"><a class="anchor-link left" href="#_7-mapping-over-and-changing-the-collection-type"><i class="icofont-laika link">&#xef71;</i></a>7. Mapping over and changing the collection type</h3>
+        <div class="tab-container" data-tab-group="underlying-code-7">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -202,7 +276,7 @@
 </span><span class="keyword">import</span><span> </span><span class="identifier">io</span><span>.</span><span class="identifier">github</span><span>.</span><span class="identifier">arainko</span><span>.</span><span class="identifier">ducktape</span><span>.</span><span class="identifier">to</span><span> </span><span class="keyword">as</span><span> </span><span class="identifier">convertTo</span><span>
 
 </span><span class="type-name">List</span><span>(</span><span class="number-literal">1</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>).</span><span class="identifier">convertTo</span><span>[</span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>]]
-</span><span class="comment">// res8: Vector[Int | String] = Vector(1, 2, 3, 4)</span></code></pre>
+</span><span class="comment">// res12: Vector[Int | String] = Vector(1, 2, 3, 4)</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
@@ -214,13 +288,13 @@
           </div>
         </div>
         
-        <h3 id="_6-transforming-between-case-classes" class="section"><a class="anchor-link left" href="#_6-transforming-between-case-classes"><i class="icofont-laika link">&#xef71;</i></a>6. Transforming between case classes</h3>
+        <h3 id="_8-transforming-between-case-classes" class="section"><a class="anchor-link left" href="#_8-transforming-between-case-classes"><i class="icofont-laika link">&#xef71;</i></a>8. Transforming between case classes</h3>
         <p>A source case class can be transformed into the destination case class given that:</p>
         <ul>
           <li>source has fields whose names cover all of the destination&#39;s fields,</li>
           <li>a transformation for the types corresponding to those fields can be derived.</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code-6">
+        <div class="tab-container" data-tab-group="underlying-code-8">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -237,7 +311,7 @@
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">value</span><span>: </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>])
 
 </span><span class="type-name">SourceToplevel</span><span>(</span><span class="type-name">SourceLevel1</span><span>(</span><span class="string-literal">&quot;extra&quot;</span><span>, </span><span class="number-literal">1</span><span>, </span><span class="type-name">List</span><span>(</span><span class="type-name">SourceLevel2</span><span>(</span><span class="number-literal">1</span><span>), </span><span class="type-name">SourceLevel2</span><span>(</span><span class="number-literal">2</span><span>)))).</span><span class="identifier">to</span><span>[</span><span class="type-name">DestToplevel</span><span>]
-</span><span class="comment">// res11: DestToplevel = DestToplevel(
+</span><span class="comment">// res15: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(
 //     int = 1,
 //     level2s = Vector(
@@ -263,13 +337,118 @@
           </div>
         </div>
         
-        <h3 id="_7-transforming-between-enums-sealed-traits" class="section"><a class="anchor-link left" href="#_7-transforming-between-enums-sealed-traits"><i class="icofont-laika link">&#xef71;</i></a>7. Transforming between enums/sealed traits</h3>
+        <h3 id="_9-transforming-between-case-classes-and-tuples" class="section"><a class="anchor-link left" href="#_9-transforming-between-case-classes-and-tuples"><i class="icofont-laika link">&#xef71;</i></a>9. Transforming between case classes and tuples</h3>
+        <p>A source case class can be transformed into a tuple given that:</p>
+        <ul>
+          <li>the order of its fields align with the tuple&#39;s elements (the source&#39;s length CAN be greater than the destination tuple&#39;s length),</li>
+          <li>a transformation for the types corresponding to the aligned fields and elements can be derived</li>
+        </ul>
+        <div class="tab-container" data-tab-group="underlying-code-9">
+          <ul class="tab-group">
+            <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
+            <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
+          </ul>
+          <div class="tab-content active" data-choice-name="visible">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">io</span><span>.</span><span class="identifier">github</span><span>.</span><span class="identifier">arainko</span><span>.</span><span class="identifier">ducktape</span><span>.*
+
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Source</span><span>(</span><span class="identifier">field1</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field2</span><span>: </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="identifier">field3</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field4</span><span>: </span><span class="type-name">Int</span><span>)
+
+</span><span class="type-name">Source</span><span>(</span><span class="number-literal">1</span><span>, </span><span class="type-name">List</span><span>(</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>).</span><span class="identifier">to</span><span>[(</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>])]
+</span><span class="comment">// res18: Tuple3[Int, Vector[Int], Option[Int]] = (
+//   1,
+//   Vector(2, 2, 2),
+//   Some(value = 3)
+// )</span></code></pre>
+          </div>
+          <div class="tab-content" data-choice-name="generated">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
+  </span><span class="keyword">val</span><span> </span><span class="identifier">source$proxy8</span><span>: </span><span class="type-name">Source</span><span> = </span><span class="type-name">Source</span><span>.</span><span class="identifier">apply</span><span>(</span><span class="number-literal">1</span><span>, </span><span class="type-name">List</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>)
+  (</span><span class="type-name">Tuple3</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="identifier">field1</span><span>.</span><span class="keyword">type</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Some</span><span>[</span><span class="type-name">Int</span><span>]](
+    </span><span class="identifier">source$proxy8</span><span>.</span><span class="identifier">field1</span><span>,
+    </span><span class="identifier">source$proxy8</span><span>.</span><span class="identifier">field2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">Int</span><span>]((</span><span class="identifier">src</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="identifier">src</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="identifier">iterableFactory</span><span>[</span><span class="type-name">Int</span><span>]),
+    </span><span class="type-name">Some</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="identifier">source$proxy8</span><span>.</span><span class="identifier">field3</span><span>)
+  ): </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]]): </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]]
+}</span></code></pre>
+          </div>
+        </div>
+        
+        <h3 id="_10-transforming-between-tuples-and-case-classes" class="section"><a class="anchor-link left" href="#_10-transforming-between-tuples-and-case-classes"><i class="icofont-laika link">&#xef71;</i></a>10. Transforming between tuples and case classes</h3>
+        <p>A source tuple can be transformed into a case class given that:</p>
+        <ul>
+          <li>the order of its elements align with the case class&#39; fields (the source&#39;s length CAN be greater than the destination&#39;s length),</li>
+          <li>a transformation for the types corresponding to the aligned fields and elements can be derived</li>
+        </ul>
+        <div class="tab-container" data-tab-group="underlying-code-10">
+          <ul class="tab-group">
+            <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
+            <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
+          </ul>
+          <div class="tab-content active" data-choice-name="visible">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">io</span><span>.</span><span class="identifier">github</span><span>.</span><span class="identifier">arainko</span><span>.</span><span class="identifier">ducktape</span><span>.*
+
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Dest</span><span>(</span><span class="identifier">field1</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field2</span><span>: </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="identifier">field3</span><span>: </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>])
+
+(</span><span class="number-literal">1</span><span>, </span><span class="type-name">Vector</span><span>(</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">Dest</span><span>]
+</span><span class="comment">// res21: Dest = Dest(
+//   field1 = 1,
+//   field2 = List(2, 2, 2),
+//   field3 = Some(value = 3)
+// )</span></code></pre>
+          </div>
+          <div class="tab-content" data-choice-name="generated">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
+  </span><span class="keyword">val</span><span> </span><span class="identifier">source$proxy10</span><span>: </span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>] =
+    </span><span class="type-name">Tuple4</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>](</span><span class="number-literal">1</span><span>, </span><span class="type-name">Vector</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>)
+  (</span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(
+    </span><span class="identifier">source$proxy10</span><span class="number-literal">._1</span><span>,
+    </span><span class="identifier">source$proxy10</span><span class="number-literal">._2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">Int</span><span>]((</span><span class="identifier">src</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="identifier">src</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="identifier">iterableFactory</span><span>[</span><span class="type-name">Int</span><span>]),
+    </span><span class="type-name">Some</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="identifier">source$proxy10</span><span class="number-literal">._3</span><span>)
+  ): </span><span class="type-name">Dest</span><span>): </span><span class="type-name">Dest</span><span>
+}</span></code></pre>
+          </div>
+        </div>
+        
+        <h3 id="_11-transforming-between-tuples" class="section"><a class="anchor-link left" href="#_11-transforming-between-tuples"><i class="icofont-laika link">&#xef71;</i></a>11. Transforming between tuples</h3>
+        <p>A source tuple can be transformed into a destination tuple given that:</p>
+        <ul>
+          <li>the order of its elements align with the destination tuple&#39;s elements (the source&#39;s length CAN be greater than the destination&#39;s length),</li>
+          <li>a transformation for the types corresponding to the aligned fields and elements can be derived</li>
+        </ul>
+        <div class="tab-container" data-tab-group="underlying-code-11">
+          <ul class="tab-group">
+            <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
+            <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
+          </ul>
+          <div class="tab-content active" data-choice-name="visible">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">io</span><span>.</span><span class="identifier">github</span><span>.</span><span class="identifier">arainko</span><span>.</span><span class="identifier">ducktape</span><span>.*
+
+(</span><span class="number-literal">1</span><span>, </span><span class="type-name">Vector</span><span>(</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>).</span><span class="identifier">to</span><span>[(</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>])]
+</span><span class="comment">// res24: Tuple3[Int, List[Int], Option[Int]] = (
+//   1,
+//   List(2, 2, 2),
+//   Some(value = 3)
+// )</span></code></pre>
+          </div>
+          <div class="tab-content" data-choice-name="generated">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
+  </span><span class="keyword">val</span><span> </span><span class="identifier">source$proxy12</span><span>: </span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>] =
+    </span><span class="type-name">Tuple4</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>](</span><span class="number-literal">1</span><span>, </span><span class="type-name">Vector</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>)
+  (</span><span class="type-name">Tuple3</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="identifier">_1</span><span>.</span><span class="keyword">type</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Some</span><span>[</span><span class="type-name">Int</span><span>]](
+    </span><span class="identifier">source$proxy12</span><span class="number-literal">._1</span><span>,
+    </span><span class="identifier">source$proxy12</span><span class="number-literal">._2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">Int</span><span>]((</span><span class="identifier">src</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="identifier">src</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="identifier">iterableFactory</span><span>[</span><span class="type-name">Int</span><span>]),
+    </span><span class="type-name">Some</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="identifier">source$proxy12</span><span class="number-literal">._3</span><span>)
+  ): </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]]): </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]]
+}</span></code></pre>
+          </div>
+        </div>
+        
+        <h3 id="_12-transforming-between-enums-sealed-traits" class="section"><a class="anchor-link left" href="#_12-transforming-between-enums-sealed-traits"><i class="icofont-laika link">&#xef71;</i></a>12. Transforming between enums/sealed traits</h3>
         <p>A source coproduct can be transformed into the destination coproduct given that:</p>
         <ul>
           <li>destination&#39;s children have names that match all of the source&#39;s children,</li>
           <li>a transformation between those two corresponding types can be derived.</li>
         </ul>
-        <div class="tab-container" data-tab-group="underlying-code-7">
+        <div class="tab-container" data-tab-group="underlying-code-12">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -291,19 +470,19 @@
 }
 
 (</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>: </span><span class="type-name">PaymentMethod</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">OtherPaymentMethod</span><span>]
-</span><span class="comment">// res13: OtherPaymentMethod = Cash</span></code></pre>
+</span><span class="comment">// res26: OtherPaymentMethod = Cash</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
-  </span><span class="keyword">val</span><span> </span><span class="identifier">source$proxy8</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>: </span><span class="type-name">PaymentMethod</span><span>
-  (</span><span class="keyword">if</span><span> (</span><span class="identifier">source$proxy8</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>])
+  </span><span class="keyword">val</span><span> </span><span class="identifier">source$proxy14</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>: </span><span class="type-name">PaymentMethod</span><span>
+  (</span><span class="keyword">if</span><span> (</span><span class="identifier">source$proxy14</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>])
      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(
-       </span><span class="identifier">name</span><span> = </span><span class="identifier">source$proxy8</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>,
-       </span><span class="identifier">digits</span><span> = </span><span class="identifier">source$proxy8</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>,
-       </span><span class="identifier">expires</span><span> = </span><span class="identifier">source$proxy8</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">expires</span><span>
+       </span><span class="identifier">name</span><span> = </span><span class="identifier">source$proxy14</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>,
+       </span><span class="identifier">digits</span><span> = </span><span class="identifier">source$proxy14</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>,
+       </span><span class="identifier">expires</span><span> = </span><span class="identifier">source$proxy14</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">expires</span><span>
      )
-   </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">source$proxy8</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>]) </span><span class="type-name">Cash</span><span>
-   </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">source$proxy8</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>]) </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">source$proxy8</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
+   </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">source$proxy14</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>]) </span><span class="type-name">Cash</span><span>
+   </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> (</span><span class="identifier">source$proxy14</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>]) </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">source$proxy14</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
    </span><span class="keyword">else</span><span>
      </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(
        </span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>
@@ -312,9 +491,9 @@
           </div>
         </div>
         
-        <h3 id="_8-same-named-singletons" class="section"><a class="anchor-link left" href="#_8-same-named-singletons"><i class="icofont-laika link">&#xef71;</i></a>8. Same named singletons</h3>
+        <h3 id="_13-same-named-singletons" class="section"><a class="anchor-link left" href="#_13-same-named-singletons"><i class="icofont-laika link">&#xef71;</i></a>13. Same named singletons</h3>
         <p>Transformations between same named singletons come down to just reffering to the destination singleton.</p>
-        <div class="tab-container" data-tab-group="underlying-code-8">
+        <div class="tab-container" data-tab-group="underlying-code-13">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -329,15 +508,15 @@
 }
 
 </span><span class="identifier">example1</span><span>.</span><span class="type-name">Singleton</span><span>.</span><span class="identifier">to</span><span>[</span><span class="identifier">example2</span><span>.</span><span class="type-name">Singleton</span><span>.</span><span class="keyword">type</span><span>]
-</span><span class="comment">// res15: Singleton = Singleton</span></code></pre>
+</span><span class="comment">// res28: Singleton = Singleton</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="type-name">Singleton</span></code></pre>
           </div>
         </div>
         
-        <h3 id="_9-unwrapping-a-value-class" class="section"><a class="anchor-link left" href="#_9-unwrapping-a-value-class"><i class="icofont-laika link">&#xef71;</i></a>9. Unwrapping a value class</h3>
-        <div class="tab-container" data-tab-group="underlying-code-9">
+        <h3 id="_14-unwrapping-a-value-class" class="section"><a class="anchor-link left" href="#_14-unwrapping-a-value-class"><i class="icofont-laika link">&#xef71;</i></a>14. Unwrapping a value class</h3>
+        <div class="tab-container" data-tab-group="underlying-code-14">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -346,18 +525,18 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Wrapper1</span><span>(</span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span>) </span><span class="keyword">extends</span><span> </span><span class="type-name">AnyVal</span><span>
 
 </span><span class="type-name">Wrapper1</span><span>(</span><span class="number-literal">1</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">Int</span><span>]
-</span><span class="comment">// res17: Int = 1</span></code></pre>
+</span><span class="comment">// res30: Int = 1</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
-  </span><span class="keyword">val</span><span> </span><span class="identifier">source$proxy10</span><span>: </span><span class="type-name">Wrapper1</span><span> = </span><span class="type-name">Wrapper1</span><span>.</span><span class="identifier">apply</span><span>(</span><span class="number-literal">1</span><span>)
-  (</span><span class="identifier">source$proxy10</span><span>.</span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span>): </span><span class="type-name">Int</span><span>
+  </span><span class="keyword">val</span><span> </span><span class="identifier">source$proxy16</span><span>: </span><span class="type-name">Wrapper1</span><span> = </span><span class="type-name">Wrapper1</span><span>.</span><span class="identifier">apply</span><span>(</span><span class="number-literal">1</span><span>)
+  (</span><span class="identifier">source$proxy16</span><span>.</span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span>): </span><span class="type-name">Int</span><span>
 }</span></code></pre>
           </div>
         </div>
         
-        <h3 id="_10-wrapping-a-value-class" class="section"><a class="anchor-link left" href="#_10-wrapping-a-value-class"><i class="icofont-laika link">&#xef71;</i></a>10. Wrapping a value class</h3>
-        <div class="tab-container" data-tab-group="underlying-code-10">
+        <h3 id="_15-wrapping-a-value-class" class="section"><a class="anchor-link left" href="#_15-wrapping-a-value-class"><i class="icofont-laika link">&#xef71;</i></a>15. Wrapping a value class</h3>
+        <div class="tab-container" data-tab-group="underlying-code-15">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
@@ -366,29 +545,31 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Wrapper2</span><span>(</span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span>) </span><span class="keyword">extends</span><span> </span><span class="type-name">AnyVal</span><span>
 
 </span><span class="number-literal">1</span><span>.</span><span class="identifier">to</span><span>[</span><span class="type-name">Wrapper2</span><span>]
-</span><span class="comment">// res19: Wrapper2 = Wrapper2(value = 1)</span></code></pre>
+</span><span class="comment">// res32: Wrapper2 = Wrapper2(value = 1)</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>((</span><span class="keyword">new</span><span> </span><span class="type-name">Wrapper2</span><span>(</span><span class="number-literal">1</span><span>): </span><span class="type-name">Wrapper2</span><span>): </span><span class="type-name">Wrapper2</span><span>)</span></code></pre>
           </div>
         </div>
         
-        <h3 id="_11-automatically-derived-transformer-derived" class="section"><a class="anchor-link left" href="#_11-automatically-derived-transformer-derived"><i class="icofont-laika link">&#xef71;</i></a>11. Automatically derived <code>Transformer.Derived</code></h3>
+        <h3 id="_16-automatically-derived-transformer-derived" class="section"><a class="anchor-link left" href="#_16-automatically-derived-transformer-derived"><i class="icofont-laika link">&#xef71;</i></a>16. Automatically derived <code>Transformer.Derived</code></h3>
         <p>Instances of <code>Transformer.Derived</code> are automatically derived as a fallback to support use cases where a generic type (eg. a field of a case class) is unknown at definition site.</p>
         <p>Note that <code>Transformer[A, B] &lt;: Transformer.Derived[A, B]</code> so any <code>Transformer</code> in scope is eligible to become a <code>Transformer.Derived</code>.</p>
-        <div class="tab-container" data-tab-group="underlying-code-11">
+        <div class="tab-container" data-tab-group="underlying-code-16">
           <ul class="tab-group">
             <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">final</span><span> </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Source</span><span>[</span><span class="type-name">A</span><span>](</span><span class="identifier">field1</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field2</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">generic</span><span>: </span><span class="type-name">A</span><span>)
+            <pre><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">io</span><span>.</span><span class="identifier">github</span><span>.</span><span class="identifier">arainko</span><span>.</span><span class="identifier">ducktape</span><span>.*
+
+</span><span class="keyword">final</span><span> </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Source</span><span>[</span><span class="type-name">A</span><span>](</span><span class="identifier">field1</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field2</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">generic</span><span>: </span><span class="type-name">A</span><span>)
 </span><span class="keyword">final</span><span> </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Dest</span><span>[</span><span class="type-name">A</span><span>](</span><span class="identifier">field1</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field2</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">generic</span><span>: </span><span class="type-name">A</span><span>)
 
 </span><span class="keyword">def</span><span> </span><span class="declaration-name">transformSource</span><span>[</span><span class="type-name">A</span><span>, </span><span class="type-name">B</span><span>](</span><span class="identifier">source</span><span>: </span><span class="type-name">Source</span><span>[</span><span class="type-name">A</span><span>])(</span><span class="keyword">using</span><span> </span><span class="type-name">Transformer</span><span>.</span><span class="type-name">Derived</span><span>[</span><span class="type-name">A</span><span>, </span><span class="type-name">B</span><span>]): </span><span class="type-name">Dest</span><span>[</span><span class="type-name">B</span><span>] = </span><span class="identifier">source</span><span>.</span><span class="identifier">to</span><span>[</span><span class="type-name">Dest</span><span>[</span><span class="type-name">B</span><span>]]
 
 </span><span class="identifier">transformSource</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="type-name">Source</span><span>(</span><span class="number-literal">1</span><span>, </span><span class="string-literal">&quot;2&quot;</span><span>, </span><span class="number-literal">3</span><span>))
-</span><span class="comment">// res21: Dest[Option[Int]] = Dest(
+</span><span class="comment">// res35: Dest[Option[Int]] = Dest(
 //   field1 = 1,
 //   field2 = &quot;2&quot;,
 //   generic = Some(value = 3)
