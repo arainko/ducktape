@@ -6,7 +6,7 @@ import scala.quoted.*
 private[ducktape] object Logger {
 
   // Logger Config
-  private[ducktape] transparent inline given level: Level = Level.Off
+  private[ducktape] transparent inline given level: Level = Level.Debug
   private val output = Output.StdOut
   private def filter(msg: String, loc: String) = true
   enum Level {
