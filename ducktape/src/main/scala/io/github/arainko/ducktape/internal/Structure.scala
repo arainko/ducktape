@@ -95,6 +95,12 @@ private[ducktape] object Structure {
         case tpe @ '[Nothing] =>
           Structure.Ordinary(tpe, path)
 
+        case tpe @ '[Option[param]] =>
+          Structure.Optional(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))
+
+        case tpe @ '[Iterable[param]] =>
+          Structure.Collection(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))
+
         case WrapperType(wrapper: WrapperType.Wrapped[f], '[underlying]) =>
           @unused given Type[f] = wrapper.wrapperTpe
           Structure.Wrappped(
@@ -102,12 +108,6 @@ private[ducktape] object Structure {
             path,
             Structure.of[underlying](path.appended(Path.Segment.Element(Type.of[underlying])))
           )
-
-        case tpe @ '[Option[param]] =>
-          Structure.Optional(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))
-
-        case tpe @ '[Iterable[param]] =>
-          Structure.Collection(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))
 
         case tpe @ '[AnyVal] if tpe.repr.typeSymbol.flags.is(Flags.Case) =>
           val repr = tpe.repr
