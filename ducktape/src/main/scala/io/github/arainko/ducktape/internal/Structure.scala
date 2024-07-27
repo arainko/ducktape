@@ -117,7 +117,7 @@ private[ducktape] object Structure {
 
         case tpe @ '[Any *: scala.Tuple] if !tpe.repr.isTupleN => // let plain tuples be caught later on
           val elements =
-            tupleTypeElements(tpe.repr.dealias).zipWithIndex.map { (tpe, idx) =>
+            tupleTypeElements(tpe).zipWithIndex.map { (tpe, idx) =>
               tpe.asType match {
                 case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
               }
@@ -155,7 +155,7 @@ private[ducktape] object Structure {
                       }
                     } if tpe.repr.isTupleN =>
                   val structures =
-                    tupleTypeElements(TypeRepr.of[types]).zipWithIndex
+                    tupleTypeElements(Type.of[types]).zipWithIndex
                       .map((tpe, idx) =>
                         tpe.asType match {
                           case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
@@ -172,7 +172,7 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val structures =
-                    tupleTypeElements(TypeRepr.of[types])
+                    tupleTypeElements(Type.of[types])
                       .zip(constStringTuple(TypeRepr.of[labels]))
                       .map((tpe, name) =>
                         name -> (tpe.asType match {
@@ -189,7 +189,7 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val structures =
-                    tupleTypeElements(TypeRepr.of[types])
+                    tupleTypeElements(Type.of[types])
                       .zip(constStringTuple(TypeRepr.of[labels]))
                       .map((tpe, name) =>
                         name -> (tpe.asType match { case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Case(Type.of[tpe]))) })
@@ -209,21 +209,25 @@ private[ducktape] object Structure {
 
   private def constantString[Const <: String: Type](using Quotes) = Type.valueOfConstant[Const].get
 
-  private def tupleTypeElements(using Quotes)(tp: quotes.reflect.TypeRepr): List[quotes.reflect.TypeRepr] = {
-    import quotes.reflect.*
+  private def tupleTypeElements(tpe: Type[?])(using Quotes): List[quotes.reflect.TypeRepr] = {
+    @tailrec def loop(using Quotes)(curr: Type[?], acc: List[quotes.reflect.TypeRepr]): List[quotes.reflect.TypeRepr] = {
+      import quotes.reflect.*
 
-    @tailrec def loop(curr: TypeRepr, acc: List[TypeRepr]): List[TypeRepr] =
       curr match {
-        case AppliedType(pairTpe, head :: tail :: Nil) =>
-          loop(tail, head :: acc)
-        case _ =>
+        case '[head *: tail] =>
+          loop(Type.of[tail], TypeRepr.of[head] :: acc)
+        case '[EmptyTuple] => 
           acc
+        case other =>
+          report.errorAndAbort(s"Unexpected type (${other.repr.show}) encountered when extracting tuple type elems. This is a bug in ducktape.")
       }
-    loop(tp, Nil).reverse
+    }
+
+    loop(tpe, Nil).reverse
   }
 
   private def constStringTuple(using Quotes)(tp: quotes.reflect.TypeRepr): List[String] = {
     import quotes.reflect.*
-    tupleTypeElements(tp).map { case ConstantType(StringConstant(l)) => l }
+    tupleTypeElements(tp.asType).map { case ConstantType(StringConstant(l)) => l }
   }
 }
