@@ -52,6 +52,11 @@ private[ducktape] object Structure {
 
   case class Optional(tpe: Type[? <: Option[?]], path: Path, paramStruct: Structure) extends Structure
 
+  object Optional {
+    def fromWrapped(wrapped: Wrapped[Option]): Optional =
+      Optional(wrapped.tpe, wrapped.path, wrapped.underlying)
+  }
+
   case class Collection(tpe: Type[? <: Iterable[?]], path: Path, paramStruct: Structure) extends Structure
 
   case class Singleton(tpe: Type[?], path: Path, name: String, value: Expr[Any]) extends Structure
@@ -60,7 +65,7 @@ private[ducktape] object Structure {
 
   case class ValueClass(tpe: Type[? <: AnyVal], path: Path, paramTpe: Type[?], paramFieldName: String) extends Structure
 
-  case class Wrappped[F[+x]](tpe: Type[? <: F[Any]], path: Path, underlying: Structure) extends Structure
+  case class Wrapped[F[+x]](tpe: Type[? <: F[Any]], wrapper: WrapperType[F], path: Path, underlying: Structure) extends Structure
 
   case class Lazy private (tpe: Type[?], path: Path, private val deferredStruct: () => Structure) extends Structure {
     lazy val struct: Structure = deferredStruct()
@@ -95,19 +100,20 @@ private[ducktape] object Structure {
         case tpe @ '[Nothing] =>
           Structure.Ordinary(tpe, path)
 
+        case WrapperType(wrapper: WrapperType[f], '[underlying]) =>
+          @unused given Type[f] = wrapper.wrapper
+          Structure.Wrapped(
+            Type.of[f[underlying]],
+            wrapper,
+            path,
+            Structure.of[underlying](path.appended(Path.Segment.Element(Type.of[underlying])))
+          )
+
         case tpe @ '[Option[param]] =>
           Structure.Optional(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))
 
         case tpe @ '[Iterable[param]] =>
           Structure.Collection(tpe, path, Structure.of[param](path.appended(Path.Segment.Element(Type.of[param]))))
-
-        case WrapperType(wrapper: WrapperType.Wrapped[f], '[underlying]) =>
-          @unused given Type[f] = wrapper.wrapperTpe
-          Structure.Wrappped(
-            Type.of[f[underlying]],
-            path,
-            Structure.of[underlying](path.appended(Path.Segment.Element(Type.of[underlying])))
-          )
 
         case tpe @ '[AnyVal] if tpe.repr.typeSymbol.flags.is(Flags.Case) =>
           val repr = tpe.repr
@@ -216,10 +222,12 @@ private[ducktape] object Structure {
       curr match {
         case '[head *: tail] =>
           loop(Type.of[tail], TypeRepr.of[head] :: acc)
-        case '[EmptyTuple] => 
+        case '[EmptyTuple] =>
           acc
         case other =>
-          report.errorAndAbort(s"Unexpected type (${other.repr.show}) encountered when extracting tuple type elems. This is a bug in ducktape.")
+          report.errorAndAbort(
+            s"Unexpected type (${other.repr.show}) encountered when extracting tuple type elems. This is a bug in ducktape."
+          )
       }
     }
 
