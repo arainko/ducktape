@@ -49,11 +49,10 @@ A value wrapped in an arbitrary `F[_]` can be flatmapped over given that:
 @:select(underlying-code-3)
 @:choice(visible)
 ```scala mdoc
-
 case class Positive private (value: Int)
 
 object Positive {
-  given Transformer.Fallible[[a] =>> Either[String, a], Int, Positive] = 
+  given Transformer.Fallible[[a] =>> Either[String, a], Int, Positive] =
     int => if (int < 0) Left("Lesser or equal to 0") else Right(Positive(int))
 }
 
@@ -80,7 +79,6 @@ A value wrapped in an arbitrary `F[_]` can be mapped over given that:
 @:select(underlying-code-4)
 @:choice(visible)
 ```scala mdoc
-
 Mode.FailFast.either[String].locally {
   Right(1).fallibleTo[Option[Int]]
 }
