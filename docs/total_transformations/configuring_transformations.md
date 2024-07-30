@@ -131,10 +131,10 @@ Docs.printCode {
   val source = (1, List(2, 2, 2), 3, 4)
 
 // using `.apply` to select the element
-source.into[(Int, Vector[Int], Int)].transform(Field.const(_.apply(2), 10))
+  source.into[(Int, Vector[Int], Int)].transform(Field.const(_.apply(2), 10))
 
 // using the legacy accessors
-source.into[(Int, Vector[Int], Int)].transform(Field.const(_._3, 10))
+  source.into[(Int, Vector[Int], Int)].transform(Field.const(_._3, 10))
 }
 ```
 @:@
