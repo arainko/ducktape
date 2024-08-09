@@ -61,6 +61,22 @@ private[ducktape] object Planner {
             recurse(source, paramStruct)
           )
 
+        // Wrapped(WrapperType.Optional) is isomorphic to Optional
+        // scalafmt: { maxColumn = 150 }
+        case (source @ Wrapped(_, WrapperType.Optional, _, srcUnderlying)) -> (dest @ Wrapped(_, WrapperType.Optional, _, destUnderlying)) =>
+          Plan.BetweenOptions(
+            Structure.Optional.fromWrapped(source),
+            Structure.Optional.fromWrapped(dest),
+            recurse(srcUnderlying, destUnderlying)
+          )
+
+        case source -> (dest @ Wrapped(_, WrapperType.Optional, _, underlying)) =>
+          Plan.BetweenNonOptionOption(
+            source,
+            Structure.Optional.fromWrapped(dest),
+            recurse(source, underlying)
+          )
+
         case (source @ Collection(_, _, srcParamStruct)) -> (dest @ Collection(_, _, destParamStruct)) =>
           Plan.BetweenCollections(
             source,
@@ -246,8 +262,7 @@ private[ducktape] object Planner {
         boundary[Plan.Error | plan.type]:
           var owner = Symbol.spliceOwner
           while !owner.isNoSymbol do {
-            if owner == transformerSymbol then
-              boundary.break(Plan.Error.from(plan, ErrorMessage.LoopingTransformerDetected, None))
+            if owner == transformerSymbol then boundary.break(Plan.Error.from(plan, ErrorMessage.LoopingTransformerDetected, None))
             owner = owner.maybeOwner
           }
           plan
@@ -260,7 +275,7 @@ private[ducktape] object Planner {
       structs: (Structure, Structure)
     )(using Quotes, Depth, Context.Of[F]): Option[Plan[Erroneous, F]] =
       PartialFunction.condOpt(Context.current *: structs) {
-        case (ctx: Context.PossiblyFallible[f], source @ Wrappped(tpe, path, underlying), dest) =>
+        case (ctx: Context.PossiblyFallible[f], source @ Wrapped(tpe, _, path, underlying), dest) =>
           // needed for the recurse call to return Plan[Erroneous, Nothing]
           given Context.Total = ctx.toTotal
           val plan = Plan.BetweenFallibleNonFallible(
@@ -283,7 +298,7 @@ private[ducktape] object Planner {
       PartialFunction.condOpt(Context.current *: structs) {
         case (
               ctx @ Context.PossiblyFallible(_, _, _, mode: TransformationMode.FailFast[f]),
-              source @ Wrappped(tpe, path, underlying),
+              source @ Wrapped(tpe, _, path, underlying),
               dest
             ) =>
           ctx.reifyPlan[F] {
@@ -296,13 +311,8 @@ private[ducktape] object Planner {
           }
 
         case (
-              ctx @ Context.PossiblyFallible(
-                WrapperType.Wrapped(given Type[f]),
-                _,
-                _,
-                TransformationMode.Accumulating(mode, Some(localMode))
-              ),
-              source @ Wrappped(tpe, path, underlying),
+              ctx @ Context.PossiblyFallible(_, _, _, TransformationMode.Accumulating(mode, Some(localMode))),
+              source @ Wrapped(tpe, _, path, underlying),
               dest
             ) =>
           ctx.reifyPlan[F] {
@@ -313,7 +323,6 @@ private[ducktape] object Planner {
               recurse(underlying, dest)
             )
           }
-
       }
   }
 }

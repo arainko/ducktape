@@ -84,13 +84,13 @@ private[ducktape] object Plan {
   ) extends Plan[Nothing, Nothing]
 
   case class BetweenFallibleNonFallible[+E <: Erroneous](
-    source: Structure.Wrappped[?],
+    source: Structure.Wrapped[?],
     dest: Structure,
     plan: Plan[E, Nothing]
   ) extends Plan[E, Fallible]
 
   case class BetweenFallibles[+E <: Erroneous](
-    source: Structure.Wrappped[?],
+    source: Structure.Wrapped[?],
     dest: Structure,
     mode: TransformationMode.FailFast[?],
     plan: Plan[E, Fallible]

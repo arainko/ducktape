@@ -19,7 +19,7 @@ private[ducktape] object FallibleTransformations {
     configs: Expr[Seq[Field.Fallible[F, A, B] | Case.Fallible[F, A, B]]]
   )(using Quotes): Expr[F[B]] = {
     given Context.PossiblyFallible[F](
-      WrapperType.Wrapped(Type.of[F]),
+      WrapperType.create[F],
       TransformationSite.fromStringExpr(transformationSite),
       Summoner.PossiblyFallible[F],
       TransformationMode.create(F)
@@ -50,7 +50,7 @@ private[ducktape] object FallibleTransformations {
     configs: Expr[Seq[Field.Fallible[F, A, Args] | Case.Fallible[F, A, Args]]]
   )(using Quotes): Expr[F[B]] = {
     given Context.PossiblyFallible[F](
-      WrapperType.Wrapped(Type.of[F]),
+      WrapperType.create[F],
       TransformationSite.fromStringExpr(transformationSite),
       Summoner.PossiblyFallible[F],
       TransformationMode.create(F)
@@ -92,7 +92,7 @@ private[ducktape] object FallibleTransformations {
     import quotes.reflect.*
 
     given Context.PossiblyFallible[F](
-      WrapperType.Wrapped(Type.of[F]),
+      WrapperType.create[F],
       TransformationSite.Transformation,
       Summoner.PossiblyFallible[F],
       TransformationMode.create(F)

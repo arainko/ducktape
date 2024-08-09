@@ -15,10 +15,10 @@ private[ducktape] sealed trait Context {
 private[ducktape] object Context {
   type Of[F0 <: Fallible] = Context { type F = F0 }
 
-  inline def current(using ctx: Context): ctx.type = ctx
+  transparent inline def current(using ctx: Context): ctx.type = ctx
 
   case class PossiblyFallible[G[+x]](
-    wrapperType: WrapperType.Wrapped[G],
+    wrapperType: WrapperType[G],
     transformationSite: TransformationSite,
     summoner: Summoner.PossiblyFallible[G],
     mode: TransformationMode[G]
