@@ -33,8 +33,8 @@ private[ducktape] object Logger {
           .getOrElse("")
       val formatted = s"${green(s"[${level.toString().toUpperCase()}]")}$location $msg"
       this match {
-        case StdOut => if (filter(msg, location)) println(formatted)
-        case Report => if (filter(msg, location)) quotes.reflect.report.info(formatted)
+        case StdOut => if filter(msg, location) then println(formatted)
+        case Report => if filter(msg, location) then quotes.reflect.report.info(formatted)
       }
     }
   }
@@ -48,8 +48,8 @@ private[ducktape] object Logger {
 
   inline def info(inline msg: String)(using quotes: Quotes): Unit =
     inline level match {
-      case Level.Debug => if (level <= Level.Info) output.print(msg, Level.Info)
-      case Level.Info  => if (level <= Level.Info) output.print(msg, Level.Info)
+      case Level.Debug => if level <= Level.Info then output.print(msg, Level.Info)
+      case Level.Info  => if level <= Level.Info then output.print(msg, Level.Info)
       case Level.Off   => ()
     }
 
@@ -68,8 +68,8 @@ private[ducktape] object Logger {
 
   inline def debug(inline msg: String)(using quotes: Quotes): Unit =
     inline level match {
-      case Level.Debug => if (level <= Level.Debug) output.print(msg, Level.Debug)
-      case Level.Info  => if (level <= Level.Debug) output.print(msg, Level.Debug)
+      case Level.Debug => if level <= Level.Debug then output.print(msg, Level.Debug)
+      case Level.Info  => if level <= Level.Debug then output.print(msg, Level.Debug)
       case Level.Off   => ()
     }
 
@@ -85,7 +85,7 @@ extension (ctx: StringContext) {
     val pi = ctx.parts.iterator
     val ai = args.iterator
     val bldr = new StringBuilder(pi.next())
-    while (ai.hasNext) {
+    while ai.hasNext do {
       bldr.append(ai.next().getClass().getSimpleName())
       bldr.append(pi.next())
     }

@@ -1,8 +1,8 @@
 package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape
-import io.github.arainko.ducktape.Transformer.Fallible
 import io.github.arainko.ducktape.*
+import io.github.arainko.ducktape.Transformer.Fallible
 
 package fallible {
   @deprecated(message = "Use io.github.arainko.ducktape.Transformer.Fallible instead", since = "ducktape 0.2.0-M3")

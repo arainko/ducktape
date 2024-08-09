@@ -65,18 +65,18 @@ object Mode {
           transformation(elem) match {
             case Left(errors) =>
               accumulatedErrors.addAll(errors)
-              if (isErroredOut == false) {
+              if isErroredOut == false then {
                 isErroredOut = true
                 accumulatedSuccesses.clear()
               }
             case Right(value) =>
-              if (isErroredOut == false) {
+              if isErroredOut == false then {
                 accumulatedSuccesses.addOne(value)
               }
           }
         }
 
-        if (isErroredOut) Left(accumulatedErrors.result()) else Right(accumulatedSuccesses.result())
+        if isErroredOut then Left(accumulatedErrors.result()) else Right(accumulatedSuccesses.result())
       }
     }
 
@@ -107,7 +107,7 @@ object Mode {
 
         val resultBuilder = factory.newBuilder
         val iterator = collection.iterator
-        while (iterator.hasNext && !isErroredOut) {
+        while iterator.hasNext && !isErroredOut do {
           transformation(iterator.next()) match {
             case err @ Left(_) =>
               error = err.asInstanceOf[Left[E, Nothing]]
@@ -117,7 +117,7 @@ object Mode {
           }
         }
 
-        if (isErroredOut) error else Right(resultBuilder.result())
+        if isErroredOut then error else Right(resultBuilder.result())
       }
 
     }
@@ -137,7 +137,7 @@ object Mode {
         var isErroredOut = false
         val resultBuilder = factory.newBuilder
         val iterator = collection.iterator
-        while (iterator.hasNext && !isErroredOut) {
+        while iterator.hasNext && !isErroredOut do {
           transformation(iterator.next()) match {
             case None =>
               isErroredOut = true
@@ -147,7 +147,7 @@ object Mode {
           }
         }
 
-        if (isErroredOut) None else Some(resultBuilder.result())
+        if isErroredOut then None else Some(resultBuilder.result())
       }
 
     }

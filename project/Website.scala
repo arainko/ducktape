@@ -1,13 +1,13 @@
 import laika.ast.LengthUnit.px
 import laika.ast.Path.Root
-import laika.ast._
+import laika.ast.*
 import laika.helium.Helium
-import laika.helium.config._
+import laika.helium.config.*
 import laika.theme.config.Color
 import org.typelevel.sbt.TypelevelGitHubPlugin.gitHubUserRepo
-import org.typelevel.sbt.TypelevelSitePlugin.autoImport._
-import org.typelevel.sbt.site._
-import sbt.Def._
+import org.typelevel.sbt.TypelevelSitePlugin.autoImport.*
+import org.typelevel.sbt.site.*
+import sbt.Def.*
 import sbt.Keys.{ licenses, scmInfo }
 
 object DeffSiteSettings {

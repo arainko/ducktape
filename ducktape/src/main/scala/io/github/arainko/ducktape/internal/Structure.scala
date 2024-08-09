@@ -1,7 +1,7 @@
 package io.github.arainko.ducktape.internal
 
-import io.github.arainko.ducktape.internal.Structure.*
 import io.github.arainko.ducktape.internal.*
+import io.github.arainko.ducktape.internal.Structure.*
 
 import scala.annotation.{ tailrec, unused }
 import scala.collection.immutable.VectorMap
