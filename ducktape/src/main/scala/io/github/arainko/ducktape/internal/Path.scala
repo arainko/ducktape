@@ -1,8 +1,8 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.internal.*
 import io.github.arainko.ducktape.internal.Debug.AST
 import io.github.arainko.ducktape.internal.Path.Segment
-import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
 import scala.reflect.TypeTest
