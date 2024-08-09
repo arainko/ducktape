@@ -11,6 +11,9 @@ import scala.util.boundary
 
 private[ducktape] object Planner {
   import Structure.*
+  private enum FallthroughUpcast {
+    case Yes, No
+  }
 
   def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context.Of[F]) = {
     given Depth = Depth.zero
@@ -19,7 +22,9 @@ private[ducktape] object Planner {
 
   private def recurse[F <: Fallible](
     source: Structure,
-    dest: Structure
+    dest: Structure,
+    //TODO: Come up with something nicer
+    noUpcast: FallthroughUpcast = FallthroughUpcast.No
   )(using quotes: Quotes, depth: Depth, context: Context.Of[F]): Plan[Erroneous, F] = {
     import quotes.reflect.*
     given Depth = Depth.incremented(using depth)
@@ -40,8 +45,10 @@ private[ducktape] object Planner {
         case UserDefinedTransformation(transformer) =>
           verifyNotSelfReferential(Plan.UserDefined(source, dest, transformer))
 
-        case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
-          Plan.Upcast(source, dest)
+        case (source, dest) if noUpcast == FallthroughUpcast.No && source.tpe.repr <:< dest.tpe.repr =>
+          //Don't allow fallible transformations in the alternative case
+          given Context.Of[Nothing] = context.toTotal
+          Plan.Upcast(source, dest, () => recurse(source, dest, FallthroughUpcast.Yes))
 
         case BetweenFallibles(plan) => plan
 

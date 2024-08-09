@@ -83,6 +83,9 @@ private[ducktape] object PlanConfigurer {
                   .map(argPlan => parent.copy(argPlans = argPlans.updated(fieldName, recurse(argPlan, tail, parent, config))))
                   .getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidArgAccessor(fieldName, config.span), None))
 
+              case paren: Upcast =>
+                recurse(paren.alt, segments, parent, config)
+
               case other => invalidPathSegment(config, other, segment)
             }
 
@@ -138,6 +141,9 @@ private[ducktape] object PlanConfigurer {
                       .from(parent, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
                   )
 
+              case paren: Upcast =>
+                recurse(paren.alt, segments, parent, config)
+
               case other =>
                 Logger.debug(s"Failing with invalid path segment on node: ${other.getClass.getSimpleName}")
                 invalidPathSegment(config, other, segment)
@@ -160,6 +166,9 @@ private[ducktape] object PlanConfigurer {
                   )
                   .getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidCaseAccessor(tpe, config.span), None))
 
+              case paren: Upcast =>
+                recurse(paren.alt, segments, parent, config)
+
               case other => invalidPathSegment(config, other, segment)
             }
 
@@ -179,6 +188,9 @@ private[ducktape] object PlanConfigurer {
 
               case parent @ BetweenFallibles(source, dest, mode, plan) if config.side.isSource =>
                 parent.copy(plan = recurse(plan, tail, parent, config))
+
+              case paren: Upcast =>
+                recurse(paren.alt, segments, parent, config)
 
               case other => invalidPathSegment(config, other, segment)
             }

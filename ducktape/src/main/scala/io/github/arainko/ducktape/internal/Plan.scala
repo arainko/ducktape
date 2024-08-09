@@ -38,8 +38,11 @@ private[ducktape] sealed trait Plan[+E <: Erroneous, +F <: Fallible] {
 private[ducktape] object Plan {
   case class Upcast(
     source: Structure,
-    dest: Structure
-  ) extends Plan[Nothing, Nothing]
+    dest: Structure,
+    private val alternative: () => Plan[Erroneous, Nothing]
+  ) extends Plan[Nothing, Nothing] {
+    lazy val alt = alternative()
+  }
 
   case class UserDefined[+F <: Fallible](
     source: Structure,
