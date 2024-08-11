@@ -17,7 +17,7 @@ private[ducktape] object Context {
 
   transparent inline def current(using ctx: Context): ctx.type = ctx
 
-  extension [F <: Fallible] (self: Context.Of[F]) {
+  extension [F <: Fallible](self: Context.Of[F]) {
     inline def locally[A](inline f: Context.Of[F] ?=> A): A = f(using self)
   }
 

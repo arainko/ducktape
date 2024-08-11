@@ -157,36 +157,3 @@ object Mode {
     def either[E]: Mode.FailFast.Either[E] = Mode.FailFast.Either[E]
   }
 }
-
-object test {
-  enum Costam {
-    case One(int: Int)
-    case Two(int: Int)
-    case Three(int: Int)
-  }
-
-  case class Level1(level2: Level2)
-
-  case class Level1Dest(level2: Level2)
-
-  case class Level2(level3: Level3)
-
-  case class Level3(int: Int)
-
-  internal.CodePrinter.code:
-    (Costam.One(1): Costam)
-      .updated(
-        Field.const(_.at[Costam.One].int, 10)
-      )
-      
-    // Level1(Level2(Level3(1)))
-    //   .into[Level1]
-    //   .transform(
-    //     Field.const(_.level2.level3.int, 5)
-    //   )
-}
-
-extension [A] (self: A) {
-  inline def updated(inline updates: Field[A, A] | Case[A, A]*): A =
-    self.into[A].transform(updates*)
-}

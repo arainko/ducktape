@@ -1,9 +1,9 @@
 package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.internal.Configuration.Instruction
+import io.github.arainko.ducktape.internal.Path.Segment
 
 import scala.quoted.*
-import io.github.arainko.ducktape.internal.Path.Segment
 
 private[ducktape] object PlanConfigurer {
   import Plan.*

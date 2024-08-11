@@ -27,7 +27,7 @@ private[ducktape] object Planner {
     noUpcast: FallthroughUpcast = FallthroughUpcast.No
   )(using quotes: Quotes, depth: Depth, context: Context.Of[F]): Plan[Erroneous, F] = {
     import quotes.reflect.*
-    given Depth = Depth.incremented(using depth)
+    given Depth = depth.incremented
 
     Logger.loggedDebug(s"Plan @ depth ${Depth.current}"):
       (source.force -> dest.force) match {
