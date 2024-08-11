@@ -11,6 +11,9 @@ import scala.util.boundary
 
 private[ducktape] object Planner {
   import Structure.*
+  private enum FallthroughUpcast {
+    case Yes, No
+  }
 
   def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context.Of[F]) = {
     given Depth = Depth.zero
@@ -19,10 +22,12 @@ private[ducktape] object Planner {
 
   private def recurse[F <: Fallible](
     source: Structure,
-    dest: Structure
+    dest: Structure,
+    // TODO: Come up with something nicer
+    noUpcast: FallthroughUpcast = FallthroughUpcast.No
   )(using quotes: Quotes, depth: Depth, context: Context.Of[F]): Plan[Erroneous, F] = {
     import quotes.reflect.*
-    given Depth = Depth.incremented(using depth)
+    given Depth = depth.incremented
 
     Logger.loggedDebug(s"Plan @ depth ${Depth.current}"):
       (source.force -> dest.force) match {
@@ -40,8 +45,9 @@ private[ducktape] object Planner {
         case UserDefinedTransformation(transformer) =>
           verifyNotSelfReferential(Plan.UserDefined(source, dest, transformer))
 
-        case (source, dest) if source.tpe.repr <:< dest.tpe.repr =>
-          Plan.Upcast(source, dest)
+        case (source, dest) if noUpcast == FallthroughUpcast.No && source.tpe.repr <:< dest.tpe.repr =>
+          // Don't allow fallible transformations in the alternative case
+          Plan.Upcast(source, dest, () => context.toTotal.locally(recurse(source, dest, FallthroughUpcast.Yes)))
 
         case BetweenFallibles(plan) => plan
 
@@ -277,12 +283,14 @@ private[ducktape] object Planner {
       PartialFunction.condOpt(Context.current *: structs) {
         case (ctx: Context.PossiblyFallible[f], source @ Wrapped(tpe, _, path, underlying), dest) =>
           // needed for the recurse call to return Plan[Erroneous, Nothing]
-          given Context.Total = ctx.toTotal
-          val plan = Plan.BetweenFallibleNonFallible(
-            source,
-            dest,
-            recurse(underlying, dest)
-          )
+          val plan =
+            ctx.toTotal.locally {
+              Plan.BetweenFallibleNonFallible(
+                source,
+                dest,
+                recurse(underlying, dest)
+              )
+            }
 
           // the compiler needs a bit more encouragement to be sure that the plan we construct has a fallibility of F
           // Context.PossiblyFallible is defined with a type F = Fallible so we can deduce that ctx.F =:= Fallible =:= F

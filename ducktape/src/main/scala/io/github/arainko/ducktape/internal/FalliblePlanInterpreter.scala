@@ -28,7 +28,7 @@ private[ducktape] object FalliblePlanInterpreter {
         Value.Unwrapped(PlanInterpreter.recurse[A](plan, value))
       case None =>
         plan match {
-          case Plan.Upcast(_, _) => Value.Unwrapped(value)
+          case Plan.Upcast(_, _, _) => Value.Unwrapped(value)
 
           case Plan.Configured(_, _, config, _) =>
             config match

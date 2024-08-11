@@ -16,7 +16,7 @@ private[ducktape] object FallibilityRefiner {
   private def recurse[E <: Erroneous](plan: Plan[E, Fallible]): None.type | Unit =
     boundary[None.type | Unit]:
       plan match
-        case Upcast(source, dest) => ()
+        case Upcast(source, dest, _) => ()
 
         case UserDefined(source, dest, transformer) =>
           transformer match

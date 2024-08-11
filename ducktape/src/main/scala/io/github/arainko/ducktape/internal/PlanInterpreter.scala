@@ -17,7 +17,7 @@ private[ducktape] object PlanInterpreter {
     import quotes.reflect.*
 
     plan match {
-      case Plan.Upcast(_, _) => value
+      case Plan.Upcast(_, _, _) => value
 
       case Plan.Configured(_, _, config, _) =>
         evaluateConfig(config, value)
