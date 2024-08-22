@@ -29,7 +29,7 @@ private[ducktape] trait PlanTraverser[A] {
               recurse(plan :: next, foldOver(p, accumulator))
             case p @ Plan.BetweenNonOptionOption(_, _, plan) =>
               recurse(plan :: next, foldOver(p, accumulator))
-            case p @ Plan.BetweenCollections(_, _, plan) =>
+            case p @ Plan.BetweenCollections(_, _, _, plan) =>
               recurse(plan :: next, foldOver(p, accumulator))
             case plan: Plan.BetweenSingletons =>
               recurse(next, foldOver(plan, accumulator))

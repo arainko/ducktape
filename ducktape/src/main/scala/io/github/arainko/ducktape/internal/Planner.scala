@@ -8,6 +8,7 @@ import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransf
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
+import scala.collection.Factory
 
 private[ducktape] object Planner {
   import Structure.*
@@ -18,6 +19,10 @@ private[ducktape] object Planner {
   def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context.Of[F]) = {
     given Depth = Depth.zero
     recurse(source, dest)
+  }
+
+  object test {
+    def unapply(a: Structure, b: Structure): Option[Int] = None
   }
 
   private def recurse[F <: Fallible](
@@ -83,12 +88,24 @@ private[ducktape] object Planner {
             recurse(source, underlying)
           )
 
-        case (source @ Collection(_, _, srcParamStruct)) -> (dest @ Collection(_, _, destParamStruct)) =>
-          Plan.BetweenCollections(
-            source,
-            dest,
-            recurse(srcParamStruct, destParamStruct)
-          )
+        case (source @ Collection(_, _, srcParamStruct)) -> (dest @ Collection('[destColl], _, destParamStruct @ Structure('[destElem]))) =>
+          Implicits.search(TypeRepr.of[Factory[destElem, destColl]]) match {
+            case success: ImplicitSearchSuccess =>
+              Plan.BetweenCollections(
+                source,
+                dest,
+                success.tree.asExprOf[Factory[destElem, destColl]],
+                recurse(srcParamStruct, destParamStruct)
+              )
+            case failure: ImplicitSearchFailure =>
+              Plan.Error(
+                source,
+                dest,
+                ErrorMessage.CollectionFactoryNotFound(dest, failure.explanation),
+                None
+              )
+
+          }
 
         case (source: Product, dest: Product) =>
           planProductTransformation(source, dest)

@@ -139,11 +139,11 @@ private[ducktape] object FalliblePlanInterpreter {
                 Value.Wrapped('{ ${ F.value }.map(${ recurse(plan, source, F).wrapped(F, Type.of[dest]) }, Some.apply) })
             }
 
-          case Plan.BetweenCollections(source, dest, plan) =>
+          case Plan.BetweenCollections(source, dest, collFactory, plan) =>
             (dest.tpe, source.paramStruct.tpe, dest.paramStruct.tpe) match {
               case ('[destCollTpe], '[srcElem], '[destElem]) =>
                 // TODO: Make it nicer, move this into Planner since we cannot be sure that a factory exists
-                val factory = Expr.summon[Factory[destElem, destCollTpe]].get
+                val factory = collFactory.asExprOf[Factory[destElem, destCollTpe]]
                 factory match {
                   case '{
                         type dest <: Iterable[`destElem`]

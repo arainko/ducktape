@@ -112,12 +112,12 @@ private[ducktape] object PlanInterpreter {
             '{ Some(${ transformation(sourceValue) }) }
         }
 
-      case Plan.BetweenCollections(source, dest, plan) =>
+      case Plan.BetweenCollections(source, dest, collFactory, plan) =>
         (dest.tpe, source.paramStruct.tpe, dest.paramStruct.tpe) match {
           case ('[destCollTpe], '[srcElem], '[destElem]) =>
             val sourceValue = value.asExprOf[Iterable[srcElem]]
             // TODO: Make it nicer, move this into Planner since we cannot be sure that a facotry exists
-            val factory = Expr.summon[Factory[destElem, destCollTpe]].get
+            val factory = collFactory.asExprOf[Factory[destElem, destCollTpe]]
             def transformation(value: Expr[srcElem])(using Quotes): Expr[destElem] = recurse(plan, value).asExprOf[destElem]
             '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
         }

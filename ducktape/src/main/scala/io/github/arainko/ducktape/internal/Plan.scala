@@ -6,6 +6,7 @@ import io.github.arainko.ducktape.internal.*
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.reflect.TypeTest
+import scala.collection.Factory
 
 private[ducktape] object Fallible
 private[ducktape] type Fallible = Fallible.type
@@ -149,6 +150,7 @@ private[ducktape] object Plan {
   case class BetweenCollections[+E <: Erroneous, +F <: Fallible](
     source: Structure.Collection,
     dest: Structure.Collection,
+    factory: Expr[Factory[?, ?]],
     plan: Plan[E, F]
   ) extends Plan[E, F]
 
