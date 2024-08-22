@@ -117,4 +117,13 @@ private[ducktape] object ErrorMessage {
     |You can make this work if you supply a deprioritized instance of Mode.FailFast for the same wrapper type.""".stripMargin
   }
 
+  final case class CollectionFactoryNotFound(struct: Structure.Collection, explanation: String) extends ErrorMessage {
+    val side: Side = Side.Dest
+    val span: Span | None.type = None
+    def render(using Quotes): String = {
+      s"""Couldn't derive a transformation between collections due to a missing instance of scala.Factory[${struct.paramStruct.tpe.repr.show}, ${struct.tpe.repr.show}].
+      |Implicit search failure explanation: $explanation""".stripMargin
+    }
+  }
+
 }

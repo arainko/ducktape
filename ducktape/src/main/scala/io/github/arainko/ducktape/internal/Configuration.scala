@@ -123,7 +123,7 @@ private[ducktape] object Configuration {
 
     Varargs
       .unapply(configs)
-      .get // TODO: Make it nicer
+      .getOrElse(report.errorAndAbort("All of the transformation configs need to be inlined", configs))
       .map(expr => parser.applyOrElse(expr.asTerm, fallback))
       .toList
   }

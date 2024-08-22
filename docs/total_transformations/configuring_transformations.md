@@ -241,7 +241,7 @@ Docs.printCode(
 card
   .into[PaymentBand]
   .transform(
-    Field.computed(_.color, card => if (card.digits % 2 == 0) "green" else "yellow")
+    Field.computed(_.color, card => if card.digits % 2 == 0 then "green" else "yellow")
   )
 ```
 @:choice(generated)
@@ -252,7 +252,7 @@ Docs.printCode(
   card
     .into[PaymentBand]
     .transform(
-      Field.computed(_.color, card => if (card.digits % 2 == 0) "green" else "yellow")
+      Field.computed(_.color, card => if card.digits % 2 == 0 then "green" else "yellow")
     )
 )
 ``` 

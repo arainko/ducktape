@@ -86,7 +86,12 @@ private[ducktape] object Function {
   )(using Quotes) = {
     import quotes.reflect.*
 
-    val func = fromExpr(function).getOrElse(report.errorAndAbort(s"Couldn't construct a function TODO ERROR MESSAGE"))
+    val func = fromExpr(function).getOrElse(
+      report.errorAndAbort(
+        s"Couldn't encode a function as a type. Please make sure you're passing in an eta-expanded method.",
+        function
+      )
+    )
     func.encodeAsType(initial)
   }
 

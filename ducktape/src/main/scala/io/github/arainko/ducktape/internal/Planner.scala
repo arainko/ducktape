@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.internal.Context.{ PossiblyFallible, Total }
 import io.github.arainko.ducktape.internal.Plan.{ Derived, UserDefined }
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
 
+import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
@@ -83,12 +84,24 @@ private[ducktape] object Planner {
             recurse(source, underlying)
           )
 
-        case (source @ Collection(_, _, srcParamStruct)) -> (dest @ Collection(_, _, destParamStruct)) =>
-          Plan.BetweenCollections(
-            source,
-            dest,
-            recurse(srcParamStruct, destParamStruct)
-          )
+        case (source @ Collection(_, _, srcParamStruct)) -> (dest @ Collection('[destColl], _, destParamStruct @ Structure('[destElem]))) =>
+          Implicits.search(TypeRepr.of[Factory[destElem, destColl]]) match {
+            case success: ImplicitSearchSuccess =>
+              Plan.BetweenCollections(
+                source,
+                dest,
+                success.tree.asExprOf[Factory[destElem, destColl]],
+                recurse(srcParamStruct, destParamStruct)
+              )
+            case failure: ImplicitSearchFailure =>
+              Plan.Error(
+                source,
+                dest,
+                ErrorMessage.CollectionFactoryNotFound(dest, failure.explanation),
+                None
+              )
+
+          }
 
         case (source: Product, dest: Product) =>
           planProductTransformation(source, dest)

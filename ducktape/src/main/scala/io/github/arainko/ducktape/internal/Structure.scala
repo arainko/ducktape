@@ -9,10 +9,12 @@ import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.TypeTest
 
-private[ducktape] sealed trait Structure derives Debug {
+private[ducktape] sealed trait Structure extends scala.Product derives Debug {
   def tpe: Type[?]
 
   def path: Path
+
+  def _1: Type[?] = tpe
 
   final def force: Structure =
     this match {
@@ -24,6 +26,8 @@ private[ducktape] sealed trait Structure derives Debug {
 }
 
 private[ducktape] object Structure {
+  def unapply(struct: Structure): Structure = struct
+
   def toplevelAny(using Quotes) = Structure.Ordinary(Type.of[Any], Path.empty(Type.of[Any]))
 
   def toplevelNothing(using Quotes) = Structure.Ordinary(Type.of[Nothing], Path.empty(Type.of[Nothing]))

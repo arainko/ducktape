@@ -53,7 +53,7 @@ case class Positive private (value: Int)
 
 object Positive {
   given Transformer.Fallible[[a] =>> Either[String, a], Int, Positive] =
-    int => if (int < 0) Left("Lesser or equal to 0") else Right(Positive(int))
+    int => if int < 0 then Left("Lesser or equal to 0") else Right(Positive(int))
 }
 
 Mode.FailFast.either[String].locally {

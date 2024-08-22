@@ -40,7 +40,7 @@ private[ducktape] object PlanConfigurer {
           current: Plan[Erroneous, F]
         ): Plan[Erroneous, F] =
           current match {
-            case parent @ BetweenCollections(_, _, plan) =>
+            case parent @ BetweenCollections(_, _, _, plan) =>
               parent.copy(plan = recurse(plan, tail, parent, config))
 
             case parent @ BetweenOptions(_, _, plan) =>

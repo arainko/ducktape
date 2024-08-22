@@ -71,7 +71,7 @@ private[ducktape] object FallibilityRefiner {
         case BetweenNonOptionOption(source, dest, plan) =>
           recurse(plan)
 
-        case BetweenCollections(source, dest, plan) =>
+        case BetweenCollections(source, dest, _, plan) =>
           recurse(plan)
 
         case BetweenFallibleNonFallible(source, dest, plan) =>
