@@ -5,10 +5,10 @@ import io.github.arainko.ducktape.internal.Context.{ PossiblyFallible, Total }
 import io.github.arainko.ducktape.internal.Plan.{ Derived, UserDefined }
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
 
+import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
-import scala.collection.Factory
 
 private[ducktape] object Planner {
   import Structure.*
@@ -19,10 +19,6 @@ private[ducktape] object Planner {
   def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context.Of[F]) = {
     given Depth = Depth.zero
     recurse(source, dest)
-  }
-
-  object test {
-    def unapply(a: Structure, b: Structure): Option[Int] = None
   }
 
   private def recurse[F <: Fallible](

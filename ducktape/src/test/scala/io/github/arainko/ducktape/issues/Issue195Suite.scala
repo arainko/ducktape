@@ -5,7 +5,7 @@ import io.github.arainko.ducktape.*
 class Issue195Suite extends DucktapeSuite {
   test("missing Factory instances are reported in a nice way") {
 
-    assertFailsToCompileWith {
+    assertFailsToCompileContains {
       """
       import scala.collection.immutable.SortedSet
       import io.github.arainko.ducktape.to as convertTo
@@ -20,8 +20,11 @@ class Issue195Suite extends DucktapeSuite {
 
       val y: SortedSet[MyClassB] = x.convertTo[SortedSet[MyClassB]]
       """
-    }("""Couldn't derive a transformation between collections due to a missing instance of scala.Factory[MyClassB, scala.collection.immutable.SortedSet[MyClassB]].
-Implicit search failure explanation: no implicit values were found that match type scala.math.Ordering.AsComparable[MyClassB] @ SortedSet[MyClassB]""")
-    
+    }(
+      // TODO: this is weird, the type in the explanation is different in CI ('java.util.Comparator[MyClassB]') as opposed to running it locally ('scala.math.Ordering.AsComparable[MyClassB]')
+      """Couldn't derive a transformation between collections due to a missing instance of scala.Factory[MyClassB, scala.collection.immutable.SortedSet[MyClassB]].
+Implicit search failure explanation: no implicit values were found that match type"""
+    )
+
   }
 }

@@ -3,10 +3,10 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.*
 
+import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.reflect.TypeTest
-import scala.collection.Factory
 
 private[ducktape] object Fallible
 private[ducktape] type Fallible = Fallible.type

@@ -142,7 +142,6 @@ private[ducktape] object FalliblePlanInterpreter {
           case Plan.BetweenCollections(source, dest, collFactory, plan) =>
             (dest.tpe, source.paramStruct.tpe, dest.paramStruct.tpe) match {
               case ('[destCollTpe], '[srcElem], '[destElem]) =>
-                // TODO: Make it nicer, move this into Planner since we cannot be sure that a factory exists
                 val factory = collFactory.asExprOf[Factory[destElem, destCollTpe]]
                 factory match {
                   case '{
