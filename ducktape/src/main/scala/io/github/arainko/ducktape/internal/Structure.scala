@@ -220,11 +220,15 @@ private[ducktape] object Structure {
   private def constantString[Const <: String: Type](using Quotes) = Type.valueOfConstant[Const].get
 
   private def tupleTypeElements(tpe: Type[?])(using Quotes): List[quotes.reflect.TypeRepr] = {
+    Logger.info(s"Tuple elems ${Type.show(using tpe)}")
     @tailrec def loop(using Quotes)(curr: Type[?], acc: List[quotes.reflect.TypeRepr]): List[quotes.reflect.TypeRepr] = {
       import quotes.reflect.*
 
       curr match {
         case '[head *: tail] =>
+          Logger.info("Type.show:" + Type.show[head])
+          Logger.info("TypeRepr.show:" + TypeRepr.of[head].show)
+
           loop(Type.of[tail], TypeRepr.of[head] :: acc)
         case '[EmptyTuple] =>
           acc
