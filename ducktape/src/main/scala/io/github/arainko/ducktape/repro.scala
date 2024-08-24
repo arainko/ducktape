@@ -10,6 +10,7 @@ object scoped {
 }
 
 object demo {
+  
   def f(
     f: From,
     theId: scoped.Ident

@@ -181,8 +181,9 @@ private[ducktape] object Structure {
                         type MirroredElemTypes = types
                       }
                     } =>
+                  val fieldTypes = tupleTypeElements(Type.of[types])
                   val structures =
-                    tupleTypeElements(Type.of[types])
+                    fieldTypes
                       .zip(constStringTuple(TypeRepr.of[labels]))
                       .map((tpe, name) =>
                         name -> (tpe.asType match {
@@ -190,6 +191,13 @@ private[ducktape] object Structure {
                         })
                       )
                       .to(VectorMap)
+
+                  given Printer[TypeRepr] = Printer.TypeReprShortCode
+
+                  val tpeName = TypeRepr.of[A].show
+
+                  if tpeName == "To" then 
+                    report.info(s"Field types: ${fieldTypes.map(_.show).mkString(", ")}")
 
                   Structure.Product(Type.of[A], path, structures)
                 case '{
