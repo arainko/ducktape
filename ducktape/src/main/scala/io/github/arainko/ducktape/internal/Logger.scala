@@ -6,9 +6,9 @@ import scala.quoted.*
 private[ducktape] object Logger {
 
   // Logger Config
-  private[ducktape] transparent inline given level: Level = Level.Off
+  private[ducktape] transparent inline given level: Level = Level.Info
   private val output = Output.StdOut
-  private def filter(msg: String, loc: String) = true
+  private def filter(msg: String, loc: String) = loc.contains("repro.scala:22:35")
   enum Level {
     case Off, Debug, Info
   }
