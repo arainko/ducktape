@@ -43,7 +43,7 @@ ThisBuild / tlVersionIntroduced := Map("3" -> "0.1.6")
 lazy val root = tlCrossRootProject.aggregate(ducktape)
 
 lazy val ducktape =
-  crossProject(JVMPlatform, JSPlatform, NativePlatform)
+  crossProject(JVMPlatform/*, JSPlatform, NativePlatform*/)
     .crossType(CrossType.Pure)
     .enablePlugins(TypelevelMimaPlugin)
     .in(file("ducktape"))
@@ -53,7 +53,7 @@ lazy val ducktape =
       Test / scalacOptions ++= List("-Werror", "-Wconf:cat=deprecation:s"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.1" % Test
     )
-    .nativeSettings(tlMimaPreviousVersions := Set.empty)
+    //.nativeSettings(tlMimaPreviousVersions := Set.empty)
 
 lazy val docs =
   project
