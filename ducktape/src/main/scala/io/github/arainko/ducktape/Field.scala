@@ -22,9 +22,9 @@ object Field {
     function: A => F[DestFieldTpe]
   ): Field.Fallible[F, A, B] = ???
 
-  def fallibleComputedDeep[F[+x], A, B, DestFieldTpe, SourceFieldTpe, ComputedTpe](
+  def fallibleComputedDeep[F[+x], A, B, DestFieldTpe, SourceFieldTpe](
     selector: Selector ?=> B => DestFieldTpe,
-    function: SourceFieldTpe => ComputedTpe
+    function: SourceFieldTpe => F[DestFieldTpe]
   ): Field.Fallible[F, A, B] = ???
 
   @compileTimeOnly("Field.const is only useable as a field configuration for transformations")

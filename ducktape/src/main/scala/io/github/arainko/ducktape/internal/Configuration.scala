@@ -10,9 +10,11 @@ private[ducktape] enum Configuration[+F <: Fallible] {
   case Const(value: Expr[Any], tpe: Type[?]) extends Configuration[Nothing]
   case CaseComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Nothing]
   case FieldComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Nothing]
+  case FieldComputedDeep(tpe: Type[?], sourceTpe: Type[?], function: Expr[Any => Any]) extends Configuration[Nothing]
   case FieldReplacement(source: Expr[Any], name: String, tpe: Type[?]) extends Configuration[Nothing]
   case FallibleConst(value: Expr[Any], tpe: Type[?]) extends Configuration[Fallible]
   case FallibleFieldComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Fallible]
+  case FallibleFieldComputedDeep(tpe: Type[?], sourceTpe: Type[?], function: Expr[Any => Any]) extends Configuration[Fallible]
   case FallibleCaseComputed(tpe: Type[?], function: Expr[Any => Any]) extends Configuration[Fallible]
 }
 

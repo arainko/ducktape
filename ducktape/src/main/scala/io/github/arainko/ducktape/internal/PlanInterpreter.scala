@@ -24,8 +24,11 @@ private[ducktape] object PlanInterpreter {
 
       case Plan.BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
         val args = fieldPlans.map {
+          case (fieldName, p: Plan.Configured[Nothing]) if sourceTpe.fields.contains(fieldName) =>
+            NamedArg(fieldName, recurse(p, value.accessFieldByName(fieldName).asExpr).asTerm)
           case (fieldName, p: Plan.Configured[Nothing]) =>
             NamedArg(fieldName, recurse(p, value).asTerm)
+
           case (fieldName, plan) =>
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             NamedArg(fieldName, recurse(plan, fieldValue).asTerm)
@@ -35,6 +38,7 @@ private[ducktape] object PlanInterpreter {
       case Plan.BetweenProductTuple(source, dest, plans) =>
         val fields = source.fields.keys
         val args = plans.zipWithIndex.map {
+          //TODO: All other Product/Tuple or vice versa things need to handle passing in the value if they can
           case (p: Plan.Configured[Nothing], _) =>
             recurse(p, value)
           case (plan, index) =>
@@ -159,6 +163,8 @@ private[ducktape] object PlanInterpreter {
         '{ $function.apply($value) }
       case Configuration.FieldComputed(_, function) =>
         '{ $function.apply($toplevelValue) }
+      case Configuration.FieldComputedDeep(tpe, sourceTpe, function) =>
+        '{ $function.apply($value) }
       case Configuration.FieldReplacement(source, name, tpe) =>
         source.accessFieldByName(name).asExpr
     }

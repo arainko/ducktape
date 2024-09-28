@@ -75,6 +75,24 @@ private[ducktape] object ConfigParser {
           )
 
         case cfg @ Apply(
+              TypeApply(
+                Select(IdentOfType('[Field.type]), "computedDeep"),
+                a :: b :: destFieldTpe :: sourceFieldTpe :: computedFieldTpe :: Nil
+              ),
+              PathSelector(path) :: function :: Nil
+            ) =>
+          Configuration.Instruction.Static(
+            path,
+            Side.Dest,
+            Configuration.FieldComputedDeep(
+              computedFieldTpe.tpe.asType,
+              sourceFieldTpe.tpe.asType,
+              function.asExpr.asInstanceOf[Expr[Any => Any]]
+            ),
+            Span.fromPosition(cfg.pos)
+          )
+
+        case cfg @ Apply(
               TypeApply(Select(IdentOfType('[Field.type]), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
               PathSelector(path) :: fieldSource :: Nil
             ) =>
@@ -170,6 +188,21 @@ private[ducktape] object ConfigParser {
             path,
             Side.Dest,
             Configuration.FallibleFieldComputed(Type.of[computed], function.asInstanceOf[Expr[Any => Any]]),
+            Span.fromPosition(cfg.pos)
+          )
+
+        case cfg @ Apply(
+              TypeApply(
+                Select(IdentOfType('[Field.type]), "fallibleComputedDeep"),
+                f :: a :: b :: destFieldTpe :: sourceFieldTpe :: Nil
+              ),
+              PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
+            ) =>
+          Configuration.Instruction.Static(
+            path,
+            Side.Dest,
+            Configuration
+              .FallibleFieldComputedDeep(Type.of[computed], sourceFieldTpe.tpe.asType, function.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos)
           )
 

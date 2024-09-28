@@ -38,6 +38,8 @@ private[ducktape] object FalliblePlanInterpreter {
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
               case cfg @ Configuration.FieldComputed(tpe, function) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
+              case cfg @ Configuration.FieldComputedDeep(tpe, srcTpe, function) =>
+                Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
               case cfg @ Configuration.FieldReplacement(source, name, tpe) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
               case Configuration.FallibleConst(value, tpe) =>
@@ -49,6 +51,12 @@ private[ducktape] object FalliblePlanInterpreter {
                 tpe match {
                   case '[tpe] =>
                     Value.Wrapped('{ $function($toplevelValue) }.asExprOf[F[tpe]])
+                }
+
+              case Configuration.FallibleFieldComputedDeep(tpe, srcTpe, function) =>
+                tpe match {
+                  case '[tpe] =>
+                    Value.Wrapped('{ $function($value) }.asExprOf[F[tpe]])
                 }
 
               case Configuration.FallibleCaseComputed(tpe, function) =>

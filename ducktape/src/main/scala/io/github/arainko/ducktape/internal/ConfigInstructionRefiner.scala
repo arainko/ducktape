@@ -9,8 +9,8 @@ private[ducktape] object ConfigInstructionRefiner {
     instruction match
       case inst @ Instruction.Static(_, _, config, _) =>
         config match
-          case cfg: (Const | CaseComputed | FieldComputed | FieldReplacement)           => inst.copy(config = cfg)
-          case fallible: (FallibleConst | FallibleFieldComputed | FallibleCaseComputed) => None
+          case cfg: (Const | CaseComputed | FieldComputed | FieldComputedDeep | FieldReplacement)           => inst.copy(config = cfg)
+          case fallible: (FallibleConst | FallibleFieldComputed | FallibleFieldComputedDeep | FallibleCaseComputed) => None
       case inst: (Instruction.Dynamic | Instruction.Bulk | Instruction.Regional | Instruction.Failed) => inst
 
 }

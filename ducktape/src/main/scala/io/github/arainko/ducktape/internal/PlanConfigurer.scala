@@ -426,7 +426,29 @@ private[ducktape] object PlanConfigurer {
       context: Context
     ) = {
       def isReplaceableBy(update: Configuration[F])(using Quotes) =
-        update.tpe.repr <:< currentPlan.destPath.currentTpe.repr
+        def checkDestTpe = update.tpe.repr <:< currentPlan.destPath.currentTpe.repr
+        def checkSourceTpe(srcTpe: Type[?]) = currentPlan.sourcePath.currentTpe.repr <:< srcTpe.repr
+
+        //TODO: Make this nicer, this should also report which sourceType was actually expected as opposed to what was provided
+        update match
+          case Configuration.Const(value, tpe) => 
+            checkDestTpe
+          case Configuration.CaseComputed(tpe, function) =>
+            checkDestTpe
+          case Configuration.FieldComputed(tpe, function) =>
+            checkDestTpe
+          case Configuration.FieldComputedDeep(tpe, sourceTpe, function) =>
+            checkDestTpe && checkSourceTpe(sourceTpe)
+          case Configuration.FieldReplacement(source, name, tpe) =>
+            checkDestTpe
+          case Configuration.FallibleConst(value, tpe) =>
+            checkDestTpe
+          case Configuration.FallibleFieldComputed(tpe, function) =>
+            checkDestTpe
+          case Configuration.FallibleFieldComputedDeep(tpe, sourceTpe, function) =>
+            checkDestTpe && checkSourceTpe(sourceTpe)
+          case Configuration.FallibleCaseComputed(tpe, function) =>
+            checkDestTpe        
 
       if isReplaceableBy(config) then
         val (path, _) =
