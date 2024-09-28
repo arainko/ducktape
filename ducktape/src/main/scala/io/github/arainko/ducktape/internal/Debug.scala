@@ -101,11 +101,9 @@ private[ducktape] object Debug extends LowPriorityDebug {
       case given Mirror.SumOf[A]     => coproduct
     }
 
-  private inline def product[A](using A: Mirror.ProductOf[A]): Debug[A] =
-    new {
-      def astify(self: A)(using Quotes): AST = {
-        val tpeName = constValue[A.MirroredLabel].toString
-        val instances = summonAll[Tuple.Map[A.MirroredElemTypes, Debug]].toIArray.map(_.asInstanceOf[Debug[Any]])
+  private[ducktape] class ForProduct[A](tpeName: String, _instances: => IArray[Debug[Any]]) extends Debug[A] {
+    private lazy val instances = _instances
+    def astify(self: A)(using Quotes): AST = {
         val prod = self.asInstanceOf[scala.Product]
         val fields = prod.productElementNames
           .zip(instances)
@@ -118,16 +116,22 @@ private[ducktape] object Debug extends LowPriorityDebug {
 
         Product(tpeName, fields)
       }
-    }
+  }
 
-  private inline def coproduct[A](using A: Mirror.SumOf[A]): Debug[A] = new {
-    private val instances = deriveForAll[A.MirroredElemTypes].toVector
+  private inline def product[A](using A: Mirror.ProductOf[A]): Debug[A] = {
+    val tpeName = constValue[A.MirroredLabel].toString
+    def instances = summonAll[Tuple.Map[A.MirroredElemTypes, Debug]].toIArray.map(_.asInstanceOf[Debug[Any]])
+    ForProduct(tpeName, instances)
+  }
 
+  private[ducktape] class ForCoproduct[A](instances: Vector[Debug[Any]])(using A: Mirror.SumOf[A]) extends Debug[A] {
     def astify(self: A)(using Quotes): AST = {
       val ordinal = A.ordinal(self)
       instances(ordinal).astify(self)
     }
   }
+
+  private inline def coproduct[A](using A: Mirror.SumOf[A]): Debug[A] = ForCoproduct(deriveForAll[A.MirroredElemTypes].toVector)
 
   private inline def deriveForAll[Tup <: Tuple]: List[Debug[Any]] =
     inline erasedValue[Tup] match {

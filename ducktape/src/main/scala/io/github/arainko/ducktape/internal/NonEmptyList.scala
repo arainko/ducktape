@@ -1,5 +1,7 @@
 package io.github.arainko.ducktape.internal
 
+import scala.annotation.nowarn
+
 private[ducktape] opaque type NonEmptyList[+A] = ::[A]
 
 private[ducktape] object NonEmptyList {
@@ -25,6 +27,7 @@ private[ducktape] object NonEmptyList {
 
     private[ducktape] def ::(elem: A): NonEmptyList[A] = Cons(elem, self)
 
+    @nowarn
     private[ducktape] def :::(that: List[A]): NonEmptyList[A] = unsafeCoerce(toList ::: that)
 
     private[ducktape] def map[B](f: A => B): NonEmptyList[B] = unsafeCoerce(toList.map(f))
