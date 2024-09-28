@@ -8,6 +8,11 @@ import scala.annotation.unused
 class FUnwrappingSuite extends DucktapeSuite {
 
   test("F-unwrapping works with match type syntax") {
+    extension [A <: Tuple](self: A) {
+      inline def parTupled[F[+x]](using mode: Mode.Accumulating[F]) =
+        self.fallibleTo[Tuple.InverseMap[A, F]]
+    }
+
     val source =
       (
         Right(1),
@@ -18,7 +23,7 @@ class FUnwrappingSuite extends DucktapeSuite {
 
     Mode.Accumulating.either[String, List].locally {
       val expected = Right((1, 2, 3, 4))
-      val actual = source.fallibleTo[Tuple.InverseMap[source.type, Mode.current.Self]]
+      val actual = source.parTupled
       assertEquals(actual, expected)
     }
 
