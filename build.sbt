@@ -15,7 +15,7 @@ ThisBuild / startYear := Some(2023)
 ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
 ThisBuild / tlSonatypeUseLegacyHost := false
-ThisBuild / scalaVersion := "3.3.3"
+ThisBuild / scalaVersion := "3.3.4"
 ThisBuild / tlSitePublishBranch := Some("series/0.2.x")
 
 ThisBuild / semanticdbEnabled := true
@@ -51,7 +51,7 @@ lazy val ducktape =
       scalacOptions ++= List("-deprecation", "-Wunused:all", "-Ykind-projector:underscores"),
       Test / scalacOptions --= List("-deprecation"),
       Test / scalacOptions ++= List("-Werror", "-Wconf:cat=deprecation:s"),
-      libraryDependencies += "org.scalameta" %%% "munit" % "1.0.1" % Test
+      libraryDependencies += "org.scalameta" %%% "munit" % "1.0.2" % Test
     )
     //.nativeSettings(tlMimaPreviousVersions := Set.empty)
 
