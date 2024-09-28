@@ -78,3 +78,20 @@ Mode.Accumulating.either[String, List].locally {
 ```
 
 ...where repeatedly referring to the `F` wrapper becomes really unwieldly - that type is known to the compiler at each call site so we make it work for us in conjunction with `Mode.current` which summons the `Mode[F]` instance in the current implicit scope.
+
+@:callout(info)
+
+Since the introduction of [SIP-56 - Proper Specification for Match Types](https://docs.scala-lang.org/sips/match-types-spec.html) in Scala 3.4+ some usages of `Mode.Self` became illegal - the example above is one of those cases (more information as to why this is the case can be found [here](https://github.com/scala/scala3/discussions/21534)).
+
+This construct can be reproduced in Scala 3.4+ by using an extension method, like so:
+
+```scala mdoc
+extension [A <: Tuple](self: A)
+  inline def parTupled[F[+x]](using Mode.Accumulating[F]) =
+    self.fallibleTo[Tuple.InverseMap[A, F]]
+
+Mode.Accumulating.either[String, List].locally {
+  source.parTupled
+}
+```
+@:@
