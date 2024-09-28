@@ -15,8 +15,6 @@ private[ducktape] object Erroneous
 private[ducktape] type Erroneous = Erroneous.type
 
 private[ducktape] sealed trait Plan[+E <: Erroneous, +F <: Fallible] {
-  import Plan.*
-
   def source: Structure
 
   def dest: Structure

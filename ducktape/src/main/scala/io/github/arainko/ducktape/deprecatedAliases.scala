@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape
-import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.Transformer.Fallible
 
 package fallible {
