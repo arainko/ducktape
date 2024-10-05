@@ -240,11 +240,11 @@ private[ducktape] object FalliblePlanInterpreter {
 
     val (unwrapped, wrapped) =
       plans.zipWithIndex.partitionMap {
-        case (p: Plan.Configured[Fallible]) -> index =>
-          recurse(p, value, F).asFieldValue(index, p.dest.tpe)
-        case plan -> index =>
+        case plan -> index if sourceStruct.elements.isDefinedAt(index) =>
           val fieldValue = value.accesFieldByIndex(index, sourceStruct)
           recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
+        case plan -> index =>
+          recurse(plan, value, F).asFieldValue(index, plan.dest.tpe)
       }
 
     plan.dest.tpe match {
@@ -283,22 +283,22 @@ private[ducktape] object FalliblePlanInterpreter {
 
     def handleVectorMap(fieldPlans: VectorMap[String, Plan[Nothing, Fallible]])(using Quotes) =
       fieldPlans.zipWithIndex.partitionMap {
-        case (fieldName, p: Plan.Configured[Fallible]) -> index =>
-          recurse(p, value, F).asFieldValue(index, p.dest.tpe)
-        case (fieldName, plan) -> index =>
+        case (fieldName, plan) -> index if source.fields.contains(fieldName) =>
           val fieldValue = value.accessFieldByName(fieldName).asExpr
           recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
+        case (fieldName, plan) -> index  =>
+          recurse(plan, value, F).asFieldValue(index, plan.dest.tpe)
       }
 
     def handleVector(fieldPlans: Vector[Plan[Nothing, Fallible]])(using Quotes) = {
       val sourceFields = source.fields.keys
       fieldPlans.zipWithIndex.partitionMap {
-        case (p: Plan.Configured[Fallible]) -> index =>
-          recurse(p, value, F).asFieldValue(index, p.dest.tpe)
-        case plan -> index =>
+        case plan -> index if sourceFields.isDefinedAt(index) =>
           val fieldName = sourceFields(index)
           val fieldValue = value.accessFieldByName(fieldName).asExpr
           recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
+        case plan -> index =>
+          recurse(plan, value, F).asFieldValue(index, plan.dest.tpe)
       }
     }
 

@@ -43,12 +43,21 @@ private[ducktape] object ErrorMessage {
     val side = Side.Source
   }
 
-  final case class InvalidConfiguration(configTpe: Type[?], expectedTpe: Type[?], side: Side, span: Span) extends ErrorMessage {
+  final case class InvalidConfigurationDestType(configTpe: Type[?], expectedTpe: Type[?], side: Side, span: Span) extends ErrorMessage {
 
     def render(using Quotes): String = {
       val renderedConfigTpe = configTpe.repr.show
       val renderedExpectedTpe = expectedTpe.repr.show
       s"Configuration is not valid since the provided type (${renderedConfigTpe}) is not a subtype of ${renderedExpectedTpe}"
+    }
+  }
+
+  final case class InvalidConfigurationSourceType(configTpe: Type[?], expectedTpe: Type[?], side: Side, span: Span) extends ErrorMessage {
+
+    def render(using Quotes): String = {
+      val renderedConfigTpe = configTpe.repr.show
+      val renderedExpectedTpe = expectedTpe.repr.show
+      s"Configuration is not valid since the provided source type (${renderedConfigTpe}) is not a supertype of ${renderedExpectedTpe}"
     }
   }
 

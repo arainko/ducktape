@@ -174,7 +174,7 @@ private[ducktape] object Plan {
       Quotes,
       Context
     ): Plan.Configured[F] =
-      (plan.source.tpe, plan.dest.tpe, conf.tpe) match {
+      (plan.source.tpe, plan.dest.tpe, conf.destTpe) match {
         case ('[src], '[dest], '[confTpe]) =>
           val source = if instruction.side.isDest then Structure.Lazy.of[confTpe](plan.source.path) else plan.source
           val dest = if instruction.side.isSource then Structure.Lazy.of[confTpe](plan.dest.path) else plan.dest

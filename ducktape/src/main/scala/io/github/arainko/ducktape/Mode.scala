@@ -158,16 +158,17 @@ object Mode {
   }
 }
 
-
 object test2 {
-  import io.github.arainko.ducktape.*
+  // import io.github.arainko.ducktape.*
 
-  case class Source(opt: Option[Level1])
-  case class Level1(int: Int)
+  private case class Source(opt: Option[Level1])
+  private case class Level1(int: Int)
 
-  // internal.CodePrinter.code:
-  Source(Some(Level1(2)))
-      .into[Source]
-      .transform(Field.computedDeep(_.opt.element.int, (int: Int) => int + 1))
+  internal.CodePrinter.code:
+    locally {
+      Source(Some(Level1(2)))
+        .into[Source]
+      .transform(Field.computedDeep(_.opt.element.int, (int: Any) => int.toString.toInt + 1))
+    }
 
 }

@@ -64,26 +64,11 @@ object Field {
   def allMatching[A, B, ProductTpe](product: ProductTpe): Field[A, B] =
     ???
 
-  inline def of[A]: Field.Of[A] = ()
+  // inline def of[A]: Field.Of[A] = ()
 
-  opaque type Of[A] = Unit
+  // opaque type Of[A] = Unit
 
-  extension [A] (inline self: Of[A]) {
-    inline def apply[B](f: A => B): A => B = f
-  }
-}
-
-object test {
-  // import other.*
-
-  def dupal[A, B](f: A => B) = f
-
-  val b = dupal(method)
-
-  Transformer.Debug.showCode:
-    val e = dupal(Field.of[Int](_.toString))
-
-  def method(str: Int): String = ???
-
-  
+  // extension [A] (inline self: Of[A]) {
+  //   inline def apply[B](f: A => B): A => B = f
+  // }
 }

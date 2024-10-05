@@ -425,56 +425,64 @@ private[ducktape] object PlanConfigurer {
       warnings: Accumulator[ConfigWarning],
       context: Context
     ) = {
+      //TODO: this is awful, refactor pls
       def isReplaceableBy(update: Configuration[F])(using Quotes) =
-        def checkDestTpe = update.tpe.repr <:< currentPlan.destPath.currentTpe.repr
-        def checkSourceTpe(srcTpe: Type[?]) = currentPlan.sourcePath.currentTpe.repr <:< srcTpe.repr
+        def checkDestTpe = update.destTpe.repr <:< currentPlan.destPath.currentTpe.repr
+        def checkSourceTpe =
+          update.sourceTpe match
+            case None         => true
+            case tpe: Type[?] => currentPlan.sourcePath.currentTpe.repr <:< tpe.repr
 
-        //TODO: Make this nicer, this should also report which sourceType was actually expected as opposed to what was provided
-        update match
-          case Configuration.Const(value, tpe) => 
-            checkDestTpe
-          case Configuration.CaseComputed(tpe, function) =>
-            checkDestTpe
-          case Configuration.FieldComputed(tpe, function) =>
-            checkDestTpe
-          case Configuration.FieldComputedDeep(tpe, sourceTpe, function) =>
-            checkDestTpe && checkSourceTpe(sourceTpe)
-          case Configuration.FieldReplacement(source, name, tpe) =>
-            checkDestTpe
-          case Configuration.FallibleConst(value, tpe) =>
-            checkDestTpe
-          case Configuration.FallibleFieldComputed(tpe, function) =>
-            checkDestTpe
-          case Configuration.FallibleFieldComputedDeep(tpe, sourceTpe, function) =>
-            checkDestTpe && checkSourceTpe(sourceTpe)
-          case Configuration.FallibleCaseComputed(tpe, function) =>
-            checkDestTpe        
-
-      if isReplaceableBy(config) then
-        val (path, _) =
-          Accumulator.append {
-            if instruction.side == Side.Dest then currentPlan.destPath -> instruction.side
-            else currentPlan.sourcePath -> instruction.side
-          }
-        Accumulator.appendAll {
-          ConfiguredCollector
-            .run(currentPlan, Nil)
-            .map(plan => ConfigWarning(plan.span, instruction.span, path))
-        }
-        Plan.Configured.from(currentPlan, config, instruction)
-      else
-        Accumulator.append {
-          Plan.Error.from(
-            currentPlan,
-            ErrorMessage.InvalidConfiguration(
-              config.tpe,
+        Either
+          .cond(
+            checkDestTpe,
+            (),
+            ErrorMessage.InvalidConfigurationDestType(
+              config.destTpe,
               currentPlan.destPath.currentTpe,
               instruction.side,
               instruction.span
-            ),
-            None
+            )
           )
-        }
+          .flatMap { _ =>
+            def tpe = config.sourceTpe match
+              case None         => Type.of[Any]
+              case tpe: Type[?] => tpe
+
+            Either.cond(
+              checkSourceTpe,
+              (),
+              ErrorMessage.InvalidConfigurationSourceType(
+                tpe,
+                currentPlan.sourcePath.currentTpe,
+                instruction.side,
+                instruction.span
+              )
+            )
+          }
+
+      isReplaceableBy(config) match
+        case Left(value) => 
+          Accumulator.append {
+            Plan.Error.from(
+              currentPlan,
+              value,
+              None
+            )
+          }
+        case Right(value) =>
+          val (path, _) =
+            Accumulator.append {
+              if instruction.side == Side.Dest then currentPlan.destPath -> instruction.side
+              else currentPlan.sourcePath -> instruction.side
+            }
+          Accumulator.appendAll {
+            ConfiguredCollector
+              .run(currentPlan, Nil)
+              .map(plan => ConfigWarning(plan.span, instruction.span, path))
+          }
+          Plan.Configured.from(currentPlan, config, instruction)
+    
     }
   }
 

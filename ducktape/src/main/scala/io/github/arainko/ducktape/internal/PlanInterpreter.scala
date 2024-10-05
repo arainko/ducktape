@@ -22,50 +22,46 @@ private[ducktape] object PlanInterpreter {
       case Plan.Configured(_, _, config, _) =>
         evaluateConfig(config, value)
 
-      case Plan.BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
+      case Plan.BetweenProducts(source, dest, fieldPlans) =>
         val args = fieldPlans.map {
-          case (fieldName, p: Plan.Configured[Nothing]) if sourceTpe.fields.contains(fieldName) =>
-            NamedArg(fieldName, recurse(p, value.accessFieldByName(fieldName).asExpr).asTerm)
-          case (fieldName, p: Plan.Configured[Nothing]) =>
-            NamedArg(fieldName, recurse(p, value).asTerm)
-
-          case (fieldName, plan) =>
+          case (fieldName, plan) if source.fields.contains(fieldName) =>
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             NamedArg(fieldName, recurse(plan, fieldValue).asTerm)
+          case (fieldName, plan) =>
+            NamedArg(fieldName, recurse(plan, value).asTerm)
         }
-        Constructor(destTpe.tpe.repr).appliedToArgs(args.toList).asExpr
+        Constructor(dest.tpe.repr).appliedToArgs(args.toList).asExpr
 
       case Plan.BetweenProductTuple(source, dest, plans) =>
         val fields = source.fields.keys
         val args = plans.zipWithIndex.map {
-          //TODO: All other Product/Tuple or vice versa things need to handle passing in the value if they can
-          case (p: Plan.Configured[Nothing], _) =>
-            recurse(p, value)
-          case (plan, index) =>
-            val fieldName = fields(index)
+          case (plan, idx) if fields.isDefinedAt(idx) =>
+            val fieldName = fields(idx)
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             recurse(plan, fieldValue)
+          case (plan, _) =>
+            recurse(plan, value)
         }
 
         Expr.ofTupleFromSeq(args.toSeq)
 
       case Plan.BetweenTupleProduct(source, dest, plans) =>
         val args = plans.values.zipWithIndex.map {
-          case (p: Plan.Configured[Nothing], idx) =>
-            recurse(p, value).asTerm
-          case (plan, idx) =>
+          case (plan, idx) if source.elements.isDefinedAt(idx) =>
             val elemValue = value.accesFieldByIndex(idx, source)
             recurse(plan, elemValue).asTerm
+          case (plan, _) =>
+            recurse(plan, value).asTerm
         }
         Constructor(dest.tpe.repr).appliedToArgs(args.toList).asExpr
 
       case Plan.BetweenTuples(source, dest, plans) =>
         val args = plans.zipWithIndex.map {
-          case (p: Plan.Configured[Nothing], idx) =>
-            recurse(p, value)
-          case (plan, idx) =>
+          case (plan, idx) if source.elements.isDefinedAt(idx) =>
             val elemValue = value.accesFieldByIndex(idx, source)
             recurse(plan, elemValue)
+          case (plan, _) =>
+            recurse(plan, value)
         }
 
         Expr.ofTupleFromSeq(args)
@@ -80,23 +76,23 @@ private[ducktape] object PlanInterpreter {
         }.toList
         IfExpression(branches, '{ throw new RuntimeException("Unhandled case. This is most likely a bug in ducktape.") }).asExpr
 
-      case Plan.BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
+      case Plan.BetweenProductFunction(source, dest, argPlans) =>
         val args = argPlans.map {
-          case (fieldName, p: Plan.Configured[Nothing]) =>
-            recurse(p, value).asTerm
-          case (fieldName, plan) =>
+          case (fieldName, plan) if source.fields.contains(fieldName) =>
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             recurse(plan, fieldValue).asTerm
+          case (fieldName, plan) =>
+            recurse(plan, value).asTerm
         }
-        destTpe.function.appliedTo(args.toList)
+        dest.function.appliedTo(args.toList)
 
       case Plan.BetweenTupleFunction(source, dest, argPlans) =>
         val args = argPlans.values.zipWithIndex.map {
-          case (p: Plan.Configured[Nothing], index) =>
-            recurse(p, value).asTerm
-          case (plan, index) =>
+          case (plan, index) if source.elements.isDefinedAt(index) =>
             val fieldValue = value.accesFieldByIndex(index, source)
             recurse(plan, fieldValue).asTerm
+          case (plan, index) =>
+            recurse(plan, value).asTerm
         }
         dest.function.appliedTo(args.toList)
 
