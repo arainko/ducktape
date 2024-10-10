@@ -425,44 +425,37 @@ private[ducktape] object PlanConfigurer {
       warnings: Accumulator[ConfigWarning],
       context: Context
     ) = {
-      //TODO: this is awful, refactor pls
-      def isReplaceableBy(update: Configuration[F])(using Quotes) =
-        def checkDestTpe = update.destTpe.repr <:< currentPlan.destPath.currentTpe.repr
-        def checkSourceTpe =
-          update.sourceTpe match
-            case None         => true
-            case tpe: Type[?] => currentPlan.sourcePath.currentTpe.repr <:< tpe.repr
-
-        Either
-          .cond(
-            checkDestTpe,
-            (),
-            ErrorMessage.InvalidConfigurationDestType(
-              config.destTpe,
-              currentPlan.destPath.currentTpe,
-              instruction.side,
-              instruction.span
-            )
-          )
-          .flatMap { _ =>
-            def tpe = config.sourceTpe match
-              case None         => Type.of[Any]
-              case tpe: Type[?] => tpe
-
-            Either.cond(
-              checkSourceTpe,
+      def isReplaceableBy(update: Configuration[F])(using Quotes) = {
+        def checkDestTpe =
+          Either
+            .cond(
+              update.destTpe.repr <:< currentPlan.destPath.currentTpe.repr,
               (),
-              ErrorMessage.InvalidConfigurationSourceType(
-                tpe,
-                currentPlan.sourcePath.currentTpe,
+              ErrorMessage.InvalidConfigurationDestType(
+                config.destTpe,
+                currentPlan.destPath.currentTpe,
                 instruction.side,
                 instruction.span
               )
             )
-          }
 
-      isReplaceableBy(config) match
-        case Left(value) => 
+        def checkSourceTpe =
+          Either.cond(
+            update.sourceTpe.fold(true, tpe => currentPlan.sourcePath.currentTpe.repr <:< tpe.repr),
+            (),
+            ErrorMessage.InvalidConfigurationSourceType(
+              config.sourceTpe.getOrElse(Type.of[Any]),
+              currentPlan.sourcePath.currentTpe, // TODO: Check if .currentTpe or rather sourcePath.last should be used here
+              instruction.side,
+              instruction.span
+            )
+          )
+
+        checkSourceTpe.zipRight(checkDestTpe)
+      }
+
+      isReplaceableBy(config) match {
+        case Left(value) =>
           Accumulator.append {
             Plan.Error.from(
               currentPlan,
@@ -482,7 +475,7 @@ private[ducktape] object PlanConfigurer {
               .map(plan => ConfigWarning(plan.span, instruction.span, path))
           }
           Plan.Configured.from(currentPlan, config, instruction)
-    
+      }
     }
   }
 

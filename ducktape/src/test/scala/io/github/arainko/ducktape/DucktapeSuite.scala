@@ -31,6 +31,19 @@ trait DucktapeSuite extends FunSuite {
       Transformer.define[A, B].build().transform(source)
     )(expected)
 
+  // transparent inline def assertTransformsVia[A, B, Func, Args <: FunctionArguments](
+  //   source: A,
+  //   inline func: A => B,
+  //   inline func1: DefinitionViaBuilder.PartiallyApplied[A] => DefinitionViaBuilder[A, B, Func, Args],
+  //   inline func2: A => AppliedViaBuilder[A, B, Func, Args],
+  //   expected: B
+  // )(using Location) =
+  //   assertEachEquals(
+  //     source.via(func),
+  //     func1(DefinitionViaBuilder.create[A]).build().transform(source),
+  //     func2(source).transform()
+  //   )(expected)
+
   inline def assertTransformsFallible[F[+x], M <: Mode[F], A, B](using M)(source: A, expected: F[B])(using loc: Location) =
     assertEachEquals(
       source.fallibleTo[B],

@@ -15,10 +15,9 @@ private[ducktape] object ConfigParser {
 
   def fallible[F[+x]: Type] = NonEmptyList(Total, PossiblyFallible[F])
 
-  def combine[F <: Fallible](parsers: NonEmptyList[ConfigParser[F]])(using
-    Quotes,
-    Context
-  ): PartialFunction[quotes.reflect.Term, Instruction[F]] =
+  def combine[F <: Fallible](
+    parsers: NonEmptyList[ConfigParser[F]]
+  )(using Quotes, Context): PartialFunction[quotes.reflect.Term, Instruction[F]] =
     parsers.map(_.apply).reduceLeft(_ orElse _)
 
   object Total extends ConfigParser[Nothing] {

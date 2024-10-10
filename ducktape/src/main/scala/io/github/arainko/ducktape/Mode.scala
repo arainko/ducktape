@@ -157,18 +157,3 @@ object Mode {
     def either[E]: Mode.FailFast.Either[E] = Mode.FailFast.Either[E]
   }
 }
-
-object test2 {
-  // import io.github.arainko.ducktape.*
-
-  private case class Source(opt: Option[Level1])
-  private case class Level1(int: Int)
-
-  internal.CodePrinter.code:
-    locally {
-      Source(Some(Level1(2)))
-        .into[Source]
-      .transform(Field.computedDeep(_.opt.element.int, (int: Any) => int.toString.toInt + 1))
-    }
-
-}

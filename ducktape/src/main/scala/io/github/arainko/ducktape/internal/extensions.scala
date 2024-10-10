@@ -30,3 +30,23 @@ extension (expr: Expr[Any]) {
 
   }
 }
+
+extension [A, B](self: Either[A, B]) {
+  private[ducktape] inline def zipRight[AA >: A, C](inline that: Either[AA, C]): Either[AA, C] =
+    self.flatMap(_ => that)
+}
+
+extension [A](self: A | None.type) {
+  private[ducktape] inline def getOrElse[AA >: A](inline fallback: AA): AA =
+    self.fold(fallback, a => a)
+
+  private[ducktape] inline def fold[B](inline caseNone: B, inline caseA: A => B): B =
+    self match
+      case None => caseNone
+      case a: A => caseA(a)
+
+  // private[ducktape] inline def map[B](inline f: A => B): B | None.type = self.fold(None, f)
+      
+    
+
+}

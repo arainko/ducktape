@@ -790,4 +790,142 @@ class NestedConfigurationSuite extends DucktapeSuite {
         .transform(source)
     )(expected)
   }
+
+  test("Field.computedDeep works in deeply nested case classes") {
+    case class SourceToplevel1(level1: SourceLevel1)
+    case class SourceLevel1(level2: SourceLevel2)
+    case class SourceLevel2(int: Int)
+
+    case class DestToplevel1(level1: DestLevel1)
+    case class DestLevel1(level2: DestLevel2)
+    case class DestLevel2(int: Long)
+
+    val source = SourceToplevel1(SourceLevel1(SourceLevel2(1)))
+    val expected = DestToplevel1(DestLevel1(DestLevel2(11)))
+
+    assertTransformsConfigured(source, expected)(
+      Field.computedDeep(_.level1.level2.int, (int: Int) => int.toLong + 10)
+    )
+
+    assertEachEquals(
+      source
+        .intoVia(DestToplevel1.apply)
+        .transform(Field.computedDeep(_.level1.level2.int, (int: Int) => int.toLong + 10)),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .build(Field.computedDeep(_.level1.level2.int, (int: Int) => int.toLong + 10))
+        .transform(source)
+    )(expected)
+
+  }
+
+  test("Field.computedDeep works with deeply nested tuples") {
+    val source = Tuple1(Tuple1(Tuple1(1)))
+
+    val expected = Tuple1(Tuple1(Tuple1(11L)))
+
+    assertTransformsConfigured(source, expected)(
+      Field.computedDeep(_.apply(0).apply(0).apply(0), (int: Int) => int.toLong + 10)
+    )
+
+    assertEachEquals(
+      source
+        .intoVia(Tuple1.apply[Tuple1[Tuple1[Long]]])
+        .transform(Field.computedDeep(_._1._1._1, (int: Int) => int.toLong + 10)),
+      Transformer
+        .defineVia[Tuple1[Tuple1[Tuple1[Int]]]](Tuple1.apply[Tuple1[Tuple1[Long]]])
+        .build(Field.computedDeep(_._1._1._1, (int: Int) => int.toLong + 10))
+        .transform(source)
+    )(expected)
+  }
+
+  test("Field.computedDeep works with Options") {
+    case class SourceToplevel1(level1: Option[SourceLevel1])
+    case class SourceLevel1(level2: Option[SourceLevel2])
+    case class SourceLevel2(level3: SourceLevel3)
+    case class SourceLevel3(int: Int)
+
+    case class DestToplevel1(level1: Option[DestLevel1])
+    case class DestLevel1(level2: Option[DestLevel2])
+    case class DestLevel2(level3: Option[DestLevel3])
+    case class DestLevel3(int: Long)
+
+    val source = SourceToplevel1(Some(SourceLevel1(Some(SourceLevel2(SourceLevel3(1))))))
+    val expected = DestToplevel1(Some(DestLevel1(Some(DestLevel2(Some(DestLevel3(11)))))))
+
+    assertTransformsConfigured(source, expected)(
+      Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
+    )
+
+    assertEachEquals(
+      source
+        .intoVia(DestToplevel1.apply)
+        .transform(
+          Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
+        ),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .build(
+          Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
+        )
+        .transform(source)
+    )(expected)
+
+  }
+
+  test("Field.computedDeep works with collections") {
+    case class SourceToplevel1(level1: Vector[SourceLevel1])
+    case class SourceLevel1(level2: Vector[SourceLevel2])
+    case class SourceLevel2(level3: Vector[SourceLevel3])
+    case class SourceLevel3(int: Int)
+
+    case class DestToplevel1(level1: List[DestLevel1])
+    case class DestLevel1(level2: List[DestLevel2])
+    case class DestLevel2(level3: List[DestLevel3])
+    case class DestLevel3(int: Long)
+
+    val source = SourceToplevel1(Vector(SourceLevel1(Vector(SourceLevel2(Vector(SourceLevel3(1)))))))
+    val expected = DestToplevel1(List(DestLevel1(List(DestLevel2(List(DestLevel3(11)))))))
+
+    assertTransformsConfigured(source, expected)(
+      Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
+    )
+
+    assertEachEquals(
+      source
+        .intoVia(DestToplevel1.apply)
+        .transform(
+          Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
+        ),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .build(
+          Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
+        )
+        .transform(source)
+    )(expected)
+  }
+
+  test("Field.computedDeep works with coproducts".ignore) {}
+
+  test("Field.computedDeep reports the right source type if the one given to it is wrong".ignore) {}
+
+  // TODO: Think this through, should this error out? This currently picks up the 'nearest' source field to the dest one
+  test("Field.computedDeep works correctly when a field on the same level is missing in the Source".ignore) {
+    case class SourceToplevel1(level1: SourceLevel1)
+    case class SourceLevel1(level2: SourceLevel2)
+    case class SourceLevel2(int: Int)
+
+    case class DestToplevel1(level1: DestLevel1)
+    case class DestLevel1(level2: DestLevel2)
+    case class DestLevel2(int: Int, extra: String)
+
+    val source = SourceToplevel1(SourceLevel1(SourceLevel2(1)))
+    val expected = DestToplevel1(DestLevel1(DestLevel2(1, "1CONF")))
+
+    assertTransformsConfigured(source, expected)(
+      Field.computedDeep(_.level1.level2.extra, (a: SourceLevel2) => a.int.toString())
+    )
+  }
+
 }
