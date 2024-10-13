@@ -172,40 +172,14 @@ private[ducktape] object Plan {
   }
 
   object Configured {
-    /*
-
-    */
     def from[F <: Fallible](plan: Plan[Erroneous, F], conf: Configuration[F], instruction: Configuration.Instruction[F])(using
       Quotes,
       Context
     ): Plan.Configured[F] =
-      (plan.source.tpe, plan.dest.tpe, conf.tpe) match {
-        case ('[src], '[dest], '[confTpe]) =>
-          
-          // val (source, dest) = conf match
-          //   case Configuration.Const(value, tpe) => 
-          //     plan.source -> Structure.Lazy.of[confTpe](plan.dest.path)
-
-          //   case Configuration.CaseComputed(tpe, function) => 
-          //     Structure.Lazy.of[confTpe](plan.source.path) -> plan.dest
-
-          //   case Configuration.FieldComputed(tpe, function) =>
-          //     plan.source -> Structure.Lazy.of[confTpe](plan.dest.path)
-
-          //   case Configuration.FieldReplacement(source, name, tpe) =>
-          //     plan.source -> Structure.Lazy.of[confTpe](plan.dest.path)
-
-          //   case Configuration.FallibleConst(value, tpe) =>
-          //     plan.source -> Structure.Lazy.of[confTpe](plan.dest.path)
-
-          //   case Configuration.FallibleFieldComputed(tpe, function) =>
-          //     plan.source -> Structure.Lazy.of[confTpe](plan.dest.path)
-
-          //   case Configuration.FallibleCaseComputed(tpe, function) =>
-          //     Structure.Lazy.of[confTpe](plan.source.path) -> plan.dest
-          
-          // if side is Dest then we're operating either on a missing Source in which case
-          // val source = if instruction.side.isDest then Structure.Lazy.of[confTpe](plan.source.path) else plan.source
+      conf.tpe match {
+        case '[confTpe] =>
+          // if side is Source then we're operating on either a missing Source case or an override of that,
+          // which means the dest types need to be narrowed down to the exact type of this config
           val dest = if instruction.side.isSource then Structure.Lazy.of[confTpe](plan.dest.path) else plan.dest
           Plan.Configured(plan.source, dest, conf, instruction.span)
       }
