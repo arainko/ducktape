@@ -907,61 +907,75 @@ class NestedConfigurationSuite extends DucktapeSuite {
   }
 
   test("Field.computedDeep works with coproducts") {
-    // enum SourceToplevel1 {
-    //   case Level1(level2: SourceLevel2)
-    // }
+    enum SourceToplevel1 {
+      case Level1(level2: SourceLevel2)
+    }
 
-    // enum SourceLevel2 {
-    //   case Level2(level3: SourceLevel3)
-    // }
+    enum SourceLevel2 {
+      case Level2(level3: SourceLevel3)
+    }
 
-    // enum SourceLevel3 {
-    //   case One(int: Int)
-    //   case Two(str: String)
-    // }
+    enum SourceLevel3 {
+      case One(int: Int)
+      case Two(str: String)
+    }
 
-    // enum DestToplevel1 {
-    //   case Level1(level2: DestLevel2)
-    // }
+    enum DestToplevel1 {
+      case Level1(level2: DestLevel2)
+    }
 
-    // enum DestLevel2 {
-    //   case Level2(level3: DestLevel3)
-    // }
+    enum DestLevel2 {
+      case Level2(level3: DestLevel3)
+    }
 
-    // enum DestLevel3 {
-    //   case One(int: Long)
-    //   case Two(str: String)
-    // }
+    enum DestLevel3 {
+      case One(int: Long)
+      case Two(str: String)
+    }
 
-    // val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.One(1)))
-    // val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One(6)))
+    val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.One(1)))
+    val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One(6)))
 
-    // assertTransformsConfigured(source, expected)(
-    //   Field.computedDeep(_.at[DestToplevel1.Level1].level2.at[DestLevel2.Level2].level3.at[DestLevel3.One], (a: SourceLevel3.One) => ???)
-    // )
+    assertTransformsConfigured(source, expected)(
+      Field.computedDeep(
+        _.at[DestToplevel1.Level1].level2.at[DestLevel2.Level2].level3.at[DestLevel3.One],
+        (a: SourceLevel3.One) => DestLevel3.One(a.int.toLong + 5)
+      )
+    )
 
-    // assertEachEquals(
-    //   source
-    //     .into[DestToplevel1]
-    //     .transform(
-    //       Case.computed(
-    //         _.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra],
-    //         extra => DestLevel3.One(extra.int + 5)
-    //       )
-    //     ),
-    //   Transformer
-    //     .define[SourceToplevel1, DestToplevel1]
-    //     .build(
-    //       Case.computed(
-    //         _.at[SourceToplevel1.Level1].level2.at[SourceLevel2.Level2].level3.at[SourceLevel3.Extra],
-    //         extra => DestLevel3.One(extra.int + 5)
-    //       )
-    //     )
-    //     .transform(source)
-    // )(expected)
+    assertTransformsConfigured(source, expected)(
+      Field.computedDeep(
+        _.at[DestToplevel1.Level1].level2.at[DestLevel2.Level2].level3.at[DestLevel3.One].int,
+        (a: Int) => a + 5L
+      )
+    )
   }
 
-  test("Field.computedDeep reports the right source type if the one given to it is wrong".ignore) {}
+  test("Field.computedDeep reports the right source type if the one given to it is wrong") {
+    case class SourceToplevel1(level1: Vector[SourceLevel1])
+    case class SourceLevel1(level2: Vector[SourceLevel2])
+    case class SourceLevel2(level3: Vector[SourceLevel3])
+    case class SourceLevel3(int: Int)
+
+    case class DestToplevel1(level1: List[DestLevel1])
+    case class DestLevel1(level2: List[DestLevel2])
+    case class DestLevel2(level3: List[DestLevel3])
+    case class DestLevel3(int: Long)
+
+    val source = SourceToplevel1(Vector(SourceLevel1(Vector(SourceLevel2(Vector(SourceLevel3(1)))))))
+    val expected = DestToplevel1(List(DestLevel1(List(DestLevel2(List(DestLevel3(11)))))))
+
+    assertFailsToCompileWith {
+      """
+      source.into[DestToplevel1].transform(
+        Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: String) => int.toLong + 10L)
+      )
+      """
+    }(
+      "Configuration is not valid since the provided source type (java.lang.String) is not a supertype of scala.Int @ DestToplevel1.level1.element.level2.element.level3.element.int",
+      "Couldn't build a transformation plan between scala.Int and scala.Long @ DestToplevel1.level1.element.level2.element.level3.element.int"
+    )
+  }: @nowarn
 
   // TODO: Think this through, should this error out? This currently picks up the 'nearest' source field to the dest one
   test("Field.computedDeep works correctly when a field on the same level is missing in the Source".ignore) {
