@@ -882,52 +882,56 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
     )(F.pure(expected))
   }
 
-  test("Field.computedDeep works in deeply nested case classes") {
+  test("Field.fallibleComputedDeep works in deeply nested case classes") {
     case class SourceToplevel1(level1: SourceLevel1)
     case class SourceLevel1(level2: SourceLevel2)
     case class SourceLevel2(int: Int)
 
     case class DestToplevel1(level1: DestLevel1)
     case class DestLevel1(level2: DestLevel2)
-    case class DestLevel2(int: Long)
+    case class DestLevel2(int: Positive)
 
     val source = SourceToplevel1(SourceLevel1(SourceLevel2(1)))
-    val expected = DestToplevel1(DestLevel1(DestLevel2(11)))
+    val expected = DestToplevel1(DestLevel1(DestLevel2(Positive(11))))
 
-    assertTransformsConfigured(source, expected)(
-      Field.computedDeep(_.level1.level2.int, (int: Int) => int.toLong + 10)
+    assertTransformsFallibleConfigured(source, F.pure(expected))(
+      Field.fallibleComputedDeep(_.level1.level2.int, (int: Int) => fallibleComputation(int + 10))
     )
 
     assertEachEquals(
       source
         .intoVia(DestToplevel1.apply)
-        .transform(Field.computedDeep(_.level1.level2.int, (int: Int) => int.toLong + 10)),
+        .fallible
+        .transform(Field.fallibleComputedDeep(_.level1.level2.int, (int: Int) => fallibleComputation(int + 10))),
       Transformer
         .defineVia[SourceToplevel1](DestToplevel1.apply)
-        .build(Field.computedDeep(_.level1.level2.int, (int: Int) => int.toLong + 10))
+        .fallible
+        .build(Field.fallibleComputedDeep(_.level1.level2.int, (int: Int) => fallibleComputation(int + 10)))
         .transform(source)
-    )(expected)
+    )(F.pure(expected))
 
   }
 
-  test("Field.computedDeep works with deeply nested tuples") {
+  test("Field.fallibleComputedDeep works with deeply nested tuples") {
     val source = Tuple1(Tuple1(Tuple1(1)))
 
-    val expected = Tuple1(Tuple1(Tuple1(11L)))
+    val expected = Tuple1(Tuple1(Tuple1(Positive(11))))
 
-    assertTransformsConfigured(source, expected)(
-      Field.computedDeep(_.apply(0).apply(0).apply(0), (int: Int) => int.toLong + 10)
+    assertTransformsFallibleConfigured(source, F.pure(expected))(
+      Field.fallibleComputedDeep(_.apply(0).apply(0).apply(0), (int: Int) => fallibleComputation(int + 10))
     )
 
     assertEachEquals(
       source
-        .intoVia(Tuple1.apply[Tuple1[Tuple1[Long]]])
-        .transform(Field.computedDeep(_._1._1._1, (int: Int) => int.toLong + 10)),
+        .intoVia(Tuple1.apply[Tuple1[Tuple1[Positive]]])
+        .fallible
+        .transform(Field.fallibleComputedDeep(_._1._1._1, (int: Int) => fallibleComputation(int + 10))),
       Transformer
-        .defineVia[Tuple1[Tuple1[Tuple1[Int]]]](Tuple1.apply[Tuple1[Tuple1[Long]]])
-        .build(Field.computedDeep(_._1._1._1, (int: Int) => int.toLong + 10))
+        .defineVia[Tuple1[Tuple1[Tuple1[Int]]]](Tuple1.apply[Tuple1[Tuple1[Positive]]])
+        .fallible
+        .build(Field.fallibleComputedDeep(_._1._1._1, (int: Int) => fallibleComputation(int + 10)))
         .transform(source)
-    )(expected)
+    )(F.pure(expected))
   }
 
   test("Field.computedDeep works with Options") {
@@ -939,63 +943,68 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
     case class DestToplevel1(level1: Option[DestLevel1])
     case class DestLevel1(level2: Option[DestLevel2])
     case class DestLevel2(level3: Option[DestLevel3])
-    case class DestLevel3(int: Long)
+    case class DestLevel3(int: Positive)
 
     val source = SourceToplevel1(Some(SourceLevel1(Some(SourceLevel2(SourceLevel3(1))))))
-    val expected = DestToplevel1(Some(DestLevel1(Some(DestLevel2(Some(DestLevel3(11)))))))
+    val expected = DestToplevel1(Some(DestLevel1(Some(DestLevel2(Some(DestLevel3(Positive(11))))))))
 
-    assertTransformsConfigured(source, expected)(
-      Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
+    assertTransformsFallibleConfigured(source, F.pure(expected))(
+      Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
     )
 
     assertEachEquals(
       source
         .intoVia(DestToplevel1.apply)
+        .fallible
         .transform(
-          Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
+          Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
         ),
       Transformer
         .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .fallible
         .build(
-          Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
+          Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
         )
         .transform(source)
-    )(expected)
+    )(F.pure(expected))
 
   }
 
-  test("Field.computedDeep works with collections") {
-    case class SourceToplevel1(level1: Vector[SourceLevel1])
-    case class SourceLevel1(level2: Vector[SourceLevel2])
-    case class SourceLevel2(level3: Vector[SourceLevel3])
-    case class SourceLevel3(int: Int)
+  // compiler crash - most likely https://github.com/arainko/ducktape/issues/128
+  // test("Field.computedDeep works with collections") {
+  //   case class SourceToplevel1(level1: Vector[SourceLevel1])
+  //   case class SourceLevel1(level2: Vector[SourceLevel2])
+  //   case class SourceLevel2(level3: Vector[SourceLevel3])
+  //   case class SourceLevel3(int: Int)
 
-    case class DestToplevel1(level1: List[DestLevel1])
-    case class DestLevel1(level2: List[DestLevel2])
-    case class DestLevel2(level3: List[DestLevel3])
-    case class DestLevel3(int: Long)
+  //   case class DestToplevel1(level1: List[DestLevel1])
+  //   case class DestLevel1(level2: List[DestLevel2])
+  //   case class DestLevel2(level3: List[DestLevel3])
+  //   case class DestLevel3(int: Positive)
 
-    val source = SourceToplevel1(Vector(SourceLevel1(Vector(SourceLevel2(Vector(SourceLevel3(1)))))))
-    val expected = DestToplevel1(List(DestLevel1(List(DestLevel2(List(DestLevel3(11)))))))
+  //   val source = SourceToplevel1(Vector(SourceLevel1(Vector(SourceLevel2(Vector(SourceLevel3(1)))))))
+  //   val expected = DestToplevel1(List(DestLevel1(List(DestLevel2(List(DestLevel3(Positive(11))))))))
 
-    assertTransformsConfigured(source, expected)(
-      Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
-    )
+  //   assertTransformsFallibleConfigured(source, F.pure(expected))(
+  //     Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
+  //   )
 
-    assertEachEquals(
-      source
-        .intoVia(DestToplevel1.apply)
-        .transform(
-          Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
-        ),
-      Transformer
-        .defineVia[SourceToplevel1](DestToplevel1.apply)
-        .build(
-          Field.computedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => int.toLong + 10)
-        )
-        .transform(source)
-    )(expected)
-  }
+  //   assertEachEquals(
+  //     source
+  //       .intoVia(DestToplevel1.apply)
+  //       .fallible
+  //       .transform(
+  //         Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
+  //       ),
+  //     Transformer
+  //       .defineVia[SourceToplevel1](DestToplevel1.apply)
+  //       .fallible
+  //       .build(
+  //         Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
+  //       )
+  //       .transform(source)
+  //   )(F.pure(expected))
+  // }
 
   test("Field.computedDeep works with coproducts") {
     enum SourceToplevel1 {
@@ -1020,24 +1029,24 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
     }
 
     enum DestLevel3 {
-      case One(int: Long)
+      case One(int: Positive)
       case Two(str: String)
     }
 
     val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.One(1)))
-    val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One(6)))
+    val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One(Positive(6))))
 
-    assertTransformsConfigured(source, expected)(
-      Field.computedDeep(
+    assertTransformsFallibleConfigured(source, F.pure(expected))(
+      Field.fallibleComputedDeep(
         _.at[DestToplevel1.Level1].level2.at[DestLevel2.Level2].level3.at[DestLevel3.One],
-        (a: SourceLevel3.One) => DestLevel3.One(a.int.toLong + 5)
+        (a: SourceLevel3.One) => fallibleComputation(a.int + 5).map(pos => DestLevel3.One(pos))
       )
     )
 
-    assertTransformsConfigured(source, expected)(
-      Field.computedDeep(
+    assertTransformsFallibleConfigured(source, F.pure(expected))(
+      Field.fallibleComputedDeep(
         _.at[DestToplevel1.Level1].level2.at[DestLevel2.Level2].level3.at[DestLevel3.One].int,
-        (a: Int) => a + 5L
+        (a: Int) => fallibleComputation(a + 5)
       )
     )
   }
