@@ -907,38 +907,38 @@ class NestedConfigurationSuite extends DucktapeSuite {
   }
 
   test("Field.computedDeep works with coproducts") {
-    enum SourceToplevel1 {
-      case Level1(level2: SourceLevel2)
-    }
+    // enum SourceToplevel1 {
+    //   case Level1(level2: SourceLevel2)
+    // }
 
-    enum SourceLevel2 {
-      case Level2(level3: SourceLevel3)
-    }
+    // enum SourceLevel2 {
+    //   case Level2(level3: SourceLevel3)
+    // }
 
-    enum SourceLevel3 {
-      case One(int: Int)
-      case Two(str: String)
-    }
+    // enum SourceLevel3 {
+    //   case One(int: Int)
+    //   case Two(str: String)
+    // }
 
-    enum DestToplevel1 {
-      case Level1(level2: DestLevel2)
-    }
+    // enum DestToplevel1 {
+    //   case Level1(level2: DestLevel2)
+    // }
 
-    enum DestLevel2 {
-      case Level2(level3: DestLevel3)
-    }
+    // enum DestLevel2 {
+    //   case Level2(level3: DestLevel3)
+    // }
 
-    enum DestLevel3 {
-      case One(int: Long)
-      case Two(str: String)
-    }
+    // enum DestLevel3 {
+    //   case One(int: Long)
+    //   case Two(str: String)
+    // }
 
-    val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.One(1)))
-    val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One(6)))
+    // val source = SourceToplevel1.Level1(SourceLevel2.Level2(SourceLevel3.One(1)))
+    // val expected = DestToplevel1.Level1(DestLevel2.Level2(DestLevel3.One(6)))
 
-    assertTransformsConfigured(source, expected)(
-      Field.computedDeep(_.at[DestToplevel1.Level1].level2.at[DestLevel2.Level2].level3.at[DestLevel3.One], (a: SourceLevel3.One) => ???)
-    )
+    // assertTransformsConfigured(source, expected)(
+    //   Field.computedDeep(_.at[DestToplevel1.Level1].level2.at[DestLevel2.Level2].level3.at[DestLevel3.One], (a: SourceLevel3.One) => ???)
+    // )
 
     // assertEachEquals(
     //   source

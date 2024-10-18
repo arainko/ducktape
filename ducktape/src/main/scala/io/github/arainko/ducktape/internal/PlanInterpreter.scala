@@ -160,7 +160,7 @@ private[ducktape] object PlanInterpreter {
       case Configuration.FieldComputed(_, function) =>
         '{ $function.apply($toplevelValue) }
       case Configuration.FieldComputedDeep(tpe, sourceTpe, function) =>
-        '{ $function.apply($value) }
+        /*Expr.betaReduce(*/'{ $function.apply($value) }/*)*/
       case Configuration.FieldReplacement(source, name, tpe) =>
         source.accessFieldByName(name).asExpr
     }

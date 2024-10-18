@@ -441,11 +441,11 @@ private[ducktape] object PlanConfigurer {
 
         def checkSourceTpe =
           Either.cond(
-            update.sourceTpe.fold(true, tpe => currentPlan.sourcePath.currentTpe.repr <:< tpe.repr),
+            update.sourceTpe.fold(true, tpe => currentPlan.sourcePath.narrowedCurrentTpe.repr <:< tpe.repr),
             (),
             ErrorMessage.InvalidConfigurationSourceType(
               config.sourceTpe.getOrElse(Type.of[Any]),
-              currentPlan.sourcePath.currentTpe, // TODO: Check if .currentTpe or rather sourcePath.last should be used here
+              currentPlan.sourcePath.narrowedCurrentTpe, // TODO: Check if .currentTpe or rather sourcePath.last should be used here
               instruction.side,
               instruction.span
             )
