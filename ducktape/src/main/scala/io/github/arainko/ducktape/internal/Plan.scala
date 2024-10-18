@@ -174,11 +174,12 @@ private[ducktape] object Plan {
       Quotes,
       Context
     ): Plan.Configured[F] =
-      (plan.source.tpe, plan.dest.tpe, conf.destTpe) match {
-        case ('[src], '[dest], '[confTpe]) =>
-          val source = if instruction.side.isDest then Structure.Lazy.of[confTpe](plan.source.path) else plan.source
+      conf.destTpe match {
+        case '[confTpe] =>
+          // if side is Source then we're operating on either a missing Source case or an override of that,
+          // which means the dest types need to be narrowed down to the exact type of this config
           val dest = if instruction.side.isSource then Structure.Lazy.of[confTpe](plan.dest.path) else plan.dest
-          Plan.Configured(source, dest, conf, instruction.span)
+          Plan.Configured(plan.source, dest, conf, instruction.span)
       }
   }
 

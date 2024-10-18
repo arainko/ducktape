@@ -19,7 +19,7 @@ private[ducktape] object PlanInterpreter {
     plan match {
       case Plan.Upcast(_, _, _) => value
 
-      case Plan.Configured(_, _, config, _) =>
+      case Plan.Configured(_, dest, config, _) =>
         evaluateConfig(config, value)
 
       case Plan.BetweenProducts(source, dest, fieldPlans) =>
