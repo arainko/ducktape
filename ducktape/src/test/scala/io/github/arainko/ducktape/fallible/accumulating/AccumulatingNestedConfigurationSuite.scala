@@ -223,15 +223,12 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
         .transform(
           Field.fallibleConst(_.level1.element.level2.element.level3.element.extra, fallibleComputation(2137))
         ),
-
-      // TODO: compiler crashes here :( minimize and report to dotty
-      // source
-      //   .intoVia(DestToplevel1.apply)
-      //   .fallible
-      //   .transform(
-      //     Field.fallibleConst(_.level1.element.level2.element.level3.element.extra, fallibleComputation(2137))
-      //   ),
-
+      source
+        .intoVia(DestToplevel1.apply)
+        .fallible
+        .transform(
+          Field.fallibleConst(_.level1.element.level2.element.level3.element.extra, fallibleComputation(2137))
+        ),
       Transformer
         .define[SourceToplevel1, DestToplevel1]
         .fallible
@@ -269,16 +266,15 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
             F.map(fallibleComputation(2), pos => DestLevel3(pos, pos))
           )
         ),
-      // TODO: Compiler crash here as well :(
-      // source
-      //   .intoVia(DestToplevel1.apply)
-      //   .fallible
-      //   .transform(
-      //     Field.fallibleConst(
-      //       _.level1.element.level2.element.level3.element,
-      //       F.map(fallibleComputation(2), pos => DestLevel3(pos, pos))
-      //     )
-      //   ),
+      source
+        .intoVia(DestToplevel1.apply)
+        .fallible
+        .transform(
+          Field.fallibleConst(
+            _.level1.element.level2.element.level3.element,
+            F.map(fallibleComputation(2), pos => DestLevel3(pos, pos))
+          )
+        ),
       Transformer
         .define[SourceToplevel1, DestToplevel1]
         .fallible
@@ -602,22 +598,21 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
 
     // scalafmt: { maxColumn = 150 }
     assertEachEquals(
-      // TODO: Compiler crash when using an internal class, works when Source and Dest are declared as toplevel
-      // source
-      //   .into[DestToplevel1]
-      //   .fallible
-      //   .transform(
-      //     Case.fallibleConst(
-      //       _.at[SourceToplevel1.Level1].level2.element
-      //         .at[SourceLevel2.Level2]
-      //         .level3
-      //         .element
-      //         .at[SourceLevel3.Level3]
-      //         .level4
-      //         .at[SourceLevel4.Extra.type],
-      //       F.pure(DestLevel4.One)
-      //     )
-      //   ),
+      source
+        .into[DestToplevel1]
+        .fallible
+        .transform(
+          Case.fallibleConst(
+            _.at[SourceToplevel1.Level1].level2.element
+              .at[SourceLevel2.Level2]
+              .level3
+              .element
+              .at[SourceLevel3.Level3]
+              .level4
+              .at[SourceLevel4.Extra.type],
+            F.pure(DestLevel4.One)
+          )
+        ),
       Transformer
         .define[SourceToplevel1, DestToplevel1]
         .fallible

@@ -22,13 +22,12 @@ private[ducktape] object ProductZipper {
     // ducktape 0.2.x changed the zipping and unzipping algorithm, to emulate the 0.1 runtime behavior we need to zip those fields in reverse
     val reorderedFields = wrappedFields.reverse
 
+    // using a method for 'transform' fixes a bunch of owner issues reported by -Xcheck-macros
     zipFields[F](F, reorderedFields) match {
       case '{ $zipped: F[a] } =>
         '{
-          $F.map(
-            $zipped,
-            value => ${ unzipAndConstruct[Dest](reorderedFields, unwrappedFields, 'value, construct) }
-          )
+          def transform(value: a) = ${ unzipAndConstruct[Dest](reorderedFields, unwrappedFields, 'value, construct) }
+          $F.map($zipped, transform)
         }
     }
   }
@@ -36,13 +35,15 @@ private[ducktape] object ProductZipper {
   private def zipFields[F[+x]: Type](
     F: Expr[Mode.Accumulating[F]],
     wrappedFields: NonEmptyList[FieldValue.Wrapped[F]]
-  )(using Quotes): Expr[F[Any]] =
-    wrappedFields.map(_.value).reduceLeft { (accumulated, current) =>
+  )(using Quotes): Expr[F[Any]] = {
+    val zipped = wrappedFields.map(_.value).reduceLeft { (accumulated, current) =>
       (accumulated -> current) match {
         case '{ $accumulated: F[a] } -> '{ $current: F[b] } =>
           '{ $F.product[`b`, `a`]($current, $accumulated) }
       }
     }
+    alignOwner(zipped).asExprOf[F[Any]]
+  }
 
   private def unzipAndConstruct[Dest: Type](
     wrappedFields: NonEmptyList[FieldValue.Wrapped[?]],

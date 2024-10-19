@@ -48,7 +48,7 @@ lazy val ducktape =
     .enablePlugins(TypelevelMimaPlugin)
     .in(file("ducktape"))
     .settings(
-      scalacOptions ++= List("-deprecation", "-Wunused:all", "-Ykind-projector:underscores"),
+      scalacOptions ++= List("-deprecation", "-Wunused:all", "-Ykind-projector:underscores", "-Xcheck-macros"),
       Test / scalacOptions --= List("-deprecation"),
       Test / scalacOptions ++= List("-Werror", "-Wconf:cat=deprecation:s"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.2" % Test
