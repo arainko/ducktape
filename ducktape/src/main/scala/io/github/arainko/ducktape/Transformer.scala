@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape
 
 import io.github.arainko.ducktape
-import io.github.arainko.ducktape.DefinitionViaBuilder.PartiallyApplied
 import io.github.arainko.ducktape.Transformer.Derived.FromFunction
 import io.github.arainko.ducktape.internal.{ FallibleTransformations, TotalTransformations }
 

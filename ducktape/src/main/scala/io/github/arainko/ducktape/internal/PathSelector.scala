@@ -5,8 +5,6 @@ import scala.quoted.*
 
 private[ducktape] object PathSelector {
   def unapply(using Quotes)(expr: quotes.reflect.Term): Some[Path] = {
-    import quotes.reflect.{ Selector as _, * }
-
     @tailrec
     def recurse(using Quotes)(acc: List[Path.Segment], term: quotes.reflect.Term): Path = {
       import quotes.reflect.*
