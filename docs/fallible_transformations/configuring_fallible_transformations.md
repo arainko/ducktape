@@ -84,6 +84,7 @@ val good = wire.Person(name = "ValidName", age = 24, socialSecurityNo = "SOCIALN
 |:-----------------:|:-------------------:|
 |     `Field.fallibleConst`   |      a fallible variant of `Field.const` that allows for supplying values wrapped in an `F`     |
 |     `Field.fallibleComputed`   |      a fallible variant of `Field.computed` that allows for supplying functions that return values wrapped in an `F`    |
+|     `Field.fallibleComputedDeep`   |      a fallible variant of `Field.computedDeep` that allows for supplying functions that return values wrapped in an `F`    |
 
 ---
 
@@ -148,6 +149,58 @@ Docs.printCode(
     )
 )
 ```
+@:@
+
+* `Field.fallibleComputedDeep` - a fallible variant of `Field.computedDeep` that allows for supplying functions that return values wrapped in an `F` 
+
+```scala mdoc:nest:silent
+given Mode.Accumulating.Either[String, List]()
+
+case class SourceToplevel1(level1: Option[SourceLevel1])
+case class SourceLevel1(level2: Option[SourceLevel2])
+case class SourceLevel2(int: Int)
+
+case class DestToplevel1(level1: Option[DestLevel1])
+case class DestLevel1(level2: Option[DestLevel2])
+case class DestLevel2(int: Positive)
+
+val source = SourceToplevel1(Some(SourceLevel1(Some(SourceLevel2(1)))))
+```
+
+@:select(underlying-code-13)
+@:choice(visible)
+
+```scala mdoc
+source
+  .into[DestToplevel1]
+  .fallible
+  .transform(
+    Field.fallibleComputedDeep(
+      _.level1.element.level2.element.int, 
+      // the type here cannot be inferred automatically and needs to be provided by the user,
+      // a nice compiletime error message is shown (with a suggestion on what the proper type to use is) otherwise
+      (value: Int) => Positive.makeAccumulating(value + 10L))
+    )
+```
+
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[DestToplevel1]
+    .fallible
+    .transform(
+      Field.fallibleComputedDeep(
+        _.level1.element.level2.element.int, 
+        // the type here cannot be inferred automatically and needs to be provided by the user,
+        // a nice compiletime error message is shown (with a suggestion on what the proper type to use is) otherwise
+        (value: Int) => Positive.makeAccumulating(value + 10L))
+      )
+)
+``` 
+
 @:@
 
 ### Coproduct configurations

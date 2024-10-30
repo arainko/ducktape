@@ -425,34 +425,57 @@ private[ducktape] object PlanConfigurer {
       warnings: Accumulator[ConfigWarning],
       context: Context
     ) = {
-      def isReplaceableBy(update: Configuration[F])(using Quotes) =
-        update.tpe.repr <:< currentPlan.destPath.currentTpe.repr
+      def isReplaceableBy(update: Configuration[F])(using Quotes) = {
+        def checkDestTpe =
+          Either
+            .cond(
+              update.destTpe.repr <:< currentPlan.destPath.currentTpe.repr,
+              (),
+              ErrorMessage.InvalidConfigurationDestType(
+                config.destTpe,
+                currentPlan.destPath.currentTpe,
+                instruction.side,
+                instruction.span
+              )
+            )
 
-      if isReplaceableBy(config) then
-        val (path, _) =
-          Accumulator.append {
-            if instruction.side == Side.Dest then currentPlan.destPath -> instruction.side
-            else currentPlan.sourcePath -> instruction.side
-          }
-        Accumulator.appendAll {
-          ConfiguredCollector
-            .run(currentPlan, Nil)
-            .map(plan => ConfigWarning(plan.span, instruction.span, path))
-        }
-        Plan.Configured.from(currentPlan, config, instruction)
-      else
-        Accumulator.append {
-          Plan.Error.from(
-            currentPlan,
-            ErrorMessage.InvalidConfiguration(
-              config.tpe,
-              currentPlan.destPath.currentTpe,
+        def checkSourceTpe =
+          Either.cond(
+            update.sourceTpe.fold(true, tpe => currentPlan.sourcePath.narrowedCurrentTpe.repr <:< tpe.repr),
+            (),
+            ErrorMessage.InvalidConfigurationSourceType(
+              config.sourceTpe.getOrElse(Type.of[Any]),
+              currentPlan.sourcePath.narrowedCurrentTpe,
               instruction.side,
               instruction.span
-            ),
-            None
+            )
           )
-        }
+
+        checkSourceTpe.zipRight(checkDestTpe)
+      }
+
+      isReplaceableBy(config) match {
+        case Left(value) =>
+          Accumulator.append {
+            Plan.Error.from(
+              currentPlan,
+              value,
+              None
+            )
+          }
+        case Right(value) =>
+          val (path, _) =
+            Accumulator.append {
+              if instruction.side == Side.Dest then currentPlan.destPath -> instruction.side
+              else currentPlan.sourcePath -> instruction.side
+            }
+          Accumulator.appendAll {
+            ConfiguredCollector
+              .run(currentPlan, Nil)
+              .map(plan => ConfigWarning(plan.span, instruction.span, path))
+          }
+          Plan.Configured.from(currentPlan, config, instruction)
+      }
     }
   }
 

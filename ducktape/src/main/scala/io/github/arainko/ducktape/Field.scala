@@ -22,6 +22,12 @@ object Field {
     function: A => F[DestFieldTpe]
   ): Field.Fallible[F, A, B] = ???
 
+  @compileTimeOnly("Field.fallibleComputedDeep is only useable as a field configuration for transformations")
+  def fallibleComputedDeep[F[+x], A, B, DestFieldTpe, SourceFieldTpe](
+    selector: Selector ?=> B => DestFieldTpe,
+    function: SourceFieldTpe => F[DestFieldTpe]
+  ): Field.Fallible[F, A, B] = ???
+
   @compileTimeOnly("Field.const is only useable as a field configuration for transformations")
   def const[A, B, DestFieldTpe, ConstTpe](selector: Selector ?=> B => DestFieldTpe, value: ConstTpe): Field[A, B] = ???
 
@@ -29,6 +35,12 @@ object Field {
   def computed[A, B, DestFieldTpe, ComputedTpe](
     selector: Selector ?=> B => DestFieldTpe,
     function: A => ComputedTpe
+  ): Field[A, B] = ???
+
+  @compileTimeOnly("Field.computedDeep is only useable as a field configuration for transformations")
+  def computedDeep[A, B, DestFieldTpe, SourceFieldTpe, ComputedTpe](
+    selector: Selector ?=> B => DestFieldTpe,
+    function: SourceFieldTpe => ComputedTpe
   ): Field[A, B] = ???
 
   @compileTimeOnly("Field.renamed is only useable as a field configuration for transformations")

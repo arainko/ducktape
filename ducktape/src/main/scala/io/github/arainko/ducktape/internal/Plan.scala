@@ -174,7 +174,7 @@ private[ducktape] object Plan {
       Quotes,
       Context
     ): Plan.Configured[F] =
-      conf.tpe match {
+      conf.destTpe match {
         case '[confTpe] =>
           // if side is Source then we're operating on either a missing Source case or an override of that,
           // which means the dest types need to be narrowed down to the exact type of this config
