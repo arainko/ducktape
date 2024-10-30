@@ -25,7 +25,7 @@ private[ducktape] enum Configuration[+F <: Fallible] {
 
   case FallibleFieldComputedDeep(destTpe: Type[?], override val sourceTpe: Type[?], function: Expr[Any => Any])
       extends Configuration[Fallible]
-      
+
   case FallibleCaseComputed(destTpe: Type[?], function: Expr[Any => Any]) extends Configuration[Fallible]
 }
 

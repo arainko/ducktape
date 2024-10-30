@@ -929,7 +929,7 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
     )(F.pure(expected))
   }
 
-  test("Field.computedDeep works with Options") {
+  test("Field.fallibleComputedDeep works with Options") {
     case class SourceToplevel1(level1: Option[SourceLevel1])
     case class SourceLevel1(level2: Option[SourceLevel2])
     case class SourceLevel2(level3: SourceLevel3)
@@ -965,7 +965,7 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
 
   }
 
-  test("Field.computedDeep works with collections") {
+  test("Field.fallibleComputedDeep works with collections") {
     case class SourceToplevel1(level1: Vector[SourceLevel1])
     case class SourceLevel1(level2: Vector[SourceLevel2])
     case class SourceLevel2(level3: Vector[SourceLevel3])
@@ -1000,7 +1000,7 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
     )(F.pure(expected))
   }
 
-  test("Field.computedDeep works with coproducts") {
+  test("Field.fallibleComputedDeep works with coproducts") {
     enum SourceToplevel1 {
       case Level1(level2: SourceLevel2)
     }
@@ -1043,5 +1043,43 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
         (a: Int) => fallibleComputation(a + 5)
       )
     )
+  }
+
+  test("Field.fallibleComputedDeep works with F-unwrapping") {
+    case class SourceToplevel1(level1: Vector[SourceLevel1])
+    case class SourceLevel1(level2: Vector[SourceLevel2])
+    case class SourceLevel2(level3: Vector[SourceLevel3])
+    case class SourceLevel3(int: Either[List[String], Int])
+
+    case class DestToplevel1(level1: List[DestLevel1])
+    case class DestLevel1(level2: List[DestLevel2])
+    case class DestLevel2(level3: List[DestLevel3])
+    case class DestLevel3(int: Int)
+
+    val source = SourceToplevel1(Vector(SourceLevel1(Vector(SourceLevel2(Vector(SourceLevel3(Right(1))))))))
+    val expected = DestToplevel1(List(DestLevel1(List(DestLevel2(List(DestLevel3(11)))))))
+
+    assertTransformsFallibleConfigured(source, F.pure(expected))(
+      Field.fallibleComputedDeep(
+        _.level1.element.level2.element.level3.element.int,
+        (int: Either[List[String], Int]) => int.map(_ + 10)
+      )
+    )
+
+    assertEachEquals(
+      source
+        .intoVia(DestToplevel1.apply)
+        .fallible
+        .transform(
+          Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Either[List[String], Int]) => int.map(_ + 10))
+        ),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .fallible
+        .build(
+          Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Either[List[String], Int]) => int.map(_ + 10))
+        )
+        .transform(source)
+    )(F.pure(expected))
   }
 }

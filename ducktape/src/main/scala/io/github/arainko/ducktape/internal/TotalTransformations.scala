@@ -23,9 +23,7 @@ private[ducktape] object TotalTransformations {
     val plan = Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])))
     val config = Configuration.parse(configs, ConfigParser.total)
     val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
-    val res = PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
-    Logger.info(res.show)
-    res
+    PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
   }
 
   inline def via[A, B, Func, Args <: FunctionArguments](

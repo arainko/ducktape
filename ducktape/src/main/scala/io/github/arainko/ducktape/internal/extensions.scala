@@ -46,7 +46,5 @@ extension [A](self: A | None.type) {
       case a: A => caseA(a)
 
   // private[ducktape] inline def map[B](inline f: A => B): B | None.type = self.fold(None, f)
-      
-    
 
 }

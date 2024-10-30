@@ -22,6 +22,7 @@ object Field {
     function: A => F[DestFieldTpe]
   ): Field.Fallible[F, A, B] = ???
 
+  @compileTimeOnly("Field.fallibleComputedDeep is only useable as a field configuration for transformations")
   def fallibleComputedDeep[F[+x], A, B, DestFieldTpe, SourceFieldTpe](
     selector: Selector ?=> B => DestFieldTpe,
     function: SourceFieldTpe => F[DestFieldTpe]
@@ -36,6 +37,7 @@ object Field {
     function: A => ComputedTpe
   ): Field[A, B] = ???
 
+  @compileTimeOnly("Field.computedDeep is only useable as a field configuration for transformations")
   def computedDeep[A, B, DestFieldTpe, SourceFieldTpe, ComputedTpe](
     selector: Selector ?=> B => DestFieldTpe,
     function: SourceFieldTpe => ComputedTpe
@@ -63,12 +65,4 @@ object Field {
   @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
   def allMatching[A, B, ProductTpe](product: ProductTpe): Field[A, B] =
     ???
-
-  // inline def of[A]: Field.Of[A] = ()
-
-  // opaque type Of[A] = Unit
-
-  // extension [A] (inline self: Of[A]) {
-  //   inline def apply[B](f: A => B): A => B = f
-  // }
 }

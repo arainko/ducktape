@@ -977,8 +977,7 @@ class NestedConfigurationSuite extends DucktapeSuite {
     )
   }: @nowarn
 
-  // TODO: Think this through, should this error out? This currently picks up the 'nearest' source field to the dest one
-  test("Field.computedDeep works correctly when a field on the same level is missing in the Source".ignore) {
+  test("Field.computedDeep works correctly when a field on the same level is missing in the Source") {
     case class SourceToplevel1(level1: SourceLevel1)
     case class SourceLevel1(level2: SourceLevel2)
     case class SourceLevel2(int: Int)
@@ -991,7 +990,7 @@ class NestedConfigurationSuite extends DucktapeSuite {
     val expected = DestToplevel1(DestLevel1(DestLevel2(1, "1CONF")))
 
     assertTransformsConfigured(source, expected)(
-      Field.computedDeep(_.level1.level2.extra, (a: SourceLevel2) => a.int.toString())
+      Field.computedDeep(_.level1.level2.extra, (a: SourceLevel2) => a.int.toString() + "CONF")
     )
   }
 

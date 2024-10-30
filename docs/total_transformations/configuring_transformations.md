@@ -195,8 +195,9 @@ What's worth noting is that any of the configuration options are purely a compil
 |   **Name**  | **Description** |
 |:-----------------:|:-------------------:|
 |     `Field.const`   |      allows to supply a constant value for a given field     |
-|   `Field.computed`  |   allows to compute a value with a function the shape of `Dest => FieldTpe`   |
+|   `Field.computed`  |   allows to compute a value with a function that has a shape of `Dest => FieldTpe`   |
 |   `Field.default`  |   only works when a field's got a default value defined (defaults are not taken into consideration by default)   |
+|   `Field.computedDeep` | allows to compute a deeply nested field (for example going through multiple `Options` or other collections) |
 |   `Field.allMatching`  |   allow to supply a field source whose fields will replace all matching fields in the destination (given that the names and the types match up)   |
 |   `Field.fallbackToDefault`  |   falls back to default field values but ONLY in case a transformation cannot be created   |
 |   `Field.fallbackToNone`  |   falls back to `None` for `Option` fields for which a transformation cannot be created  |
@@ -279,9 +280,52 @@ Docs.printCode(
 ``` 
 @:@
 
+* `Field.computedDeep` - allows to compute a deeply nested field (for example going through multiple `Options` or collections)
+
+```scala mdoc:nest:silent
+case class SourceToplevel1(level1: Option[SourceLevel1])
+case class SourceLevel1(level2: Option[SourceLevel2])
+case class SourceLevel2(int: Int)
+
+case class DestToplevel1(level1: Option[DestLevel1])
+case class DestLevel1(level2: Option[DestLevel2])
+case class DestLevel2(int: Long)
+
+val source = SourceToplevel1(Some(SourceLevel1(Some(SourceLevel2(1)))))
+```
+
+@:select(underlying-code-13)
+@:choice(visible)
+
+```scala mdoc
+source
+  .into[DestToplevel1]
+  .transform(
+    Field.computedDeep(
+      _.level1.element.level2.element.int,
+      // the type here cannot be inferred automatically and needs to be provided by the user,
+      // a nice compiletime error message is shown (with a suggestion on what the proper type to use is) otherwise
+      (value: Int) => value + 10L
+    )
+  )
+```
+
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[DestToplevel1]
+    .transform(Field.computedDeep(_.level1.element.level2.element.int, (value: Int) => value + 10L))
+)
+``` 
+
+@:@
+
 * `Field.allMatching` - allow to supply a field source whose fields will replace all matching fields in the destination (given that the names and the types match up)
 
-```scala mdoc:silent
+```scala mdoc:nest:silent
 case class FieldSource(color: String, digits: Long, extra: Int)
 val source = FieldSource("magenta", 123445678, 23)
 ```

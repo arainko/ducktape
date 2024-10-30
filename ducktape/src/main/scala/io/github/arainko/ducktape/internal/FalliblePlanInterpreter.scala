@@ -286,7 +286,7 @@ private[ducktape] object FalliblePlanInterpreter {
         case (fieldName, plan) -> index if source.fields.contains(fieldName) =>
           val fieldValue = value.accessFieldByName(fieldName).asExpr
           recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
-        case (fieldName, plan) -> index  =>
+        case (fieldName, plan) -> index =>
           recurse(plan, value, F).asFieldValue(index, plan.dest.tpe)
       }
 
