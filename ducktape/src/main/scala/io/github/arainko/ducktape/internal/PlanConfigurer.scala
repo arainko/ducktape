@@ -445,7 +445,7 @@ private[ducktape] object PlanConfigurer {
             (),
             ErrorMessage.InvalidConfigurationSourceType(
               config.sourceTpe.getOrElse(Type.of[Any]),
-              currentPlan.sourcePath.narrowedCurrentTpe, // TODO: Check if .currentTpe or rather sourcePath.last should be used here
+              currentPlan.sourcePath.narrowedCurrentTpe,
               instruction.side,
               instruction.span
             )

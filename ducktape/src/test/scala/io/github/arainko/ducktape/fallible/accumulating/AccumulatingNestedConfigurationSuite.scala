@@ -965,41 +965,40 @@ class AccumulatingNestedConfigurationSuite extends DucktapeSuite {
 
   }
 
-  // compiler crash - most likely https://github.com/arainko/ducktape/issues/128
-  // test("Field.computedDeep works with collections") {
-  //   case class SourceToplevel1(level1: Vector[SourceLevel1])
-  //   case class SourceLevel1(level2: Vector[SourceLevel2])
-  //   case class SourceLevel2(level3: Vector[SourceLevel3])
-  //   case class SourceLevel3(int: Int)
+  test("Field.computedDeep works with collections") {
+    case class SourceToplevel1(level1: Vector[SourceLevel1])
+    case class SourceLevel1(level2: Vector[SourceLevel2])
+    case class SourceLevel2(level3: Vector[SourceLevel3])
+    case class SourceLevel3(int: Int)
 
-  //   case class DestToplevel1(level1: List[DestLevel1])
-  //   case class DestLevel1(level2: List[DestLevel2])
-  //   case class DestLevel2(level3: List[DestLevel3])
-  //   case class DestLevel3(int: Positive)
+    case class DestToplevel1(level1: List[DestLevel1])
+    case class DestLevel1(level2: List[DestLevel2])
+    case class DestLevel2(level3: List[DestLevel3])
+    case class DestLevel3(int: Positive)
 
-  //   val source = SourceToplevel1(Vector(SourceLevel1(Vector(SourceLevel2(Vector(SourceLevel3(1)))))))
-  //   val expected = DestToplevel1(List(DestLevel1(List(DestLevel2(List(DestLevel3(Positive(11))))))))
+    val source = SourceToplevel1(Vector(SourceLevel1(Vector(SourceLevel2(Vector(SourceLevel3(1)))))))
+    val expected = DestToplevel1(List(DestLevel1(List(DestLevel2(List(DestLevel3(Positive(11))))))))
 
-  //   assertTransformsFallibleConfigured(source, F.pure(expected))(
-  //     Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
-  //   )
+    assertTransformsFallibleConfigured(source, F.pure(expected))(
+      Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
+    )
 
-  //   assertEachEquals(
-  //     source
-  //       .intoVia(DestToplevel1.apply)
-  //       .fallible
-  //       .transform(
-  //         Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
-  //       ),
-  //     Transformer
-  //       .defineVia[SourceToplevel1](DestToplevel1.apply)
-  //       .fallible
-  //       .build(
-  //         Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
-  //       )
-  //       .transform(source)
-  //   )(F.pure(expected))
-  // }
+    assertEachEquals(
+      source
+        .intoVia(DestToplevel1.apply)
+        .fallible
+        .transform(
+          Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
+        ),
+      Transformer
+        .defineVia[SourceToplevel1](DestToplevel1.apply)
+        .fallible
+        .build(
+          Field.fallibleComputedDeep(_.level1.element.level2.element.level3.element.int, (int: Int) => fallibleComputation(int + 10))
+        )
+        .transform(source)
+    )(F.pure(expected))
+  }
 
   test("Field.computedDeep works with coproducts") {
     enum SourceToplevel1 {

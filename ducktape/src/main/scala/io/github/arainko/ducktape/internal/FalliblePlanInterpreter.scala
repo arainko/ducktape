@@ -103,12 +103,12 @@ private[ducktape] object FalliblePlanInterpreter {
             dest.tpe match {
               case '[destSupertype] =>
                 val branches = casePlans.map { plan =>
-                  (plan.source.tpe -> plan.dest.tpe) match {
-                    case '[src] -> '[dest] =>
+                  plan.source.tpe match {
+                    case '[src] =>
                       val sourceValue = '{ $value.asInstanceOf[src] }
                       IfExpression.Branch(
                         IsInstanceOf(value, plan.source.tpe),
-                        recurse(plan, sourceValue, F).wrapped(F, Type.of[dest])
+                        recurse(plan, sourceValue, F).wrapped(F, Type.of[destSupertype])
                       )
                   }
                 }.toList
