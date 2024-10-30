@@ -53,7 +53,11 @@ lazy val ducktape =
       Test / scalacOptions ++= List("-Werror", "-Wconf:cat=deprecation:s"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.2" % Test
     )
-    .nativeSettings(tlMimaPreviousVersions := Set.empty)
+    .nativeSettings(
+      bspEnabled := false,
+      tlMimaPreviousVersions := Set.empty
+    )
+    .jsSettings(bspEnabled := false)
 
 lazy val docs =
   project
