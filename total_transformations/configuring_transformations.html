@@ -352,11 +352,15 @@
             </tr>
             <tr>
               <td><code>Field.computed</code></td>
-              <td>allows to compute a value with a function the shape of <code>Dest =&gt; FieldTpe</code></td>
+              <td>allows to compute a value with a function that has a shape of <code>Dest =&gt; FieldTpe</code></td>
             </tr>
             <tr>
               <td><code>Field.default</code></td>
               <td>only works when a field&#39;s got a default value defined (defaults are not taken into consideration by default)</td>
+            </tr>
+            <tr>
+              <td><code>Field.computedDeep</code></td>
+              <td>allows to compute a deeply nested field (for example going through multiple <code>Options</code> or other collections)</td>
             </tr>
             <tr>
               <td><code>Field.allMatching</code></td>
@@ -473,6 +477,61 @@
           </div>
         </div>
         <ul>
+          <li><code>Field.computedDeep</code> - allows to compute a deeply nested field (for example going through multiple <code>Options</code> or collections)</li>
+        </ul>
+        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">SourceToplevel1</span><span>(</span><span class="identifier">level1</span><span>: </span><span class="type-name">Option</span><span>[</span><span class="type-name">SourceLevel1</span><span>])
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">SourceLevel1</span><span>(</span><span class="identifier">level2</span><span>: </span><span class="type-name">Option</span><span>[</span><span class="type-name">SourceLevel2</span><span>])
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">SourceLevel2</span><span>(</span><span class="identifier">int</span><span>: </span><span class="type-name">Int</span><span>)
+
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestToplevel1</span><span>(</span><span class="identifier">level1</span><span>: </span><span class="type-name">Option</span><span>[</span><span class="type-name">DestLevel1</span><span>])
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">level2</span><span>: </span><span class="type-name">Option</span><span>[</span><span class="type-name">DestLevel2</span><span>])
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">int</span><span>: </span><span class="type-name">Long</span><span>)
+
+</span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span> = </span><span class="type-name">SourceToplevel1</span><span>(</span><span class="type-name">Some</span><span>(</span><span class="type-name">SourceLevel1</span><span>(</span><span class="type-name">Some</span><span>(</span><span class="type-name">SourceLevel2</span><span>(</span><span class="number-literal">1</span><span>)))))</span></code></pre>
+        <div class="tab-container" data-tab-group="underlying-code-13">
+          <ul class="tab-group">
+            <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
+            <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
+          </ul>
+          <div class="tab-content active" data-choice-name="visible">
+            <pre><code class="nohighlight"><span class="identifier">source</span><span>
+  .</span><span class="identifier">into</span><span>[</span><span class="type-name">DestToplevel1</span><span>]
+  .</span><span class="identifier">transform</span><span>(
+    </span><span class="type-name">Field</span><span>.</span><span class="identifier">computedDeep</span><span>(
+      </span><span class="identifier">_</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">element</span><span>.</span><span class="identifier">level2</span><span>.</span><span class="identifier">element</span><span>.</span><span class="identifier">int</span><span>,
+      </span><span class="comment">// the type here cannot be inferred automatically and needs to be provided by the user,
+</span><span>      </span><span class="comment">// a nice compiletime error message is shown (with a suggestion on what the proper type to use is) otherwise
+</span><span>      (</span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="identifier">value</span><span> + </span><span class="number-literal">10L</span><span>
+    )
+  )
+</span><span class="comment">// res12: DestToplevel1 = DestToplevel1(
+//   level1 = Some(
+//     value = DestLevel1(level2 = Some(value = DestLevel2(int = 11L)))
+//   )
+// )</span></code></pre>
+          </div>
+          <div class="tab-content" data-choice-name="generated">
+            <pre><code class="nohighlight"><span>{
+  </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel1</span><span>, </span><span class="type-name">DestToplevel1</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel1</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel1</span><span>]
+  {
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy19</span><span>: </span><span class="type-name">SourceToplevel1</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel1</span><span>(</span><span class="identifier">level1</span><span> =
+      </span><span class="identifier">value$proxy19</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">DestLevel1</span><span>]((</span><span class="identifier">src</span><span>: </span><span class="type-name">SourceLevel1</span><span>) =&gt;
+        </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">level2</span><span> =
+          </span><span class="identifier">src</span><span>.</span><span class="identifier">level2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">DestLevel2</span><span>]((</span><span class="identifier">`src₂`</span><span>: </span><span class="type-name">SourceLevel2</span><span>) =&gt;
+            </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">int</span><span> = {
+              </span><span class="keyword">val</span><span> </span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span> = </span><span class="identifier">`src₂`</span><span>.</span><span class="identifier">int</span><span>
+              </span><span class="identifier">value</span><span>.+(</span><span class="number-literal">10L</span><span>)
+            })
+          )
+        )
+      )
+    ): </span><span class="type-name">DestToplevel1</span><span>
+  }: </span><span class="type-name">DestToplevel1</span><span>
+}</span></code></pre>
+          </div>
+        </div>
+        <ul>
           <li><code>Field.allMatching</code> - allow to supply a field source whose fields will replace all matching fields in the destination (given that the names and the types match up)</li>
         </ul>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">FieldSource</span><span>(</span><span class="identifier">color</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">digits</span><span>: </span><span class="type-name">Long</span><span>, </span><span class="identifier">extra</span><span>: </span><span class="type-name">Int</span><span>)
@@ -486,7 +545,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">card</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">PaymentBand</span><span>]
   .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">allMatching</span><span>(</span><span class="identifier">paymentBand</span><span> =&gt; </span><span class="identifier">paymentBand</span><span>, </span><span class="identifier">source</span><span>))
-</span><span class="comment">// res12: PaymentBand = PaymentBand(
+</span><span class="comment">// res14: PaymentBand = PaymentBand(
 //   name = &quot;J. Doe&quot;,
 //   digits = 123445678L,
 //   color = &quot;magenta&quot;
@@ -496,12 +555,8 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Card</span><span>, </span><span class="type-name">PaymentBand</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Card</span><span>](</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">card</span><span>)[</span><span class="type-name">PaymentBand</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy19</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(
-      </span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy19</span><span>.</span><span class="identifier">name</span><span>,
-      </span><span class="identifier">digits</span><span> = </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">source</span><span>.</span><span class="identifier">digits</span><span>,
-      </span><span class="identifier">color</span><span> = </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">source</span><span>.</span><span class="identifier">color</span><span>
-    ): </span><span class="type-name">PaymentBand</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy22</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy22</span><span>.</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">source</span><span>.</span><span class="identifier">digits</span><span>, </span><span class="identifier">color</span><span> = </span><span class="identifier">source</span><span>.</span><span class="identifier">color</span><span>): </span><span class="type-name">PaymentBand</span><span>
   }: </span><span class="type-name">PaymentBand</span><span>
 }</span></code></pre>
           </div>
@@ -525,7 +580,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">source</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">DestToplevel</span><span>]
   .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">fallbackToDefault</span><span>)
-</span><span class="comment">// res14: DestToplevel = DestToplevel(
+</span><span class="comment">// res16: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(extra = &quot;level1&quot;, str = &quot;str&quot;),
 //   extra = 111,
 //   transformableButWithDefault = 400
@@ -535,11 +590,11 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy22</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy25</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy22</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy25</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
       </span><span class="identifier">extra</span><span> = </span><span class="type-name">DestToplevel</span><span>.</span><span class="identifier">$lessinit$greater$default$2</span><span>,
-      </span><span class="identifier">transformableButWithDefault</span><span> = </span><span class="identifier">value$proxy22</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
+      </span><span class="identifier">transformableButWithDefault</span><span> = </span><span class="identifier">value$proxy25</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
     ): </span><span class="type-name">DestToplevel</span><span>
   }: </span><span class="type-name">DestToplevel</span><span>
 }</span></code></pre>
@@ -560,7 +615,7 @@
     ), </span><span class="comment">// &lt;-- we&#39;re applying the config starting on the `.level1` field and below, it&#39;ll be also applied to other transformations nested inside
 </span><span>    </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">extra</span><span>, </span><span class="number-literal">123</span><span>) </span><span class="comment">// &lt;-- note that this field now needs to be configured manually
 </span><span>  )
-</span><span class="comment">// res16: DestToplevel = DestToplevel(
+</span><span class="comment">// res18: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(extra = &quot;level1&quot;, str = &quot;str&quot;),
 //   extra = 123,
 //   transformableButWithDefault = 400
@@ -570,11 +625,11 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy25</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy28</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy25</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy28</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
       </span><span class="identifier">extra</span><span> = </span><span class="number-literal">123</span><span>,
-      </span><span class="identifier">transformableButWithDefault</span><span> = </span><span class="identifier">value$proxy25</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
+      </span><span class="identifier">transformableButWithDefault</span><span> = </span><span class="identifier">value$proxy28</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
     ): </span><span class="type-name">DestToplevel</span><span>
   }: </span><span class="type-name">DestToplevel</span><span>
 }</span></code></pre>
@@ -599,7 +654,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">source</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">DestToplevel</span><span>]
   .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">fallbackToNone</span><span>)
-</span><span class="comment">// res18: DestToplevel = DestToplevel(
+</span><span class="comment">// res20: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(extra = None, str = &quot;str&quot;),
 //   extra = None,
 //   transformable = Some(value = 400)
@@ -609,11 +664,11 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy28</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy31</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy28</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy31</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
       </span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>,
-      </span><span class="identifier">transformable</span><span> = </span><span class="identifier">value$proxy28</span><span>.</span><span class="identifier">transformable</span><span>
+      </span><span class="identifier">transformable</span><span> = </span><span class="identifier">value$proxy31</span><span>.</span><span class="identifier">transformable</span><span>
     ): </span><span class="type-name">DestToplevel</span><span>
   }: </span><span class="type-name">DestToplevel</span><span>
 }</span></code></pre>
@@ -634,7 +689,7 @@
     ), </span><span class="comment">// &lt;-- we&#39;re applying the config starting on the `.level1` field and below, it&#39;ll be also applied to other transformations nested inside
 </span><span>    </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">extra</span><span>, </span><span class="type-name">Some</span><span>(</span><span class="number-literal">123</span><span>)) </span><span class="comment">// &lt;-- note that this field now needs to be configured manually
 </span><span>  )
-</span><span class="comment">// res20: DestToplevel = DestToplevel(
+</span><span class="comment">// res22: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(extra = None, str = &quot;str&quot;),
 //   extra = Some(value = 123),
 //   transformable = Some(value = 400)
@@ -644,11 +699,11 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy31</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy34</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
     </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy31</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
       </span><span class="identifier">extra</span><span> = </span><span class="type-name">Some</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="number-literal">123</span><span>),
-      </span><span class="identifier">transformable</span><span> = </span><span class="identifier">value$proxy31</span><span>.</span><span class="identifier">transformable</span><span>
+      </span><span class="identifier">transformable</span><span> = </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">transformable</span><span>
     ): </span><span class="type-name">DestToplevel</span><span>
   }: </span><span class="type-name">DestToplevel</span><span>
 }</span></code></pre>
@@ -689,19 +744,19 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">transfer</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
   .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Case</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">at</span><span>[</span><span class="identifier">wire</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Transfer</span><span>], </span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>))
-</span><span class="comment">// res22: PaymentMethod = Cash</span></code></pre>
+</span><span class="comment">// res24: PaymentMethod = Cash</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">PaymentMethod</span><span>, </span><span class="type-name">PaymentMethod</span><span>] =
     </span><span class="identifier">into</span><span>[</span><span class="type-name">PaymentMethod</span><span>](</span><span class="identifier">transfer</span><span>)[</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy34</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>] </span><span class="keyword">then</span><span>
-      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy37</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>] </span><span class="keyword">then</span><span>
+      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
     </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">PaymentMethod</span><span>
   }: </span><span class="type-name">PaymentMethod</span><span>
 }</span></code></pre>
@@ -721,20 +776,20 @@
   .</span><span class="identifier">transform</span><span>(
     </span><span class="type-name">Case</span><span>.</span><span class="identifier">computed</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">at</span><span>[</span><span class="identifier">wire</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Transfer</span><span>], </span><span class="identifier">transfer</span><span> =&gt; </span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Card</span><span>(</span><span class="string-literal">&quot;J. Doe&quot;</span><span>, </span><span class="identifier">transfer</span><span>.</span><span class="identifier">accountNo</span><span>.</span><span class="identifier">toLong</span><span>))
   )
-</span><span class="comment">// res24: PaymentMethod = Card(name = &quot;J. Doe&quot;, digits = 2764262L)</span></code></pre>
+</span><span class="comment">// res26: PaymentMethod = Card(name = &quot;J. Doe&quot;, digits = 2764262L)</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">PaymentMethod</span><span>, </span><span class="type-name">PaymentMethod</span><span>] =
     </span><span class="identifier">into</span><span>[</span><span class="type-name">PaymentMethod</span><span>](</span><span class="identifier">transfer</span><span>)[</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
   {
-    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy37</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>] </span><span class="keyword">then</span><span>
-      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>] </span><span class="keyword">then</span><span> {
-      </span><span class="keyword">val</span><span> </span><span class="identifier">`transfer₂`</span><span>: </span><span class="type-name">Transfer</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>]
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy40</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>] </span><span class="keyword">then</span><span>
+      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>] </span><span class="keyword">then</span><span> {
+      </span><span class="keyword">val</span><span> </span><span class="identifier">`transfer₂`</span><span>: </span><span class="type-name">Transfer</span><span> = </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>]
       </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Card</span><span>.</span><span class="identifier">apply</span><span>(</span><span class="string-literal">&quot;J. Doe&quot;</span><span>, </span><span class="identifier">augmentString</span><span>(</span><span class="identifier">`transfer₂`</span><span>.</span><span class="identifier">accountNo</span><span>).</span><span class="identifier">toLong</span><span>): </span><span class="type-name">PaymentMethod</span><span>
     } </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">PaymentMethod</span><span>
   }: </span><span class="type-name">PaymentMethod</span><span>
@@ -753,7 +808,7 @@
     </span><span class="type-name">Case</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">paymentMethods</span><span>.</span><span class="identifier">element</span><span>.</span><span class="identifier">at</span><span>[</span><span class="identifier">wire</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Transfer</span><span>], </span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>),
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">paymentMethods</span><span>.</span><span class="identifier">element</span><span>, </span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>) </span><span class="comment">// &lt;-- override all payment methods to `Cash`
 </span><span>  )
-</span><span class="comment">// res26: Person = Person(
+</span><span class="comment">// res28: Person = Person(
 //   firstName = &quot;John&quot;,
 //   lastName = &quot;Doe&quot;,
 //   age = 24,
@@ -769,7 +824,7 @@
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">age</span><span>, </span><span class="number-literal">24</span><span>),
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">age</span><span>, </span><span class="number-literal">50</span><span>) </span><span class="comment">// &lt;-- override the previously configured &#39;age&#39; field`
 </span><span>  )
-</span><span class="comment">// res27: Person = Person(
+</span><span class="comment">// res29: Person = Person(
 //   firstName = &quot;John&quot;,
 //   lastName = &quot;Doe&quot;,
 //   age = 50,
@@ -794,7 +849,7 @@
       </span><span class="type-name">Vector</span><span>.</span><span class="identifier">empty</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
     ) </span><span class="comment">// &lt;-- also override the &#39;parent&#39; of &#39;_.paymentMethods.element&#39; so now payment methods are just empty
 </span><span>  )
-</span><span class="comment">// res28: Person = Person(
+</span><span class="comment">// res30: Person = Person(
 //   firstName = &quot;John&quot;,
 //   lastName = &quot;Doe&quot;,
 //   age = 24,
