@@ -104,18 +104,18 @@ private[ducktape] object Debug extends LowPriorityDebug {
   private[ducktape] class ForProduct[A](tpeName: String, _instances: => IArray[Debug[Any]]) extends Debug[A] {
     private lazy val instances = _instances
     def astify(self: A)(using Quotes): AST = {
-        val prod = self.asInstanceOf[scala.Product]
-        val fields = prod.productElementNames
-          .zip(instances)
-          .zip(prod.productIterator)
-          .map {
-            case label -> debug -> value =>
-              label -> debug.astify(value)
-          }
-          .to(VectorMap)
+      val prod = self.asInstanceOf[scala.Product]
+      val fields = prod.productElementNames
+        .zip(instances)
+        .zip(prod.productIterator)
+        .map {
+          case label -> debug -> value =>
+            label -> debug.astify(value)
+        }
+        .to(VectorMap)
 
-        Product(tpeName, fields)
-      }
+      Product(tpeName, fields)
+    }
   }
 
   private inline def product[A](using A: Mirror.ProductOf[A]): Debug[A] = {

@@ -14,7 +14,7 @@ ThisBuild / organizationName := "arainko"
 ThisBuild / startYear := Some(2023)
 ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
-ThisBuild / tlSonatypeUseLegacyHost := false
+ThisBuild / sonatypeCredentialHost := Sonatype.sonatype01
 ThisBuild / scalaVersion := "3.3.4"
 ThisBuild / tlSitePublishBranch := Some("series/0.2.x")
 
@@ -43,17 +43,21 @@ ThisBuild / tlVersionIntroduced := Map("3" -> "0.1.6")
 lazy val root = tlCrossRootProject.aggregate(ducktape)
 
 lazy val ducktape =
-  crossProject(JVMPlatform/*, JSPlatform, NativePlatform*/)
+  crossProject(JVMPlatform, JSPlatform, NativePlatform)
     .crossType(CrossType.Pure)
     .enablePlugins(TypelevelMimaPlugin)
     .in(file("ducktape"))
     .settings(
-      scalacOptions ++= List("-deprecation", "-Wunused:all", "-Ykind-projector:underscores"),
+      scalacOptions ++= List("-deprecation", "-Wunused:all", "-Ykind-projector:underscores", "-Xcheck-macros"),
       Test / scalacOptions --= List("-deprecation"),
       Test / scalacOptions ++= List("-Werror", "-Wconf:cat=deprecation:s"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.0.2" % Test
     )
-    //.nativeSettings(tlMimaPreviousVersions := Set.empty)
+    .nativeSettings(
+      bspEnabled := false,
+      tlMimaPreviousVersions := Set.empty
+    )
+    .jsSettings(bspEnabled := false)
 
 lazy val docs =
   project
