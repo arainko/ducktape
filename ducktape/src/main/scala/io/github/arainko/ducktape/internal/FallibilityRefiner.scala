@@ -53,7 +53,7 @@ private[ducktape] object FallibilityRefiner {
         case BetweenSingletons(source, dest) => ()
 
         case BetweenProducts(source, dest, fieldPlans) =>
-          evaluate(fieldPlans.values)
+          evaluate(fieldPlans.values.map(_.plan))
 
         case BetweenProductTuple(source, dest, plans) =>
           evaluate(plans)

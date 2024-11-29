@@ -75,8 +75,10 @@ private[ducktape] object PlanConfigurer {
               val fieldPlan =
                 fieldPlans
                   .get(segment.name)
-                  .map(fieldPlan => recurse(fieldPlan, tail, parent, config))
-                  .getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None))
+                  .map(fieldPlan => fieldPlan.update(recurse(_, tail, parent, config)))
+                  .getOrElse(
+                    FieldPlan.empty(Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None))
+                  )
 
               parent.copy(fieldPlans = fieldPlans.updated(segment.name, fieldPlan))
 
@@ -94,7 +96,6 @@ private[ducktape] object PlanConfigurer {
                 case (fieldPlan, index @ sourceFields(segment.name)) =>
                   parent.copy(plans = plans.updated(index, recurse(fieldPlan, tail, parent, config)))
               }.getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None))
-
             case parent @ BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
               val argPlan =
                 argPlans
@@ -322,7 +323,9 @@ private[ducktape] object PlanConfigurer {
       case plan: BetweenSingletons => plan
 
       case plan: BetweenProducts[Erroneous, F] =>
-        plan.copy(fieldPlans = plan.fieldPlans.transform((_, fieldPlan) => regional(fieldPlan, modifier, plan)))
+        plan.copy(fieldPlans =
+          plan.fieldPlans.transform((_, fieldPlan) => fieldPlan.update(regional(_, modifier, plan)))
+        )
 
       case plan: BetweenProductTuple[Erroneous, F] =>
         plan.copy(plans = plan.plans.map(fieldPlan => regional(fieldPlan, modifier, plan)))
@@ -392,7 +395,7 @@ private[ducktape] object PlanConfigurer {
           val updatedArgPlans = func.argPlans.transform(updatePlan(func))
           func.copy(argPlans = updatedArgPlans)
         case prod: Plan.BetweenProducts[Erroneous, F] =>
-          val updatedFieldPlans = prod.fieldPlans.transform(updatePlan(prod))
+          val updatedFieldPlans = prod.fieldPlans.transform((name, fieldPlan) => fieldPlan.update(updatePlan(prod)(name, _)))
           prod.copy(fieldPlans = updatedFieldPlans)
         case prodTuple: Plan.BetweenTupleProduct[Erroneous, F] =>
           val updatedFieldPlans = prodTuple.plans.transform(updatePlan(prodTuple))

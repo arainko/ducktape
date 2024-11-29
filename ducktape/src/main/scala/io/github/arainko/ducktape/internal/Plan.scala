@@ -34,13 +34,23 @@ private[ducktape] sealed trait Plan[+E <: Erroneous, +F <: Fallible] {
   final def refine: Either[NonEmptyList[Plan.Error], Plan[Nothing, F]] = ErroneousnessRefiner.run(this)
 }
 
+case class FieldPlan[+E <: Erroneous, +F <: Fallible](sourceField: String | None.type, plan: Plan[E, F]) {
+  inline def update[EE <: Erroneous, FF <: Fallible](inline f: Plan[E, F] => Plan[EE, FF]): FieldPlan[EE, FF] =
+    this.copy(plan = f(this.plan))
+}
+
+object FieldPlan {
+  def empty[E <: Erroneous, F <: Fallible](plan: Plan[E ,F]): FieldPlan[E, F] = FieldPlan(None, plan)
+}
+
 private[ducktape] object Plan {
+
   case class Upcast(
     source: Structure,
     dest: Structure,
     private val alternative: () => Plan[Erroneous, Nothing]
   ) extends Plan[Nothing, Nothing] {
-    lazy val alt = alternative()
+    lazy val alt: Plan[Erroneous, Nothing] = alternative()
   }
 
   case class UserDefined[+F <: Fallible](
@@ -106,7 +116,7 @@ private[ducktape] object Plan {
   case class BetweenProducts[+E <: Erroneous, +F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product,
-    fieldPlans: VectorMap[String, Plan[E, F]]
+    fieldPlans: VectorMap[String, FieldPlan[E, F]]
   ) extends Plan[E, F]
 
   case class BetweenProductTuple[+E <: Erroneous, +F <: Fallible](

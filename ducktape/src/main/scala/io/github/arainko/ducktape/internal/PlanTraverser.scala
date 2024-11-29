@@ -12,7 +12,7 @@ private[ducktape] trait PlanTraverser[A] {
             case plan: Plan.Upcast =>
               recurse(next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenProducts(_, _, fieldPlans) =>
-              recurse(fieldPlans.values.toList ::: next, foldOver(plan, accumulator))
+              recurse(fieldPlans.values.map(_.plan).toList ::: next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenProductTuple(_, _, plans) =>
               recurse(plans.toList ::: next, foldOver(plan, accumulator))
             case plan @ Plan.BetweenTupleProduct(_, _, plans) =>

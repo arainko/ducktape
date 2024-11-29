@@ -149,18 +149,23 @@ private[ducktape] object Planner {
     source: Structure.Product,
     dest: Structure.Product
   )(using Quotes, Depth, Context.Of[F]) = {
-
+    def transformName(name: String): String = name.toUpperCase()
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
+      // val destName = transformName(destField)
+      source.fields.map { (ogField, struct) =>  }
+
       val plan =
         source.fields
           .get(destField)
-          .map(sourceStruct => recurse(sourceStruct, destFieldStruct))
+          .map(sourceStruct => FieldPlan(destField, recurse(sourceStruct, destFieldStruct)))
           .getOrElse(
-            Plan.Error(
-              Structure.of[Nothing](source.path),
-              destFieldStruct,
-              ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
-              None
+            FieldPlan.empty(
+              Plan.Error(
+                Structure.of[Nothing](source.path),
+                destFieldStruct,
+                ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
+                None
+              )
             )
           )
       destField -> plan

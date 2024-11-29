@@ -66,7 +66,7 @@ private[ducktape] object FalliblePlanInterpreter {
                 }
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
-            fromProductTransformation(plan, source, fieldPlans, value, F)(ProductConstructor.Primary(dest))
+            fromProductTransformation(plan, source, fieldPlans.transform((_, fieldPlan) => fieldPlan.plan), value, F)(ProductConstructor.Primary(dest))
 
           case plan @ Plan.BetweenProductTuple(source, dest, plans) =>
             fromProductTransformation(plan, source, plans, value, F)(ProductConstructor.Tuple)
