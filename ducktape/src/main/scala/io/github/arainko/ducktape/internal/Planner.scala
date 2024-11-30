@@ -9,6 +9,7 @@ import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
+import scala.collection.immutable.HashSet
 
 private[ducktape] object Planner {
   import Structure.*
@@ -149,25 +150,46 @@ private[ducktape] object Planner {
     source: Structure.Product,
     dest: Structure.Product
   )(using Quotes, Depth, Context.Of[F]) = {
-    def transformName(name: String): String = name.toUpperCase()
+    def transformDestName(name: String) = name.toUpperCase()
+
+    //Should source field transformations be allowed?
+    // these may introduce ambiguity if 2 (or more) renamed fields map to the same one
+    def transformSrcName(name: String): String = name.toUpperCase()
+
+    // TODO: detect ambiguaties (when name transform maps to 2 or more fields and fail transformation)
+    val destNames = dest.fields.keys.groupBy(transformDestName)
+    val srcNames = source.fields.keys.groupBy(transformSrcName)
+
+    val a: HashSet[Nothing] = HashSet()
+    
+    quotes.reflect.report.info(s"destName: ${destNames}\n srcNames: ${srcNames}")
+
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-      // val destName = transformName(destField)
-      source.fields.map { (ogField, struct) =>  }
+      val transformedDestName = transformDestName(destField)
+
+
+      val transformedSource =
+        source.fields.map { (ogField, struct) => transformSrcName(ogField) -> (ogField, struct) }
+
+
+      transformedSource.keySet
+      source.fields.keySet.size
 
       val plan =
-        source.fields
-          .get(destField)
-          .map(sourceStruct => FieldPlan(destField, recurse(sourceStruct, destFieldStruct)))
+        transformedSource
+          .get(transformedDestName)
+          .map((srcField, srcStruct) => FieldPlan(srcField, recurse(srcStruct, destFieldStruct)))
           .getOrElse(
             FieldPlan.empty(
               Plan.Error(
                 Structure.of[Nothing](source.path),
                 destFieldStruct,
-                ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
+                ErrorMessage.NoFieldFound(transformedDestName, destFieldStruct.tpe, source.tpe),
                 None
               )
             )
           )
+
       destField -> plan
     }
     Plan.BetweenProducts(source, dest, fieldPlans)

@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.internal.Configuration.Instruction
 import io.github.arainko.ducktape.internal.Path.Segment
 
 import scala.quoted.*
+import io.github.arainko.ducktape.Transformer
 
 private[ducktape] object PlanConfigurer {
   import Plan.*
@@ -323,9 +324,7 @@ private[ducktape] object PlanConfigurer {
       case plan: BetweenSingletons => plan
 
       case plan: BetweenProducts[Erroneous, F] =>
-        plan.copy(fieldPlans =
-          plan.fieldPlans.transform((_, fieldPlan) => fieldPlan.update(regional(_, modifier, plan)))
-        )
+        plan.copy(fieldPlans = plan.fieldPlans.transform((_, fieldPlan) => fieldPlan.update(regional(_, modifier, plan))))
 
       case plan: BetweenProductTuple[Erroneous, F] =>
         plan.copy(plans = plan.plans.map(fieldPlan => regional(fieldPlan, modifier, plan)))
@@ -395,7 +394,8 @@ private[ducktape] object PlanConfigurer {
           val updatedArgPlans = func.argPlans.transform(updatePlan(func))
           func.copy(argPlans = updatedArgPlans)
         case prod: Plan.BetweenProducts[Erroneous, F] =>
-          val updatedFieldPlans = prod.fieldPlans.transform((name, fieldPlan) => fieldPlan.update(updatePlan(prod)(name, _)))
+          val updatedFieldPlans =
+            prod.fieldPlans.transform((name, fieldPlan) => fieldPlan.update(updatePlan(prod)(name, _)))
           prod.copy(fieldPlans = updatedFieldPlans)
         case prodTuple: Plan.BetweenTupleProduct[Erroneous, F] =>
           val updatedFieldPlans = prodTuple.plans.transform(updatePlan(prodTuple))
