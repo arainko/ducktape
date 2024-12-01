@@ -137,4 +137,17 @@ private[ducktape] object ErrorMessage {
     }
   }
 
+  final case class AmbiguousFieldTransformations(tpe: Structure.Product, transformationFunction: String => String) extends ErrorMessage {
+    def render(using Quotes): String = {
+      val ambNames = tpe.fields.keys.groupBy(transformationFunction).collect { 
+        case (key, names) if names.size >= 2 =>
+          s"  * '$key' maps to more than one field name: ${names.map(name => s"'$name'").mkString(", ")}"
+      }.mkString(System.lineSeparator(), System.lineSeparator(), "")
+      s"Field name transformation results in ambiguity for fields in ${tpe.tpe.repr.show}:$ambNames"
+    }
+
+    val side = Side.Dest
+    val span = None
+  }
+
 }
