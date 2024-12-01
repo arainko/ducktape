@@ -153,38 +153,43 @@ private[ducktape] object Planner {
     def transformDestName(name: String) = name.toUpperCase()
     def transformSrcName(name: String): String = name.toUpperCase()
 
-    val transformedDest = dest.fields
-      .map((destField, destFieldStruct) => transformDestName(destField) -> (destField, destFieldStruct))
-      
-    val transformedSource = source.fields
-      .map((srcField, srcFieldStruct) => transformSrcName(srcField) -> (srcField, srcFieldStruct))
+    // keys to transformed keys
+    val destAmbiguities = dest.fields.keys.groupBy(transformDestName).filter((_, ambs) => ambs.size > 1)
+    val sourceAmbiguities = source.fields.keys.groupBy(transformSrcName).filter((_, ambs) => ambs.size > 1)
 
-    if transformedDest.keySet.size != dest.fields.keySet.size then
-      Plan.Error(source, dest, ErrorMessage.AmbiguousFieldTransformations(dest, transformDestName), None)
-    else if transformedSource.keySet.size != source.fields.keySet.size then
-      Plan.Error(source, dest, ErrorMessage.AmbiguousFieldTransformations(source, transformSrcName), None)
-    else {
-      val fieldPlans = transformedDest.map {
-        case transformedDestField -> (destField, destFieldStruct) =>
-          val plan =
-            transformedSource
-              .get(transformedDestField)
-              .map((srcField, srcStruct) => FieldPlan(srcField, recurse(srcStruct, destFieldStruct)))
-              .getOrElse(
-                FieldPlan.empty(
-                  Plan.Error(
-                    Structure.of[Nothing](source.path),
-                    destFieldStruct,
-                    ErrorMessage.NoFieldFound(transformedDestField, destFieldStruct.tpe, source.tpe),
-                    None
-                  )
+    val transformedSource =
+      source.fields
+        .map((srcField, srcFieldStruct) => transformSrcName(srcField) -> (srcField, srcFieldStruct))
+
+    val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
+      val transformedDestField = transformDestName(destField)
+      val destAmbs = destAmbiguities.getOrElse(transformedDestField, Vector.empty)
+      val sourceAmbs = sourceAmbiguities.getOrElse(transformedDestField, Vector.empty)
+
+      if destAmbs.nonEmpty then
+        destField -> FieldPlan.empty(Plan.Error(source, destFieldStruct, ErrorMessage.AmbiguousFieldTransformations(dest.tpe, destField, transformedDestField, destAmbs), None))
+      else if sourceAmbs.nonEmpty then
+        destField -> FieldPlan.empty(Plan.Error(source, destFieldStruct, ErrorMessage.AmbiguousFieldTransformations(source.tpe, destField, transformSrcName(destField), sourceAmbs), None))
+      else {
+        val plan =
+          transformedSource
+            .get(transformedDestField)
+            .map((srcField, srcStruct) => FieldPlan(srcField, recurse(srcStruct, destFieldStruct)))
+            .getOrElse(
+              FieldPlan.empty(
+                Plan.Error(
+                  Structure.of[Nothing](source.path),
+                  destFieldStruct,
+                  ErrorMessage.NoFieldFound(transformedDestField, destFieldStruct.tpe, source.tpe),
+                  None
                 )
               )
+            )
 
-          destField -> plan
+        destField -> plan
       }
-      Plan.BetweenProducts(source, dest, fieldPlans)
     }
+    Plan.BetweenProducts(source, dest, fieldPlans)
   }
 
   private def positionWisePlans[F <: Fallible](
