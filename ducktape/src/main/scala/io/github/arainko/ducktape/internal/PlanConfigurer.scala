@@ -4,7 +4,6 @@ import io.github.arainko.ducktape.internal.Configuration.Instruction
 import io.github.arainko.ducktape.internal.Path.Segment
 
 import scala.quoted.*
-import io.github.arainko.ducktape.Transformer
 
 private[ducktape] object PlanConfigurer {
   import Plan.*
