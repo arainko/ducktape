@@ -40,7 +40,7 @@ case class FieldPlan[+E <: Erroneous, +F <: Fallible](sourceField: String | None
 }
 
 object FieldPlan {
-  def empty[E <: Erroneous, F <: Fallible](plan: Plan[E ,F]): FieldPlan[E, F] = FieldPlan(None, plan)
+  def empty[E <: Erroneous, F <: Fallible](plan: Plan[E, F]): FieldPlan[E, F] = FieldPlan(None, plan)
 }
 
 private[ducktape] object Plan {
@@ -76,13 +76,55 @@ private[ducktape] object Plan {
     source: Structure.Product,
     dest: Structure.Function,
     argPlans: VectorMap[String, Plan[E, F]]
-  ) extends Plan[E, F]
+  ) extends Plan[E, F] {
+    inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
+      inline f: Plan[E, F] => Plan[EE, FF]
+    ): BetweenProductFunction[EE, FF] =
+      copy(argPlans = argPlans.transform((_, argPlan) => f(argPlan)))
+
+    inline def updateOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
+      inline f: Plan[E, F] => Plan[EE, FF],
+      alt: Plan.Error
+    ): BetweenProductFunction[Erroneous, FF] = {
+      val updatedArgPlan =
+        argPlans
+          .get(argName)
+          .map(f)
+          .getOrElse(alt)
+
+      copy(argPlans = argPlans.updated(argName, updatedArgPlan))
+    }
+  }
 
   case class BetweenTupleFunction[+E <: Erroneous, +F <: Fallible](
     source: Structure.Tuple,
     dest: Structure.Function,
     argPlans: VectorMap[String, Plan[E, F]]
-  ) extends Plan[E, F]
+  ) extends Plan[E, F] {
+    inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
+      inline f: Plan[E, F] => Plan[EE, FF]
+    ): BetweenTupleFunction[EE, FF] =
+      copy(argPlans = argPlans.transform((_, argPlan) => f(argPlan)))
+
+    inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
+      inline f: Plan[E, F] => Plan[EE, FF],
+      inline alt: Plan.Error
+    ): Plan[Erroneous, FF] = {
+      argPlans
+        .get(argName)
+        .map(argPlan => copy(argPlans = argPlans.updated(argName, f(argPlan))))
+        .getOrElse(alt)
+    }
+
+    inline def updateByIndexOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argIdx: Int)(
+      inline f: Plan[E, F] => Plan[EE, FF],
+      alt: Plan.Error
+    ): Plan[Erroneous, FF] =
+      argPlans.toVector
+        .lift(argIdx)
+        .map((name, fieldPlan) => copy(argPlans = argPlans.updated(name, f(fieldPlan))))
+        .getOrElse(alt)
+  }
 
   case class BetweenUnwrappedWrapped(
     source: Structure,
@@ -99,14 +141,20 @@ private[ducktape] object Plan {
     source: Structure.Wrapped[?],
     dest: Structure,
     plan: Plan[E, Nothing]
-  ) extends Plan[E, Fallible]
+  ) extends Plan[E, Fallible] {
+    inline def update[EE >: E <: Erroneous](inline f: Plan[E, Nothing] => Plan[EE, Nothing]): BetweenFallibleNonFallible[EE] =
+      copy(plan = f(plan))
+  }
 
   case class BetweenFallibles[+E <: Erroneous](
     source: Structure.Wrapped[?],
     dest: Structure,
     mode: TransformationMode.FailFast[?],
     plan: Plan[E, Fallible]
-  ) extends Plan[E, Fallible]
+  ) extends Plan[E, Fallible] {
+    inline def update[EE >: E <: Erroneous](inline f: Plan[E, Fallible] => Plan[EE, Fallible]): BetweenFallibles[EE] =
+      copy(plan = f(plan))
+  }
 
   case class BetweenSingletons(
     source: Structure.Singleton,
@@ -117,13 +165,55 @@ private[ducktape] object Plan {
     source: Structure.Product,
     dest: Structure.Product,
     fieldPlans: VectorMap[String, FieldPlan[E, F]]
-  ) extends Plan[E, F]
+  ) extends Plan[E, F] {
+    inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
+      inline f: Plan[E, F] => Plan[EE, FF]
+    ) =
+      copy(fieldPlans = fieldPlans.transform((_, argPlan) => argPlan.update(f)))
+
+    inline def updateOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](name: String)(
+      inline f: Plan[E, F] => Plan[EE, FF],
+      alt: Plan.Error
+    ) = {
+      val updatedArgPlan =
+        fieldPlans
+          .get(name)
+          .map(_.update(f))
+          .getOrElse(FieldPlan.empty(alt))
+
+      copy(fieldPlans = fieldPlans.updated(name, updatedArgPlan))
+    }
+  }
 
   case class BetweenProductTuple[+E <: Erroneous, +F <: Fallible](
     source: Structure.Product,
     dest: Structure.Tuple,
     plans: Vector[Plan[E, F]]
-  ) extends Plan[E, F]
+  ) extends Plan[E, F] {
+    inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
+      inline f: Plan[E, F] => Plan[EE, FF]
+    ) =
+      copy(plans = plans.map(argPlan => f(argPlan)))
+
+    // inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
+    //   inline f: Plan[E, F] => Plan[EE, FF],
+    //   inline alt: Plan.Error
+    // ): Plan[Erroneous, FF] = {
+    //   plans
+    //     .get(argName)
+    //     .map(argPlan => copy(argPlans = argPlans.updated(argName, f(argPlan))))
+    //     .getOrElse(alt)
+    // }
+
+    inline def updateByIndexOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argIdx: Int)(
+      inline f: Plan[E, F] => Plan[EE, FF],
+      alt: Plan.Error
+    ): Plan[Erroneous, FF] =
+      plans
+        .lift(argIdx)
+        .map(fieldPlan => copy(plans = plans.updated(argIdx, f(fieldPlan))))
+        .getOrElse(alt)
+  }
 
   case class BetweenTupleProduct[+E <: Erroneous, +F <: Fallible](
     source: Structure.Tuple,
@@ -205,4 +295,5 @@ private[ducktape] object Plan {
   object Reconfigured {
     given debug: Debug[Reconfigured[Fallible]] = Debug.derived
   }
+
 }
