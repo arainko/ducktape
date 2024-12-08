@@ -195,19 +195,21 @@ private[ducktape] object Plan {
     ) =
       copy(plans = plans.map(argPlan => f(argPlan)))
 
-    // inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
-    //   inline f: Plan[E, F] => Plan[EE, FF],
-    //   inline alt: Plan.Error
-    // ): Plan[Erroneous, FF] = {
-    //   plans
-    //     .get(argName)
-    //     .map(argPlan => copy(argPlans = argPlans.updated(argName, f(argPlan))))
-    //     .getOrElse(alt)
-    // }
+    inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](name: String)(
+      inline f: Plan[E, F] => Plan[EE, FF],
+      inline alt: Plan.Error
+    ): Plan[Erroneous, FF] = {
+      val sourceFields = source.fields.keys
+      // basically, find the index of `fieldName`
+      plans.zipWithIndex.collectFirst {
+        case (fieldPlan, index @ sourceFields(name)) =>
+          copy(plans = plans.updated(index, f(fieldPlan)))
+      }.getOrElse(alt)
+    }
 
     inline def updateByIndexOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argIdx: Int)(
       inline f: Plan[E, F] => Plan[EE, FF],
-      alt: Plan.Error
+      inline alt: Plan.Error
     ): Plan[Erroneous, FF] =
       plans
         .lift(argIdx)
@@ -219,13 +221,53 @@ private[ducktape] object Plan {
     source: Structure.Tuple,
     dest: Structure.Product,
     plans: VectorMap[String, Plan[E, F]]
-  ) extends Plan[E, F]
+  ) extends Plan[E, F], Ops.UpdateByName[E, F] {
+    inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
+      inline f: Plan[E, F] => Plan[EE, FF]
+    ) =
+      copy(plans = plans.transform((_, argPlan) => f(argPlan)))
+
+    def rebuild[EE <: Erroneous, FF <: Fallible](plans: VectorMap[String, Plan[EE, FF]]): Plan[EE, FF] = copy(plans = plans)
+
+    // inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
+    //   inline f: Plan[E, F] => Plan[EE, FF],
+    //   inline alt: Plan.Error
+    // ): Plan[Erroneous, FF] = {
+    //   plans
+    //     .get(argName)
+    //     .map(argPlan => copy(plans = plans.updated(argName, f(argPlan))))
+    //     .getOrElse(alt)
+    // }
+
+    inline def updateByIndexOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argIdx: Int)(
+      inline f: Plan[E, F] => Plan[EE, FF],
+      inline alt: Plan.Error
+    ): Plan[Erroneous, FF] =
+      plans.toVector
+        .lift(argIdx)
+        .map((name, fieldPlan) => copy(plans = plans.updated(name, f(fieldPlan))))
+        .getOrElse(alt)
+  }
 
   case class BetweenTuples[+E <: Erroneous, +F <: Fallible](
     source: Structure.Tuple,
     dest: Structure.Tuple,
     plans: Vector[Plan[E, F]]
-  ) extends Plan[E, F]
+  ) extends Plan[E, F] {
+    inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
+      inline f: Plan[E, F] => Plan[EE, FF]
+    ) =
+      copy(plans = plans.map(argPlan => f(argPlan)))
+
+    inline def updateByIndexOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argIdx: Int)(
+      inline f: Plan[E, F] => Plan[EE, FF],
+      inline alt: Plan.Error
+    ): Plan[Erroneous, FF] =
+      plans
+        .lift(argIdx)
+        .map(fieldPlan => copy(plans = plans.updated(argIdx, f(fieldPlan))))
+        .getOrElse(alt)
+  }
 
   case class BetweenCoproducts[+E <: Erroneous, +F <: Fallible](
     source: Structure.Coproduct,
@@ -296,4 +338,21 @@ private[ducktape] object Plan {
     given debug: Debug[Reconfigured[Fallible]] = Debug.derived
   }
 
+  object Ops {
+    transparent trait UpdateByName[+E <: Erroneous, +F <: Fallible] {
+      def plans: VectorMap[String, Plan[E, F]]
+
+      def rebuild[EE <: Erroneous, FF <: Fallible](plans: VectorMap[String, Plan[EE, FF]]): Plan[EE, FF]
+
+      final inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
+        inline f: Plan[E, F] => Plan[EE, FF],
+        inline alt: Plan.Error
+      ): Plan[Erroneous, FF] = {
+        plans
+          .get(argName)
+          .map(argPlan => rebuild(plans.updated(argName, f(argPlan))))
+          .getOrElse(alt)
+      }
+    }
+  }
 }
