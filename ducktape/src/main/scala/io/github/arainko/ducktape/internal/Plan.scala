@@ -51,6 +51,9 @@ private[ducktape] object Plan {
     private val alternative: () => Plan[Erroneous, Nothing]
   ) extends Plan[Nothing, Nothing] {
     lazy val alt: Plan[Erroneous, Nothing] = alternative()
+
+    inline def update(inline f: Plan[Erroneous, Nothing] => Plan[Erroneous, Nothing]) =
+      copy(alternative = () => f(alternative()))
   }
 
   case class UserDefined[+F <: Fallible](
@@ -80,7 +83,7 @@ private[ducktape] object Plan {
     inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
       inline f: Plan[E, F] => Plan[EE, FF]
     ): BetweenProductFunction[EE, FF] =
-      copy(argPlans = argPlans.transform((_, argPlan) => f(argPlan)))
+      copy(argPlans = argPlans.updateEach(f))
 
     inline def updateOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
       inline f: Plan[E, F] => Plan[EE, FF],
@@ -104,25 +107,21 @@ private[ducktape] object Plan {
     inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
       inline f: Plan[E, F] => Plan[EE, FF]
     ): BetweenTupleFunction[EE, FF] =
-      copy(argPlans = argPlans.transform((_, argPlan) => f(argPlan)))
+      copy(argPlans = argPlans.updateEach(f))
 
     inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
       inline f: Plan[E, F] => Plan[EE, FF],
       inline alt: Plan.Error
-    ): Plan[Erroneous, FF] = {
-      argPlans
-        .get(argName)
-        .map(argPlan => copy(argPlans = argPlans.updated(argName, f(argPlan))))
-        .getOrElse(alt)
-    }
+    ) = argPlans
+      .updateByName(argName)(f, plans => copy(argPlans = plans))
+      .getOrElse(alt)
 
     inline def updateByIndexOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argIdx: Int)(
       inline f: Plan[E, F] => Plan[EE, FF],
       alt: Plan.Error
     ): Plan[Erroneous, FF] =
-      argPlans.toVector
-        .lift(argIdx)
-        .map((name, fieldPlan) => copy(argPlans = argPlans.updated(name, f(fieldPlan))))
+      argPlans
+        .updateByIndex(argIdx)(f, plans => copy(argPlans = plans))
         .getOrElse(alt)
   }
 
@@ -192,8 +191,7 @@ private[ducktape] object Plan {
   ) extends Plan[E, F] {
     inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
       inline f: Plan[E, F] => Plan[EE, FF]
-    ) =
-      copy(plans = plans.map(argPlan => f(argPlan)))
+    ): BetweenProductTuple[EE, FF] = copy(plans = plans.map(f))
 
     inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](name: String)(
       inline f: Plan[E, F] => Plan[EE, FF],
@@ -213,8 +211,7 @@ private[ducktape] object Plan {
       inline alt: Plan.Error
     ): Plan[Erroneous, FF] =
       plans
-        .lift(argIdx)
-        .map(fieldPlan => copy(plans = plans.updated(argIdx, f(fieldPlan))))
+        .updateByIndex(argIdx)(f, plans => copy(plans = plans))
         .getOrElse(alt)
   }
 
@@ -222,34 +219,21 @@ private[ducktape] object Plan {
     source: Structure.Tuple,
     dest: Structure.Product,
     plans: VectorMap[String, Plan[E, F]]
-  ) extends Plan[E, F],
-        Ops.UpdateByName[E, F, BetweenTupleProduct] {
+  ) extends Plan[E, F] {
     inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
       inline f: Plan[E, F] => Plan[EE, FF]
-    ) =
-      copy(plans = plans.transform((_, argPlan) => f(argPlan)))
+    ): BetweenTupleProduct[EE, FF] = copy(plans = plans.updateEach(f))
 
-    def rebuild[EE <: Erroneous, FF <: Fallible](plans: VectorMap[String, Plan[EE, FF]]): BetweenTupleProduct[EE, FF] =
-      copy(plans = plans)
-
-    // inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
-    //   inline f: Plan[E, F] => Plan[EE, FF],
-    //   inline alt: Plan.Error
-    // ): Plan[Erroneous, FF] = {
-    //   plans
-    //     .get(argName)
-    //     .map(argPlan => copy(plans = plans.updated(argName, f(argPlan))))
-    //     .getOrElse(alt)
-    // }
+    inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
+      inline f: Plan[E, F] => Plan[EE, FF],
+      inline alt: Plan.Error
+    ): Plan[Erroneous, FF] = plans.updateByName(argName)(f, plans => copy(plans = plans)).getOrElse(alt)
 
     inline def updateByIndexOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argIdx: Int)(
       inline f: Plan[E, F] => Plan[EE, FF],
       inline alt: Plan.Error
     ): Plan[Erroneous, FF] =
-      plans.toVector
-        .lift(argIdx)
-        .map((name, fieldPlan) => copy(plans = plans.updated(name, f(fieldPlan))))
-        .getOrElse(alt)
+      plans.updateByIndex(argIdx)(f, plans => copy(plans = plans)).getOrElse(alt)
   }
 
   case class BetweenTuples[+E <: Erroneous, +F <: Fallible](
@@ -260,42 +244,52 @@ private[ducktape] object Plan {
     inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
       inline f: Plan[E, F] => Plan[EE, FF]
     ) =
-      copy(plans = plans.map(argPlan => f(argPlan)))
+      copy(plans = plans.map(f))
 
     inline def updateByIndexOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argIdx: Int)(
       inline f: Plan[E, F] => Plan[EE, FF],
       inline alt: Plan.Error
     ): Plan[Erroneous, FF] =
-      plans
-        .lift(argIdx)
-        .map(fieldPlan => copy(plans = plans.updated(argIdx, f(fieldPlan))))
-        .getOrElse(alt)
+      plans.updateByIndex(argIdx)(f, plans => copy(plans = plans)).getOrElse(alt)
   }
 
   case class BetweenCoproducts[+E <: Erroneous, +F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct,
     casePlans: Vector[Plan[E, F]]
-  ) extends Plan[E, F]
+  ) extends Plan[E, F] {
+    inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
+      inline f: Plan[E, F] => Plan[EE, FF]
+    ) = copy(casePlans = casePlans.map(f))
+  }
 
   case class BetweenOptions[+E <: Erroneous, +F <: Fallible](
     source: Structure.Optional,
     dest: Structure.Optional,
     plan: Plan[E, F]
-  ) extends Plan[E, F]
+  ) extends Plan[E, F] {
+    inline def update[EE >: E <: Erroneous, FF >: F <: Fallible](inline f: Plan[E, F] => Plan[EE, FF]) =
+      copy(plan = f(plan))
+  }
 
   case class BetweenNonOptionOption[+E <: Erroneous, +F <: Fallible](
     source: Structure,
     dest: Structure.Optional,
     plan: Plan[E, F]
-  ) extends Plan[E, F]
+  ) extends Plan[E, F] {
+    inline def update[EE >: E <: Erroneous, FF >: F <: Fallible](inline f: Plan[E, F] => Plan[EE, FF]) =
+      copy(plan = f(plan))
+  }
 
   case class BetweenCollections[+E <: Erroneous, +F <: Fallible](
     source: Structure.Collection,
     dest: Structure.Collection,
     factory: Expr[Factory[?, ?]],
     plan: Plan[E, F]
-  ) extends Plan[E, F]
+  ) extends Plan[E, F] {
+    inline def update[EE >: E <: Erroneous, FF >: F <: Fallible](inline f: Plan[E, F] => Plan[EE, FF]) =
+      copy(plan = f(plan))
+  }
 
   case class Error(
     source: Structure,
@@ -351,15 +345,36 @@ private[ducktape] object Plan {
         inline f: Plan[E, F] => Plan[EE, FF],
         inline alt: Plan.Error
       ): Plan[Erroneous, FF] = {
-        plans.update(argName)(f, rebuild).getOrElse(alt)
+        plans.updateByName(argName)(f, rebuild).getOrElse(alt)
       }
     }
   }
 
   extension [E <: Erroneous, F <: Fallible](self: VectorMap[String, Plan[E, F]]) {
-    inline def update[EE >: E <: Erroneous, FF >: F <: Fallible, A](
+    inline def updateEach[EE <: Erroneous, FF <: Fallible](
+      inline f: Plan[E, F] => Plan[EE, FF]
+    ): VectorMap[String, Plan[EE, FF]] =
+      self.transform((_, plan) => f(plan))
+
+    inline def updateByName[EE >: E <: Erroneous, FF >: F <: Fallible, A](
       name: String
     )(inline f: Plan[E, F] => Plan[EE, FF], rebuild: VectorMap[String, Plan[EE, FF]] => A) =
       self.get(name).map(plan => rebuild(self.updated(name, f(plan))))
+
+    inline def updateByIndex[EE >: E <: Erroneous, FF >: F <: Fallible, A](
+      idx: Int
+    )(inline f: Plan[E, F] => Plan[EE, FF], rebuild: VectorMap[String, Plan[EE, FF]] => A) =
+      self.toVector
+        .lift(idx)
+        .map((name, fieldPlan) => rebuild(self.updated(name, f(fieldPlan))))
+  }
+
+  extension [E <: Erroneous, F <: Fallible](self: Vector[Plan[E, F]]) {
+    inline def updateByIndex[EE >: E <: Erroneous, FF >: F <: Fallible, A](
+      idx: Int
+    )(inline f: Plan[E, F] => Plan[EE, FF], rebuild: Vector[Plan[EE, FF]] => A) =
+      self
+        .lift(idx)
+        .map(fieldPlan => rebuild(self.updated(idx, f(fieldPlan))))
   }
 }
