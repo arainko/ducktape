@@ -41,7 +41,7 @@ private[ducktape] object FallibilityRefiner {
             case Configuration.FallibleCaseComputed(tpe, function)              => boundary.break(None)
 
         case BetweenProductFunction(source, dest, argPlans) =>
-          evaluate(argPlans.values)
+          evaluate(argPlans.map((_, fieldPlan) => fieldPlan.plan))
 
         case BetweenTupleFunction(source, dest, argPlans) =>
           evaluate(argPlans.values)
@@ -53,10 +53,10 @@ private[ducktape] object FallibilityRefiner {
         case BetweenSingletons(source, dest) => ()
 
         case BetweenProducts(source, dest, fieldPlans) =>
-          evaluate(fieldPlans.values)
+          evaluate(fieldPlans.values.map(_.plan))
 
         case BetweenProductTuple(source, dest, plans) =>
-          evaluate(plans)
+          evaluate(plans.map(_.plan))
 
         case BetweenTupleProduct(source, dest, plans) =>
           evaluate(plans.values)

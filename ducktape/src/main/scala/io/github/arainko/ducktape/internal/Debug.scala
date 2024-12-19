@@ -1,5 +1,7 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.internal.Logger.Level
+
 import scala.collection.immutable.VectorMap
 import scala.compiletime.*
 import scala.deriving.Mirror
@@ -96,9 +98,13 @@ private[ducktape] object Debug extends LowPriorityDebug {
   }
 
   inline def derived[A](using A: Mirror.Of[A]): Debug[A] =
-    inline A match {
-      case given Mirror.ProductOf[A] => product
-      case given Mirror.SumOf[A]     => coproduct
+    inline summonInline[Logger.Level] match {
+      case Level.Off => nonShowable
+      case _ =>
+        inline A match {
+          case given Mirror.ProductOf[A] => product
+          case given Mirror.SumOf[A]     => coproduct
+        }
     }
 
   private[ducktape] class ForProduct[A](tpeName: String, _instances: => IArray[Debug[Any]]) extends Debug[A] {

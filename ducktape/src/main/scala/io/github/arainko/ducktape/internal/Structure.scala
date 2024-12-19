@@ -33,6 +33,7 @@ private[ducktape] object Structure {
   def toplevelNothing(using Quotes) = Structure.Ordinary(Type.of[Nothing], Path.empty(Type.of[Nothing]))
 
   case class Product(tpe: Type[?], path: Path, fields: VectorMap[String, Structure]) extends Structure {
+
     private var cachedDefaults: Map[String, Expr[Any]] = null
 
     def defaults(using Quotes): Map[String, Expr[Any]] =

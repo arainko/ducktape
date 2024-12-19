@@ -19,4 +19,5 @@ object AppliedBuilder {
     ): F[Dest] =
       FallibleTransformations.between[F, Source, Dest](source, F, "transformation", config*)
   }
+
 }

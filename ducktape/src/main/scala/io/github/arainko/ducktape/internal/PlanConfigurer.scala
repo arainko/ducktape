@@ -32,7 +32,7 @@ private[ducktape] object PlanConfigurer {
             case None =>
               Plan.Error.from(parent, ErrorMessage.FallibleConfigNotPermitted(config.span, config.side), None)
             case nonFallible: Configuration.Instruction[Nothing] =>
-              parent.copy(plan = recurse(plan, tail, parent, nonFallible))
+              parent.update(recurse(_, tail, parent, nonFallible))
 
         def handleElement(
           segment: Path.Segment.Element,
@@ -41,21 +41,22 @@ private[ducktape] object PlanConfigurer {
         ): Plan[Erroneous, F] =
           current match {
             case parent @ BetweenCollections(_, _, _, plan) =>
-              parent.copy(plan = recurse(plan, tail, parent, config))
+              parent.update(recurse(_, tail, parent, config))
 
             case parent @ BetweenOptions(_, _, plan) =>
-              parent.copy(plan = recurse(plan, tail, parent, config))
+              parent.update(recurse(_, tail, parent, config))
 
             case parent @ BetweenNonOptionOption(_, _, plan) =>
-              parent.copy(plan = recurse(plan, tail, parent, config))
+              parent.update(recurse(_, tail, parent, config))
 
             case parent @ BetweenFallibleNonFallible(source, dest, plan) if config.side.isSource =>
               traverseBetweenNotFallible(parent, plan, tail)
 
             case parent @ BetweenFallibles(source, dest, mode, plan) if config.side.isSource =>
-              parent.copy(plan = recurse(plan, tail, parent, config))
+              parent.update(recurse(_, tail, parent, config))
 
             case paren: Upcast =>
+              // TODO: use paren.update
               recurse(paren.alt, segments, parent, config)
 
             case other => invalidPathSegment(config, other, segment)
@@ -69,48 +70,40 @@ private[ducktape] object PlanConfigurer {
 
             // passthrough BetweenFallibles, the dest is just a normal field in this case
             case parent @ BetweenFallibles(source, dest, mode, plan) if config.side.isDest =>
-              parent.copy(plan = recurse(plan, segments, parent, config))
+              parent.update(recurse(_, tail, parent, config))
 
             case parent @ BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
-              val fieldPlan =
-                fieldPlans
-                  .get(segment.name)
-                  .map(fieldPlan => recurse(fieldPlan, tail, parent, config))
-                  .getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None))
-
-              parent.copy(fieldPlans = fieldPlans.updated(segment.name, fieldPlan))
+              parent.updateOrElse(segment.name)(
+                recurse(_, tail, parent, config),
+                Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None)
+              )
 
             case parent @ BetweenTupleProduct(source, dest, plans) if config.side.isDest =>
-              plans
-                .get(segment.name)
-                .map(fieldPlan => parent.copy(plans = plans.updated(segment.name, recurse(fieldPlan, tail, parent, config))))
-                .getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None))
+              parent.updateByNameOrElse(segment.name)(
+                recurse(_, tail, parent, config),
+                Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None)
+              )
 
             case parent @ BetweenProductTuple(source, dest, plans) if config.side.isSource =>
-              val sourceFields = source.fields.keys
-
-              // basically, find the index of `fieldName`
-              plans.zipWithIndex.collectFirst {
-                case (fieldPlan, index @ sourceFields(segment.name)) =>
-                  parent.copy(plans = plans.updated(index, recurse(fieldPlan, tail, parent, config)))
-              }.getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None))
+              parent.updateByNameOrElse(segment.name)(
+                recurse(_, tail, parent, config),
+                Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None)
+              )
 
             case parent @ BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
-              val argPlan =
-                argPlans
-                  .get(segment.name)
-                  .map(argPlan => recurse(argPlan, tail, parent, config))
-                  .getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidArgAccessor(segment.name, config.span), None))
-
-              parent.copy(argPlans = argPlans.updated(segment.name, argPlan))
+              parent.updateOrElse(segment.name)(
+                recurse(_, tail, parent, config),
+                Plan.Error.from(parent, ErrorMessage.InvalidArgAccessor(segment.name, config.span), None)
+              )
 
             case parent @ BetweenTupleFunction(source, dest, argPlans) if config.side.isDest =>
-              argPlans
-                .get(segment.name)
-                .map(argPlan => parent.copy(argPlans = argPlans.updated(segment.name, recurse(argPlan, tail, parent, config))))
-                .getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidArgAccessor(segment.name, config.span), None))
+              parent.updateByNameOrElse(segment.name)(
+                recurse(_, tail, parent, config),
+                Plan.Error.from(parent, ErrorMessage.InvalidArgAccessor(segment.name, config.span), None)
+              )
 
             case paren: Upcast =>
+              // TODO: use paren.update
               recurse(paren.alt, segments, parent, config)
 
             case other => invalidPathSegment(config, other, segment)
@@ -131,49 +124,38 @@ private[ducktape] object PlanConfigurer {
 
             // passthrough BetweenFallibles, the dest is just a tuple elem in this case
             case parent @ BetweenFallibles(source, dest, mode, plan) if config.side.isDest =>
-              parent.copy(plan = recurse(plan, segments, parent, config))
+              parent.update(recurse(_, segments, parent, config))
 
             case parent @ BetweenTuples(source, dest, plans) =>
               Logger.debug(ds"Matched $parent")
-              plans
-                .lift(index)
-                .map(elemPlan => parent.copy(plans = plans.updated(index, recurse(elemPlan, tail, plan, config))))
-                .getOrElse(
-                  Plan.Error
-                    .from(plan, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
-                )
+              parent.updateByIndexOrElse(index)(
+                recurse(_, tail, plan, config),
+                Plan.Error.from(plan, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
+              )
 
             case parent @ BetweenProductTuple(source, dest, plans) if config.side.isDest =>
               Logger.debug(ds"Matched $parent")
-              plans
-                .lift(index)
-                .map(elemPlan => parent.copy(plans = plans.updated(index, recurse(elemPlan, tail, parent, config))))
-                .getOrElse(
-                  Plan.Error
-                    .from(parent, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
-                )
+              parent.updateByIndexOrElse(index)(
+                recurse(_, tail, parent, config),
+                Plan.Error.from(parent, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
+              )
 
             case parent @ BetweenTupleProduct(source, dest, plans) if config.side.isSource =>
               Logger.debug(ds"Matched $parent")
-              plans.toVector
-                .lift(index)
-                .map((name, fieldPlan) => parent.copy(plans = plans.updated(name, recurse(fieldPlan, tail, parent, config))))
-                .getOrElse(
-                  Plan.Error
-                    .from(parent, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
-                )
+              parent.updateByIndexOrElse(index)(
+                recurse(_, tail, parent, config),
+                Plan.Error.from(parent, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
+              )
 
             case parent @ BetweenTupleFunction(source, dest, plans) if config.side.isSource =>
               Logger.debug(ds"Matched $parent")
-              plans.toVector
-                .lift(index)
-                .map((name, fieldPlan) => parent.copy(argPlans = plans.updated(name, recurse(fieldPlan, tail, parent, config))))
-                .getOrElse(
-                  Plan.Error
-                    .from(parent, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
-                )
+              parent.updateByIndexOrElse(index)(
+                recurse(_, tail, parent, config),
+                Plan.Error.from(parent, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
+              )
 
             case paren: Upcast =>
+              // TODO: use paren.update
               recurse(paren.alt, segments, parent, config)
 
             case other =>
@@ -187,7 +169,7 @@ private[ducktape] object PlanConfigurer {
           current match {
             // BetweenNonOptionOption keeps the same type as its source so we passthrough it when traversing source nodes
             case parent: BetweenNonOptionOption[Erroneous, F] if config.side.isSource =>
-              parent.copy(plan = recurse(parent.plan, segments, parent, config))
+              parent.update(recurse(_, segments, parent, config))
 
             case parent @ BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
               def sideTpe(plan: Plan[Erroneous, Fallible]) =
@@ -199,6 +181,7 @@ private[ducktape] object PlanConfigurer {
                 .getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidCaseAccessor(tpe, config.span), None))
 
             case paren: Upcast =>
+              // TODO: use paren.update
               recurse(paren.alt, segments, parent, config)
 
             case other => invalidPathSegment(config, other, segment)
@@ -310,10 +293,10 @@ private[ducktape] object PlanConfigurer {
       case plan: Configured[F] => plan
 
       case plan: BetweenProductFunction[Erroneous, F] =>
-        plan.copy(argPlans = plan.argPlans.transform((_, argPlan) => regional(argPlan, modifier, plan)))
+        plan.updateEach(regional(_, modifier, plan))
 
       case plan: BetweenTupleFunction[Erroneous, F] =>
-        plan.copy(argPlans = plan.argPlans.transform((_, argPlan) => regional(argPlan, modifier, plan)))
+        plan.updateEach(regional(_, modifier, plan))
 
       case plan: BetweenUnwrappedWrapped => plan
 
@@ -322,34 +305,34 @@ private[ducktape] object PlanConfigurer {
       case plan: BetweenSingletons => plan
 
       case plan: BetweenProducts[Erroneous, F] =>
-        plan.copy(fieldPlans = plan.fieldPlans.transform((_, fieldPlan) => regional(fieldPlan, modifier, plan)))
+        plan.updateEach(regional(_, modifier, plan))
 
       case plan: BetweenProductTuple[Erroneous, F] =>
-        plan.copy(plans = plan.plans.map(fieldPlan => regional(fieldPlan, modifier, plan)))
+        plan.updateEach(regional(_, modifier, plan))
 
       case plan: BetweenTupleProduct[Erroneous, F] =>
-        plan.copy(plans = plan.plans.transform((_, fieldPlan) => regional(fieldPlan, modifier, plan)))
+        plan.updateEach(regional(_, modifier, plan))
 
       case plan: BetweenTuples[Erroneous, F] =>
-        plan.copy(plans = plan.plans.map(fieldPlan => regional(fieldPlan, modifier, plan)))
+        plan.updateEach(regional(_, modifier, plan))
 
       case plan: BetweenCoproducts[Erroneous, F] =>
-        plan.copy(casePlans = plan.casePlans.map(regional(_, modifier, plan)))
+        plan.updateEach(regional(_, modifier, plan))
 
       case plan: BetweenOptions[Erroneous, F] =>
-        plan.copy(plan = regional(plan.plan, modifier, plan))
+        plan.update(regional(_, modifier, plan))
 
       case plan: BetweenNonOptionOption[Erroneous, F] =>
-        plan.copy(plan = regional(plan.plan, modifier, plan))
+        plan.update(regional(_, modifier, plan))
 
       case plan: BetweenCollections[Erroneous, F] =>
-        plan.copy(plan = regional(plan.plan, modifier, plan))
+        plan.update(regional(_, modifier, plan))
 
       case plan: BetweenFallibleNonFallible[Erroneous] =>
-        plan.copy(plan = regional(plan.plan, modifier, plan))
+        plan.update(regional(_, modifier, plan))
 
       case plan @ BetweenFallibles(_, _, _, elemPlan) =>
-        plan.copy(plan = regional(elemPlan, modifier, plan))
+        plan.update(regional(_, modifier, plan))
 
       case plan: Error =>
         // TODO: Detect when a regional config doesn't do anything and emit an error
@@ -389,10 +372,11 @@ private[ducktape] object PlanConfigurer {
     PartialFunction
       .condOpt(current) {
         case func: Plan.BetweenProductFunction[Erroneous, F] =>
-          val updatedArgPlans = func.argPlans.transform(updatePlan(func))
+          val updatedArgPlans = func.argPlans.transform((name, fieldPlan) => fieldPlan.update(updatePlan(func)(name, _)))
           func.copy(argPlans = updatedArgPlans)
         case prod: Plan.BetweenProducts[Erroneous, F] =>
-          val updatedFieldPlans = prod.fieldPlans.transform(updatePlan(prod))
+          val updatedFieldPlans =
+            prod.fieldPlans.transform((name, fieldPlan) => fieldPlan.update(updatePlan(prod)(name, _)))
           prod.copy(fieldPlans = updatedFieldPlans)
         case prodTuple: Plan.BetweenTupleProduct[Erroneous, F] =>
           val updatedFieldPlans = prodTuple.plans.transform(updatePlan(prodTuple))

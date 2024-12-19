@@ -24,22 +24,20 @@ private[ducktape] object PlanInterpreter {
 
       case Plan.BetweenProducts(source, dest, fieldPlans) =>
         val args = fieldPlans.map {
-          case (fieldName, plan) if source.fields.contains(fieldName) =>
-            val fieldValue = value.accessFieldByName(fieldName).asExpr
+          case (fieldName, FieldPlan(sourceField: String, plan)) =>
+            val fieldValue = value.accessFieldByName(sourceField).asExpr
             NamedArg(fieldName, recurse(plan, fieldValue).asTerm)
-          case (fieldName, plan) =>
+          case (fieldName, FieldPlan(None, plan)) =>
             NamedArg(fieldName, recurse(plan, value).asTerm)
         }
         Constructor(dest.tpe.repr).appliedToArgs(args.toList).asExpr
 
       case Plan.BetweenProductTuple(source, dest, plans) =>
-        val fields = source.fields.keys
-        val args = plans.zipWithIndex.map {
-          case (plan, idx) if fields.isDefinedAt(idx) =>
-            val fieldName = fields(idx)
+        val args = plans.map {
+          case FieldPlan(fieldName: String, plan) =>
             val fieldValue = value.accessFieldByName(fieldName).asExpr
             recurse(plan, fieldValue)
-          case (plan, _) =>
+          case FieldPlan(None, plan) =>
             recurse(plan, value)
         }
 
@@ -78,10 +76,10 @@ private[ducktape] object PlanInterpreter {
 
       case Plan.BetweenProductFunction(source, dest, argPlans) =>
         val args = argPlans.map {
-          case (fieldName, plan) if source.fields.contains(fieldName) =>
-            val fieldValue = value.accessFieldByName(fieldName).asExpr
+          case (fieldName, FieldPlan(sourceField: String, plan)) =>
+            val fieldValue = value.accessFieldByName(sourceField).asExpr
             recurse(plan, fieldValue).asTerm
-          case (fieldName, plan) =>
+          case (fieldName, FieldPlan(None, plan)) =>
             recurse(plan, value).asTerm
         }
         dest.function.appliedTo(args.toList)
