@@ -323,11 +323,11 @@ private[ducktape] object Plan {
   }
 
   extension [K, V](self: VectorMap[K, V]) {
-    inline def updateEach[A](inline f: V => A): VectorMap[K, A] = self.transform((_, v) => f(v))
+    private inline def updateEach[A](inline f: V => A): VectorMap[K, A] = self.transform((_, v) => f(v))
   }
 
   extension [E <: Erroneous, F <: Fallible](self: VectorMap[String, FieldPlan[E, F]]) {
-    inline def updatedByName[FF >: F <: Fallible, A](
+    private inline def updatedByName[FF >: F <: Fallible, A](
       name: String
     )(inline f: Plan[E, F] => Plan[Erroneous, FF], inline alt: Plan.Error): VectorMap[String, FieldPlan[Erroneous, FF]] =
       if self.isDefinedAt(name) then self.updated(name, self(name).update(f))
@@ -335,12 +335,12 @@ private[ducktape] object Plan {
   }
 
   extension [E <: Erroneous, F <: Fallible](self: VectorMap[String, Plan[E, F]]) {
-    inline def updateByName[FF >: F <: Fallible, A](
+    private inline def updateByName[FF >: F <: Fallible, A](
       name: String
     )(inline f: Plan[E, F] => Plan[Erroneous, FF], inline rebuild: VectorMap[String, Plan[Erroneous, FF]] => A): A | None =
       if self.isDefinedAt(name) then rebuild(self.updated(name, f(self(name)))) else None
 
-    inline def updateByIndex[FF >: F <: Fallible, A](
+    private inline def updateByIndex[FF >: F <: Fallible, A](
       idx: Int
     )(inline f: Plan[E, F] => Plan[Erroneous, FF], inline rebuild: VectorMap[String, Plan[Erroneous, FF]] => A): A | None = {
       val asVector = self.toVector
@@ -352,7 +352,7 @@ private[ducktape] object Plan {
   }
 
   extension [A](self: Vector[A]) {
-    inline def updateByIndex[B >: A, C](
+    private inline def updateByIndex[B >: A, C](
       idx: Int
     )(inline f: A => B, inline rebuild: Vector[B] => C): C | None =
       if self.isDefinedAt(idx) then rebuild(self.updated(idx, f(self(idx)))) else None

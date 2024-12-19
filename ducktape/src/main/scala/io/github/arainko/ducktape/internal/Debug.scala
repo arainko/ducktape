@@ -1,11 +1,12 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.internal.Logger.Level
+
 import scala.collection.immutable.VectorMap
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.ClassTag
-import io.github.arainko.ducktape.internal.Logger.Level
 
 private[ducktape] trait Debug[-A] {
   def astify(self: A)(using Quotes): Debug.AST
