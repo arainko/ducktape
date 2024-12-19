@@ -48,3 +48,5 @@ extension [A](self: A | None.type) {
   // private[ducktape] inline def map[B](inline f: A => B): B | None.type = self.fold(None, f)
 
 }
+
+private[ducktape] type None = None.type

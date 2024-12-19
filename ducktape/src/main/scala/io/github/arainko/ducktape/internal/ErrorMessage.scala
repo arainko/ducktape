@@ -137,7 +137,6 @@ private[ducktape] object ErrorMessage {
     }
   }
 
-
   // Currently unused - part of the POC behind field renames will be brought back to life when working
   // final case class AmbiguousFieldTransformations(
   //   tpe: Type[?],
@@ -145,7 +144,7 @@ private[ducktape] object ErrorMessage {
   //   transformedFieldName: String,
   //   ambiguities: Vector[String],
   // ) extends ErrorMessage {
-  //   def render(using Quotes): String = 
+  //   def render(using Quotes): String =
   //     s"Field '$fieldName' (transformed to '$transformedFieldName') in ${tpe.repr.show} maps to more than one field name: ${ambiguities.map(name => s"'$name'").mkString(", ")}"
 
   //   val span = None

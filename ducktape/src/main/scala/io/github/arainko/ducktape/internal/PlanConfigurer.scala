@@ -372,7 +372,7 @@ private[ducktape] object PlanConfigurer {
     PartialFunction
       .condOpt(current) {
         case func: Plan.BetweenProductFunction[Erroneous, F] =>
-          val updatedArgPlans = func.argPlans.transform(updatePlan(func))
+          val updatedArgPlans = func.argPlans.transform((name, fieldPlan) => fieldPlan.update(updatePlan(func)(name, _)))
           func.copy(argPlans = updatedArgPlans)
         case prod: Plan.BetweenProducts[Erroneous, F] =>
           val updatedFieldPlans =

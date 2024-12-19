@@ -107,7 +107,7 @@ private[ducktape] object Planner {
           planProductTransformation(source, dest)
 
         case (source: Product, dest: Tuple) =>
-          val plans = positionWisePlans(source, source.fields.values.toIndexedSeq, dest.elements)
+          val plans = positionWiseFieldPlans(source, dest)
           Plan.BetweenProductTuple(source, dest, plans)
 
         case (source: Tuple, dest: Product) =>
@@ -190,6 +190,28 @@ private[ducktape] object Planner {
     }.toVector
   }
 
+  private def positionWiseFieldPlans[F <: Fallible](
+    source: Structure.Product,
+    dest: Structure.Tuple
+  )(using Quotes, Depth, Context.Of[F]): Vector[FieldPlan[Erroneous, F]] = {
+    val sourceFields = source.fields.toVector
+    dest.elements.zipWithIndex.map { (destFieldStruct, index) =>
+      sourceFields
+        .lift(index)
+        .map((sourceName, sourceStruct) => FieldPlan(sourceName, recurse(sourceStruct, destFieldStruct)))
+        .getOrElse(
+          FieldPlan.empty(
+            Plan.Error(
+              Structure.of[Nothing](source.path),
+              destFieldStruct,
+              ErrorMessage.NoFieldFoundAtIndex(index, source.tpe),
+              None
+            )
+          )
+        )
+    }.toVector
+  }
+
   private def planProductFunctionTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function
@@ -199,14 +221,16 @@ private[ducktape] object Planner {
         source.fields
           .get(destField)
           .map { sourceStruct =>
-            recurse(sourceStruct, destFieldStruct)
+            FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
           }
           .getOrElse(
-            Plan.Error(
-              Structure.of[Nothing](source.path),
-              destFieldStruct,
-              ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
-              None
+            FieldPlan.empty(
+              Plan.Error(
+                Structure.of[Nothing](source.path),
+                destFieldStruct,
+                ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
+                None
+              )
             )
           )
       destField -> plan

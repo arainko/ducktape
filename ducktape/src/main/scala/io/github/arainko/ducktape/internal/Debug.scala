@@ -5,6 +5,7 @@ import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.ClassTag
+import io.github.arainko.ducktape.internal.Logger.Level
 
 private[ducktape] trait Debug[-A] {
   def astify(self: A)(using Quotes): Debug.AST
@@ -96,9 +97,13 @@ private[ducktape] object Debug extends LowPriorityDebug {
   }
 
   inline def derived[A](using A: Mirror.Of[A]): Debug[A] =
-    inline A match {
-      case given Mirror.ProductOf[A] => product
-      case given Mirror.SumOf[A]     => coproduct
+    inline summonInline[Logger.Level] match {
+      case Level.Off => nonShowable
+      case _ =>
+        inline A match {
+          case given Mirror.ProductOf[A] => product
+          case given Mirror.SumOf[A]     => coproduct
+        }
     }
 
   private[ducktape] class ForProduct[A](tpeName: String, _instances: => IArray[Debug[Any]]) extends Debug[A] {
