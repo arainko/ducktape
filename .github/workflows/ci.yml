@@ -24,23 +24,23 @@ concurrency:
 
 jobs:
   build:
-    name: Build and Test
+    name: Test
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-22.04]
         scala: [3]
         java: [temurin@17]
         project: [rootJS, rootJVM, rootNative]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
-      - name: Install sbt
-        uses: sbt/setup-sbt@v1
-
       - name: Checkout current branch (full)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
 
       - name: Setup Java (temurin@17)
         id: setup-java-temurin-17
@@ -59,11 +59,11 @@ jobs:
         run: sbt --client githubWorkflowCheck
 
       - name: Check formatting
-        if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-latest'
+        if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-22.04'
         run: sbt --client 'project ${{ matrix.project }}; ++ ${{ matrix.scala }}; scalafmtCheckAll; project /; scalafmtSbtCheck'
 
       - name: Check scalafix lints
-        if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-latest'
+        if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-22.04'
         run: sbt --client 'project ${{ matrix.project }}; ++ ${{ matrix.scala }}; scalafixAll --check'
 
       - name: scalaJSLink
@@ -78,11 +78,11 @@ jobs:
         run: sbt --client 'project ${{ matrix.project }}; ++ ${{ matrix.scala }}; test'
 
       - name: Check binary compatibility
-        if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-latest'
+        if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-22.04'
         run: sbt --client 'project ${{ matrix.project }}; ++ ${{ matrix.scala }}; mimaReportBinaryIssues'
 
       - name: Generate API documentation
-        if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-latest'
+        if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-22.04'
         run: sbt --client 'project ${{ matrix.project }}; ++ ${{ matrix.scala }}; doc'
 
       - name: Check docs
@@ -110,17 +110,17 @@ jobs:
     if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/series/0.1.x' || github.ref == 'refs/heads/series/0.2.x')
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-22.04]
         java: [temurin@17]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Install sbt
-        uses: sbt/setup-sbt@v1
-
       - name: Checkout current branch (full)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
 
       - name: Setup Java (temurin@17)
         id: setup-java-temurin-17
@@ -194,17 +194,17 @@ jobs:
     if: github.event.repository.fork == false && github.event_name != 'pull_request'
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-22.04]
         java: [temurin@17]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Install sbt
-        uses: sbt/setup-sbt@v1
-
       - name: Checkout current branch (full)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
 
       - name: Setup Java (temurin@17)
         id: setup-java-temurin-17
@@ -229,17 +229,17 @@ jobs:
     name: Generate Site
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-22.04]
         java: [temurin@17]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Install sbt
-        uses: sbt/setup-sbt@v1
-
       - name: Checkout current branch (full)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
 
       - name: Setup Java (temurin@17)
         id: setup-java-temurin-17
