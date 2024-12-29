@@ -27,7 +27,7 @@ private[ducktape] object FallibleTransformations {
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
     val destStruct = Structure.of[B](Path.empty(Type.of[B]))
-    val plan = Planner.between(sourceStruct, destStruct)
+    val plan = Planner.between(sourceStruct, destStruct, StrictTypeMap.empty)
     val config = Configuration.parse(configs, ConfigParser.fallible[F])
 
     val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
@@ -71,7 +71,7 @@ private[ducktape] object FallibleTransformations {
       )
       .map { func =>
         val destStruct = Structure.fromFunction(func)
-        Planner.between(sourceStruct, destStruct)
+        Planner.between(sourceStruct, destStruct, StrictTypeMap.empty)
       }
       .match {
         case Left(error) => Backend.reportErrorsAndAbort(NonEmptyList(error), config)
@@ -112,7 +112,7 @@ private[ducktape] object FallibleTransformations {
       )
       .map { func =>
         val destStruct = Structure.fromFunction(func)
-        Planner.between(sourceStruct, destStruct)
+        Planner.between(sourceStruct, destStruct, StrictTypeMap.empty)
       }
       .match {
         case Left(error) => Backend.reportErrorsAndAbort(NonEmptyList(error), Nil)

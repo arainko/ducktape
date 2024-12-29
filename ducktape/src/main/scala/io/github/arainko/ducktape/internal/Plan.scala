@@ -76,6 +76,11 @@ private[ducktape] object Plan {
     ): BetweenProductFunction[EE, FF] =
       copy(argPlans = argPlans.updateEach(_.update(f)))
 
+    inline def transformEach[EE >: E <: Erroneous, FF >: F <: Fallible](
+      inline f: (String, Plan[E, F]) => Plan[EE, FF]
+    ): BetweenProductFunction[EE, FF] =
+      copy(argPlans = argPlans.transform((k, v) => v.update(f(k, _))))
+
     inline def updateOrElse[FF >: F <: Fallible](argName: String)(
       inline f: Plan[E, F] => Plan[Erroneous, FF],
       inline alt: Plan.Error
@@ -93,6 +98,9 @@ private[ducktape] object Plan {
       inline f: Plan[E, F] => Plan[EE, FF]
     ): BetweenTupleFunction[EE, FF] =
       copy(argPlans = argPlans.updateEach(f))
+
+    inline def transformEach[EE >: E <: Erroneous, FF >: F <: Fallible](inline f: (String, Plan[E, F]) => Plan[EE, FF]) =
+      copy(argPlans = argPlans.transform(f))
 
     inline def updateByNameOrElse[EE >: E <: Erroneous, FF >: F <: Fallible](argName: String)(
       inline f: Plan[E, F] => Plan[EE, FF],
@@ -156,6 +164,11 @@ private[ducktape] object Plan {
     ): BetweenProducts[EE, FF] =
       copy(fieldPlans = fieldPlans.updateEach(_.update(f)))
 
+    inline def transformEach[EE >: E <: Erroneous, FF >: F <: Fallible](
+      inline f: (String, Plan[E, F]) => Plan[EE, FF]
+    ): BetweenProducts[EE, FF] =
+      copy(fieldPlans = fieldPlans.transform((k, v) => v.update(f(k, _))))
+
     inline def updateOrElse[FF >: F <: Fallible](name: String)(
       inline f: Plan[E, F] => Plan[Erroneous, FF],
       inline alt: Plan.Error
@@ -206,6 +219,9 @@ private[ducktape] object Plan {
     ): BetweenTupleProduct[EE, FF] =
       copy(plans = plans.updateEach(f))
 
+    def transformEach[EE >: E <: Erroneous, FF >: F <: Fallible](f: (String, Plan[E, F]) => Plan[EE, FF]) =
+      copy(plans = plans.transform(f))
+
     inline def updateByNameOrElse[FF >: F <: Fallible](argName: String)(
       inline f: Plan[E, F] => Plan[Erroneous, FF],
       inline alt: Plan.Error
@@ -244,6 +260,13 @@ private[ducktape] object Plan {
     inline def updateEach[EE >: E <: Erroneous, FF >: F <: Fallible](
       inline f: Plan[E, F] => Plan[EE, FF]
     ): BetweenCoproducts[EE, FF] = copy(casePlans = casePlans.map(f))
+
+    inline def updateWhereOrElse[FF >: F <: Fallible](
+      pred: Plan[E, F] => Boolean
+    )(inline f: Plan[E, F] => Plan[Erroneous, FF], inline alt: Plan.Error) = {
+      val idx = casePlans.indexWhere(pred)
+      casePlans.updateByIndex(idx)(f, plans => copy(casePlans = plans)).getOrElse(alt)
+    }
   }
 
   case class BetweenOptions[+E <: Erroneous, +F <: Fallible](

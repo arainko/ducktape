@@ -175,10 +175,10 @@ private[ducktape] object PlanConfigurer {
               def sideTpe(plan: Plan[Erroneous, Fallible]) =
                 if config.side.isSource then plan.source.tpe.repr else plan.dest.tpe.repr
 
-              casePlans.zipWithIndex
-                .find((plan, _) => tpe.repr =:= sideTpe(plan))
-                .map((casePlan, idx) => parent.copy(casePlans = casePlans.updated(idx, recurse(casePlan, tail, parent, config))))
-                .getOrElse(Plan.Error.from(parent, ErrorMessage.InvalidCaseAccessor(tpe, config.span), None))
+              parent.updateWhereOrElse(plan => tpe.repr =:= sideTpe(plan))(
+                recurse(_, tail, parent, config),
+                Plan.Error.from(parent, ErrorMessage.InvalidCaseAccessor(tpe, config.span), None)
+              )
 
             case paren: Upcast =>
               // TODO: use paren.update
@@ -372,15 +372,11 @@ private[ducktape] object PlanConfigurer {
     PartialFunction
       .condOpt(current) {
         case func: Plan.BetweenProductFunction[Erroneous, F] =>
-          val updatedArgPlans = func.argPlans.transform((name, fieldPlan) => fieldPlan.update(updatePlan(func)(name, _)))
-          func.copy(argPlans = updatedArgPlans)
+          func.transformEach(updatePlan(func))
         case prod: Plan.BetweenProducts[Erroneous, F] =>
-          val updatedFieldPlans =
-            prod.fieldPlans.transform((name, fieldPlan) => fieldPlan.update(updatePlan(prod)(name, _)))
-          prod.copy(fieldPlans = updatedFieldPlans)
+          prod.transformEach(updatePlan(prod))
         case prodTuple: Plan.BetweenTupleProduct[Erroneous, F] =>
-          val updatedFieldPlans = prodTuple.plans.transform(updatePlan(prodTuple))
-          prodTuple.copy(plans = updatedFieldPlans)
+          prodTuple.transformEach(updatePlan(prodTuple))
       }
       .toRight(
         "This config only works when applied to name-wise based product transformations (product-to-product, tuple-to-product, product-via-function)"

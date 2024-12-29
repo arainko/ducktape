@@ -10,14 +10,34 @@ import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
 
+private[ducktape] final class Renamer(val value: String => String)
+
 private[ducktape] object Planner {
   import Structure.*
   private enum FallthroughUpcast {
     case Yes, No
   }
 
-  def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context.Of[F]) = {
+  private class UsageCountedRenames(renames: StrictTypeMap[Renamer]) {
+    // Renamer doesn't really have a well defined hashCode and equals, but it'll do for this purpose
+    private val counter = collection.mutable.Map(renames.values.map(_ -> 0)*)
+    def get(key: Type[?])(using Quotes): Option[Renamer] = {
+      renames.get(key) match
+        case None => None
+        case ret @ Some(value) =>
+          counter.updateWith(value)(_.map(_ + 1))
+          ret
+    }
+
+    def unused = counter.collect { case (renamer, 0) => renamer }.toVector
+  }
+
+  def between[F <: Fallible](source: Structure, dest: Structure, renames: StrictTypeMap[Renamer])(using
+    Quotes,
+    Context.Of[F]
+  ): Plan[Erroneous.type, F] = {
     given Depth = Depth.zero
+
     recurse(source, dest)
   }
 
@@ -372,6 +392,8 @@ private[ducktape] object Planner {
           }
       }
   }
+
+  val a = collection.mutable.Map()
 
   // POC of field renames and how to handle ambiguities
   // private def planProductTransformation[F <: Fallible](
