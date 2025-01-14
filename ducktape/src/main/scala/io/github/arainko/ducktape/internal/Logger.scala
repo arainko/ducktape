@@ -39,7 +39,9 @@ private[ducktape] object Logger {
     }
   }
 
-  inline def loggedInfo[A](using Quotes)(
+  inline def loggedInfo[A](using
+    Quotes
+  )(
     inline msg: String
   )(value: A)(using Debug[A]) = {
     info(msg, value)
@@ -59,7 +61,9 @@ private[ducktape] object Logger {
   )(using Debug[A], Quotes): Unit =
     info(s"$msg: ${Debug.show(value)}")
 
-  inline def loggedDebug[A](using Quotes)(
+  inline def loggedDebug[A](using
+    Quotes
+  )(
     inline msg: String
   )(value: A)(using Debug[A]) = {
     debug(msg, value)

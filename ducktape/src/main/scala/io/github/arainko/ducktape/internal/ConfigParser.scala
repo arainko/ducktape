@@ -232,7 +232,10 @@ private[ducktape] object ConfigParser {
     }
   }
 
-  private def parseAllMatching(using Quotes, Context)(
+  private def parseAllMatching(using
+    Quotes,
+    Context
+  )(
     sourceExpr: Expr[Any],
     path: Path,
     fieldSourceTpe: quotes.reflect.TypeRepr,
