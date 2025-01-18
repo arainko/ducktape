@@ -5,7 +5,9 @@ import scala.quoted.runtime.StopMacroExpansion
 
 private[ducktape] object Backend {
 
-  def refineOrReportErrorsAndAbort[F <: Fallible](using Context.Of[F])(
+  def refineOrReportErrorsAndAbort[F <: Fallible](using
+    Context.Of[F]
+  )(
     plan: Plan[Erroneous, F],
     configs: List[Configuration.Instruction[F]]
   )(using Quotes) = {
@@ -36,9 +38,8 @@ private[ducktape] object Backend {
                   reconfiguredPlan.successes
                     .exists((path, side) => side == Side.Source && path.isAncestorOrSiblingOf(ogError.sourcePath))
                 case Side.Dest =>
-                  reconfiguredPlan.successes.exists((path, side) =>
-                    side == Side.Dest && path.isAncestorOrSiblingOf(ogError.destPath)
-                  )
+                  reconfiguredPlan.successes
+                    .exists((path, side) => side == Side.Dest && path.isAncestorOrSiblingOf(ogError.destPath))
             )
 
         val allErrors = errors ::: reconfiguredPlan.errors ::: ogErrors
