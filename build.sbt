@@ -51,7 +51,7 @@ lazy val ducktape =
       scalacOptions ++= List("-deprecation", "-Wunused:all", "-Ykind-projector:underscores", "-Xcheck-macros"),
       Test / scalacOptions --= List("-deprecation"),
       Test / scalacOptions ++= List("-Werror", "-Wconf:cat=deprecation:s"),
-      libraryDependencies += "org.scalameta" %%% "munit" % "1.0.4" % Test
+      libraryDependencies += "org.scalameta" %%% "munit" % "1.1.0" % Test
     )
     .nativeSettings(
       bspEnabled := false,
