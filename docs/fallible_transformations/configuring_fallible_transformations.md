@@ -176,11 +176,12 @@ source
   .fallible
   .transform(
     Field.fallibleComputedDeep(
-      _.level1.element.level2.element.int, 
+      _.level1.element.level2.element.int,
       // the type here cannot be inferred automatically and needs to be provided by the user,
       // a nice compiletime error message is shown (with a suggestion on what the proper type to use is) otherwise
-      (value: Int) => Positive.makeAccumulating(value + 10L))
+      (value: Int) => Positive.makeAccumulating(value + 10L)
     )
+  )
 ```
 
 @:choice(generated)
@@ -193,11 +194,12 @@ Docs.printCode(
     .fallible
     .transform(
       Field.fallibleComputedDeep(
-        _.level1.element.level2.element.int, 
+        _.level1.element.level2.element.int,
         // the type here cannot be inferred automatically and needs to be provided by the user,
         // a nice compiletime error message is shown (with a suggestion on what the proper type to use is) otherwise
-        (value: Int) => Positive.makeAccumulating(value + 10L))
+        (value: Int) => Positive.makeAccumulating(value + 10L)
       )
+    )
 )
 ``` 
 

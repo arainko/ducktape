@@ -46,7 +46,9 @@ trait DucktapeSuite extends FunSuite {
       Transformer.define[A, B].build(config*).transform(source)
     )(expected)
 
-  inline def assertTransformsFallibleConfigured[F[+x], M <: Mode[F], A, B](using M)(
+  inline def assertTransformsFallibleConfigured[F[+x], M <: Mode[F], A, B](using
+    M
+  )(
     source: A,
     expected: F[B]
   )(inline config: (Field.Fallible[F, A, B] | Case.Fallible[F, A, B])*) =
