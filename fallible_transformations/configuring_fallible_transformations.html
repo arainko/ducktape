@@ -330,11 +330,12 @@
   .</span><span class="identifier">fallible</span><span>
   .</span><span class="identifier">transform</span><span>(
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">fallibleComputedDeep</span><span>(
-      </span><span class="identifier">_</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">element</span><span>.</span><span class="identifier">level2</span><span>.</span><span class="identifier">element</span><span>.</span><span class="identifier">int</span><span>, 
+      </span><span class="identifier">_</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">element</span><span>.</span><span class="identifier">level2</span><span>.</span><span class="identifier">element</span><span>.</span><span class="identifier">int</span><span>,
       </span><span class="comment">// the type here cannot be inferred automatically and needs to be provided by the user,
 </span><span>      </span><span class="comment">// a nice compiletime error message is shown (with a suggestion on what the proper type to use is) otherwise
-</span><span>      (</span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="type-name">Positive</span><span>.</span><span class="identifier">makeAccumulating</span><span>(</span><span class="identifier">value</span><span> + </span><span class="number-literal">10L</span><span>))
+</span><span>      (</span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="type-name">Positive</span><span>.</span><span class="identifier">makeAccumulating</span><span>(</span><span class="identifier">value</span><span> + </span><span class="number-literal">10L</span><span>)
     )
+  )
 </span><span class="comment">// res4: Either[List[String], DestToplevel1] = Right(
 //   value = DestToplevel1(
 //     level1 = Some(
