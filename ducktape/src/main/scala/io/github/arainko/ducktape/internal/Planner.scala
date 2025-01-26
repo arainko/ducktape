@@ -9,6 +9,30 @@ import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
+import scala.util.NotGiven
+
+case class Flag(name: String) derives Debug
+
+//TODO: this poc only concerns itself with dest flags, there'll be source flags as well
+case class Flags(
+  outOfScope: Vector[(List[Path.Segment], Flag)],
+  inScope: Vector[Flag]
+) derives Debug {
+  inline def transition[A](segment: Path.Segment)(inline f: Flags ?=> A)(using Quotes): A = {
+    val (nextInScope, nextOutOfScope) = outOfScope.partitionMap {
+      case (Nil, flag)                              => Left(flag)
+      case (head :: Nil, flag) if head =:= segment  => Left(flag)
+      case (head :: tail, flag) if head =:= segment => Right(Some((tail, flag)))
+      case (other, flag) => Right(None) // prune these, it means this won't match next matches either (I thiiiiiiiiiiink?)
+    }
+
+    f(using Flags(nextOutOfScope.flatten, nextInScope ++ inScope))
+  }
+}
+
+object Flags {
+  def current(using f: Flags): f.type = f
+}
 
 private[ducktape] object Planner {
   import Structure.*
@@ -18,6 +42,16 @@ private[ducktape] object Planner {
 
   def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context.Of[F]) = {
     given Depth = Depth.zero
+    given Flags = Flags(
+      Vector(
+        Nil -> Flag("global flag"),
+        List(
+          Path.Segment.Field(Type.of[LevelDest1], "level1"),
+          Path.Segment.Field(Type.of[Int], "int")
+        ) -> Flag("int flag")
+      ),
+      Vector.empty
+    )
     recurse(source, dest)
   }
 
@@ -26,9 +60,11 @@ private[ducktape] object Planner {
     dest: Structure,
     // TODO: Come up with something nicer
     noUpcast: FallthroughUpcast = FallthroughUpcast.No
-  )(using quotes: Quotes, depth: Depth, context: Context.Of[F]): Plan[Erroneous, F] = {
+  )(using quotes: Quotes, depth: Depth, context: Context.Of[F], flags: Flags): Plan[Erroneous, F] = {
     import quotes.reflect.*
     given Depth = depth.incremented
+
+    println(flags.toString())
 
     Logger.loggedDebug(s"Plan @ depth ${Depth.current}"):
       (source.force -> dest.force) match {
@@ -148,24 +184,26 @@ private[ducktape] object Planner {
   private def planProductTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product
-  )(using Quotes, Depth, Context.Of[F]) = {
+  )(using Quotes, Depth, Context.Of[F], Flags) = {
 
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-      val plan =
-        source.fields
-          .get(destField)
-          .map(sourceStruct => FieldPlan(destField, recurse(sourceStruct, destFieldStruct)))
-          .getOrElse(
-            FieldPlan.empty(
-              Plan.Error(
-                Structure.of[Nothing](source.path),
-                destFieldStruct,
-                ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
-                None
+      Flags.current.transition(Path.Segment.Field(destFieldStruct.tpe, destField)) {
+        val plan =
+          source.fields
+            .get(destField)
+            .map(sourceStruct => FieldPlan(destField, recurse(sourceStruct, destFieldStruct)))
+            .getOrElse(
+              FieldPlan.empty(
+                Plan.Error(
+                  Structure.of[Nothing](source.path),
+                  destFieldStruct,
+                  ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
+                  None
+                )
               )
             )
-          )
-      destField -> plan
+        destField -> plan
+      }
     }
     Plan.BetweenProducts(source, dest, fieldPlans)
   }
@@ -174,7 +212,7 @@ private[ducktape] object Planner {
     sourceStruct: Structure,
     source: IndexedSeq[Structure],
     dest: IndexedSeq[Structure]
-  )(using Quotes, Depth, Context.Of[F]): Vector[Plan[Erroneous, F]] = {
+  )(using Quotes, Depth, Context.Of[F], Flags): Vector[Plan[Erroneous, F]] = {
     dest.zipWithIndex.map { (destFieldStruct, index) =>
       source
         .lift(index)
@@ -193,7 +231,7 @@ private[ducktape] object Planner {
   private def positionWiseFieldPlans[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Tuple
-  )(using Quotes, Depth, Context.Of[F]): Vector[FieldPlan[Erroneous, F]] = {
+  )(using Quotes, Depth, Context.Of[F], Flags): Vector[FieldPlan[Erroneous, F]] = {
     val sourceFields = source.fields.toVector
     dest.elements.zipWithIndex.map { (destFieldStruct, index) =>
       sourceFields
@@ -215,7 +253,7 @@ private[ducktape] object Planner {
   private def planProductFunctionTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function
-  )(using Quotes, Depth, Context.Of[F]) = {
+  )(using Quotes, Depth, Context.Of[F], Flags) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
       val plan =
         source.fields
@@ -241,7 +279,7 @@ private[ducktape] object Planner {
   private def planCoproductTransformation[F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct
-  )(using Quotes, Depth, Context.Of[F]) = {
+  )(using Quotes, Depth, Context.Of[F], Flags) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
 
       dest.children
@@ -318,7 +356,7 @@ private[ducktape] object Planner {
   object BetweenFallibleNonFallible {
     def unapply[F <: Fallible](
       structs: (Structure, Structure)
-    )(using Quotes, Depth, Context.Of[F]): Option[Plan[Erroneous, F]] =
+    )(using Quotes, Depth, Context.Of[F], Flags): Option[Plan[Erroneous, F]] =
       PartialFunction.condOpt(Context.current *: structs) {
         case (ctx: Context.PossiblyFallible[f], source @ Wrapped(tpe, _, path, underlying), dest) =>
           // needed for the recurse call to return Plan[Erroneous, Nothing]
@@ -341,7 +379,7 @@ private[ducktape] object Planner {
   object BetweenFallibles {
     def unapply[F <: Fallible](
       structs: (Structure, Structure)
-    )(using Quotes, Depth, Context.Of[F]): Option[Plan[Erroneous, F]] =
+    )(using Quotes, Depth, Context.Of[F], Flags): Option[Plan[Erroneous, F]] =
       PartialFunction.condOpt(Context.current *: structs) {
         case (
               ctx @ Context.PossiblyFallible(_, _, _, mode: TransformationMode.FailFast[f]),

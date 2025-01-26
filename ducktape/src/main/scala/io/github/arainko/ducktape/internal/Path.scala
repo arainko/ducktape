@@ -86,6 +86,23 @@ private[ducktape] object Path {
 
     final def narrow[A <: Segment](using tt: TypeTest[Segment, A]): Option[A] = tt.unapply(this)
 
+    infix final def =:=(that: Path.Segment)(using Quotes): Boolean =
+      (this, that) match {
+        case (Field(selfTpe, selfName), Field(thatTpe, thatName)) =>
+          selfName == thatName && selfTpe.repr =:= thatTpe.repr
+
+        case (TupleElement(selfTpe, selfIndex), TupleElement(thatTpe, thatIndex)) =>
+          selfIndex == thatIndex && selfTpe.repr =:= thatTpe.repr
+
+        case (Case(selfTpe), Case(thatTpe)) =>
+          selfTpe.repr =:= thatTpe.repr
+
+        case (Element(selfTpe), Element(thatTpe)) =>
+          selfTpe.repr =:= thatTpe.repr
+
+        case _ => false
+      }
+
     case Field(tpe: Type[?], name: String)
     case TupleElement(tpe: Type[?], index: Int)
     case Case(tpe: Type[?])
