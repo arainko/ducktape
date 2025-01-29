@@ -14,15 +14,16 @@ import io.github.arainko.ducktape.Transformer
 case object Passthrough
 type Passthrough = Passthrough.type
 
-case class Flags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
-  inline def transition[A](sourceStep: Path.Segment | Passthrough, destStep: Path.Segment | Passthrough)(inline
-    f: Flags ?=> A
+case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
+  inline def transition[A](sourceStep: Path.Segment | Passthrough, destStep: Path.Segment | Passthrough)(
+    inline
+    f: PlanFlags ?=> A
   )(using Quotes): A = f(using this.copy(source.transition(sourceStep), dest.transition(destStep)))
 
 }
 
-object Flags {
-  def current(using f: Flags): f.type = f
+object PlanFlags {
+  def current(using f: PlanFlags): f.type = f
 }
 
 case class Flag(name: String) derives Debug
@@ -67,8 +68,8 @@ private[ducktape] object Planner {
 
   def between[F <: Fallible](source: Structure, dest: Structure)(using Quotes, Context.Of[F]) = {
     given Depth = Depth.zero
-    given Flags =
-      Flags(
+    given PlanFlags =
+      PlanFlags(
         SideSpecficFlags(Vector.empty, Vector.empty),
         SideSpecficFlags(
           Vector(
@@ -89,7 +90,7 @@ private[ducktape] object Planner {
     dest: Structure,
     // TODO: Come up with something nicer
     noUpcast: FallthroughUpcast = FallthroughUpcast.No
-  )(using quotes: Quotes, depth: Depth, context: Context.Of[F], flags: Flags): Plan[Erroneous, F] = {
+  )(using quotes: Quotes, depth: Depth, context: Context.Of[F], flags: PlanFlags): Plan[Erroneous, F] = {
     import quotes.reflect.*
     given Depth = depth.incremented
 
@@ -123,14 +124,24 @@ private[ducktape] object Planner {
           Plan.BetweenOptions(
             source,
             dest,
-            recurse(srcParamStruct, destParamStruct)
+            PlanFlags.current.transition(
+              Path.Segment.Element(srcParamStruct.tpe),
+              Path.Segment.Element(destParamStruct.tpe)
+            ) {
+              recurse(srcParamStruct, destParamStruct)
+            }
           )
 
         case source -> (dest @ Optional(_, _, paramStruct)) =>
           Plan.BetweenNonOptionOption(
             source,
             dest,
-            recurse(source, paramStruct)
+            PlanFlags.current.transition(
+              Passthrough,
+              Path.Segment.Element(paramStruct.tpe)
+            ) {
+              recurse(source, paramStruct)
+            }
           )
 
         // Wrapped(WrapperType.Optional) is isomorphic to Optional
@@ -139,14 +150,24 @@ private[ducktape] object Planner {
           Plan.BetweenOptions(
             Structure.Optional.fromWrapped(source),
             Structure.Optional.fromWrapped(dest),
-            recurse(srcUnderlying, destUnderlying)
+            PlanFlags.current.transition(
+              Path.Segment.Element(srcUnderlying.tpe),
+              Path.Segment.Element(destUnderlying.tpe)
+            ) {
+              recurse(srcUnderlying, destUnderlying)
+            }
           )
 
         case source -> (dest @ Wrapped(_, WrapperType.Optional, _, underlying)) =>
           Plan.BetweenNonOptionOption(
             source,
             Structure.Optional.fromWrapped(dest),
-            recurse(source, underlying)
+            PlanFlags.current.transition(
+              Passthrough,
+              Path.Segment.Element(underlying.tpe)
+            ) {
+              recurse(source, underlying)
+            }
           )
 
         case (source @ Collection(_, _, srcParamStruct)) -> (dest @ Collection('[destColl], _, destParamStruct @ Structure('[destElem]))) =>
@@ -156,7 +177,12 @@ private[ducktape] object Planner {
                 source,
                 dest,
                 success.tree.asExprOf[Factory[destElem, destColl]],
-                recurse(srcParamStruct, destParamStruct)
+                PlanFlags.current.transition(
+                  Path.Segment.Element(srcParamStruct.tpe),
+                  Path.Segment.Element(destParamStruct.tpe)
+                ) {
+                  recurse(srcParamStruct, destParamStruct)
+                }
               )
             case failure: ImplicitSearchFailure =>
               Plan.Error(
@@ -213,22 +239,19 @@ private[ducktape] object Planner {
   private def planProductTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product
-  )(using Quotes, Depth, Context.Of[F], Flags) = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
 
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
       val plan =
         source.fields
           .get(destField)
           .map { sourceStruct =>
-            // Flags.current.transition()
-              Flags.current.transition(
-                Path.Segment.Field(sourceStruct.tpe, destField),
-                Path.Segment.Field(destFieldStruct.tpe, destField)
-              ) {
-                FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
-              }
-              // SideSpecficFlags.current.transition(Path.Segment.Field(destFieldStruct.tpe, destField)) {
-            // }
+            PlanFlags.current.transition(
+              Path.Segment.Field(sourceStruct.tpe, destField),
+              Path.Segment.Field(destFieldStruct.tpe, destField)
+            ) {
+              FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
+            }
           }
           .getOrElse(
             FieldPlan.empty(
@@ -246,11 +269,12 @@ private[ducktape] object Planner {
     Plan.BetweenProducts(source, dest, fieldPlans)
   }
 
+  // TODO: can't properly propagate flags here
   private def positionWisePlans[F <: Fallible](
     sourceStruct: Structure,
     source: IndexedSeq[Structure],
     dest: IndexedSeq[Structure]
-  )(using Quotes, Depth, Context.Of[F], Flags): Vector[Plan[Erroneous, F]] = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags): Vector[Plan[Erroneous, F]] = {
     dest.zipWithIndex.map { (destFieldStruct, index) =>
       source
         .lift(index)
@@ -269,12 +293,19 @@ private[ducktape] object Planner {
   private def positionWiseFieldPlans[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Tuple
-  )(using Quotes, Depth, Context.Of[F], Flags): Vector[FieldPlan[Erroneous, F]] = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags): Vector[FieldPlan[Erroneous, F]] = {
     val sourceFields = source.fields.toVector
     dest.elements.zipWithIndex.map { (destFieldStruct, index) =>
       sourceFields
         .lift(index)
-        .map((sourceName, sourceStruct) => FieldPlan(sourceName, recurse(sourceStruct, destFieldStruct)))
+        .map { (sourceName, sourceStruct) =>
+          PlanFlags.current.transition(
+            Path.Segment.Field(sourceStruct.tpe, sourceName),
+            Path.Segment.TupleElement(destFieldStruct.tpe, index)
+          ) {
+            FieldPlan(sourceName, recurse(sourceStruct, destFieldStruct))
+          }
+        }
         .getOrElse(
           FieldPlan.empty(
             Plan.Error(
@@ -291,13 +322,18 @@ private[ducktape] object Planner {
   private def planProductFunctionTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function
-  )(using Quotes, Depth, Context.Of[F], Flags) = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
       val plan =
         source.fields
           .get(destField)
           .map { sourceStruct =>
-            FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
+            PlanFlags.current.transition(
+              Path.Segment.Field(sourceStruct.tpe, destField),
+              Path.Segment.Field(destFieldStruct.tpe, destField)
+            ) {
+              FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
+            }
           }
           .getOrElse(
             FieldPlan.empty(
@@ -317,13 +353,18 @@ private[ducktape] object Planner {
   private def planCoproductTransformation[F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct
-  )(using Quotes, Depth, Context.Of[F], Flags) = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
 
       dest.children
         .get(sourceName)
         .map { destCaseStruct =>
-          recurse(sourceCaseStruct, destCaseStruct)
+          PlanFlags.current.transition(
+            Path.Segment.Case(sourceCaseStruct.tpe),
+            Path.Segment.Case(destCaseStruct.tpe)
+          ) {
+            recurse(sourceCaseStruct, destCaseStruct)
+          }
         }
         .getOrElse(
           Plan.Error(
@@ -394,7 +435,7 @@ private[ducktape] object Planner {
   object BetweenFallibleNonFallible {
     def unapply[F <: Fallible](
       structs: (Structure, Structure)
-    )(using Quotes, Depth, Context.Of[F], Flags): Option[Plan[Erroneous, F]] =
+    )(using Quotes, Depth, Context.Of[F], PlanFlags): Option[Plan[Erroneous, F]] =
       PartialFunction.condOpt(Context.current *: structs) {
         case (ctx: Context.PossiblyFallible[f], source @ Wrapped(tpe, _, path, underlying), dest) =>
           // needed for the recurse call to return Plan[Erroneous, Nothing]
@@ -417,7 +458,7 @@ private[ducktape] object Planner {
   object BetweenFallibles {
     def unapply[F <: Fallible](
       structs: (Structure, Structure)
-    )(using Quotes, Depth, Context.Of[F], Flags): Option[Plan[Erroneous, F]] =
+    )(using Quotes, Depth, Context.Of[F], PlanFlags): Option[Plan[Erroneous, F]] =
       PartialFunction.condOpt(Context.current *: structs) {
         case (
               ctx @ Context.PossiblyFallible(_, _, _, mode: TransformationMode.FailFast[f]),

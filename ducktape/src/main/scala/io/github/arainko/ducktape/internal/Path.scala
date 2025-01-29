@@ -89,16 +89,16 @@ private[ducktape] object Path {
     infix final def =:=(that: Path.Segment)(using Quotes): Boolean =
       (this, that) match {
         case (Field(selfTpe, selfName), Field(thatTpe, thatName)) =>
-          selfName == thatName && selfTpe.repr =:= thatTpe.repr
+          selfName == thatName
 
         case (TupleElement(selfTpe, selfIndex), TupleElement(thatTpe, thatIndex)) =>
-          selfIndex == thatIndex && selfTpe.repr =:= thatTpe.repr
+          selfIndex == thatIndex
 
         case (Case(selfTpe), Case(thatTpe)) =>
           selfTpe.repr =:= thatTpe.repr
 
         case (Element(selfTpe), Element(thatTpe)) =>
-          selfTpe.repr =:= thatTpe.repr
+          true
 
         case _ => false
       }
