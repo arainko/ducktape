@@ -9,16 +9,15 @@ import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
-import io.github.arainko.ducktape.Transformer
-
-case object Passthrough
-type Passthrough = Passthrough.type
+import java.util.IdentityHashMap
 
 case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
-  inline def transition[A](sourceStep: Path.Segment | Passthrough, destStep: Path.Segment | Passthrough)(
-    inline
-    f: PlanFlags ?=> A
-  )(using Quotes): A = f(using this.copy(source.transition(sourceStep), dest.transition(destStep)))
+  def transition[A](
+    sourceStep: Step | Passthrough,
+    destStep: Step | Passthrough
+  )(using Quotes): PlanFlags = this.copy(source.transition(sourceStep), dest.transition(destStep))
+
+  inline def locally[A](inline f: PlanFlags ?=> A): A = f(using this)
 
 }
 
@@ -26,33 +25,83 @@ object PlanFlags {
   def current(using f: PlanFlags): f.type = f
 }
 
-case class Flag(name: String) derives Debug
+case class Flag(name: String, kind: Kind) derives Debug
 
-//TODO: this poc only concerns itself with dest flags, there'll be source flags as well
+// What to support:
+// * 'local' flags - i.e. ones that disappear in the next transition step once they reach their destination
+// * 'regional' flags - i.e. ones that stick around all the way down till they reach the leaf transformations
+// * 'type-specific' flags - like global, but only apply to a given type (can they also be local?)
+//
+//
+enum Kind derives Debug {
+  final def isLocal: Boolean =
+    this match
+      case Local                       => true
+      case Regional                    => false
+      case TypeSpecific(tpe, Local)    => true
+      case TypeSpecific(tpe, Regional) => false
+
+  case Local
+  case Regional
+  case TypeSpecific(tpe: Type[?], kind: Local.type | Regional.type)
+}
+
+case object Passthrough
+type Passthrough = Passthrough.type
+
+enum Step { self =>
+  case Element
+  case Field(name: String)
+  case TupleElement(index: Int)
+  case Case(tpe: Type[?])
+
+  final infix def =:=(that: Step)(using Quotes): Boolean =
+    (self, that) match {
+      case (Element, Element)                             => true
+      case (Field(selfName), Field(thatName))             => selfName == thatName
+      case (TupleElement(selfIdx), TupleElement(thatIdx)) => selfIdx == thatIdx
+      case (Case(selfTpe), Case(thatTpe))                 => selfTpe.repr =:= thatTpe.repr
+      case _                                              => false
+    }
+}
+
+object Step {
+  def fromPathSegment(segment: Path.Segment): Step =
+    segment match {
+      case Path.Segment.Field(tpe, name)         => Field(name)
+      case Path.Segment.TupleElement(tpe, index) => TupleElement(index)
+      case Path.Segment.Case(tpe)                => Case(tpe)
+      case Path.Segment.Element(tpe)             => Element
+    }
+}
+
 case class SideSpecficFlags(
-  outOfScope: Vector[(List[Path.Segment], Flag)],
+  outOfScope: Vector[(List[Step], Flag)],
   inScope: Vector[Flag]
 ) derives Debug {
-  def transition(segment: Path.Segment | Passthrough)(using Quotes): SideSpecficFlags = {
-    import Path.Segment
+
+  def transition(step: Step | Passthrough)(using Quotes): SideSpecficFlags = {
     val (nextInScope, nextOutOfScope) = outOfScope.partitionMap { segmentsAndFlag =>
-      (segment *: segmentsAndFlag) match {
+      (step *: segmentsAndFlag) match {
         case (_, Nil, flag) =>
           Left(flag)
         case (Passthrough, path, flag) =>
           Right(Some(path, flag))
-        case (segment: Segment, head :: Nil, flag) if head =:= segment =>
+        case (segment: Step, head :: Nil, flag) if head =:= segment =>
           Left(flag)
-        case (segment: Segment, head :: tail, flag) if head =:= segment =>
+        case (segment: Step, head :: tail, flag) if head =:= segment =>
           Right(Some((tail, flag)))
         // prune these, it means this won't match next matches either (I thiiiiiiiiiiink?)
-        case (segment: Segment, other, flag) =>
+        case (segment: Step, other, flag) =>
           Right(None)
       }
 
     }
 
-    SideSpecficFlags(nextOutOfScope.flatten, nextInScope ++ inScope)
+    SideSpecficFlags(
+      nextOutOfScope.flatten,
+      nextInScope ++ inScope.filter(!_.kind.isLocal)
+    )
   }
 }
 
@@ -73,11 +122,11 @@ private[ducktape] object Planner {
         SideSpecficFlags(Vector.empty, Vector.empty),
         SideSpecficFlags(
           Vector(
-            Nil -> Flag("global flag"),
+            Nil -> Flag("global flag", Kind.Regional),
             List(
-              Path.Segment.Field(Type.of[LevelDest1], "level1"),
-              Path.Segment.Field(Type.of[Int], "int")
-            ) -> Flag("int flag")
+              Step.Field("level1"),
+              Step.Field("int")
+            ) -> Flag("int flag", Kind.Local)
           ),
           Vector.empty
         )
@@ -124,24 +173,28 @@ private[ducktape] object Planner {
           Plan.BetweenOptions(
             source,
             dest,
-            PlanFlags.current.transition(
-              Path.Segment.Element(srcParamStruct.tpe),
-              Path.Segment.Element(destParamStruct.tpe)
-            ) {
-              recurse(srcParamStruct, destParamStruct)
-            }
+            PlanFlags.current
+              .transition(
+                Step.Element,
+                Step.Element
+              )
+              .locally {
+                recurse(srcParamStruct, destParamStruct)
+              }
           )
 
         case source -> (dest @ Optional(_, _, paramStruct)) =>
           Plan.BetweenNonOptionOption(
             source,
             dest,
-            PlanFlags.current.transition(
-              Passthrough,
-              Path.Segment.Element(paramStruct.tpe)
-            ) {
-              recurse(source, paramStruct)
-            }
+            PlanFlags.current
+              .transition(
+                Passthrough,
+                Step.Element
+              )
+              .locally {
+                recurse(source, paramStruct)
+              }
           )
 
         // Wrapped(WrapperType.Optional) is isomorphic to Optional
@@ -150,24 +203,28 @@ private[ducktape] object Planner {
           Plan.BetweenOptions(
             Structure.Optional.fromWrapped(source),
             Structure.Optional.fromWrapped(dest),
-            PlanFlags.current.transition(
-              Path.Segment.Element(srcUnderlying.tpe),
-              Path.Segment.Element(destUnderlying.tpe)
-            ) {
-              recurse(srcUnderlying, destUnderlying)
-            }
+            PlanFlags.current
+              .transition(
+                Step.Element,
+                Step.Element
+              )
+              .locally {
+                recurse(srcUnderlying, destUnderlying)
+              }
           )
 
         case source -> (dest @ Wrapped(_, WrapperType.Optional, _, underlying)) =>
           Plan.BetweenNonOptionOption(
             source,
             Structure.Optional.fromWrapped(dest),
-            PlanFlags.current.transition(
-              Passthrough,
-              Path.Segment.Element(underlying.tpe)
-            ) {
-              recurse(source, underlying)
-            }
+            PlanFlags.current
+              .transition(
+                Passthrough,
+                Step.Element
+              )
+              .locally {
+                recurse(source, underlying)
+              }
           )
 
         case (source @ Collection(_, _, srcParamStruct)) -> (dest @ Collection('[destColl], _, destParamStruct @ Structure('[destElem]))) =>
@@ -177,12 +234,14 @@ private[ducktape] object Planner {
                 source,
                 dest,
                 success.tree.asExprOf[Factory[destElem, destColl]],
-                PlanFlags.current.transition(
-                  Path.Segment.Element(srcParamStruct.tpe),
-                  Path.Segment.Element(destParamStruct.tpe)
-                ) {
-                  recurse(srcParamStruct, destParamStruct)
-                }
+                PlanFlags.current
+                  .transition(
+                    Step.Element,
+                    Step.Element
+                  )
+                  .locally {
+                    recurse(srcParamStruct, destParamStruct)
+                  }
               )
             case failure: ImplicitSearchFailure =>
               Plan.Error(
@@ -246,12 +305,14 @@ private[ducktape] object Planner {
         source.fields
           .get(destField)
           .map { sourceStruct =>
-            PlanFlags.current.transition(
-              Path.Segment.Field(sourceStruct.tpe, destField),
-              Path.Segment.Field(destFieldStruct.tpe, destField)
-            ) {
-              FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
-            }
+            PlanFlags.current
+              .transition(
+                Step.Field(destField),
+                Step.Field(destField)
+              )
+              .locally {
+                FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
+              }
           }
           .getOrElse(
             FieldPlan.empty(
@@ -299,12 +360,14 @@ private[ducktape] object Planner {
       sourceFields
         .lift(index)
         .map { (sourceName, sourceStruct) =>
-          PlanFlags.current.transition(
-            Path.Segment.Field(sourceStruct.tpe, sourceName),
-            Path.Segment.TupleElement(destFieldStruct.tpe, index)
-          ) {
-            FieldPlan(sourceName, recurse(sourceStruct, destFieldStruct))
-          }
+          PlanFlags.current
+            .transition(
+              Step.Field(sourceName),
+              Step.TupleElement(index)
+            )
+            .locally {
+              FieldPlan(sourceName, recurse(sourceStruct, destFieldStruct))
+            }
         }
         .getOrElse(
           FieldPlan.empty(
@@ -328,12 +391,14 @@ private[ducktape] object Planner {
         source.fields
           .get(destField)
           .map { sourceStruct =>
-            PlanFlags.current.transition(
-              Path.Segment.Field(sourceStruct.tpe, destField),
-              Path.Segment.Field(destFieldStruct.tpe, destField)
-            ) {
-              FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
-            }
+            PlanFlags.current
+              .transition(
+                Step.Field(destField),
+                Step.Field(destField)
+              )
+              .locally {
+                FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
+              }
           }
           .getOrElse(
             FieldPlan.empty(
@@ -359,12 +424,14 @@ private[ducktape] object Planner {
       dest.children
         .get(sourceName)
         .map { destCaseStruct =>
-          PlanFlags.current.transition(
-            Path.Segment.Case(sourceCaseStruct.tpe),
-            Path.Segment.Case(destCaseStruct.tpe)
-          ) {
-            recurse(sourceCaseStruct, destCaseStruct)
-          }
+          PlanFlags.current
+            .transition(
+              Step.Case(sourceCaseStruct.tpe),
+              Step.Case(destCaseStruct.tpe)
+            )
+            .locally {
+              recurse(sourceCaseStruct, destCaseStruct)
+            }
         }
         .getOrElse(
           Plan.Error(
