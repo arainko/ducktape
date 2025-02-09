@@ -9,7 +9,6 @@ import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
-import java.util.IdentityHashMap
 
 case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
   def transition[A](
@@ -154,9 +153,7 @@ private[ducktape] object Planner {
           planProductFunctionTransformation(source, dest)
 
         case (source: Tuple, dest: Function) =>
-          val plans = positionWisePlans(source, source.elements, dest.args.values.toIndexedSeq)
-          val argPlans = dest.args.keys.zip(plans).to(VectorMap)
-          Plan.BetweenTupleFunction(source, dest, argPlans)
+          planTupleFunctionTransformation(source, dest)
 
         case UserDefinedTransformation(transformer) =>
           verifyNotSelfReferential(Plan.UserDefined(source, dest, transformer))
@@ -173,14 +170,9 @@ private[ducktape] object Planner {
           Plan.BetweenOptions(
             source,
             dest,
-            PlanFlags.current
-              .transition(
-                Step.Element,
-                Step.Element
-              )
-              .locally {
-                recurse(srcParamStruct, destParamStruct)
-              }
+            PlanFlags.current.transition(Step.Element, Step.Element).locally {
+              recurse(srcParamStruct, destParamStruct)
+            }
           )
 
         case source -> (dest @ Optional(_, _, paramStruct)) =>
@@ -217,14 +209,9 @@ private[ducktape] object Planner {
           Plan.BetweenNonOptionOption(
             source,
             Structure.Optional.fromWrapped(dest),
-            PlanFlags.current
-              .transition(
-                Passthrough,
-                Step.Element
-              )
-              .locally {
-                recurse(source, underlying)
-              }
+            PlanFlags.current.transition(Passthrough, Step.Element).locally {
+              recurse(source, underlying)
+            }
           )
 
         case (source @ Collection(_, _, srcParamStruct)) -> (dest @ Collection('[destColl], _, destParamStruct @ Structure('[destElem]))) =>
@@ -234,14 +221,9 @@ private[ducktape] object Planner {
                 source,
                 dest,
                 success.tree.asExprOf[Factory[destElem, destColl]],
-                PlanFlags.current
-                  .transition(
-                    Step.Element,
-                    Step.Element
-                  )
-                  .locally {
-                    recurse(srcParamStruct, destParamStruct)
-                  }
+                PlanFlags.current.transition(Step.Element, Step.Element).locally {
+                  recurse(srcParamStruct, destParamStruct)
+                }
               )
             case failure: ImplicitSearchFailure =>
               Plan.Error(
@@ -257,18 +239,13 @@ private[ducktape] object Planner {
           planProductTransformation(source, dest)
 
         case (source: Product, dest: Tuple) =>
-          val plans = positionWiseFieldPlans(source, dest)
-          Plan.BetweenProductTuple(source, dest, plans)
+          planProductTupleTransformation(source, dest)
 
         case (source: Tuple, dest: Product) =>
-          val plans = positionWisePlans(source, source.elements, dest.fields.values.toIndexedSeq)
-          // safe under the assumption that 'positionWisePlans' always returns dest.fields.size amount of plans
-          val fieldPlans = dest.fields.keys.zip(plans).to(VectorMap)
-          Plan.BetweenTupleProduct(source, dest, fieldPlans)
+          planTupleProductTransformation(source, dest)
 
         case (source: Structure.Tuple, dest: Structure.Tuple) =>
-          val plans = positionWisePlans(source, source.elements, dest.elements)
-          Plan.BetweenTuples(source, dest, plans)
+          planTupleTransformation(source, dest)
 
         case (source: Coproduct, dest: Coproduct) =>
           planCoproductTransformation(source, dest)
@@ -303,83 +280,140 @@ private[ducktape] object Planner {
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
       val plan =
         source.fields
-          .get(destField)
-          .map { sourceStruct =>
-            PlanFlags.current
-              .transition(
-                Step.Field(destField),
-                Step.Field(destField)
-              )
-              .locally {
-                FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
-              }
-          }
-          .getOrElse(
-            FieldPlan.empty(
-              Plan.Error(
-                Structure.of[Nothing](source.path),
-                destFieldStruct,
-                ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
-                None
-              )
-            )
+          .andThen(sourceStruct =>
+            PlanFlags.current.transition(Step.Field(destField), Step.Field(destField)).locally {
+              FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
+            }
           )
+          .applyOrElse(
+            destField,
+            destField =>
+              FieldPlan.empty(
+                Plan.Error(
+                  Structure.of[Nothing](source.path),
+                  destFieldStruct,
+                  ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
+                  None
+                )
+              )
+          )
+
       destField -> plan
 
     }
     Plan.BetweenProducts(source, dest, fieldPlans)
   }
 
-  // TODO: can't properly propagate flags here
-  private def positionWisePlans[F <: Fallible](
-    sourceStruct: Structure,
-    source: IndexedSeq[Structure],
-    dest: IndexedSeq[Structure]
-  )(using Quotes, Depth, Context.Of[F], PlanFlags): Vector[Plan[Erroneous, F]] = {
-    dest.zipWithIndex.map { (destFieldStruct, index) =>
-      source
-        .lift(index)
-        .map(sourceStruct => recurse(sourceStruct, destFieldStruct))
-        .getOrElse(
-          Plan.Error(
-            Structure.of[Nothing](sourceStruct.path),
-            destFieldStruct,
-            ErrorMessage.NoFieldFoundAtIndex(index, sourceStruct.tpe),
-            None
-          )
-        )
-    }.toVector
-  }
-
-  private def positionWiseFieldPlans[F <: Fallible](
-    source: Structure.Product,
+  private def planTupleTransformation[F <: Fallible](
+    source: Structure.Tuple,
     dest: Structure.Tuple
-  )(using Quotes, Depth, Context.Of[F], PlanFlags): Vector[FieldPlan[Erroneous, F]] = {
-    val sourceFields = source.fields.toVector
-    dest.elements.zipWithIndex.map { (destFieldStruct, index) =>
-      sourceFields
-        .lift(index)
-        .map { (sourceName, sourceStruct) =>
-          PlanFlags.current
-            .transition(
-              Step.Field(sourceName),
-              Step.TupleElement(index)
-            )
-            .locally {
-              FieldPlan(sourceName, recurse(sourceStruct, destFieldStruct))
-            }
-        }
-        .getOrElse(
-          FieldPlan.empty(
+  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+    val plans = dest.elements.zipWithIndex.map { (destFieldStruct, index) =>
+      source.elements
+        .andThen(sourceStruct =>
+          PlanFlags.current.transition(Step.TupleElement(index), Step.TupleElement(index)).locally {
+            recurse(sourceStruct, destFieldStruct)
+          }
+        )
+        .applyOrElse(
+          index,
+          index =>
             Plan.Error(
               Structure.of[Nothing](source.path),
               destFieldStruct,
               ErrorMessage.NoFieldFoundAtIndex(index, source.tpe),
               None
             )
-          )
         )
     }.toVector
+
+    Plan.BetweenTuples(source, dest, plans)
+  }
+
+  private def planTupleProductTransformation[F <: Fallible](
+    source: Structure.Tuple,
+    dest: Structure.Product
+  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+    val plans = dest.fields.zipWithIndex.map {
+      case (fieldName -> destFieldStruct, index) =>
+        val plan = source.elements
+          .andThen(sourceStruct =>
+            PlanFlags.current.transition(Step.TupleElement(index), Step.Field(fieldName)).locally {
+              recurse(sourceStruct, destFieldStruct)
+            }
+          )
+          .applyOrElse(
+            index,
+            index =>
+              Plan.Error(
+                Structure.of[Nothing](source.path),
+                destFieldStruct,
+                ErrorMessage.NoFieldFoundAtIndex(index, source.tpe),
+                None
+              )
+          )
+
+        fieldName -> plan
+    }.to(VectorMap)
+    Plan.BetweenTupleProduct(source, dest, plans)
+  }
+
+  private def planTupleFunctionTransformation[F <: Fallible](
+    source: Structure.Tuple,
+    dest: Structure.Function
+  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+    val plans = dest.args.zipWithIndex.map {
+      case (fieldName -> destFieldStruct, index) =>
+        val plan = source.elements
+          .andThen(sourceStruct =>
+            PlanFlags.current.transition(Step.TupleElement(index), Step.Field(fieldName)).locally {
+              recurse(sourceStruct, destFieldStruct)
+            }
+          )
+          .applyOrElse(
+            index,
+            index =>
+              Plan.Error(
+                Structure.of[Nothing](source.path),
+                destFieldStruct,
+                ErrorMessage.NoFieldFoundAtIndex(index, source.tpe),
+                None
+              )
+          )
+
+        fieldName -> plan
+    }.to(VectorMap)
+
+    Plan.BetweenTupleFunction(source, dest, plans)
+  }
+
+  private def planProductTupleTransformation[F <: Fallible](
+    source: Structure.Product,
+    dest: Structure.Tuple
+  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+    val sourceFields = source.fields.toVector
+    val plans = dest.elements.zipWithIndex.map { (destFieldStruct, index) =>
+      sourceFields
+        .andThen((sourceName, sourceStruct) =>
+          PlanFlags.current.transition(Step.Field(sourceName), Step.TupleElement(index)).locally {
+            FieldPlan(sourceName, recurse(sourceStruct, destFieldStruct))
+          }
+        )
+        .applyOrElse(
+          index,
+          index =>
+            FieldPlan.empty(
+              Plan.Error(
+                Structure.of[Nothing](source.path),
+                destFieldStruct,
+                ErrorMessage.NoFieldFoundAtIndex(index, source.tpe),
+                None
+              )
+            )
+        )
+    }.toVector
+
+    Plan.BetweenProductTuple(source, dest, plans)
   }
 
   private def planProductFunctionTransformation[F <: Fallible](
@@ -387,20 +421,15 @@ private[ducktape] object Planner {
     dest: Structure.Function
   )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
-      val plan =
-        source.fields
-          .get(destField)
-          .map { sourceStruct =>
-            PlanFlags.current
-              .transition(
-                Step.Field(destField),
-                Step.Field(destField)
-              )
-              .locally {
-                FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
-              }
+      val plan = source.fields
+        .andThen(sourceStruct =>
+          PlanFlags.current.transition(Step.Field(destField), Step.Field(destField)).locally {
+            FieldPlan(destField, recurse(sourceStruct, destFieldStruct))
           }
-          .getOrElse(
+        )
+        .applyOrElse(
+          destField,
+          destField =>
             FieldPlan.empty(
               Plan.Error(
                 Structure.of[Nothing](source.path),
@@ -409,7 +438,7 @@ private[ducktape] object Planner {
                 None
               )
             )
-          )
+        )
       destField -> plan
     }
     Plan.BetweenProductFunction(source, dest, argPlans)
@@ -420,26 +449,21 @@ private[ducktape] object Planner {
     dest: Structure.Coproduct
   )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
-
       dest.children
-        .get(sourceName)
-        .map { destCaseStruct =>
-          PlanFlags.current
-            .transition(
-              Step.Case(sourceCaseStruct.tpe),
-              Step.Case(destCaseStruct.tpe)
+        .andThen(destCaseStruct =>
+          PlanFlags.current.transition(Step.Case(sourceCaseStruct.tpe), Step.Case(destCaseStruct.tpe)).locally {
+            recurse(sourceCaseStruct, destCaseStruct)
+          }
+        )
+        .applyOrElse(
+          sourceName,
+          sourceName =>
+            Plan.Error(
+              sourceCaseStruct,
+              Structure.of[Any](dest.path),
+              ErrorMessage.NoChildFound(sourceName, dest.tpe),
+              None
             )
-            .locally {
-              recurse(sourceCaseStruct, destCaseStruct)
-            }
-        }
-        .getOrElse(
-          Plan.Error(
-            sourceCaseStruct,
-            Structure.of[Any](dest.path),
-            ErrorMessage.NoChildFound(sourceName, dest.tpe),
-            None
-          )
         )
     }
     Plan.BetweenCoproducts(source, dest, casePlans.toVector)
@@ -511,7 +535,9 @@ private[ducktape] object Planner {
               Plan.BetweenFallibleNonFallible(
                 source,
                 dest,
-                recurse(underlying, dest)
+                PlanFlags.current.transition(Step.Element, Passthrough).locally {
+                  recurse(underlying, dest)
+                }
               )
             }
 
@@ -537,7 +563,9 @@ private[ducktape] object Planner {
               source,
               dest,
               mode,
-              recurse(underlying, dest)
+              PlanFlags.current.transition(Step.Element, Step.Element).locally {
+                recurse(underlying, dest)
+              }
             )
           }
 
@@ -551,7 +579,9 @@ private[ducktape] object Planner {
               source,
               dest,
               TransformationMode.FailFast(localMode),
-              recurse(underlying, dest)
+              PlanFlags.current.transition(Step.Element, Step.Element).locally {
+                recurse(underlying, dest)
+              }
             )
           }
       }
