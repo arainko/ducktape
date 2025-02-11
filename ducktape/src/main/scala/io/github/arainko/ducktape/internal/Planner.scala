@@ -24,7 +24,11 @@ object PlanFlags {
   def current(using f: PlanFlags): f.type = f
 }
 
-case class Flag(name: String, kind: Kind) derives Debug
+enum Effect {
+  case Defaults, Nones
+}
+
+case class Flag(effect: Effect, kind: Kind) derives Debug
 
 // What to support:
 // * 'local' flags - i.e. ones that disappear in the next transition step once they reach their destination
@@ -79,6 +83,8 @@ case class SideSpecficFlags(
   inScope: Vector[Flag]
 ) derives Debug {
 
+  def has(effect: Effect): Boolean = inScope.exists(_.effect == effect)
+
   def transition(step: Step | Passthrough)(using Quotes): SideSpecficFlags = {
     val (nextInScope, nextOutOfScope) = outOfScope.partitionMap { segmentsAndFlag =>
       (step *: segmentsAndFlag) match {
@@ -106,6 +112,14 @@ case class SideSpecficFlags(
 
 object SideSpecficFlags {
   def current(using f: SideSpecficFlags): f.type = f
+
+  def create(outOfScope: Vector[(List[Step], Flag)],inScope: Vector[Flag]) = {
+    val (immediateInScope, outsideOfScope) = outOfScope.partitionMap { 
+      case (Nil, flag) => Left(flag)
+      case (other, flag) => Right(other -> flag)
+    }
+    SideSpecficFlags(outsideOfScope, immediateInScope ++ inScope)
+  }
 }
 
 private[ducktape] object Planner {
@@ -118,14 +132,14 @@ private[ducktape] object Planner {
     given Depth = Depth.zero
     given PlanFlags =
       PlanFlags(
-        SideSpecficFlags(Vector.empty, Vector.empty),
-        SideSpecficFlags(
+        SideSpecficFlags.create(Vector.empty, Vector.empty),
+        SideSpecficFlags.create(
           Vector(
-            Nil -> Flag("global flag", Kind.Regional),
+            // Nil -> Flag(Effect.Defaults, Kind.Local),
             List(
-              Step.Field("level1"),
-              Step.Field("int")
-            ) -> Flag("int flag", Kind.Local)
+              // Step.Field("level1"),
+              // Step.Field("int")
+            ) -> Flag(Effect.Defaults, Kind.Regional)
           ),
           Vector.empty
         )
@@ -179,14 +193,9 @@ private[ducktape] object Planner {
           Plan.BetweenNonOptionOption(
             source,
             dest,
-            PlanFlags.current
-              .transition(
-                Passthrough,
-                Step.Element
-              )
-              .locally {
-                recurse(source, paramStruct)
-              }
+            PlanFlags.current.transition(Passthrough, Step.Element).locally {
+              recurse(source, paramStruct)
+            }
           )
 
         // Wrapped(WrapperType.Optional) is isomorphic to Optional
@@ -195,14 +204,9 @@ private[ducktape] object Planner {
           Plan.BetweenOptions(
             Structure.Optional.fromWrapped(source),
             Structure.Optional.fromWrapped(dest),
-            PlanFlags.current
-              .transition(
-                Step.Element,
-                Step.Element
-              )
-              .locally {
-                recurse(srcUnderlying, destUnderlying)
-              }
+            PlanFlags.current.transition(Step.Element, Step.Element).locally {
+              recurse(srcUnderlying, destUnderlying)
+            }
           )
 
         case source -> (dest @ Wrapped(_, WrapperType.Optional, _, underlying)) =>
@@ -276,6 +280,7 @@ private[ducktape] object Planner {
     source: Structure.Product,
     dest: Structure.Product
   )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+    import quotes.reflect.*
 
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
       val plan =
@@ -288,14 +293,19 @@ private[ducktape] object Planner {
           .applyOrElse(
             destField,
             destField =>
-              FieldPlan.empty(
+              val error =
                 Plan.Error(
                   Structure.of[Nothing](source.path),
                   destFieldStruct,
                   ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
                   None
                 )
-              )
+              def default = dest.defaults.get(destField).map { deff => 
+                val const = Configuration.Const(deff, deff.asTerm.tpe.asType) //TODO: it'll be nicer
+                Plan.Configured.from(error, const, Configuration.Instruction.Static(dest.path, Side.Dest, const, Span(0, 0)))  
+              }
+              val plan = if PlanFlags.current.dest.has(Effect.Defaults) then default.getOrElse(error) else error
+              FieldPlan.empty(plan)
           )
 
       destField -> plan

@@ -112,7 +112,7 @@ private[ducktape] object PlanConfigurer {
         def handleTupleElement(
           segment: Path.Segment.TupleElement,
           tail: List[Segment],
-          currnet: Plan[Erroneous, F]
+          current: Plan[Erroneous, F]
         ): Plan[Erroneous, F] = {
           val index = segment.index
           Logger.debug(s"Matched tupleElement with index of $index")
