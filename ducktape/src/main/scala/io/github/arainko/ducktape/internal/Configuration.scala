@@ -89,26 +89,29 @@ private[ducktape] object Configuration {
     def path: Path
     def side: Side
     def span: Span
+    def priority: Priority
 
-    case Static(path: Path, side: Side, config: Configuration[F], span: Span) extends Instruction[F]
+    case Static(path: Path, side: Side, config: Configuration[F], span: Span, priority: Priority) extends Instruction[F]
 
     case Dynamic(
       path: Path,
       side: Side,
       config: Plan[Erroneous, Fallible] | None.type => Either[String, Configuration[Nothing]],
-      span: Span
+      span: Span,
+      priority: Priority
     ) extends Instruction[Nothing]
 
     case Bulk(
       path: Path,
       side: Side,
       modifier: FieldModifier,
-      span: Span
+      span: Span,
+      priority: Priority
     ) extends Instruction[Nothing]
 
-    case Regional(path: Path, side: Side, modifier: ErrorModifier, span: Span) extends Instruction[Nothing]
+    case Regional(path: Path, side: Side, modifier: ErrorModifier, span: Span, priority: Priority) extends Instruction[Nothing]
 
-    case Failed(path: Path, side: Side, message: String, span: Span) extends Instruction[Nothing]
+    case Failed(path: Path, side: Side, message: String, span: Span, priority: Priority) extends Instruction[Nothing]
   }
 
   object Instruction {
@@ -116,7 +119,7 @@ private[ducktape] object Configuration {
 
     object Failed {
       def from(instruction: Instruction[Fallible], message: String): Instruction.Failed =
-        Failed(instruction.path, instruction.side, message, instruction.span)
+        Failed(instruction.path, instruction.side, message, instruction.span, instruction.priority)
     }
   }
 
@@ -125,19 +128,27 @@ private[ducktape] object Configuration {
     parsers: NonEmptyList[ConfigParser[F]]
   )(using Quotes, Context): List[Instruction[F]] = {
     import quotes.reflect.*
-    def fallback(term: quotes.reflect.Term) =
+    def fallback(term: quotes.reflect.Term, priority: Priority) =
       Configuration.Instruction.Failed(
         Path.empty(Type.of[Nothing]),
         Side.Dest,
         s"Unsupported config expression: ${term.show}",
-        Span.fromPosition(term.pos)
+        Span.fromPosition(term.pos),
+        priority
       )
     val parser = ConfigParser.combine(parsers)
 
     Varargs
       .unapply(configs)
       .getOrElse(report.errorAndAbort("All of the transformation configs need to be inlined", configs))
-      .map(expr => parser.applyOrElse(expr.asTerm, fallback))
+      .zipWithIndex // index is the priority, so that we can sort out if we should override a Preconfig with a Config
+      .map((expr, priority) =>
+        parser
+          .applyOrElse(
+            (Priority.of(priority), expr.asTerm), 
+            (priority, expr) => fallback(expr, Priority.of(priority))
+          )
+      )
       .toList
   }
 }

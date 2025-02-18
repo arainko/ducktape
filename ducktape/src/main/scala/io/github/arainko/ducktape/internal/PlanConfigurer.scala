@@ -235,10 +235,10 @@ private[ducktape] object PlanConfigurer {
       case instruction: Configuration.Instruction.Bulk =>
         bulk(current, instruction)
 
-      case cfg @ Configuration.Instruction.Regional(path, side, modifier, span) =>
+      case cfg: Configuration.Instruction.Regional =>
         regional(current, cfg, parent)
 
-      case cfg @ Configuration.Instruction.Failed(path, side, message, span) =>
+      case cfg: Configuration.Instruction.Failed =>
         Accumulator.append {
           Plan.Error.from(current, ErrorMessage.ConfigurationFailed(cfg), None)
         }

@@ -17,7 +17,6 @@ case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives D
   )(using Quotes): PlanFlags = this.copy(source.transition(sourceStep), dest.transition(destStep))
 
   inline def locally[A](inline f: PlanFlags ?=> A): A = f(using this)
-
 }
 
 object PlanFlags {
@@ -300,12 +299,12 @@ private[ducktape] object Planner {
                   ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
                   None
                 )
-              def default = dest.defaults.get(destField).map { deff => 
-                val const = Configuration.Const(deff, deff.asTerm.tpe.asType) //TODO: it'll be nicer
-                Plan.Configured.from(error, const, Configuration.Instruction.Static(dest.path, Side.Dest, const, Span(0, 0)))  
-              }
-              val plan = if PlanFlags.current.dest.has(Effect.Defaults) then default.getOrElse(error) else error
-              FieldPlan.empty(plan)
+              // def default = dest.defaults.get(destField).map { deff => 
+              //   val const = Configuration.Const(deff, deff.asTerm.tpe.asType) //TODO: it'll be nicer
+              //   Plan.Configured.from(error, const, Configuration.Instruction.Static(dest.path, Side.Dest, const, Span(0, 0), Priority.of(0)))  
+              // }
+              // val plan = if PlanFlags.current.dest.has(Effect.Defaults) then default.getOrElse(error) else error
+              FieldPlan.empty(error)
           )
 
       destField -> plan
