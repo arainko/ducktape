@@ -235,9 +235,6 @@ private[ducktape] object PlanConfigurer {
       case instruction: Configuration.Instruction.Bulk =>
         bulk(current, instruction)
 
-      case cfg: Configuration.Instruction.Regional =>
-        regional(current, cfg, parent)
-
       case cfg: Configuration.Instruction.Failed =>
         Accumulator.append {
           Plan.Error.from(current, ErrorMessage.ConfigurationFailed(cfg), None)
@@ -277,70 +274,6 @@ private[ducktape] object PlanConfigurer {
         }
     }
   }
-
-  private def regional[F <: Fallible](
-    plan: Plan[Erroneous, F],
-    modifier: Configuration.Instruction.Regional,
-    parent: Plan[Erroneous, Fallible] | None.type
-  )(using Quotes, Accumulator[Plan.Error], Accumulator[(Path, Side)], Accumulator[ConfigWarning], Context): Plan[Erroneous, F] =
-    plan match {
-      case plan: Upcast => plan
-
-      case plan: UserDefined[F] => plan
-
-      case plan: Derived[F] => plan
-
-      case plan: Configured[F] => plan
-
-      case plan: BetweenProductFunction[Erroneous, F] =>
-        plan.updateEach(regional(_, modifier, plan))
-
-      case plan: BetweenTupleFunction[Erroneous, F] =>
-        plan.updateEach(regional(_, modifier, plan))
-
-      case plan: BetweenUnwrappedWrapped => plan
-
-      case plan: BetweenWrappedUnwrapped => plan
-
-      case plan: BetweenSingletons => plan
-
-      case plan: BetweenProducts[Erroneous, F] =>
-        plan.updateEach(regional(_, modifier, plan))
-
-      case plan: BetweenProductTuple[Erroneous, F] =>
-        plan.updateEach(regional(_, modifier, plan))
-
-      case plan: BetweenTupleProduct[Erroneous, F] =>
-        plan.updateEach(regional(_, modifier, plan))
-
-      case plan: BetweenTuples[Erroneous, F] =>
-        plan.updateEach(regional(_, modifier, plan))
-
-      case plan: BetweenCoproducts[Erroneous, F] =>
-        plan.updateEach(regional(_, modifier, plan))
-
-      case plan: BetweenOptions[Erroneous, F] =>
-        plan.update(regional(_, modifier, plan))
-
-      case plan: BetweenNonOptionOption[Erroneous, F] =>
-        plan.update(regional(_, modifier, plan))
-
-      case plan: BetweenCollections[Erroneous, F] =>
-        plan.update(regional(_, modifier, plan))
-
-      case plan: BetweenFallibleNonFallible[Erroneous] =>
-        plan.update(regional(_, modifier, plan))
-
-      case plan @ BetweenFallibles(_, _, _, elemPlan) =>
-        plan.update(regional(_, modifier, plan))
-
-      case plan: Error =>
-        // TODO: Detect when a regional config doesn't do anything and emit an error
-        modifier.modifier(parent, plan) match {
-          case config: Configuration[F] => plan.configureIfValid(modifier, config)
-          case other: plan.type         => other
-        }
-    }
 
   // TODO: Support tuple-to-tuple, product-to-tuple?
   private def bulk[F <: Fallible](
@@ -458,7 +391,12 @@ private[ducktape] object PlanConfigurer {
               .run(currentPlan, Nil)
               .map(plan => ConfigWarning(plan.span, instruction.span, path))
           }
-          Plan.Configured.from(currentPlan, config, instruction)
+          currentPlan match {
+            case Plan.Configured(_, _, _, _, prio) => 
+              if instruction.priority >= prio then Plan.Configured.fromInstruction(currentPlan, config, instruction) else currentPlan
+            case _ => Plan.Configured.fromInstruction(currentPlan, config, instruction)
+          }
+
       }
     }
   }

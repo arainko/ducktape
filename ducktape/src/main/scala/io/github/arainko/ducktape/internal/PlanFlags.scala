@@ -81,7 +81,8 @@ case class SideSpecficFlags(
   inScope: Vector[Flag]
 ) derives Debug {
 
-  def has(effect: Flag.Effect): Boolean = inScope.exists(_.effect == effect)
+  //TODO: Get the one with the highest priority?
+  def get(effect: Flag.Effect): Option[Flag] = inScope.find(_.effect == effect)
 
   def transition(step: Step | Passthrough)(using Quotes): SideSpecficFlags = {
     val (nextInScope, nextOutOfScope) = outOfScope.partitionMap { segmentsAndFlag =>
