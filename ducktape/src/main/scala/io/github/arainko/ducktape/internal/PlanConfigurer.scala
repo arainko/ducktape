@@ -389,7 +389,6 @@ private[ducktape] object PlanConfigurer {
           Accumulator.appendAll {
             ConfiguredCollector
               .run(currentPlan, Nil)
-              .filter(_.priority < instruction.priority)
               .map(plan => ConfigWarning(plan.span, instruction.span, path))
           }
           currentPlan match {
