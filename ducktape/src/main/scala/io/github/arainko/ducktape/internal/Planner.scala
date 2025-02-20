@@ -115,7 +115,15 @@ private[ducktape] object Planner {
           }
 
         case (source: Product, dest: Product) =>
-          planProductTransformation(source, dest)
+          (PlanFlags.current.dest.get[Flag.Effect.Rename], PlanFlags.current.source.get[Flag.Effect.Rename]) match {
+            case (Some(destRename), srcRename) =>
+              planProductTransformationModified(source, dest, srcRename.fold(identity[String])(_.renamer), destRename.renamer)
+            case (destRename, Some(srcRename)) =>
+              planProductTransformationModified(source, dest, srcRename.renamer, destRename.fold(identity[String])(_.renamer))
+            case _ =>
+              planProductTransformation(source, dest)
+
+          }
 
         case (source: Product, dest: Tuple) =>
           planProductTupleTransformation(source, dest)
@@ -468,49 +476,57 @@ private[ducktape] object Planner {
   }
 
   // POC of field renames and how to handle ambiguities
-  // private def planProductTransformation[F <: Fallible](
-  //   source: Structure.Product,
-  //   dest: Structure.Product
-  // )(using Quotes, Depth, Context.Of[F]) = {
-  //   def transformDestName(name: String) = name.toUpperCase()
-  //   def transformSrcName(name: String): String = name.toUpperCase()
+  private def planProductTransformationModified[F <: Fallible](
+    source: Structure.Product,
+    dest: Structure.Product,
+    transformSrcName: String => String,
+    transformDestName: String => String
+  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+    // keys to transformed keys
+    val destAmbiguities = dest.fields.keys.groupBy(transformDestName).filter((_, ambs) => ambs.size > 1)
+    val sourceAmbiguities = source.fields.keys.groupBy(transformSrcName).filter((_, ambs) => ambs.size > 1)
 
-  //   // keys to transformed keys
-  //   val destAmbiguities = dest.fields.keys.groupBy(transformDestName).filter((_, ambs) => ambs.size > 1)
-  //   val sourceAmbiguities = source.fields.keys.groupBy(transformSrcName).filter((_, ambs) => ambs.size > 1)
+    val transformedSource =
+      source.fields
+        .map((srcField, srcFieldStruct) => transformSrcName(srcField) -> (srcField, srcFieldStruct))
 
-  //   val transformedSource =
-  //     source.fields
-  //       .map((srcField, srcFieldStruct) => transformSrcName(srcField) -> (srcField, srcFieldStruct))
+    val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
+      val transformedDestField = transformDestName(destField)
+      val destAmbs = destAmbiguities.getOrElse(transformedDestField, Vector.empty)
+      val sourceAmbs = sourceAmbiguities.getOrElse(transformedDestField, Vector.empty)
 
-  //   val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
-  //     val transformedDestField = transformDestName(destField)
-  //     val destAmbs = destAmbiguities.getOrElse(transformedDestField, Vector.empty)
-  //     val sourceAmbs = sourceAmbiguities.getOrElse(transformedDestField, Vector.empty)
+      if destAmbs.nonEmpty then
+        destField -> FieldPlan.empty(
+          Plan.Error(source, destFieldStruct, ErrorMessage.AmbiguousFieldTransformations(dest.tpe, destField, transformedDestField, destAmbs), None)
+        )
+      else if sourceAmbs.nonEmpty then
+        destField -> FieldPlan.empty(
+          Plan.Error(
+            source,
+            destFieldStruct,
+            ErrorMessage.AmbiguousFieldTransformations(source.tpe, destField, transformSrcName(destField), sourceAmbs),
+            None
+          )
+        )
+      else {
+        val plan =
+          transformedSource
+            .get(transformedDestField)
+            .map((srcField, srcStruct) => FieldPlan(srcField, recurse(srcStruct, destFieldStruct)))
+            .getOrElse(
+              FieldPlan.empty(
+                Plan.Error(
+                  Structure.of[Nothing](source.path),
+                  destFieldStruct,
+                  ErrorMessage.NoFieldFound(transformedDestField, destFieldStruct.tpe, source.tpe),
+                  None
+                )
+              )
+            )
 
-  //     if destAmbs.nonEmpty then
-  //       destField -> FieldPlan.empty(Plan.Error(source, destFieldStruct, ErrorMessage.AmbiguousFieldTransformations(dest.tpe, destField, transformedDestField, destAmbs), None))
-  //     else if sourceAmbs.nonEmpty then
-  //       destField -> FieldPlan.empty(Plan.Error(source, destFieldStruct, ErrorMessage.AmbiguousFieldTransformations(source.tpe, destField, transformSrcName(destField), sourceAmbs), None))
-  //     else {
-  //       val plan =
-  //         transformedSource
-  //           .get(transformedDestField)
-  //           .map((srcField, srcStruct) => FieldPlan(srcField, recurse(srcStruct, destFieldStruct)))
-  //           .getOrElse(
-  //             FieldPlan.empty(
-  //               Plan.Error(
-  //                 Structure.of[Nothing](source.path),
-  //                 destFieldStruct,
-  //                 ErrorMessage.NoFieldFound(transformedDestField, destFieldStruct.tpe, source.tpe),
-  //                 None
-  //               )
-  //             )
-  //           )
-
-  //       destField -> plan
-  //     }
-  //   }
-  //   Plan.BetweenProducts(source, dest, fieldPlans)
-  // }
+        destField -> plan
+      }
+    }
+    Plan.BetweenProducts(source, dest, fieldPlans)
+  }
 }

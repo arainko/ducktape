@@ -3,6 +3,7 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
+import scala.reflect.TypeTest
 
 case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
   def transition[A](
@@ -23,20 +24,19 @@ case class Flag(effect: Flag.Effect, kind: Flag.Kind, span: Span, priority: Prio
 
 object Flag {
   enum Effect {
-    case Defaults, Nones
+    case Rename(renamer: String => String)
   }
 
   enum Kind derives Debug {
     final def isLocal: Boolean =
       this match
-        case Local                       => true
-        case Regional                    => false
-        case TypeSpecific(tpe, Local)    => true
-        case TypeSpecific(tpe, Regional) => false
+        case Local           => true
+        case Regional        => false
+        case TypeSpecific(_) => false
 
     case Local
     case Regional
-    case TypeSpecific(tpe: Type[?], kind: Local.type | Regional.type)
+    case TypeSpecific(tpe: Type[?])
   }
 }
 
@@ -81,8 +81,10 @@ case class SideSpecficFlags(
   inScope: Vector[Flag]
 ) derives Debug {
 
-  //TODO: Get the one with the highest priority?
-  def get(effect: Flag.Effect): Option[Flag] = inScope.find(_.effect == effect)
+  def get[A <: Flag.Effect](using TypeTest[Flag.Effect, A]): Option[A] =
+    inScope.collect { case Flag(effect: A, _, _, prio) => effect -> prio }
+      .maxByOption((_, prio) => prio)
+      .map((eff, _) => eff)
 
   def transition(step: Step | Passthrough)(using Quotes): SideSpecficFlags = {
     val (nextInScope, nextOutOfScope) = outOfScope.partitionMap { segmentsAndFlag =>

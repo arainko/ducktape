@@ -180,6 +180,20 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos),
           )
 
+        case (prio, cfg @ AsExpr('{ Field.modifyName[a, b] })) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.Rename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Nil
+          )
+
+        case (prio, cfg @ RegionalConfig(AsExpr('{ Field.modifyName[a, b] }), path)) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.Rename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
         case DeprecatedConfig(configs) => configs
       }
     }

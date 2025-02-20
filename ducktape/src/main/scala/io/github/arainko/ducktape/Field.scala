@@ -28,9 +28,6 @@ object Field {
     function: SourceFieldTpe => F[DestFieldTpe]
   ): Field.Fallible[F, A, B] = ???
 
-  /* 
-  Docs:
-   */
   @compileTimeOnly("Field.const is only useable as a field configuration for transformations")
   def const[A, B, DestFieldTpe, ConstTpe](selector: Selector ?=> B => DestFieldTpe, value: ConstTpe): Field[A, B] = ???
 
@@ -68,4 +65,6 @@ object Field {
   @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
   def allMatching[A, B, ProductTpe](product: ProductTpe): Field[A, B] =
     ???
+
+  def modifyName[A, B]: Field[A, B] & Regional = ???
 }
