@@ -33,6 +33,45 @@ private[ducktape] object Configuration {
 
   given debug: Debug[Configuration[Fallible]] = Debug.derived
 
+  trait ErrorModifier {
+    def apply(parent: Plan[Erroneous, Fallible] | None.type, plan: Plan.Error)(using Quotes): Configuration[Nothing] | plan.type
+  }
+
+  object ErrorModifier {
+    given Debug[ErrorModifier] = Debug.nonShowable
+
+    val substituteOptionsWithNone = new ErrorModifier:
+      def apply(parent: Plan[Erroneous, Fallible] | None.type, plan: Plan.Error)(using
+        Quotes
+      ): Configuration[Nothing] | plan.type =
+        plan.dest.tpe match {
+          case tpe @ '[Option[a]] => Configuration.Const('{ None }, tpe)
+          case _                  => plan
+        }
+
+    val substituteWithDefaults = new ErrorModifier:
+      def apply(parent: Plan[Erroneous, Fallible] | None.type, plan: Plan.Error)(using
+        Quotes
+      ): Configuration[Nothing] | plan.type =
+        PartialFunction
+          .condOpt(parent -> plan.destPath.segments.lastOption) {
+            case (Plan.BetweenProducts(_, dest, _), Some(Path.Segment.Field(_, fieldName))) =>
+              import quotes.reflect.*
+
+              dest.defaults
+                .get(fieldName)
+                .collect { case expr if expr.asTerm.tpe <:< plan.dest.tpe.repr => Configuration.Const(expr, plan.dest.tpe) }
+            case (Plan.BetweenTupleProduct(_, dest, _), Some(Path.Segment.Field(_, fieldName))) =>
+              import quotes.reflect.*
+
+              dest.defaults
+                .get(fieldName)
+                .collect { case expr if expr.asTerm.tpe <:< plan.dest.tpe.repr => Configuration.Const(expr, plan.dest.tpe) }
+          }
+          .flatten
+          .getOrElse(plan)
+  }
+
   trait FieldModifier {
     def apply(
       parent: Plan.BetweenProductFunction[Erroneous, Fallible] | Plan.BetweenProducts[Erroneous, Fallible] |
@@ -70,6 +109,8 @@ private[ducktape] object Configuration {
       priority: Priority
     ) extends Instruction[Nothing]
 
+    case Regional(path: Path, side: Side, modifier: ErrorModifier, span: Span, priority: Priority) extends Instruction[Nothing]
+
     case Failed(path: Path, side: Side, message: String, span: Span, priority: Priority) extends Instruction[Nothing]
   }
 
@@ -97,29 +138,36 @@ private[ducktape] object Configuration {
       )
     val parser = ConfigParser.combine(parsers)
 
-    val (instructions, flags) =
-      Varargs
-        .unapply(configs)
-        .getOrElse(report.errorAndAbort("All of the transformation configs need to be inlined", configs))
-        .zipWithIndex // index is the priority, so that we can sort out if we should override a Preconfig with a Config
-        .toVector
-        .partitionMap[Instruction[F], ParsedFlag] { (expr, priority) =>
-          parser
-            .applyOrElse(
-              (Priority.of(priority), expr.asTerm),
-              (priority, expr) => fallback(expr, Priority.of(priority))
-            )
-            .match {
-              case instruction: Instruction[F] => Left(instruction)
-              case flag: ParsedFlag            => Right(flag)
-            }
-        }
+    val (instructions, flags) = Varargs
+      .unapply(configs)
+      .getOrElse(report.errorAndAbort("All of the transformation configs need to be inlined", configs))
+      .zipWithIndex // index is the priority, so that we can sort out if we should override a Preconfig with a Config
+      .toVector
+      .partitionMap[Instruction[F], ParsedFlag] { (expr, priority) =>
+        parser
+          .applyOrElse(
+            (Priority.of(priority), expr.asTerm),
+            (priority, expr) => fallback(expr, Priority.of(priority))
+          )
+          .match {
+            case instruction: Instruction[F] => Left(instruction)
+            case flag: ParsedFlag            => Right(flag)
+          }
+      }
 
-    val (sourceFlags, destFlags) = flags.partitionMap {
+    val (sourceFlags, destFlags) = flags.partitionMap { 
       case ParsedFlag(Side.Source, flag, steps) => Left(steps -> flag)
-      case ParsedFlag(Side.Dest, flag, steps)   => Right(steps -> flag)
+      case ParsedFlag(Side.Dest, flag, steps) => Right(steps -> flag)
     }
 
     instructions.toList -> PlanFlags(SideSpecficFlags.create(sourceFlags), SideSpecficFlags.create(destFlags))
+    // .map((expr, priority) =>
+    //   parser
+    //     .applyOrElse(
+    //       (Priority.of(priority), expr.asTerm),
+    //       (priority, expr) => fallback(expr, Priority.of(priority))
+    //     )
+    // )
+    // .toList
   }
 }

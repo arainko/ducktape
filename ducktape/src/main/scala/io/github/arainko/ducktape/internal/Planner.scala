@@ -175,14 +175,12 @@ private[ducktape] object Planner {
                   ErrorMessage.NoFieldFound(destField, destFieldStruct.tpe, source.tpe),
                   None
                 )
-
-              val planWithDefault =
-                for {
-                  flag <- PlanFlags.current.dest.get(Flag.Effect.Defaults)
-                  default <- dest.defaults.get(destField)
-                } yield Plan.Configured.fromFlag(error, Configuration.Const(default, default.asTerm.tpe.asType), flag, Side.Dest)
-              
-              FieldPlan.empty(planWithDefault.getOrElse(error))
+              // def default = dest.defaults.get(destField).map { deff => 
+              //   val const = Configuration.Const(deff, deff.asTerm.tpe.asType) //TODO: it'll be nicer
+              //   Plan.Configured.from(error, const, Configuration.Instruction.Static(dest.path, Side.Dest, const, Span(0, 0), Priority.of(0)))  
+              // }
+              // val plan = if PlanFlags.current.dest.has(Effect.Defaults) then default.getOrElse(error) else error
+              FieldPlan.empty(error)
           )
 
       destField -> plan

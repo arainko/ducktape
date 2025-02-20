@@ -297,7 +297,7 @@ private[ducktape] object Plan {
   }
 
   object Configured {
-    def fromInstruction[F <: Fallible](
+    def from[F <: Fallible](
       plan: Plan[Erroneous, F],
       conf: Configuration[F],
       instruction: Configuration.Instruction[F]
@@ -312,21 +312,6 @@ private[ducktape] object Plan {
           val dest = if instruction.side.isSource then Structure.Lazy.of[confTpe](plan.dest.path) else plan.dest
           Plan.Configured(plan.source, dest, conf, instruction.span, instruction.priority)
       }
-
-    def fromFlag(
-      error: Plan.Error,
-      conf: Configuration[Nothing],
-      flag: Flag,
-      side: Side
-    )(using Quotes, Context): Plan.Configured[Nothing] =
-      conf.destTpe match {
-        case '[confTpe] =>
-          // if side is Source then we're operating on either a missing Source case or an override of that,
-          // which means the dest types need to be narrowed down to the exact type of this config
-          val dest = if side.isSource then Structure.Lazy.of[confTpe](error.dest.path) else error.dest
-          Plan.Configured(error.source, dest, conf, flag.span, flag.priority)
-      }
-
   }
 
   given debug: Debug[Plan[Erroneous, Fallible]] = Debug.derived
