@@ -6,8 +6,10 @@ import scala.quoted.*
 
 import Configuration.*
 
+case class ParsedFlag(side: Side, flag: Flag, steps: List[Step])
+
 private[ducktape] sealed trait ConfigParser[+F <: Fallible] {
-  def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F]]
+  def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F] | ParsedFlag]
 }
 
 private[ducktape] object ConfigParser {
@@ -17,11 +19,11 @@ private[ducktape] object ConfigParser {
 
   def combine[F <: Fallible](
     parsers: NonEmptyList[ConfigParser[F]]
-  )(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F]] =
+  )(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F] | ParsedFlag] =
     parsers.map(_.apply).reduceLeft(_ orElse _)
 
   object Total extends ConfigParser[Nothing] {
-    def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[Nothing]] = {
+    def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[Nothing] | ParsedFlag] = {
       import quotes.reflect.*
       {
         case (
@@ -36,7 +38,6 @@ private[ducktape] object ConfigParser {
             Side.Dest,
             Configuration.Const(value.asExpr, value.tpe.widen.asType),
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case (
@@ -67,7 +68,7 @@ private[ducktape] object ConfigParser {
 
           val span = Span.fromPosition(cfg.pos)
 
-          Configuration.Instruction.Dynamic(path, Side.Dest, default, span, prio)
+          Configuration.Instruction.Dynamic(path, Side.Dest, default, span)
 
         case (
               prio,
@@ -84,7 +85,6 @@ private[ducktape] object ConfigParser {
             Side.Dest,
             Configuration.FieldComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case (
@@ -106,7 +106,6 @@ private[ducktape] object ConfigParser {
               function.asExpr.asInstanceOf[Expr[Any => Any]]
             ),
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case (
@@ -116,7 +115,7 @@ private[ducktape] object ConfigParser {
                 PathSelector(path) :: fieldSource :: Nil
               )
             ) =>
-          parseAllMatching(fieldSource.asExpr, path, fieldSourceTpe.tpe, Span.fromPosition(cfg.pos), prio)
+          parseAllMatching(fieldSource.asExpr, path, fieldSourceTpe.tpe, Span.fromPosition(cfg.pos))
 
         case (
               prio,
@@ -130,7 +129,6 @@ private[ducktape] object ConfigParser {
             Side.Source,
             Configuration.Const(value.asExpr, value.tpe.asType),
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case (
@@ -145,7 +143,6 @@ private[ducktape] object ConfigParser {
             Side.Source,
             Configuration.CaseComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case (
@@ -157,7 +154,6 @@ private[ducktape] object ConfigParser {
             Side.Dest,
             ErrorModifier.substituteOptionsWithNone,
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case (prio, regionalCfg @ RegionalConfig(AsExpr('{ Field.fallbackToNone[a, b] }), path)) =>
@@ -166,7 +162,6 @@ private[ducktape] object ConfigParser {
             Side.Dest,
             ErrorModifier.substituteOptionsWithNone,
             Span.fromPosition(regionalCfg.pos),
-            prio
           )
 
         case (prio, cfg @ AsExpr('{ Field.fallbackToDefault[a, b] })) =>
@@ -175,7 +170,6 @@ private[ducktape] object ConfigParser {
             Side.Dest,
             ErrorModifier.substituteWithDefaults,
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case (prio, cfg @ RegionalConfig(AsExpr('{ Field.fallbackToDefault[a, b] }), path)) =>
@@ -184,7 +178,6 @@ private[ducktape] object ConfigParser {
             Side.Dest,
             ErrorModifier.substituteWithDefaults,
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case DeprecatedConfig(configs) => configs
@@ -193,7 +186,7 @@ private[ducktape] object ConfigParser {
   }
 
   final class PossiblyFallible[F[+x]: Type] extends ConfigParser[Fallible] {
-    def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[Fallible]] = {
+    def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[Fallible] | ParsedFlag] = {
       import quotes.reflect.*
       {
         case (
@@ -208,7 +201,6 @@ private[ducktape] object ConfigParser {
             Side.Dest,
             Configuration.FallibleConst(value, Type.of[const]),
             Span.fromPosition(cfg.pos),
-            prio
           )
         case (
               prio,
@@ -225,7 +217,6 @@ private[ducktape] object ConfigParser {
             Side.Dest,
             Configuration.FallibleFieldComputed(Type.of[computed], function.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case (
@@ -244,7 +235,6 @@ private[ducktape] object ConfigParser {
             Configuration
               .FallibleFieldComputedDeep(Type.of[computed], sourceFieldTpe.tpe.asType, function.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case (
@@ -259,7 +249,6 @@ private[ducktape] object ConfigParser {
             Side.Source,
             Configuration.FallibleConst(value, Type.of[const]),
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case (
@@ -274,7 +263,6 @@ private[ducktape] object ConfigParser {
             Side.Source,
             Configuration.FallibleCaseComputed(Type.of[computed], function.asInstanceOf[Expr[Any => Any]]),
             Span.fromPosition(cfg.pos),
-            prio
           )
 
         case DeprecatedFallibleConfig(cfg) => cfg
@@ -289,8 +277,7 @@ private[ducktape] object ConfigParser {
     sourceExpr: Expr[Any],
     path: Path,
     fieldSourceTpe: quotes.reflect.TypeRepr,
-    span: Span,
-    prio: Priority
+    span: Span
   ) = {
 
     Structure
@@ -315,7 +302,6 @@ private[ducktape] object ConfigParser {
           Side.Dest,
           modifier,
           span,
-          prio
         )
       }
       .getOrElse(
@@ -324,7 +310,6 @@ private[ducktape] object ConfigParser {
           Side.Dest,
           "Field source needs to be a product",
           span,
-          prio
         )
       )
   }
@@ -347,7 +332,6 @@ private[ducktape] object ConfigParser {
             Side.Source,
             Configuration.Const(value, value.asTerm.tpe.asType),
             Span.fromExpr(cfg),
-            prio
           )
 
         case cfg @ '{
@@ -361,11 +345,10 @@ private[ducktape] object ConfigParser {
             Side.Source,
             Configuration.CaseComputed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
             Span.fromExpr(cfg),
-            prio
           )
 
         case cfg @ '{ Field.allMatching[a, b, source]($fieldSource) } =>
-          parseAllMatching(fieldSource, Path.empty(Type.of[b]), TypeRepr.of[source], Span.fromExpr(cfg), prio)
+          parseAllMatching(fieldSource, Path.empty(Type.of[b]), TypeRepr.of[source], Span.fromExpr(cfg))
     }
   }
 
@@ -383,7 +366,6 @@ private[ducktape] object ConfigParser {
             Side.Source,
             Configuration.FallibleCaseComputed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
             Span.fromExpr(cfg),
-            prio
           )
 
         case cfg @ '{ Case.fallibleConst[srcSubtype].apply[F, source, dest]($value) } =>
@@ -393,7 +375,6 @@ private[ducktape] object ConfigParser {
             Side.Source,
             Configuration.FallibleConst(value, Type.of[dest]),
             Span.fromExpr(cfg),
-            prio
           )
       }
     }

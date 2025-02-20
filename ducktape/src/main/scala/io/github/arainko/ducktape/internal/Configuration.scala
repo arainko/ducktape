@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.*
 
 import scala.quoted.*
 
+
 private[ducktape] enum Configuration[+F <: Fallible] {
   def destTpe: Type[?]
   def sourceTpe: Type[?] | None.type = None
@@ -89,29 +90,26 @@ private[ducktape] object Configuration {
     def path: Path
     def side: Side
     def span: Span
-    def priority: Priority
 
-    case Static(path: Path, side: Side, config: Configuration[F], span: Span, priority: Priority) extends Instruction[F]
+    case Static(path: Path, side: Side, config: Configuration[F], span: Span) extends Instruction[F]
 
     case Dynamic(
       path: Path,
       side: Side,
       config: Plan[Erroneous, Fallible] | None.type => Either[String, Configuration[Nothing]],
-      span: Span,
-      priority: Priority
+      span: Span
     ) extends Instruction[Nothing]
 
     case Bulk(
       path: Path,
       side: Side,
       modifier: FieldModifier,
-      span: Span,
-      priority: Priority
+      span: Span
     ) extends Instruction[Nothing]
 
-    case Regional(path: Path, side: Side, modifier: ErrorModifier, span: Span, priority: Priority) extends Instruction[Nothing]
+    case Regional(path: Path, side: Side, modifier: ErrorModifier, span: Span) extends Instruction[Nothing]
 
-    case Failed(path: Path, side: Side, message: String, span: Span, priority: Priority) extends Instruction[Nothing]
+    case Failed(path: Path, side: Side, message: String, span: Span) extends Instruction[Nothing]
   }
 
   object Instruction {
@@ -119,7 +117,7 @@ private[ducktape] object Configuration {
 
     object Failed {
       def from(instruction: Instruction[Fallible], message: String): Instruction.Failed =
-        Failed(instruction.path, instruction.side, message, instruction.span, instruction.priority)
+        Failed(instruction.path, instruction.side, message, instruction.span)
     }
   }
 
@@ -133,8 +131,7 @@ private[ducktape] object Configuration {
         Path.empty(Type.of[Nothing]),
         Side.Dest,
         s"Unsupported config expression: ${term.show}",
-        Span.fromPosition(term.pos),
-        priority
+        Span.fromPosition(term.pos)
       )
     val parser = ConfigParser.combine(parsers)
 

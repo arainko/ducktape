@@ -7,7 +7,7 @@ private[ducktape] object ConfigInstructionRefiner {
 
   def run[F <: Fallible](instruction: Configuration.Instruction[F]): Configuration.Instruction[Nothing] | None.type =
     instruction match
-      case inst @ Instruction.Static(_, _, config, _, _) =>
+      case inst @ Instruction.Static(_, _, config, _) =>
         config match
           case cfg: (Const | CaseComputed | FieldComputed | FieldComputedDeep | FieldReplacement) => inst.copy(config = cfg)
           case fallible: (FallibleConst | FallibleFieldComputed | FallibleFieldComputedDeep | FallibleCaseComputed) => None
