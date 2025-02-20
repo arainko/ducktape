@@ -6,10 +6,8 @@ import scala.quoted.*
 
 import Configuration.*
 
-case class ParsedFlag(side: Side, flag: Flag, steps: List[Step])
-
 private[ducktape] sealed trait ConfigParser[+F <: Fallible] {
-  def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F] | ParsedFlag]
+  def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F]]
 }
 
 private[ducktape] object ConfigParser {
@@ -19,11 +17,11 @@ private[ducktape] object ConfigParser {
 
   def combine[F <: Fallible](
     parsers: NonEmptyList[ConfigParser[F]]
-  )(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F] | ParsedFlag] =
+  )(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F]] =
     parsers.map(_.apply).reduceLeft(_ orElse _)
 
   object Total extends ConfigParser[Nothing] {
-    def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[Nothing] | ParsedFlag] = {
+    def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[Nothing]] = {
       import quotes.reflect.*
       {
         case (
@@ -154,31 +152,39 @@ private[ducktape] object ConfigParser {
               prio,
               cfg @ AsExpr('{ Field.fallbackToNone[a, b] })
             ) =>
-          ParsedFlag(
+          Configuration.Instruction.Regional(
+            Path.empty(Type.of[b]),
             Side.Dest,
-            Flag(Flag.Effect.Nones, Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
-            Nil
+            ErrorModifier.substituteOptionsWithNone,
+            Span.fromPosition(cfg.pos),
+            prio
           )
 
         case (prio, regionalCfg @ RegionalConfig(AsExpr('{ Field.fallbackToNone[a, b] }), path)) =>
-          ParsedFlag(
+          Configuration.Instruction.Regional(
+            path,
             Side.Dest,
-            Flag(Flag.Effect.Defaults, Flag.Kind.Regional, Span.fromPosition(regionalCfg.pos), prio),
-            path.segments.map(Step.fromPathSegment).toList
+            ErrorModifier.substituteOptionsWithNone,
+            Span.fromPosition(regionalCfg.pos),
+            prio
           )
 
         case (prio, cfg @ AsExpr('{ Field.fallbackToDefault[a, b] })) =>
-          ParsedFlag(
+          Configuration.Instruction.Regional(
+            Path.empty(Type.of[b]),
             Side.Dest,
-            Flag(Flag.Effect.Defaults, Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
-            Nil
+            ErrorModifier.substituteWithDefaults,
+            Span.fromPosition(cfg.pos),
+            prio
           )
 
         case (prio, cfg @ RegionalConfig(AsExpr('{ Field.fallbackToDefault[a, b] }), path)) =>
-          ParsedFlag(
+          Configuration.Instruction.Regional(
+            path,
             Side.Dest,
-            Flag(Flag.Effect.Defaults, Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
-            path.segments.map(Step.fromPathSegment).toList
+            ErrorModifier.substituteWithDefaults,
+            Span.fromPosition(cfg.pos),
+            prio
           )
 
         case DeprecatedConfig(configs) => configs
@@ -187,7 +193,7 @@ private[ducktape] object ConfigParser {
   }
 
   final class PossiblyFallible[F[+x]: Type] extends ConfigParser[Fallible] {
-    def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[Fallible] | ParsedFlag] = {
+    def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[Fallible]] = {
       import quotes.reflect.*
       {
         case (

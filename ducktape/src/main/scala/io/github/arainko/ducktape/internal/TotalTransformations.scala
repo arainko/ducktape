@@ -20,8 +20,8 @@ private[ducktape] object TotalTransformations {
       TransformationSite.fromStringExpr(transformationSite)
     )
 
-    val (config, flags) = Configuration.parse(configs, ConfigParser.total)
-    val plan = Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])), flags)
+    val plan = Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])))
+    val config = Configuration.parse(configs, ConfigParser.total)
     val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
     PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
   }
@@ -50,7 +50,7 @@ private[ducktape] object TotalTransformations {
     val plan =
       Function
         .fromExpr(function)
-        .map(function => Planner.between(sourceStruct, Structure.fromFunction(function), PlanFlags.empty))
+        .map(function => Planner.between(sourceStruct, Structure.fromFunction(function)))
         .getOrElse(
           Plan.Error(
             sourceStruct,
@@ -75,13 +75,11 @@ private[ducktape] object TotalTransformations {
     )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
-    val (config, flags) = Configuration.parse(configs, ConfigParser.total)
-
 
     val plan =
       Function
         .fromFunctionArguments[Args, Func](function)
-        .map(function => Planner.between(sourceStruct, Structure.fromFunction(function), flags))
+        .map(function => Planner.between(sourceStruct, Structure.fromFunction(function)))
         .getOrElse(
           Plan.Error(
             sourceStruct,
@@ -91,6 +89,7 @@ private[ducktape] object TotalTransformations {
           )
         )
 
+    val config = Configuration.parse(configs, ConfigParser.total)
     val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
     PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
   }
