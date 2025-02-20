@@ -15,9 +15,14 @@ object a {
 
   Transformer.Debug.showCode {
     src.into[TestDest].transform(
-      Field.fallbackToDefault.regional(a => a),
       Field.const(_.extra, 123),
-    ): @nowarn
+
+
+      Field.fallbackToDefault.regional(a => a),
+
+
+
+    )
 
 
   }
