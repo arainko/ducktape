@@ -63,8 +63,7 @@ private[ducktape] object Plan {
     source: Structure,
     dest: Structure,
     config: Configuration[F],
-    span: Span,
-    priority: Priority
+    span: Span
   ) extends Plan[Nothing, F]
 
   case class BetweenProductFunction[+E <: Erroneous, +F <: Fallible](
@@ -310,7 +309,7 @@ private[ducktape] object Plan {
           // if side is Source then we're operating on either a missing Source case or an override of that,
           // which means the dest types need to be narrowed down to the exact type of this config
           val dest = if instruction.side.isSource then Structure.Lazy.of[confTpe](plan.dest.path) else plan.dest
-          Plan.Configured(plan.source, dest, conf, instruction.span, instruction.priority)
+          Plan.Configured(plan.source, dest, conf, instruction.span)
       }
   }
 

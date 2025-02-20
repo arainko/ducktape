@@ -30,7 +30,7 @@ private[ducktape] object FalliblePlanInterpreter {
         plan match {
           case Plan.Upcast(_, _, _) => Value.Unwrapped(value)
 
-          case Plan.Configured(_, _, config, _, _) =>
+          case Plan.Configured(_, _, config, _) =>
             config match
               case cfg @ Configuration.Const(_, _) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
