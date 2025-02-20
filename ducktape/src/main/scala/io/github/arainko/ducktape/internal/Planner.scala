@@ -115,14 +115,14 @@ private[ducktape] object Planner {
           }
 
         case (source: Product, dest: Product) =>
+          // TODO: needs a separte effect type for field renames and case renames - not a joint one
           (PlanFlags.current.dest.get[Flag.Effect.Rename], PlanFlags.current.source.get[Flag.Effect.Rename]) match {
             case (Some(destRename), srcRename) =>
-              planProductTransformationModified(source, dest, srcRename.fold(identity[String])(_.renamer), destRename.renamer)
+              planProductTransformationWithModifiedNames(source, dest, srcRename.fold(identity[String])(_.renamer), destRename.renamer)
             case (destRename, Some(srcRename)) =>
-              planProductTransformationModified(source, dest, srcRename.renamer, destRename.fold(identity[String])(_.renamer))
+              planProductTransformationWithModifiedNames(source, dest, srcRename.renamer, destRename.fold(identity[String])(_.renamer))
             case _ =>
               planProductTransformation(source, dest)
-
           }
 
         case (source: Product, dest: Tuple) =>
@@ -135,9 +135,22 @@ private[ducktape] object Planner {
           planTupleTransformation(source, dest)
 
         case (source: Coproduct, dest: Coproduct) =>
-          planCoproductTransformation(source, dest)
+          // TODO: needs a separte effect type for field renames and case renames - not a joint one
 
-        case (source: Structure.Singleton, dest: Structure.Singleton) if source.name == dest.name =>
+          (PlanFlags.current.dest.get[Flag.Effect.Rename], PlanFlags.current.source.get[Flag.Effect.Rename]) match {
+            case (Some(destRename), srcRename) =>
+              planCoproductTransformationWithModifiedNames(source, dest, srcRename.fold(identity[String])(_.renamer), destRename.renamer)
+            case (destRename, Some(srcRename)) =>
+              planCoproductTransformationWithModifiedNames(source, dest, srcRename.renamer, destRename.fold(identity[String])(_.renamer))
+            case _ =>
+              planCoproductTransformation(source, dest)
+          }
+
+        case (source: Structure.Singleton, dest: Structure.Singleton)
+            // ayy lmao
+            if PlanFlags.current.source.get[Flag.Effect.Rename].fold(identity[String])(_.renamer)(source.name) == PlanFlags.current.dest
+              .get[Flag.Effect.Rename]
+              .fold(identity[String])(_.renamer)(dest.name) =>
           Plan.BetweenSingletons(source, dest)
 
         case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
@@ -476,7 +489,7 @@ private[ducktape] object Planner {
   }
 
   // POC of field renames and how to handle ambiguities
-  private def planProductTransformationModified[F <: Fallible](
+  private def planProductTransformationWithModifiedNames[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product,
     transformSrcName: String => String,
@@ -495,6 +508,7 @@ private[ducktape] object Planner {
       val destAmbs = destAmbiguities.getOrElse(transformedDestField, Vector.empty)
       val sourceAmbs = sourceAmbiguities.getOrElse(transformedDestField, Vector.empty)
 
+      // TODO: Are those source and dest structs passed in correctly?
       if destAmbs.nonEmpty then
         destField -> FieldPlan.empty(
           Plan.Error(source, destFieldStruct, ErrorMessage.AmbiguousFieldTransformations(dest.tpe, destField, transformedDestField, destAmbs), None)
@@ -512,7 +526,11 @@ private[ducktape] object Planner {
         val plan =
           transformedSource
             .get(transformedDestField)
-            .map((srcField, srcStruct) => FieldPlan(srcField, recurse(srcStruct, destFieldStruct)))
+            .map((srcField, srcStruct) =>
+              PlanFlags.current.transition(Step.Field(srcField), Step.Field(destField)).locally {
+                FieldPlan(srcField, recurse(srcStruct, destFieldStruct))
+              }
+            )
             .getOrElse(
               FieldPlan.empty(
                 Plan.Error(
@@ -528,5 +546,63 @@ private[ducktape] object Planner {
       }
     }
     Plan.BetweenProducts(source, dest, fieldPlans)
+  }
+
+  private def planCoproductTransformationWithModifiedNames[F <: Fallible](
+    source: Structure.Coproduct,
+    dest: Structure.Coproduct,
+    transformSrcName: String => String,
+    transformDestName: String => String
+  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+    // keys to transformed keys
+    val destAmbiguities = dest.children.keys.toVector.groupBy(transformDestName).filter((_, ambs) => ambs.size > 1)
+    val sourceAmbiguities = source.children.keys.toVector.groupBy(transformSrcName).filter((_, ambs) => ambs.size > 1)
+
+    val transformedDest =
+      dest.children
+        .map((srcField, srcFieldStruct) => transformSrcName(srcField) -> srcFieldStruct)
+
+    val plans = source.children.map { (sourceName, sourceCaseStruct) =>
+      val transformedSrc = transformSrcName(sourceName)
+      val destAmbs = destAmbiguities.getOrElse(transformedSrc, Vector.empty)
+      val sourceAmbs = sourceAmbiguities.getOrElse(transformedSrc, Vector.empty)
+
+      // TODO: Are those source and dest structs passed in correctly?
+      if sourceAmbs.nonEmpty then
+        Plan.Error(
+          sourceCaseStruct,
+          Structure.of[Any](dest.path),
+          ErrorMessage.AmbiguousCaseTransformations(source.tpe, sourceName, transformedSrc, sourceAmbs),
+          None
+        )
+      else if destAmbs.nonEmpty then
+        Plan.Error(
+          sourceCaseStruct,
+          Structure.of[Any](dest.path),
+          ErrorMessage.AmbiguousCaseTransformations(source.tpe, sourceName, transformedSrc, sourceAmbs),
+          None
+        )
+      else {
+        val plan =
+          transformedDest
+            .get(transformedSrc)
+            .map(destCaseStruct =>
+              PlanFlags.current.transition(Step.Case(sourceCaseStruct.tpe), Step.Case(destCaseStruct.tpe)).locally {
+                recurse(sourceCaseStruct, destCaseStruct)
+              }
+            )
+            .getOrElse(
+              Plan.Error(
+                sourceCaseStruct,
+                Structure.of[Any](dest.path),
+                ErrorMessage.NoChildFound(transformedSrc, dest.tpe),
+                None
+              )
+            )
+
+        plan
+      }
+    }
+    Plan.BetweenCoproducts(source, dest, plans.toVector)
   }
 }

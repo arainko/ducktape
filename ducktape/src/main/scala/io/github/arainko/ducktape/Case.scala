@@ -25,6 +25,8 @@ object Case {
   @compileTimeOnly("Case.computed is only useable as a case configuration for transformations")
   def computed[A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, function: SourceTpe => DestTpe): Case[A, B] = ???
 
+  def modifyNames[A, B]: Case[A, B] & Regional = ???
+
   @deprecated(
     message = "Use the variant that accepts a path selector instead (Case.const(_.at[SourceSubtype], ...))",
     since = "ducktape 0.2.0-M1"

@@ -9,8 +9,24 @@ case class LevelSource1(INT: Int, int: Int)
 case class LevelDest1(int: Int, INT: Int)
 
 
+enum SourceEnum {
+  case int(FIELD1: Int)
+  case str, double
+}
+
+enum DestEnum {
+  case INT(FIELD1: Int)
+  case STR, DOUBLE
+}
+
+
 object a {
-  val src: Test = ???
+  val src: SourceEnum = ???
+
+  Transformer.Debug.showCode {
+
+    src.into[DestEnum].transform(Case.modifyNames)
+  }
 
   // Transformer.Debug.showCode {
     // src.into[TestDest].transform(Field.modifyName.regional(_.level1))
