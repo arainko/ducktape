@@ -249,7 +249,7 @@ private[ducktape] object ConfigParser {
         case (prio, cfg @ AsExpr('{ Case.modifySourceNames[a, b]($renamer) })) =>
           ParsedFlag(
             Side.Source,
-            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
             Nil
           )
 
@@ -282,7 +282,7 @@ private[ducktape] object ConfigParser {
         case (prio, cfg @ AsExpr('{ Case.modifyDestNames[a, b]($renamer) })) =>
           ParsedFlag(
             Side.Dest,
-            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
             Nil
           )
 

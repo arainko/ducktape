@@ -22,6 +22,8 @@ private[ducktape] object Planner {
     recurse(source, dest)
   }
 
+  import scala.util.chaining.*
+
   private def recurse[F <: Fallible](
     source: Structure,
     dest: Structure,
@@ -165,9 +167,9 @@ private[ducktape] object Planner {
 
         case (source: Structure.Singleton, dest: Structure.Singleton)
             // ayy lmao
-            if PlanFlags.current.source.get[Flag.Effect.CaseRename](source.tpe).fold(identity[String])(_.renamer)(source.name) == PlanFlags.current.dest
-              .get[Flag.Effect.CaseRename](dest.tpe)
-              .fold(identity[String])(_.renamer)(dest.name) =>
+            if PlanFlags.current.source.get[Flag.Effect.CaseRename](source.tpe).tap(println).fold(identity[String])(_.renamer)(source.name).tap(println) == PlanFlags.current.dest
+              .get[Flag.Effect.CaseRename](dest.tpe).tap(println)
+              .fold(identity[String])(_.renamer)(dest.name).tap(println) =>
           Plan.BetweenSingletons(source, dest)
 
         case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
