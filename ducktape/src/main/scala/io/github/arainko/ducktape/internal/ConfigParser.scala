@@ -183,29 +183,57 @@ private[ducktape] object ConfigParser {
         case (prio, cfg @ AsExpr('{ Field.modifyName[a, b] })) =>
           ParsedFlag(
             Side.Dest,
-            Flag(Flag.Effect.Rename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.FieldRename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
             Nil
           )
 
         case (prio, cfg @ RegionalConfig(AsExpr('{ Field.modifyName[a, b] }), path)) =>
           ParsedFlag(
             Side.Dest,
-            Flag(Flag.Effect.Rename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.FieldRename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
             path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ LocalConfig(AsExpr('{ Field.modifyName[a, b] }), path)) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.FieldRename(_.toUpperCase()), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ AsExpr('{ Field.modifyName[a, b].typeSpecific[tpe] })) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.FieldRename(_.toUpperCase()), Flag.Kind.TypeSpecific(Type.of[tpe]), Span.fromPosition(cfg.pos), prio),
+            Nil
           )
 
         case (prio, cfg @ AsExpr('{ Case.modifyNames[a, b] })) =>
           ParsedFlag(
             Side.Source,
-            Flag(Flag.Effect.Rename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.FieldRename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
             Nil
           )
 
         case (prio, cfg @ RegionalConfig(AsExpr('{ Case.modifyNames[a, b] }), path)) =>
           ParsedFlag(
             Side.Source,
-            Flag(Flag.Effect.Rename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.CaseRename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
             path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ LocalConfig(AsExpr('{ Case.modifyNames[a, b] }), path)) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.CaseRename(_.toUpperCase()), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ AsExpr('{ Case.modifyNames[a, b].typeSpecific[tpe] })) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.CaseRename(_.toUpperCase()), Flag.Kind.TypeSpecific(Type.of[tpe]), Span.fromPosition(cfg.pos), prio),
+            Nil
           )
 
         case DeprecatedConfig(configs) => configs
@@ -442,4 +470,42 @@ private[ducktape] object ConfigParser {
       }
     }
   }
+
+  private object LocalConfig {
+    def unapply(using Quotes)(term: quotes.reflect.Term): Option[(quotes.reflect.Term, Path)] = {
+      import quotes.reflect.*
+      PartialFunction.condOpt(term) {
+        case Apply(
+              TypeApply(
+                Apply(
+                  TypeApply(Select(Ident("Local"), "local"), _),
+                  term :: Nil
+                ),
+                _
+              ),
+              PathSelector(path) :: Nil
+            ) =>
+          term -> path
+      }
+    }
+  }
+
+  // private object TypeSpecifixConfig {
+  //   def unapply(using Quotes)(term: quotes.reflect.Term): Option[(quotes.reflect.Term, Type[?])] = {
+  //     import quotes.reflect.*
+  //     PartialFunction.condOpt(term) {
+  //       case Apply(
+  //             TypeApply(
+  //               Apply(
+  //                 TypeApply(Select(Ident("TypeSpecific"), "typeSpecific"), _),
+  //                 term :: Nil
+  //               ),
+  //               _
+  //             ),
+  //             PathSelector(path) :: Nil
+  //           ) =>
+  //         term -> path
+  //     }
+  //   }
+  // }
 }

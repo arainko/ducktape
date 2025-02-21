@@ -24,7 +24,8 @@ case class Flag(effect: Flag.Effect, kind: Flag.Kind, span: Span, priority: Prio
 
 object Flag {
   enum Effect {
-    case Rename(renamer: String => String)
+    case FieldRename(renamer: String => String)
+    case CaseRename(renamer: String => String)
   }
 
   enum Kind derives Debug {
