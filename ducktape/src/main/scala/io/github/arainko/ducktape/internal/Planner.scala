@@ -39,7 +39,7 @@ private[ducktape] object Planner {
           Plan.Error(source, dest, ErrorMessage.RecursionSuspected, None)
 
         case (source: Product, dest: Function) =>
-          (PlanFlags.current.dest.get[Flag.Effect.FieldRename], PlanFlags.current.source.get[Flag.Effect.FieldRename]) match {
+          (PlanFlags.current.dest.get[Flag.Effect.FieldRename](dest.tpe), PlanFlags.current.source.get[Flag.Effect.FieldRename](source.tpe)) match {
             case (Some(destRename), srcRename) =>
               planProductFunctionTransformationWithModifiedNames(
                 source,
@@ -133,7 +133,7 @@ private[ducktape] object Planner {
 
         case (source: Product, dest: Product) =>
           // TODO: needs a separte effect type for field renames and case renames - not a joint one
-          (PlanFlags.current.dest.get[Flag.Effect.FieldRename], PlanFlags.current.source.get[Flag.Effect.FieldRename]) match {
+          (PlanFlags.current.dest.get[Flag.Effect.FieldRename](dest.tpe), PlanFlags.current.source.get[Flag.Effect.FieldRename](source.tpe)) match {
             case (Some(destRename), srcRename) =>
               planProductTransformationWithModifiedNames(source, dest, srcRename.fold(identity[String])(_.renamer), destRename.renamer)
             case (destRename, Some(srcRename)) =>
@@ -154,7 +154,7 @@ private[ducktape] object Planner {
         case (source: Coproduct, dest: Coproduct) =>
           // TODO: needs a separte effect type for field renames and case renames - not a joint one
 
-          (PlanFlags.current.dest.get[Flag.Effect.CaseRename], PlanFlags.current.source.get[Flag.Effect.CaseRename]) match {
+          (PlanFlags.current.dest.get[Flag.Effect.CaseRename](dest.tpe), PlanFlags.current.source.get[Flag.Effect.CaseRename](source.tpe)) match {
             case (Some(destRename), srcRename) =>
               planCoproductTransformationWithModifiedNames(source, dest, srcRename.fold(identity[String])(_.renamer), destRename.renamer)
             case (destRename, Some(srcRename)) =>
@@ -165,8 +165,8 @@ private[ducktape] object Planner {
 
         case (source: Structure.Singleton, dest: Structure.Singleton)
             // ayy lmao
-            if PlanFlags.current.source.get[Flag.Effect.CaseRename].fold(identity[String])(_.renamer)(source.name) == PlanFlags.current.dest
-              .get[Flag.Effect.CaseRename]
+            if PlanFlags.current.source.get[Flag.Effect.CaseRename](source.tpe).fold(identity[String])(_.renamer)(source.name) == PlanFlags.current.dest
+              .get[Flag.Effect.CaseRename](dest.tpe)
               .fold(identity[String])(_.renamer)(dest.name) =>
           Plan.BetweenSingletons(source, dest)
 

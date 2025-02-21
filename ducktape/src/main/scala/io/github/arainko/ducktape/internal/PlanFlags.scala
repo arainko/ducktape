@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.quoted.*
 import scala.reflect.TypeTest
+import io.github.arainko.ducktape.internal.Flag.Kind
 
 case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
   def transition[A](
@@ -82,10 +83,13 @@ case class SideSpecficFlags(
   inScope: Vector[Flag]
 ) derives Debug {
 
-  def get[A <: Flag.Effect](using TypeTest[Flag.Effect, A]): Option[A] =
-    inScope.collect { case Flag(effect: A, _, _, prio) => effect -> prio }
+  def get[A <: Flag.Effect](tpe: Type[?])(using TypeTest[Flag.Effect, A], Quotes): Option[A] =
+    inScope.collect {
+      case Flag(effect: A, Flag.Kind.TypeSpecific(flagType), _, prio) if flagType.repr <:< tpe.repr => effect -> prio
+      case Flag(effect: A, Flag.Kind.Local | Flag.Kind.Regional, _, prio)                           => effect -> prio
+    }
       .maxByOption((_, prio) => prio)
-      .map((eff, _) => eff)
+      .map { (eff, _) => eff }
 
   def transition(step: Step | Passthrough)(using Quotes): SideSpecficFlags = {
     val (nextInScope, nextOutOfScope) = outOfScope.partitionMap { segmentsAndFlag =>

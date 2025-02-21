@@ -37,7 +37,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Dest,
             Configuration.Const(value.asExpr, value.tpe.widen.asType),
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case (
@@ -84,7 +84,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Dest,
             Configuration.FieldComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case (
@@ -105,7 +105,7 @@ private[ducktape] object ConfigParser {
               sourceFieldTpe.tpe.asType,
               function.asExpr.asInstanceOf[Expr[Any => Any]]
             ),
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case (
@@ -128,7 +128,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Source,
             Configuration.Const(value.asExpr, value.tpe.asType),
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case (
@@ -142,7 +142,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Source,
             Configuration.CaseComputed(computedTpe.tpe.asType, function.asExpr.asInstanceOf[Expr[Any => Any]]),
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case (
@@ -153,7 +153,7 @@ private[ducktape] object ConfigParser {
             Path.empty(Type.of[b]),
             Side.Dest,
             ErrorModifier.substituteOptionsWithNone,
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case (prio, regionalCfg @ RegionalConfig(AsExpr('{ Field.fallbackToNone[a, b] }), path)) =>
@@ -161,7 +161,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Dest,
             ErrorModifier.substituteOptionsWithNone,
-            Span.fromPosition(regionalCfg.pos),
+            Span.fromPosition(regionalCfg.pos)
           )
 
         case (prio, cfg @ AsExpr('{ Field.fallbackToDefault[a, b] })) =>
@@ -169,7 +169,7 @@ private[ducktape] object ConfigParser {
             Path.empty(Type.of[b]),
             Side.Dest,
             ErrorModifier.substituteWithDefaults,
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case (prio, cfg @ RegionalConfig(AsExpr('{ Field.fallbackToDefault[a, b] }), path)) =>
@@ -177,62 +177,138 @@ private[ducktape] object ConfigParser {
             path,
             Side.Dest,
             ErrorModifier.substituteWithDefaults,
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
-        case (prio, cfg @ AsExpr('{ Field.modifyName[a, b] })) =>
+        case (prio, cfg @ AsExpr('{ Field.modifyDestNames[a, b]($renamer) })) =>
           ParsedFlag(
             Side.Dest,
-            Flag(Flag.Effect.FieldRename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
             Nil
           )
 
-        case (prio, cfg @ RegionalConfig(AsExpr('{ Field.modifyName[a, b] }), path)) =>
+        case (prio, cfg @ RegionalConfig(AsExpr('{ Field.modifyDestNames[a, b]($renamer) }), path)) =>
           ParsedFlag(
             Side.Dest,
-            Flag(Flag.Effect.FieldRename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
             path.segments.map(Step.fromPathSegment).toList
           )
 
-        case (prio, cfg @ LocalConfig(AsExpr('{ Field.modifyName[a, b] }), path)) =>
+        case (prio, cfg @ LocalConfig(AsExpr('{ Field.modifyDestNames[a, b]($renamer) }), path)) =>
           ParsedFlag(
             Side.Dest,
-            Flag(Flag.Effect.FieldRename(_.toUpperCase()), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
             path.segments.map(Step.fromPathSegment).toList
           )
 
-        case (prio, cfg @ AsExpr('{ Field.modifyName[a, b].typeSpecific[tpe] })) =>
+        case (prio, cfg @ AsExpr('{ Field.modifyDestNames[a, b]($renamer).typeSpecific[tpe] })) =>
           ParsedFlag(
-            Side.Source,
-            Flag(Flag.Effect.FieldRename(_.toUpperCase()), Flag.Kind.TypeSpecific(Type.of[tpe]), Span.fromPosition(cfg.pos), prio),
+            Side.Dest,
+            Flag(
+              Flag.Effect.FieldRename(ParseRenamer.parse(renamer)),
+              Flag.Kind.TypeSpecific(Type.of[tpe]),
+              Span.fromPosition(cfg.pos),
+              prio
+            ),
             Nil
           )
 
-        case (prio, cfg @ AsExpr('{ Case.modifyNames[a, b] })) =>
+        case (prio, cfg @ AsExpr('{ Field.modifySourceNames[a, b]($renamer) })) =>
           ParsedFlag(
             Side.Source,
-            Flag(Flag.Effect.FieldRename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
             Nil
           )
 
-        case (prio, cfg @ RegionalConfig(AsExpr('{ Case.modifyNames[a, b] }), path)) =>
+        case (prio, cfg @ RegionalConfig(AsExpr('{ Field.modifySourceNames[a, b]($renamer) }), path)) =>
           ParsedFlag(
             Side.Source,
-            Flag(Flag.Effect.CaseRename(_.toUpperCase()), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
             path.segments.map(Step.fromPathSegment).toList
           )
 
-        case (prio, cfg @ LocalConfig(AsExpr('{ Case.modifyNames[a, b] }), path)) =>
+        case (prio, cfg @ LocalConfig(AsExpr('{ Field.modifySourceNames[a, b]($renamer) }), path)) =>
           ParsedFlag(
             Side.Source,
-            Flag(Flag.Effect.CaseRename(_.toUpperCase()), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
             path.segments.map(Step.fromPathSegment).toList
           )
 
-        case (prio, cfg @ AsExpr('{ Case.modifyNames[a, b].typeSpecific[tpe] })) =>
+        case (prio, cfg @ AsExpr('{ Field.modifySourceNames[a, b]($renamer).typeSpecific[tpe] })) =>
           ParsedFlag(
             Side.Source,
-            Flag(Flag.Effect.CaseRename(_.toUpperCase()), Flag.Kind.TypeSpecific(Type.of[tpe]), Span.fromPosition(cfg.pos), prio),
+            Flag(
+              Flag.Effect.FieldRename(ParseRenamer.parse(renamer)),
+              Flag.Kind.TypeSpecific(Type.of[tpe]),
+              Span.fromPosition(cfg.pos),
+              prio
+            ),
+            Nil
+          )
+
+        case (prio, cfg @ AsExpr('{ Case.modifySourceNames[a, b]($renamer) })) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Nil
+          )
+
+        case (prio, cfg @ RegionalConfig(AsExpr('{ Case.modifySourceNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ LocalConfig(AsExpr('{ Case.modifySourceNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ AsExpr('{ Case.modifySourceNames[a, b]($renamer).typeSpecific[tpe] })) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(
+              Flag.Effect.CaseRename(ParseRenamer.parse(renamer)),
+              Flag.Kind.TypeSpecific(Type.of[tpe]),
+              Span.fromPosition(cfg.pos),
+              prio
+            ),
+            Nil
+          )
+
+        case (prio, cfg @ AsExpr('{ Case.modifyDestNames[a, b]($renamer) })) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Nil
+          )
+
+        case (prio, cfg @ RegionalConfig(AsExpr('{ Case.modifyDestNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ LocalConfig(AsExpr('{ Case.modifyDestNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ AsExpr('{ Case.modifyDestNames[a, b]($renamer).typeSpecific[tpe] })) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(
+              Flag.Effect.CaseRename(ParseRenamer.parse(renamer)),
+              Flag.Kind.TypeSpecific(Type.of[tpe]),
+              Span.fromPosition(cfg.pos),
+              prio
+            ),
             Nil
           )
 
@@ -256,7 +332,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Dest,
             Configuration.FallibleConst(value, Type.of[const]),
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
         case (
               prio,
@@ -272,7 +348,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Dest,
             Configuration.FallibleFieldComputed(Type.of[computed], function.asInstanceOf[Expr[Any => Any]]),
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case (
@@ -290,7 +366,7 @@ private[ducktape] object ConfigParser {
             Side.Dest,
             Configuration
               .FallibleFieldComputedDeep(Type.of[computed], sourceFieldTpe.tpe.asType, function.asInstanceOf[Expr[Any => Any]]),
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case (
@@ -304,7 +380,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Source,
             Configuration.FallibleConst(value, Type.of[const]),
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case (
@@ -318,7 +394,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Source,
             Configuration.FallibleCaseComputed(Type.of[computed], function.asInstanceOf[Expr[Any => Any]]),
-            Span.fromPosition(cfg.pos),
+            Span.fromPosition(cfg.pos)
           )
 
         case DeprecatedFallibleConfig(cfg) => cfg
@@ -357,7 +433,7 @@ private[ducktape] object ConfigParser {
           path,
           Side.Dest,
           modifier,
-          span,
+          span
         )
       }
       .getOrElse(
@@ -365,7 +441,7 @@ private[ducktape] object ConfigParser {
           path,
           Side.Dest,
           "Field source needs to be a product",
-          span,
+          span
         )
       )
   }
@@ -387,7 +463,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Source,
             Configuration.Const(value, value.asTerm.tpe.asType),
-            Span.fromExpr(cfg),
+            Span.fromExpr(cfg)
           )
 
         case cfg @ '{
@@ -400,7 +476,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Source,
             Configuration.CaseComputed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
-            Span.fromExpr(cfg),
+            Span.fromExpr(cfg)
           )
 
         case cfg @ '{ Field.allMatching[a, b, source]($fieldSource) } =>
@@ -421,7 +497,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Source,
             Configuration.FallibleCaseComputed(Type.of[dest], function.asInstanceOf[Expr[Any => Any]]),
-            Span.fromExpr(cfg),
+            Span.fromExpr(cfg)
           )
 
         case cfg @ '{ Case.fallibleConst[srcSubtype].apply[F, source, dest]($value) } =>
@@ -430,7 +506,7 @@ private[ducktape] object ConfigParser {
             path,
             Side.Source,
             Configuration.FallibleConst(value, Type.of[dest]),
-            Span.fromExpr(cfg),
+            Span.fromExpr(cfg)
           )
       }
     }

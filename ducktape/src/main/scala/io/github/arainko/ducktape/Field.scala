@@ -66,5 +66,7 @@ object Field {
   def allMatching[A, B, ProductTpe](product: ProductTpe): Field[A, B] =
     ???
 
-  def modifyName[A, B]: Field[A, B] & Regional[B] & Local[B] & TypeSpecific = ???
+  def modifyDestNames[A, B](renamer: Renamer => Renamer): Field[A, B] & Regional[B] & Local[B] & TypeSpecific = ???
+
+  def modifySourceNames[A, B](renamer: Renamer => Renamer): Field[A, B] & Regional[A] & Local[A] & TypeSpecific = ???
 }
