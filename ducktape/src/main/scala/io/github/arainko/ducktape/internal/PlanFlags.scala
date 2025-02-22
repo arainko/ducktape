@@ -24,7 +24,7 @@ object PlanFlags {
 case class Flag(effect: Flag.Effect, kind: Flag.Kind, span: Span, priority: Priority) derives Debug
 
 object Flag {
-  enum Effect {
+  enum Effect derives Debug {
     case FieldRename(renamer: String => String)
     case CaseRename(renamer: String => String)
   }
@@ -47,12 +47,19 @@ object Flag {
 // * 'regional' flags - i.e. ones that stick around all the way down till they reach the leaf transformations
 // * 'type-specific' flags - like global, but only apply to a given type (can they also be local?)
 //
+// Local flags are meant to stick around for all of the children of an enum/sealed trait and all fields of a case class.
+// For example, if we were to apply a local FieldRename to an enum like this one:
+// enum ExampleEnum {
+//    case Case1(int: Int, str: String)
+//    case Case2(int: Int, str: String)
+// }
+// it'd mean we want to rename field in all of the cases as well - to targed a specific case we can narrow down with the path with .at[...] 
 //
 
 case object Passthrough
 type Passthrough = Passthrough.type
 
-enum Step { self =>
+enum Step derives Debug { self =>
   case Element
   case Field(name: String)
   case TupleElement(index: Int)
@@ -102,22 +109,22 @@ case class SideSpecficFlags(
           Left(flag)
         case (segment: Step, head :: tail, flag) if head =:= segment =>
           Right(Some((tail, flag)))
-        // prune these, it means this won't match next matches either (I thiiiiiiiiiiink?)
         case (segment: Step, other, flag) =>
           Right(None)
       }
-
     }
+
+    val isCase = PartialFunction.cond(step) { case Step.Case(_) => true }
 
     SideSpecficFlags(
       nextOutOfScope.flatten,
-      nextInScope ++ inScope.filter(!_.kind.isLocal)
+      // check for isCase here to be able to apply local flags to children of an enum and bubble down to all the non-case children
+      nextInScope ++ inScope.filter(flag => !flag.kind.isLocal || isCase) 
     )
   }
 }
 
 object SideSpecficFlags {
-  def current(using f: SideSpecficFlags): f.type = f
 
   def create(flags: Vector[(List[Step], Flag)]) = {
     val (immediateInScope, outsideOfScope) = flags.partitionMap {

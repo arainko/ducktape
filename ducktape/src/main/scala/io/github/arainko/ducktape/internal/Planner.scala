@@ -12,9 +12,6 @@ import scala.util.boundary
 
 private[ducktape] object Planner {
   import Structure.*
-  private enum FallthroughUpcast {
-    case Yes, No
-  }
 
   def between[F <: Fallible](source: Structure, dest: Structure, flags: PlanFlags)(using Quotes, Context.Of[F]) = {
     given Depth = Depth.zero
@@ -22,18 +19,16 @@ private[ducktape] object Planner {
     recurse(source, dest)
   }
 
-  import scala.util.chaining.*
-
   private def recurse[F <: Fallible](
     source: Structure,
     dest: Structure,
     // TODO: Come up with something nicer
-    noUpcast: FallthroughUpcast = FallthroughUpcast.No
+    noUpcast: FallthroughUpcast = FallthroughUpcast.No,
   )(using quotes: Quotes, depth: Depth, context: Context.Of[F], flags: PlanFlags): Plan[Erroneous, F] = {
     import quotes.reflect.*
     given Depth = depth.incremented
 
-    println(flags.toString())
+    println(Debug.show(flags))
 
     Logger.loggedDebug(s"Plan @ depth ${Depth.current}"):
       (source.force -> dest.force) match {
@@ -154,8 +149,6 @@ private[ducktape] object Planner {
           planTupleTransformation(source, dest)
 
         case (source: Coproduct, dest: Coproduct) =>
-          // TODO: needs a separte effect type for field renames and case renames - not a joint one
-
           (PlanFlags.current.dest.get[Flag.Effect.CaseRename](dest.tpe), PlanFlags.current.source.get[Flag.Effect.CaseRename](source.tpe)) match {
             case (Some(destRename), srcRename) =>
               planCoproductTransformationWithModifiedNames(source, dest, srcRename.fold(identity[String])(_.renamer), destRename.renamer)
@@ -165,11 +158,7 @@ private[ducktape] object Planner {
               planCoproductTransformation(source, dest)
           }
 
-        case (source: Structure.Singleton, dest: Structure.Singleton)
-            // ayy lmao
-            if PlanFlags.current.source.get[Flag.Effect.CaseRename](source.tpe).tap(println).fold(identity[String])(_.renamer)(source.name).tap(println) == PlanFlags.current.dest
-              .get[Flag.Effect.CaseRename](dest.tpe).tap(println)
-              .fold(identity[String])(_.renamer)(dest.name).tap(println) =>
+        case (source: Structure.Singleton, dest: Structure.Singleton) if namesAreTheSame(source, dest) => 
           Plan.BetweenSingletons(source, dest)
 
         case (source: ValueClass, dest) if source.paramTpe.repr <:< dest.tpe.repr =>
@@ -683,5 +672,18 @@ private[ducktape] object Planner {
       }
     }
     Plan.BetweenProductFunction(source, dest, fieldPlans)
+  }
+
+  private enum FallthroughUpcast {
+    case Yes, No
+  }
+
+  private def namesAreTheSame(source: Structure.Singleton, dest: Structure.Singleton)(using PlanFlags, Quotes) = {
+    val sourceName = 
+      PlanFlags.current.source.get[Flag.Effect.CaseRename](source.tpe).fold(identity[String])(_.renamer)(source.name)
+    val destName = 
+      PlanFlags.current.dest.get[Flag.Effect.CaseRename](dest.tpe).fold(identity[String])(_.renamer)(dest.name)
+
+    sourceName == destName
   }
 }

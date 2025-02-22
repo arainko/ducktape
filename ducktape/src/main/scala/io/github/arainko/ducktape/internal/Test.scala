@@ -22,25 +22,58 @@ enum DestEnum {
 }
 
 enum SourceEnum {
-  case INT(field1: Int)
+  case INT(FIELD1: Int)
   case STR, DOUBLE, BIG_ASS_NAME
 }
 
 
-object a {
-  val src: SourceEnum = ???
+sealed trait Dupal 
 
-  TestSnakeCase.into[TEST_SNAKE_CASE.type].transform(
-    Case.modifySourceNames(_.toLowerCase),
-    Case.modifyDestNames(dupal)
+object Dupal {
+  sealed trait Level1Dupal extends Dupal
+  sealed trait Level2Dupal extends Dupal
+
+  case class Dupal1Impl(int: Int, str: String) extends Level1Dupal
+  case class Dupal2Impl(int: Int, str: String) extends Level2Dupal
+}
+
+sealed trait DupalDest
+
+object DupalDest {
+  sealed trait Level1Dupal extends DupalDest
+  sealed trait Level2Dupal extends DupalDest
+
+  case class Dupal1Impl(int: Int, str: String) extends Level1Dupal
+  case class Dupal2Impl(int: Int, str: String) extends Level2Dupal
+}
+
+
+object a extends App {
+
+  val src1: Dupal = Dupal.Dupal1Impl(3, "asd")
+
+  println {
+  Transformer.Debug.showCode {
+  src1.into[DupalDest].transform(
+    Field.const(_.at[DupalDest.Level1Dupal].at[DupalDest.Dupal1Impl].int, 1)
   )
+  }
+}
 
-  private inline def dupal(renamer: Renamer): Renamer = renamer.toLowerCase.replace("_", "")
+  // val src: SourceEnum = ???
 
-  src.into[DestEnum].transform(
-    Case.modifyDestNames(_.toLowerCase).local(_.at[DestEnum.bigAssName.type]),
-    Case.modifySourceNames(_.toLowerCase.replace("_", ""))
-  )
+  // TestSnakeCase.into[TEST_SNAKE_CASE.type].transform(
+  //   Case.modifySourceNames(_.toLowerCase),
+  //   Case.modifyDestNames(dupal)
+  // )
+
+  // private inline def dupal(renamer: Renamer): Renamer = renamer.toLowerCase.replace("_", "")
+
+  // src.into[DestEnum].transform(
+  //   Field.modifySourceNames(_.toLowerCase).local(a => a),
+  //   Case.modifyDestNames(_.toLowerCase).local(a => a),
+  //   Case.modifySourceNames(_.toLowerCase.replace("_", "")).local(a => a)
+  // )
   
   // Transformer.Debug.showCode {
   //   src.into[TestDest].transform(
