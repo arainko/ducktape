@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal
 import scala.quoted.*
 import io.github.arainko.ducktape.Renamer
 
-object ParseRenamer {
+private[ducktape] object ParseRenamer {
   def parse(expr: Expr[Renamer => Renamer])(using Quotes): String => String = {
     import quotes.reflect.*
 
@@ -27,7 +27,7 @@ object ParseRenamer {
           recurse(body, ((str: String) => str.replace(from, to)) :: accumulatedFunctions)
 
         case '{ (arg: Renamer) => ($body(arg): Renamer).regexReplace(${ Expr(from) }, ${ Expr(to) }) } =>
-          recurse(body, ((str: String) => str.replaceAll(from, to)) :: accumulatedFunctions)
+          recurse(body, ((str: String) => str.replaceAll(from, to)) :: accumulatedFunctions)          
         
         case _ => report.errorAndAbort("Invalid renamer expression - make sure all of the renamer expressions can be read at compiletime", expr)
       }

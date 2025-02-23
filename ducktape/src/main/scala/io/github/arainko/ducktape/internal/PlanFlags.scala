@@ -6,7 +6,7 @@ import scala.quoted.*
 import scala.reflect.TypeTest
 import io.github.arainko.ducktape.internal.Flag.Kind
 
-case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
+private[ducktape] case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
   def transition[A](
     sourceStep: Step | Passthrough,
     destStep: Step | Passthrough
@@ -15,15 +15,15 @@ case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives D
   inline def locally[A](inline f: PlanFlags ?=> A): A = f(using this)
 }
 
-object PlanFlags {
+private[ducktape] object PlanFlags {
   def current(using f: PlanFlags): f.type = f
 
   val empty = PlanFlags(SideSpecficFlags.create(Vector.empty), SideSpecficFlags.create(Vector.empty))
 }
 
-case class Flag(effect: Flag.Effect, kind: Flag.Kind, span: Span, priority: Priority) derives Debug
+private[ducktape] case class Flag(effect: Flag.Effect, kind: Flag.Kind, span: Span, priority: Priority) derives Debug
 
-object Flag {
+private[ducktape] object Flag {
   enum Effect derives Debug {
     case FieldRename(renamer: String => String)
     case CaseRename(renamer: String => String)
@@ -58,10 +58,10 @@ object Flag {
 // it'd mean we want to rename field in all of the cases as well - to targed a specific case we can narrow down with the path with .at[...] 
 //
 
-case object Passthrough
-type Passthrough = Passthrough.type
+private[ducktape] case object Passthrough
+private[ducktape] type Passthrough = Passthrough.type
 
-enum Step derives Debug { self =>
+private[ducktape] enum Step derives Debug { self =>
   case Element
   case Field(name: String)
   case TupleElement(index: Int)
@@ -77,7 +77,7 @@ enum Step derives Debug { self =>
     }
 }
 
-object Step {
+private[ducktape] object Step {
   def fromPathSegment(segment: Path.Segment): Step =
     segment match {
       case Path.Segment.Field(tpe, name)         => Field(name)
@@ -87,7 +87,7 @@ object Step {
     }
 }
 
-case class SideSpecficFlags(
+private[ducktape] case class SideSpecficFlags(
   outOfScope: Vector[(List[Step], Flag)],
   inScope: Vector[Flag]
 ) derives Debug {
@@ -128,7 +128,7 @@ case class SideSpecficFlags(
   }
 }
 
-object SideSpecficFlags {
+private[ducktape] object SideSpecficFlags {
 
   def create(flags: Vector[(List[Step], Flag)]) = {
     val (immediateInScope, outsideOfScope) = flags.partitionMap {

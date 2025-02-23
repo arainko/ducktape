@@ -28,8 +28,6 @@ private[ducktape] object Planner {
     import quotes.reflect.*
     given Depth = depth.incremented
 
-    println(Debug.show(flags))
-
     Logger.loggedDebug(s"Plan @ depth ${Depth.current}"):
       (source.force -> dest.force) match {
         case _ if Depth.current > 64 =>
@@ -525,11 +523,10 @@ private[ducktape] object Planner {
       val destAmbs = destAmbiguities.getOrElse(transformedDestField, Vector.empty)
       val sourceAmbs = sourceAmbiguities.getOrElse(transformedDestField, Vector.empty)
 
-      // TODO: Are those source and dest structs passed in correctly?
       if destAmbs.nonEmpty then
         destField -> FieldPlan.empty(
           Plan.Error(
-            source,
+            Structure.of[Nothing](source.path),
             destFieldStruct,
             ErrorMessage.AmbiguousFieldTransformations(dest.tpe, destField, transformedDestField, destAmbs, destFlag.map(_.span)),
             None
@@ -538,7 +535,7 @@ private[ducktape] object Planner {
       else if sourceAmbs.nonEmpty then
         destField -> FieldPlan.empty(
           Plan.Error(
-            source,
+            Structure.of[Nothing](source.path),
             destFieldStruct,
             ErrorMessage.AmbiguousFieldTransformations(source.tpe, destField, transformSrcName(destField), sourceAmbs, sourceFlag.map(_.span)),
             None
@@ -586,14 +583,13 @@ private[ducktape] object Planner {
 
     val transformedDest =
       dest.children
-        .map((srcField, srcFieldStruct) => transformSrcName(srcField) -> srcFieldStruct)
+        .map((srcField, srcFieldStruct) => transformDestName(srcField) -> srcFieldStruct)
 
     val plans = source.children.map { (sourceName, sourceCaseStruct) =>
       val transformedSrc = transformSrcName(sourceName)
       val destAmbs = destAmbiguities.getOrElse(transformedSrc, Vector.empty)
       val sourceAmbs = sourceAmbiguities.getOrElse(transformedSrc, Vector.empty)
 
-      // TODO: Are those source and dest structs passed in correctly?
       if sourceAmbs.nonEmpty then
         Plan.Error(
           sourceCaseStruct,
@@ -621,7 +617,7 @@ private[ducktape] object Planner {
               Plan.Error(
                 sourceCaseStruct,
                 Structure.of[Any](dest.path),
-                ErrorMessage.NoChildFound(transformedSrc, dest.tpe),
+                ErrorMessage.NoChildFound(transformedSrc + s" ${transformedDest.keySet}", dest.tpe),
                 None
               )
             )
@@ -656,11 +652,10 @@ private[ducktape] object Planner {
       val destAmbs = destAmbiguities.getOrElse(transformedDestField, Vector.empty)
       val sourceAmbs = sourceAmbiguities.getOrElse(transformedDestField, Vector.empty)
 
-      // TODO: Are those source and dest structs passed in correctly?
       if destAmbs.nonEmpty then
         destField -> FieldPlan.empty(
           Plan.Error(
-            source,
+            Structure.of[Nothing](source.path),
             destFieldStruct,
             ErrorMessage.AmbiguousFieldTransformations(dest.tpe, destField, transformedDestField, destAmbs, destFlag.map(_.span)),
             None
@@ -669,7 +664,7 @@ private[ducktape] object Planner {
       else if sourceAmbs.nonEmpty then
         destField -> FieldPlan.empty(
           Plan.Error(
-            source,
+            Structure.of[Nothing](source.path),
             destFieldStruct,
             ErrorMessage.AmbiguousFieldTransformations(source.tpe, destField, transformSrcName(destField), sourceAmbs, sourceFlag.map(_.span)),
             None

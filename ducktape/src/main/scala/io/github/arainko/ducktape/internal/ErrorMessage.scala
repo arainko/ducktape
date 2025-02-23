@@ -137,7 +137,6 @@ private[ducktape] object ErrorMessage {
     }
   }
 
-  //TODO: Carry span from flag into here
   final case class AmbiguousFieldTransformations(
     tpe: Type[?],
     fieldName: String,
