@@ -143,26 +143,26 @@ private[ducktape] object ErrorMessage {
     fieldName: String,
     transformedFieldName: String,
     ambiguities: Vector[String],
+    flagSpan: Option[Span]
   ) extends ErrorMessage {
     def render(using Quotes): String =
       s"Field '$fieldName' (transformed to '$transformedFieldName') in ${tpe.repr.show} maps to more than one field name: ${ambiguities.map(name => s"'$name'").mkString(", ")}"
 
-    val span = None
+    val span = flagSpan.asUnion
     val side = Side.Dest
   }
-
-  //TODO: Carry span from flag into here
 
   final case class AmbiguousCaseTransformations(
     tpe: Type[?],
     caseName: String,
     transformedCaseName: String,
     ambiguities: Vector[String],
+    flagSpan: Option[Span]
   ) extends ErrorMessage {
     def render(using Quotes): String =
       s"Case '$caseName' (transformed to '$transformedCaseName') in ${tpe.repr.show} maps to more than one case names: ${ambiguities.map(name => s"'$name'").mkString(", ")}"
 
-    val span = None
+    val span = flagSpan.asUnion
     val side = Side.Dest
   }
 }

@@ -40,6 +40,8 @@ object Flag {
     case Regional
     case TypeSpecific(tpe: Type[?])
   }
+
+  final case class Typed[+A <: Effect](effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug
 }
 
 // What to support:
@@ -90,13 +92,15 @@ case class SideSpecficFlags(
   inScope: Vector[Flag]
 ) derives Debug {
 
-  def get[A <: Flag.Effect](tpe: Type[?])(using TypeTest[Flag.Effect, A], Quotes): Option[A] =
+  def get[A <: Flag.Effect](tpe: Type[?])(using TypeTest[Flag.Effect, A], Quotes): Option[Flag.Typed[A]] =
     inScope.collect {
-      case Flag(effect: A, Flag.Kind.TypeSpecific(flagType), _, prio) if flagType.repr <:< tpe.repr => effect -> prio
-      case Flag(effect: A, Flag.Kind.Local | Flag.Kind.Regional, _, prio)                           => effect -> prio
+      case Flag(effect: A, kind @ Flag.Kind.TypeSpecific(flagType), span, prio) if flagType.repr <:< tpe.repr => 
+        Flag.Typed(effect, kind, span, prio)
+      case Flag(effect: A, kind @ (Flag.Kind.Local | Flag.Kind.Regional), span, prio)                           => 
+        Flag.Typed(effect, kind, span, prio)
     }
-      .maxByOption((_, prio) => prio)
-      .map { (eff, _) => eff }
+      .maxByOption(_.priority)
+      
 
   def transition(step: Step | Passthrough)(using Quotes): SideSpecficFlags = {
     val (nextInScope, nextOutOfScope) = outOfScope.partitionMap { segmentsAndFlag =>
