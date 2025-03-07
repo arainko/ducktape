@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
+import scala.annotation.nowarn
 
 class FlagSuite extends DucktapeSuite {
   test("dest field renames work") {
@@ -23,7 +24,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "asd"),
       Dest(1, "asd")
     )(
-      Field.modifySourceNames(_.toUpperCase.rename("INT", "INT_ADDITION")),
+      Field.modifySourceNames(_.toUpperCase.rename("INT", "INT_ADDITION"))
     )
   }
 
@@ -79,12 +80,17 @@ class FlagSuite extends DucktapeSuite {
     val expected = Dest(1, "1")
 
     assertEachEquals(
-      source.intoVia(Dest.apply).transform(
-        Field.modifySourceNames(_.toUpperCase.rename("INT", "INT_ADDITION"))
-      ),
-      Transformer.defineVia[Source](Dest.apply).build(
-        Field.modifySourceNames(_.toUpperCase.rename("INT", "INT_ADDITION"))
-      ).transform(source)
+      source
+        .intoVia(Dest.apply)
+        .transform(
+          Field.modifySourceNames(_.toUpperCase.rename("INT", "INT_ADDITION"))
+        ),
+      Transformer
+        .defineVia[Source](Dest.apply)
+        .build(
+          Field.modifySourceNames(_.toUpperCase.rename("INT", "INT_ADDITION"))
+        )
+        .transform(source)
     )(expected)
   }
 
@@ -96,12 +102,17 @@ class FlagSuite extends DucktapeSuite {
     val expected = Dest(1, "1")
 
     assertEachEquals(
-      source.intoVia(Dest.apply).transform(
-        Field.modifyDestNames(_.toLowerCase.replace("_addition", ""))
-      ),
-      Transformer.defineVia[Source](Dest.apply).build(
-        Field.modifyDestNames(_.toLowerCase.replace("_addition", ""))
-      ).transform(source)
+      source
+        .intoVia(Dest.apply)
+        .transform(
+          Field.modifyDestNames(_.toLowerCase.replace("_addition", ""))
+        ),
+      Transformer
+        .defineVia[Source](Dest.apply)
+        .build(
+          Field.modifyDestNames(_.toLowerCase.replace("_addition", ""))
+        )
+        .transform(source)
     )(expected)
   }
 
@@ -130,7 +141,6 @@ class FlagSuite extends DucktapeSuite {
       case class Level2(str: String)
     }
 
-
     case class Dest(int: Int, str: String, level1: Option[Dest.Level1])
     object Dest {
       case class Level1(int: Int, level2: Level2)
@@ -141,7 +151,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", Some(Source.Level1(2, Source.Level2("3")))),
       Dest(1, "1", Some(Dest.Level1(2, Dest.Level2("3"))))
     )(
-      Field.modifyDestNames(_.toLowerCase).local(_.level1.element.level2),
+      Field.modifyDestNames(_.toLowerCase).local(_.level1.element.level2)
     )
   }
 
@@ -152,7 +162,6 @@ class FlagSuite extends DucktapeSuite {
       case class Level2(STR: String)
     }
 
-
     case class Dest(int: Int, str: String, level1: Option[Dest.Level1])
     object Dest {
       case class Level1(int: Int, level2: Level2)
@@ -163,7 +172,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", Some(Source.Level1(2, Source.Level2("3")))),
       Dest(1, "1", Some(Dest.Level1(2, Dest.Level2("3"))))
     )(
-      Field.modifySourceNames(_.toLowerCase).local(_.level1.element.level2),
+      Field.modifySourceNames(_.toLowerCase).local(_.level1.element.level2)
     )
   }
 
@@ -174,7 +183,6 @@ class FlagSuite extends DucktapeSuite {
       case class Level2(str: String)
     }
 
-
     case class Dest(int: Int, str: String, level1: Option[Dest.Level1])
     object Dest {
       case class Level1(int: Int, level2: Level2)
@@ -185,7 +193,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", Source.Level1(2, Source.Level2("3"))),
       Dest(1, "1", Some(Dest.Level1(2, Dest.Level2("3"))))
     )(
-      Field.modifyDestNames(_.toLowerCase).local(_.level1.element.level2),
+      Field.modifyDestNames(_.toLowerCase).local(_.level1.element.level2)
     )
   }
 
@@ -196,7 +204,6 @@ class FlagSuite extends DucktapeSuite {
       case class Level2(STR: String)
     }
 
-
     case class Dest(int: Int, str: String, level1: Option[Dest.Level1])
     object Dest {
       case class Level1(int: Int, level2: Level2)
@@ -207,7 +214,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", Source.Level1(2, Source.Level2("3"))),
       Dest(1, "1", Some(Dest.Level1(2, Dest.Level2("3"))))
     )(
-      Field.modifySourceNames(_.toLowerCase).local(_.level1.level2),
+      Field.modifySourceNames(_.toLowerCase).local(_.level1.level2)
     )
   }
 
@@ -217,7 +224,6 @@ class FlagSuite extends DucktapeSuite {
       case class Level1(int: Int, level2: Level2)
       case class Level2(str: String)
     }
-
 
     case class Dest(int: Int, str: String, level1: Vector[Dest.Level1])
     object Dest {
@@ -229,7 +235,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", List(Source.Level1(2, Source.Level2("3")))),
       Dest(1, "1", Vector(Dest.Level1(2, Dest.Level2("3"))))
     )(
-      Field.modifyDestNames(_.toLowerCase).local(_.level1.element.level2),
+      Field.modifyDestNames(_.toLowerCase).local(_.level1.element.level2)
     )
   }
 
@@ -250,7 +256,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", List(Source.Level1(2, Source.Level2("3")))),
       Dest(1, "1", Vector(Dest.Level1(2, Dest.Level2("3"))))
     )(
-      Field.modifySourceNames(_.toLowerCase).local(_.level1.element.level2),
+      Field.modifySourceNames(_.toLowerCase).local(_.level1.element.level2)
     )
   }
 
@@ -261,7 +267,6 @@ class FlagSuite extends DucktapeSuite {
       case class Level2(str: String)
     }
 
-
     case class Dest(int: Int, str: String, level1: Vector[(Int, Dest.Level2)])
     object Dest {
       case class Level2(STR: String)
@@ -271,7 +276,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", List(Source.Level1(2, Source.Level2("3")))),
       Dest(1, "1", Vector((2, Dest.Level2("3"))))
     )(
-      Field.modifyDestNames(_.toLowerCase).local(_.level1.element._2),
+      Field.modifyDestNames(_.toLowerCase).local(_.level1.element._2)
     )
   }
 
@@ -282,7 +287,6 @@ class FlagSuite extends DucktapeSuite {
       case class Level2(STR: String)
     }
 
-
     case class Dest(int: Int, str: String, level1: Vector[(Int, Dest.Level2)])
     object Dest {
       case class Level2(str: String)
@@ -292,7 +296,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", List(Source.Level1(2, Source.Level2("3")))),
       Dest(1, "1", Vector((2, Dest.Level2("3"))))
     )(
-      Field.modifySourceNames(_.toLowerCase).local(_.level1.element.level2),
+      Field.modifySourceNames(_.toLowerCase).local(_.level1.element.level2)
     )
   }
 
@@ -312,7 +316,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", List((2, Source.Level2("3")))),
       Dest(1, "1", Vector(Dest.Level1(2, Dest.Level2("3"))))
     )(
-      Field.modifySourceNames(_.toUpperCase).local(_.level1.element._2),
+      Field.modifySourceNames(_.toUpperCase).local(_.level1.element._2)
     )
   }
 
@@ -332,7 +336,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", List((2, Source.Level2("3")))),
       Dest(1, "1", Vector(Dest.Level1(2, Dest.Level2("3"))))
     )(
-      Field.modifyDestNames(_.toLowerCase).local(_.level1.element.level2),
+      Field.modifyDestNames(_.toLowerCase).local(_.level1.element.level2)
     )
   }
 
@@ -351,7 +355,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", List((2, Source.Level2("3")))),
       Dest(1, "1", Vector((2, Dest.Level2("3"))))
     )(
-      Field.modifySourceNames(_.toUpperCase).local(_.level1.element._2),
+      Field.modifySourceNames(_.toUpperCase).local(_.level1.element._2)
     )
   }
 
@@ -370,11 +374,11 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "1", List((2, Source.Level2("3")))),
       Dest(1, "1", Vector(Some((2, Dest.Level2("3")))))
     )(
-      Field.modifyDestNames(_.toLowerCase).local(_.level1.element.element._2),
+      Field.modifyDestNames(_.toLowerCase).local(_.level1.element.element._2)
     )
   }
 
-  test("source flag carries through BetweenFallibleNonFallible") {
+  test("source flag carries through BetweenFallibles") {
     case class Source(int: Int, str: String, level1: Option[Source.Level1])
     object Source {
       case class Level1(int: Int, level2: Level2)
@@ -390,63 +394,192 @@ class FlagSuite extends DucktapeSuite {
     Mode.FailFast.option.locally {
       assertTransformsFallibleConfigured(
         Source(1, "1", Some(Source.Level1(2, Source.Level2("3")))),
-        Some(Dest(1, "1", Dest.Level1(2, Dest.Level2("3")))),
+        Some(Dest(1, "1", Dest.Level1(2, Dest.Level2("3"))))
       )(
-        Field.modifySourceNames(_.toLowerCase).local(_.level1.element.level2),
+        Field.modifySourceNames(_.toLowerCase).local(_.level1.element.level2)
       )
     }
   }
 
-  //TODO: Broken! - however rethink BetweenFallibleNonFallible and BetweenFallibles...
-  // test("dest flag carries through BetweenFallibleNonFallible") {
-  //   case class Source(int: Int, str: String, level1: Option[Source.Level1])
-  //   object Source {
-  //     case class Level1(int: Int, level2: Level2)
-  //     case class Level2(STR: String)
-  //   }
+  test("dest flag carries through BetweenFallibles") {
+    case class Source(int: Int, str: String, level1: Option[Source.Level1])
+    object Source {
+      case class Level1(int: Int, level2: Level2)
+      case class Level2(STR: String)
+    }
 
-  //   case class Dest(int: Int, str: String, level1: Dest.Level1)
-  //   object Dest {
-  //     case class Level1(int: Int, level2: Level2)
-  //     case class Level2(str: String)
-  //   }
+    case class Dest(int: Int, str: String, level1: Dest.Level1)
+    object Dest {
+      case class Level1(int: Int, level2: Level2)
+      case class Level2(str: String)
+    }
 
-  //   Mode.FailFast.option.locally {
-  //     assertTransformsFallibleConfigured(
-  //       Source(1, "1", Some(Source.Level1(2, Source.Level2("3")))),
-  //       Some(Dest(1, "1", Dest.Level1(2, Dest.Level2("3")))),
-  //     )(
-  //       Field.modifyDestNames(_.toUpperCase).regional(_.level1.level2),
-  //     )
-  //   }
-  // }
+    Mode.FailFast.option.locally {
+      assertTransformsFallibleConfigured(
+        Source(1, "1", Some(Source.Level1(2, Source.Level2("3")))),
+        Some(Dest(1, "1", Dest.Level1(2, Dest.Level2("3"))))
+      )(
+        Field.modifyDestNames(_.toUpperCase).regional(_.level1.level2)
+      )
+    }
+  }
 
-  // test("source flag carries through BetweenFallibleNonFallible") {
-  //   case class Source(int: Int, str: String, level1: Either[String, Source.Level1])
-  //   object Source {
-  //     case class Level1(int: Int, level2: Level2)
-  //     case class Level2(STR: String)
-  //   }
+  test("source flag carries through BetweenFallibleNonFallible") {
+    case class Source(int: Int, str: String, level1: Either[List[String], Source.Level1])
+    object Source {
+      case class Level1(int: Int, level2: Level2)
+      case class Level2(STR: String)
+    }
 
-  //   case class Dest(int: Int, str: String, level1: Either[String, Dest.Level1])
-  //   object Dest {
-  //     case class Level1(int: Int, level2: Level2)
-  //     case class Level2(str: String)
-  //   }
+    case class Dest(int: Int, str: String, level1: Dest.Level1)
+    object Dest {
+      case class Level1(int: Int, level2: Level2)
+      case class Level2(str: String)
+    }
 
-  //   Mode.FailFast.either[String].locally {
-  //     assertTransformsFallibleConfigured(
-  //       Source(1, "1", Right(Source.Level1(2, Source.Level2("3")))),
-  //       Right(Dest(1, "1", Right(Dest.Level1(2, Dest.Level2("3"))))),
-  //     )(
-  //       Field.modifySourceNames(_.toLowerCase).local(_.level1.element.level2),
-  //     )
-  //   }
-  // }
+    Mode.Accumulating.either[String, List].locally {
+      assertTransformsFallibleConfigured(
+        Source(1, "1", Right(Source.Level1(2, Source.Level2("3")))),
+        Right(Dest(1, "1", Dest.Level1(2, Dest.Level2("3"))))
+      )(
+        Field.modifySourceNames(_.toLowerCase).local(_.level1.element.level2)
+      )
+    }
+  }
 
-  //todo: tuple-function, fallibles
-  //todo: priority overwrites of flags
-  //todo: name ambiguities
-  //todo: regional flags (copy-paste of local flag tests)
-  //todo: type specific flags
+  test("dest flag carries through BetweenFallibleNonFallible") {
+    case class Source(int: Int, str: String, level1: Either[List[String], Source.Level1])
+    object Source {
+      case class Level1(int: Int, level2: Level2)
+      case class Level2(STR: String)
+    }
+
+    case class Dest(int: Int, str: String, level1: Dest.Level1)
+    object Dest {
+      case class Level1(int: Int, level2: Level2)
+      case class Level2(str: String)
+    }
+
+    Mode.Accumulating.either[String, List].locally {
+      assertTransformsFallibleConfigured(
+        Source(1, "1", Right(Source.Level1(2, Source.Level2("3")))),
+        Right(Dest(1, "1", Dest.Level1(2, Dest.Level2("3"))))
+      )(
+        Field.modifyDestNames(_.toUpperCase).local(_.level1.level2)
+      )
+    }
+  }
+
+  test("dest flag carries through TupleFunction") {
+    object Source {
+      case class Level2(str: String)
+    }
+
+    case class Dest(int: Int, level2: Dest.Level2)
+    object Dest {
+      case class Level2(STR: String)
+    }
+
+    assertEachEquals(
+      (1, Source.Level2("2")).intoVia(Dest.apply).transform(Field.modifyDestNames(_.toLowerCase).local(_.level2)),
+      Transformer
+        .defineVia[(Int, Source.Level2)](Dest.apply)
+        .build(Field.modifyDestNames(_.toLowerCase).local(_.level2))
+        .transform((1, Source.Level2("2")))
+    )(Dest(1, Dest.Level2("2")))
+  }
+
+  test("source flag carries through TupleFunction") {
+    object Source {
+      case class Level2(str: String)
+    }
+
+    case class Dest(int: Int, level2: Dest.Level2)
+    object Dest {
+      case class Level2(STR: String)
+    }
+
+    assertEachEquals(
+      (1, Source.Level2("2")).intoVia(Dest.apply).transform(Field.modifySourceNames(_.toUpperCase).local(_.apply(1))),
+      Transformer
+        .defineVia[(Int, Source.Level2)](Dest.apply)
+        .build(Field.modifySourceNames(_.toUpperCase).local(_._2))
+        .transform((1, Source.Level2("2")))
+    )(Dest(1, Dest.Level2("2")))
+  }
+
+  test("local flags with higher priority overwrite flags with lower priority") {
+    case class Source(int: Int, str: String)
+    case class Dest(INT_ADDITION: Int, STR: String)
+
+    assertTransformsConfigured(
+      Source(1, "asd"),
+      Dest(1, "asd")
+    )(
+      Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).local(a => a),
+      Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).local(a => a),
+    )
+  }
+
+  test("regional flags with higher priority overwrite flags with lower priority") {
+    case class Source(int: Int, str: String)
+    case class Dest(INT_ADDITION: Int, STR: String)
+
+    assertTransformsConfigured(
+      Source(1, "asd"),
+      Dest(1, "asd")
+    )(
+      Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).regional(a => a),
+      Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).regional(a => a),
+    )
+  }
+
+  test("type-specific flags with higher priority overwrite flags with lower priority") {
+    case class Source(int: Int, str: String)
+    case class Dest(INT_ADDITION: Int, STR: String)
+
+    assertTransformsConfigured(
+      Source(1, "asd"),
+      Dest(1, "asd")
+    )(
+      Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).typeSpecific[Dest],
+      Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).typeSpecific[Dest],
+    )
+  }
+
+  test("dest name amiguities are reported for products") {
+    case class Source(int: Int, str: String)
+    case class Dest(INT: Int, STR: String)
+
+    assertFailsToCompileWith {
+      """
+      val source: Source = ???
+      source
+        .into[Dest]
+        .transform(Field.modifyDestNames(_.rename("INT", "AMBIGOUS").rename("STR", "AMBIGOUS")))
+      """
+    }("""Field 'STR' (transformed to 'AMBIGOUS') in Dest maps to more than one field name: 'INT', 'STR' @ Dest.STR
+Field 'INT' (transformed to 'AMBIGOUS') in Dest maps to more than one field name: 'INT', 'STR' @ Dest.INT""")
+  }: @nowarn
+
+  //TODO: I feel like this should report an ambiguity warning
+  test("source name ambiguities are reported for products") {
+    case class Source(int: Int, str: String, extra: String)
+    case class Dest(INT: Int, STR: String)
+
+    assertFailsToCompileWith {
+      """
+    val source: Source = ???
+    source
+      .into[Dest]
+      .transform(Field.modifySourceNames(_.toUpperCase.rename("EXTRA", "STR")))
+      """
+    }("""Field 'STR' (transformed to 'STR') in Source maps to more than one field name: 'str', 'extra' @ Dest.STR""")
+  }: @nowarn
+
+
+  // todo: name ambiguities (coproducts, functions)
+  // todo: regional flags (copy-paste of local flag tests)
+  // todo: type specific flags
+
 }

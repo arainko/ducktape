@@ -5,10 +5,14 @@ import scala.quoted.*
 
 private[ducktape] object Logger {
 
+  object locally {
+    inline def apply[A](inline f: locally.type ?=> A): A = f(using this)
+  }
+
   // Logger Config
   private[ducktape] transparent inline given level: Level = Level.Info
   private val output = Output.StdOut
-  private def filter(msg: String, loc: String) = false
+  private def filter(msg: String, loc: String)(using Quotes) = Expr.summon[locally.type].isDefined
   enum Level {
     case Off, Debug, Info
   }
@@ -25,13 +29,18 @@ private[ducktape] object Logger {
 
       def colored(color: String & scala.Singleton)(msg: String) = s"$color$msg${Console.RESET}"
       def green(msg: String) = colored(Console.GREEN)(msg)
+      def blue(msg: String) = colored(Console.BLUE)(msg)
+
+      val loc = Thread.currentThread().getStackTrace().lift(2)
+
+      val formattedMacroLoc = loc.map(pos => blue(s" [${pos.getFileName()}:${pos.getLineNumber()}] ")).mkString
 
       val location =
         Symbol.spliceOwner.pos
           .map(pos => s"${pos.sourceFile.name}:${pos.startLine}:${pos.startColumn}")
           .map(formatted => green(" [" + formatted + "]"))
           .getOrElse("")
-      val formatted = s"${green(s"[${level.toString().toUpperCase()}]")}$location $msg"
+      val formatted = s"${green(s"[${level.toString().toUpperCase()}]")}$location$formattedMacroLoc$msg"
       this match {
         case StdOut => if filter(msg, location) then println(formatted)
         case Report => if filter(msg, location) then quotes.reflect.report.info(formatted)

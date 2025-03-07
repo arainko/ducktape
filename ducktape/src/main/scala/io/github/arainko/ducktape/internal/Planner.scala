@@ -65,10 +65,10 @@ private[ducktape] object Planner {
         case (source, dest) if noUpcast == FallthroughUpcast.No && source.tpe.repr <:< dest.tpe.repr =>
           // Don't allow fallible transformations in the alternative case
           Plan.Upcast(source, dest, () => context.toTotal.locally(recurse(source, dest, FallthroughUpcast.Yes)))
-
+        
         case BetweenFallibles(plan) => plan
 
-        case BetweenFallibleNonFallible(plan) => plan
+        // case BetweenFallibleNonFallible(plan) => plan
 
         case (source @ Optional(_, _, srcParamStruct)) -> (dest @ Optional(_, _, destParamStruct)) =>
           Plan.BetweenOptions(
@@ -436,31 +436,6 @@ private[ducktape] object Planner {
 
   }
 
-  object BetweenFallibleNonFallible {
-    def unapply[F <: Fallible](
-      structs: (Structure, Structure)
-    )(using Quotes, Depth, Context.Of[F], PlanFlags): Option[Plan[Erroneous, F]] =
-      PartialFunction.condOpt(Context.current *: structs) {
-        case (ctx: Context.PossiblyFallible[f], source @ Wrapped(tpe, _, path, underlying), dest) =>
-          // needed for the recurse call to return Plan[Erroneous, Nothing]
-          val plan =
-            ctx.toTotal.locally {
-              Plan.BetweenFallibleNonFallible(
-                source,
-                dest,
-                PlanFlags.current.transition(Step.Element, Passthrough).locally {
-                  recurse(underlying, dest)
-                }
-              )
-            }
-
-          // the compiler needs a bit more encouragement to be sure that the plan we construct has a fallibility of F
-          // Context.PossiblyFallible is defined with a type F = Fallible so we can deduce that ctx.F =:= Fallible =:= F
-          ctx.reifyPlan[F](plan)
-      }
-
-  }
-
   object BetweenFallibles {
     def unapply[F <: Fallible](
       structs: (Structure, Structure)
@@ -471,12 +446,15 @@ private[ducktape] object Planner {
               source @ Wrapped(tpe, _, path, underlying),
               dest
             ) =>
+          Logger.debug("Flags going in:", PlanFlags.current)
           ctx.reifyPlan[F] {
             Plan.BetweenFallibles(
               source,
               dest,
               mode,
-              PlanFlags.current.transition(Step.Element, Step.Element).locally {
+              PlanFlags.current.transition(Step.Element, Passthrough).locally {
+                Logger.debug("Flags inside:", PlanFlags.current)
+
                 recurse(underlying, dest)
               }
             )
@@ -487,16 +465,43 @@ private[ducktape] object Planner {
               source @ Wrapped(tpe, _, path, underlying),
               dest
             ) =>
+          Logger.debug("Flags going in:", PlanFlags.current)
           ctx.reifyPlan[F] {
             Plan.BetweenFallibles(
               source,
               dest,
               TransformationMode.FailFast(localMode),
-              PlanFlags.current.transition(Step.Element, Step.Element).locally {
+              PlanFlags.current.transition(Step.Element, Passthrough).locally {
+                Logger.debug("Flags inside:", PlanFlags.current)
+
                 recurse(underlying, dest)
               }
             )
           }
+
+      case (
+        ctx @ Context.PossiblyFallible(_, _, _, TransformationMode.Accumulating(mode, None)), 
+        source @ Wrapped(tpe, _, path, underlying),
+        dest
+      ) =>
+          Logger.debug("Flags going in:", PlanFlags.current)
+          // needed for the recurse call to return Plan[Erroneous, Nothing]
+          val plan =
+            ctx.toTotal.locally {
+              Plan.BetweenFallibleNonFallible(
+                source,
+                dest,
+                PlanFlags.current.transition(Step.Element, Passthrough).locally {
+                  Logger.debug("Flags inside:", PlanFlags.current)
+
+                  recurse(underlying, dest)
+                }
+              )
+            }
+
+          // the compiler needs a bit more encouragement to be sure that the plan we construct has a fallibility of F
+          // Context.PossiblyFallible is defined with a type F = Fallible so we can deduce that ctx.F =:= Fallible =:= F
+          ctx.reifyPlan[F](plan)
       }
   }
 
