@@ -81,7 +81,7 @@ class LocalFlagSuite extends DucktapeSuite {
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
-      Source(1,SourceEnum.Two(2, "2", SourceLevel1(3))),
+      Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
       Field.modifySourceNames(_.toUpperCase).local(_.level1)
@@ -108,7 +108,7 @@ class LocalFlagSuite extends DucktapeSuite {
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
-      Source(1,SourceEnum.Two(2, "2", SourceLevel1(3))),
+      Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
       Field.modifyDestNames(_.toUpperCase).local(_.level1)
@@ -145,7 +145,7 @@ class LocalFlagSuite extends DucktapeSuite {
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
-      Source(1,SourceEnum.Two(2, "2", SourceLevel1(3))),
+      Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
       Field.modifySourceNames(_.toUpperCase).local(_.level1)
@@ -172,7 +172,7 @@ class LocalFlagSuite extends DucktapeSuite {
     object DestEnum {
       sealed trait NestLevel1 extends DestEnum
       sealed trait NestLevel2 extends DestEnum
-      
+
       case class One(int: Int, str: String) extends NestLevel2
       case class Two(int: Int, str: String, level1: DestLevel1) extends NestLevel1
       case class Three(int: Int, str: String) extends NestLevel2
@@ -182,14 +182,16 @@ class LocalFlagSuite extends DucktapeSuite {
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
-      Source(1,SourceEnum.Two(2, "2", SourceLevel1(3))),
+      Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
       Field.modifyDestNames(_.toUpperCase).local(_.level1)
     )
   }
 
-  test("dest field local flag covers all subtypes of an enum and nothing else (even when the enum is nested, and we pick one of the sub-enums)") {
+  test(
+    "dest field local flag covers all subtypes of an enum and nothing else (even when the enum is nested, and we pick one of the sub-enums)"
+  ) {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 
@@ -209,7 +211,7 @@ class LocalFlagSuite extends DucktapeSuite {
     object DestEnum {
       sealed trait NestLevel1 extends DestEnum
       sealed trait NestLevel2 extends DestEnum
-      
+
       case class One(int: Int, str: String) extends NestLevel2
       case class Two(int: Int, str: String, level1: DestLevel1) extends NestLevel1
       case class Three(int: Int, str: String) extends NestLevel2
@@ -219,14 +221,16 @@ class LocalFlagSuite extends DucktapeSuite {
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
-      Source(1,SourceEnum.Two(2, "2", SourceLevel1(3))),
+      Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
       Field.modifyDestNames(_.toUpperCase).local(_.level1.at[DestEnum.NestLevel1])
     )
   }
 
-  test("source field local flag covers all subtypes of an enum and nothing else (even when the enum is nested, and we pick one of the sub-enums)") {
+  test(
+    "source field local flag covers all subtypes of an enum and nothing else (even when the enum is nested, and we pick one of the sub-enums)"
+  ) {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 
@@ -246,7 +250,7 @@ class LocalFlagSuite extends DucktapeSuite {
     object DestEnum {
       sealed trait NestLevel1 extends DestEnum
       sealed trait NestLevel2 extends DestEnum
-      
+
       case class One(int: Int, str: String) extends NestLevel2
       case class Two(INT: Int, STR: String, LEVEL1: DestLevel1) extends NestLevel1
       case class Three(int: Int, str: String) extends NestLevel2
@@ -256,7 +260,7 @@ class LocalFlagSuite extends DucktapeSuite {
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
-      Source(1,SourceEnum.Two(2, "2", SourceLevel1(3))),
+      Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
       Field.modifySourceNames(_.toUpperCase).local(_.level1.at[SourceEnum.NestLevel1])
@@ -293,7 +297,7 @@ class LocalFlagSuite extends DucktapeSuite {
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
-      Source(1,SourceEnum.TWO(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
+      Source(1, SourceEnum.TWO(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
       Dest(1, DestEnum.two(2, "2", DestLevel1(3), DestLevel1Enum.Two))
     )(
       Case.modifySourceNames(_.toLowerCase).local(_.level1)
@@ -330,7 +334,7 @@ class LocalFlagSuite extends DucktapeSuite {
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
-      Source(1,SourceEnum.Two(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
+      Source(1, SourceEnum.Two(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3), DestLevel1Enum.Two))
     )(
       Case.modifySourceNames(_.toLowerCase).local(_.level1.at[SourceEnum.Two])
@@ -367,7 +371,7 @@ class LocalFlagSuite extends DucktapeSuite {
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
-      Source(1,SourceEnum.Two(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
+      Source(1, SourceEnum.Two(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3), DestLevel1Enum.Two))
     )(
       Case.modifyDestNames(_.toLowerCase).local(_.level1.at[DestEnum.Two])

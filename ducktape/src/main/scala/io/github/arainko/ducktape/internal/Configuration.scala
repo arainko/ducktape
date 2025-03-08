@@ -4,7 +4,6 @@ import io.github.arainko.ducktape.*
 
 import scala.quoted.*
 
-
 private[ducktape] enum Configuration[+F <: Fallible] {
   def destTpe: Type[?]
   def sourceTpe: Type[?] | None.type = None
@@ -152,9 +151,9 @@ private[ducktape] object Configuration {
           }
       }
 
-    val (sourceFlags, destFlags) = flags.partitionMap { 
+    val (sourceFlags, destFlags) = flags.partitionMap {
       case ParsedFlag(Side.Source, flag, steps) => Left(steps -> flag)
-      case ParsedFlag(Side.Dest, flag, steps) => Right(steps -> flag)
+      case ParsedFlag(Side.Dest, flag, steps)   => Right(steps -> flag)
     }
 
     instructions.toList -> PlanFlags(SideSpecficFlags.create(sourceFlags), SideSpecficFlags.create(destFlags))

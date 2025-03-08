@@ -10,11 +10,9 @@ case class LevelSource1(INT: Int)
 
 case class LevelDest1(int: Int)
 
-
 case object TEST_SNAKE_CASE
 
 case object TestSnakeCase
-
 
 enum DestEnum {
   case int(field1: Int)
@@ -28,7 +26,6 @@ enum SourceEnum {
 
 object a extends App {
 
-
   val src: SourceEnum = ???
 
   // TestSnakeCase.into[TEST_SNAKE_CASE.type].transform(
@@ -40,13 +37,15 @@ object a extends App {
 
   // Transformer.Debug.showCode {
 
-  src.into[DestEnum].transform(
-    Field.modifySourceNames(_.toLowerCase),
-    Case.modifyDestNames(_.toLowerCase),
-    Case.modifySourceNames(_.toLowerCase.replace("_", ""))
-  )
+  src
+    .into[DestEnum]
+    .transform(
+      Field.modifySourceNames(_.toLowerCase),
+      Case.modifyDestNames(_.toLowerCase),
+      Case.modifySourceNames(_.toLowerCase.replace("_", ""))
+    )
   // }
-  
+
   // Transformer.Debug.showCode {
   //   src.into[TestDest].transform(
   //     Field.modifySourceNames(_.rename("INT", "int")),
@@ -57,10 +56,8 @@ object a extends App {
   // }
 
   // Transformer.Debug.showCode {
-    // src.into[TestDest].transform(Field.modifyName.regional(_.level1))
-
+  // src.into[TestDest].transform(Field.modifyName.regional(_.level1))
 
   // }
-
 
 }

@@ -1,6 +1,5 @@
 package io.github.arainko.ducktape
 
-
 sealed trait Renamer {
   def toUpperCase: Renamer
 

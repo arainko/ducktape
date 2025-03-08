@@ -2,42 +2,45 @@ package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
 
-class RegionalFlagSuite extends DucktapeSuite {
-  test("dest field regional flag covers the selected case class and everything below it") {
+class TypeSpecificFlagSuite extends DucktapeSuite {
+  test("dest field type specific flag covers the selected case class and nothing else") {
     case class Source(int: Int, str: String, level1: SourceLevel1)
     case class SourceLevel1(INT: Int, STR: String, LEVEL2: SourceLevel2)
-    case class SourceLevel2(INT: Int, STR: String)
+    case class SourceLevel2(int: Int, str: String)
 
     case class Dest(int: Int, str: String, level1: DestLevel1)
-    case class DestLevel1(INT: Int, STR: String, LEVEL2: DestLevel2)
-    case class DestLevel2(INT: Int, STR: String)
+    case class DestLevel1(int: Int, str: String, level2: DestLevel2)
+    case class DestLevel2(int: Int, str: String)
 
     val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
     val expected = Dest(1, "1", DestLevel1(2, "2", DestLevel2(3, "3")))
 
     assertTransformsConfigured(source, expected)(
-      Field.modifyDestNames(_.toUpperCase).regional(_.level1)
+      Field.modifyDestNames(_.toUpperCase).typeSpecific[DestLevel1]
     )
   }
 
-  test("source field regional flag covers the selected case class and everything below it") {
+  test("source field type specific flag covers the selected case class and nothing else") {
     case class Source(int: Int, str: String, level1: SourceLevel1)
-    case class SourceLevel1(INT: Int, STR: String, LEVEL2: SourceLevel2)
-    case class SourceLevel2(INT: Int, STR: String)
+    case class SourceLevel1(int: Int, str: String, level2: SourceLevel2)
+    case class SourceLevel2(int: Int, str: String)
 
     case class Dest(int: Int, str: String, level1: DestLevel1)
     case class DestLevel1(INT: Int, STR: String, LEVEL2: DestLevel2)
-    case class DestLevel2(INT: Int, STR: String)
+    case class DestLevel2(int: Int, str: String)
 
     val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
     val expected = Dest(1, "1", DestLevel1(2, "2", DestLevel2(3, "3")))
 
     assertTransformsConfigured(source, expected)(
-      Field.modifySourceNames(_.toUpperCase).regional(_.level1)
+      Field.modifySourceNames(_.toUpperCase).typeSpecific[SourceLevel1]
     )
   }
 
-  test("source field regional flag covers the selected subtype of an enum and everything below it") {
+  test("source field type specific flag covers the selected subtype of an enum and nothing else") {
+    case class SourceLevel1(int: Int)
+    case class DestLevel1(int: Int)
+
     enum Source {
       case One(int: Int, str: String)
       case Two(int: Int, str: String, level1: SourceLevel1)
@@ -50,18 +53,15 @@ class RegionalFlagSuite extends DucktapeSuite {
       case Three(int: Int, str: String)
     }
 
-    case class SourceLevel1(int: Int)
-    case class DestLevel1(INT: Int)
-
     assertTransformsConfigured(
       Source.Two(2, "2", SourceLevel1(1)),
       Dest.Two(2, "2", DestLevel1(1))
     )(
-      Field.modifySourceNames(_.toUpperCase).regional(_.at[Source.Two])
+      Field.modifySourceNames(_.toUpperCase).typeSpecific[Source.Two]
     )
   }
 
-  test("source field regional flag covers all subtypes of an enum and everything below it") {
+  test("source field type specific flag covers all subtypes of an enum and nothing else") {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 
@@ -78,17 +78,17 @@ class RegionalFlagSuite extends DucktapeSuite {
     }
 
     case class SourceLevel1(int: Int)
-    case class DestLevel1(INT: Int)
+    case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
       Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
-      Field.modifySourceNames(_.toUpperCase).regional(_.level1)
+      Field.modifySourceNames(_.toUpperCase).typeSpecific[SourceEnum]
     )
   }
 
-  test("dest regional flag covers all subtypes of an enum and everything below it") {
+  test("dest field type specific flag covers all subtypes of an enum and nothing else") {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 
@@ -104,18 +104,18 @@ class RegionalFlagSuite extends DucktapeSuite {
       case Three(INT: Int, STR: String)
     }
 
-    case class SourceLevel1(INT: Int)
+    case class SourceLevel1(int: Int)
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
       Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
-      Field.modifyDestNames(_.toUpperCase).regional(_.level1)
+      Field.modifyDestNames(_.toUpperCase).typeSpecific[DestEnum]
     )
   }
 
-  test("source field regional flag covers all subtypes of an enum and everything below (even when the enum is nested)") {
+  test("source field type specific flag covers all subtypes of an enum and nothing else (even when the enum is nested)") {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 
@@ -142,17 +142,17 @@ class RegionalFlagSuite extends DucktapeSuite {
     }
 
     case class SourceLevel1(int: Int)
-    case class DestLevel1(INT: Int)
+    case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
       Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
-      Field.modifySourceNames(_.toUpperCase).regional(_.level1)
+      Field.modifySourceNames(_.toUpperCase).typeSpecific[SourceEnum]
     )
   }
 
-  test("dest field regional flag covers all subtypes of an enum and everything below (even when the enum is nested)") {
+  test("dest field type specific flag covers all subtypes of an enum and nothing else (even when the enum is nested)") {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 
@@ -178,19 +178,19 @@ class RegionalFlagSuite extends DucktapeSuite {
       case class Three(int: Int, str: String) extends NestLevel2
     }
 
-    case class SourceLevel1(INT: Int)
+    case class SourceLevel1(int: Int)
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
       Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
-      Field.modifyDestNames(_.toUpperCase).regional(_.level1)
+      Field.modifyDestNames(_.toUpperCase).typeSpecific[DestEnum]
     )
   }
 
   test(
-    "dest field regional flag covers all subtypes of an enum and everything below (even when the enum is nested, and we pick one of the sub-enums)"
+    "dest field local flag covers all subtypes of an enum and nothing else (even when the enum is nested, and we pick one of the sub-enums)"
   ) {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
@@ -217,19 +217,19 @@ class RegionalFlagSuite extends DucktapeSuite {
       case class Three(int: Int, str: String) extends NestLevel2
     }
 
-    case class SourceLevel1(INT: Int)
+    case class SourceLevel1(int: Int)
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
       Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
-      Field.modifyDestNames(_.toUpperCase).regional(_.level1.at[DestEnum.NestLevel1])
+      Field.modifyDestNames(_.toUpperCase).typeSpecific[DestEnum.NestLevel1]
     )
   }
 
   test(
-    "source field regional flag covers all subtypes of an enum and everything below (even when the enum is nested, and we pick one of the sub-enums)"
+    "source field local flag covers all subtypes of an enum and nothing else (even when the enum is nested, and we pick one of the sub-enums)"
   ) {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
@@ -257,17 +257,17 @@ class RegionalFlagSuite extends DucktapeSuite {
     }
 
     case class SourceLevel1(int: Int)
-    case class DestLevel1(INT: Int)
+    case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
       Source(1, SourceEnum.Two(2, "2", SourceLevel1(3))),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3)))
     )(
-      Field.modifySourceNames(_.toUpperCase).regional(_.level1.at[SourceEnum.NestLevel1])
+      Field.modifySourceNames(_.toUpperCase).typeSpecific[SourceEnum.NestLevel1]
     )
   }
 
-  test("source case regional flag covers the selected subtype and everything below (picked as a field in case class)") {
+  test("source case type specific flag covers the selected subtype (picked as a field in case class)") {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 
@@ -289,8 +289,8 @@ class RegionalFlagSuite extends DucktapeSuite {
     }
 
     enum DestLevel1Enum {
-      case one
-      case two
+      case One
+      case Two
     }
 
     case class SourceLevel1(int: Int)
@@ -298,13 +298,13 @@ class RegionalFlagSuite extends DucktapeSuite {
 
     assertTransformsConfigured(
       Source(1, SourceEnum.TWO(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
-      Dest(1, DestEnum.two(2, "2", DestLevel1(3), DestLevel1Enum.two))
+      Dest(1, DestEnum.two(2, "2", DestLevel1(3), DestLevel1Enum.Two))
     )(
-      Case.modifySourceNames(_.toLowerCase).regional(_.level1)
+      Case.modifySourceNames(_.toLowerCase).typeSpecific[SourceEnum]
     )
   }
 
-  test("source case regional flag DOESN'T cover the selected subtype (picked as a subtype with .at)") {
+  test("source case local flag DOESN'T cover the selected subtype (picked as a subtype with .at)") {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 
@@ -326,8 +326,8 @@ class RegionalFlagSuite extends DucktapeSuite {
     }
 
     enum DestLevel1Enum {
-      case one
-      case two
+      case One
+      case Two
     }
 
     case class SourceLevel1(int: Int)
@@ -335,13 +335,13 @@ class RegionalFlagSuite extends DucktapeSuite {
 
     assertTransformsConfigured(
       Source(1, SourceEnum.Two(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
-      Dest(1, DestEnum.Two(2, "2", DestLevel1(3), DestLevel1Enum.two))
+      Dest(1, DestEnum.Two(2, "2", DestLevel1(3), DestLevel1Enum.Two))
     )(
-      Case.modifySourceNames(_.toLowerCase).regional(_.level1.at[SourceEnum.Two])
+      Case.modifySourceNames(_.toLowerCase).typeSpecific[SourceEnum.Two]
     )
   }
 
-  test("dest case regional flag DOESN'T cover the selected subtype (picked as a subtype with .at)") {
+  test("dest case local flag DOESN'T cover the selected subtype (picked as a subtype with .at)") {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 
@@ -358,8 +358,8 @@ class RegionalFlagSuite extends DucktapeSuite {
     }
 
     enum SourceLevel1Enum {
-      case one
-      case two
+      case One
+      case Two
     }
 
     enum DestLevel1Enum {
@@ -371,10 +371,10 @@ class RegionalFlagSuite extends DucktapeSuite {
     case class DestLevel1(int: Int)
 
     assertTransformsConfigured(
-      Source(1, SourceEnum.Two(2, "2", SourceLevel1(3), SourceLevel1Enum.two)),
+      Source(1, SourceEnum.Two(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3), DestLevel1Enum.Two))
     )(
-      Case.modifyDestNames(_.toLowerCase).regional(_.level1.at[DestEnum.Two])
+      Case.modifyDestNames(_.toLowerCase).typeSpecific[DestEnum.Two]
     )
   }
 

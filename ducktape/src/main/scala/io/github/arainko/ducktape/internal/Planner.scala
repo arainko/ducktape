@@ -29,7 +29,6 @@ private[ducktape] object Planner {
     given Depth = depth.incremented
     Logger.info("Flags going in: ", PlanFlags.current)
 
-
     Logger.loggedDebug(s"Plan @ depth ${Depth.current}"):
       (source.force -> dest.force) match {
         case _ if Depth.current > 64 =>
@@ -67,7 +66,7 @@ private[ducktape] object Planner {
         case (source, dest) if noUpcast == FallthroughUpcast.No && source.tpe.repr <:< dest.tpe.repr =>
           // Don't allow fallible transformations in the alternative case
           Plan.Upcast(source, dest, () => context.toTotal.locally(recurse(source, dest, FallthroughUpcast.Yes)))
-        
+
         case BetweenFallibles(plan) => plan
 
         // case BetweenFallibleNonFallible(plan) => plan
@@ -481,11 +480,11 @@ private[ducktape] object Planner {
             )
           }
 
-      case (
-        ctx @ Context.PossiblyFallible(_, _, _, TransformationMode.Accumulating(mode, None)), 
-        source @ Wrapped(tpe, _, path, underlying),
-        dest
-      ) =>
+        case (
+              ctx @ Context.PossiblyFallible(_, _, _, TransformationMode.Accumulating(mode, None)),
+              source @ Wrapped(tpe, _, path, underlying),
+              dest
+            ) =>
           Logger.debug("Flags going in:", PlanFlags.current)
           // needed for the recurse call to return Plan[Erroneous, Nothing]
           val plan =

@@ -10,5 +10,4 @@ private[ducktape] object Priority {
 
   given ordering: Ordering[Priority] = Ordering.Int
 
-
 }

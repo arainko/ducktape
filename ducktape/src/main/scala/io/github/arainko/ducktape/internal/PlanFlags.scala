@@ -1,10 +1,10 @@
 package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.internal.*
+import io.github.arainko.ducktape.internal.Flag.Kind
 
 import scala.quoted.*
 import scala.reflect.TypeTest
-import io.github.arainko.ducktape.internal.Flag.Kind
 
 private[ducktape] case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
   def transition[A](
@@ -55,7 +55,7 @@ private[ducktape] object Flag {
 //    case Case1(int: Int, str: String)
 //    case Case2(int: Int, str: String)
 // }
-// it'd mean we want to rename field in all of the cases as well - to targed a specific case we can narrow down with the path with .at[...] 
+// it'd mean we want to rename field in all of the cases as well - to targed a specific case we can narrow down with the path with .at[...]
 //
 
 private[ducktape] case object Passthrough
@@ -92,15 +92,17 @@ private[ducktape] case class SideSpecficFlags(
   inScope: Vector[Flag]
 ) derives Debug {
 
-  def get[A <: Flag.Effect](tpe: Type[?])(using TypeTest[Flag.Effect, A], Quotes): Option[Flag.Typed[A]] =
+  import scala.util.chaining.*
+
+  def get[A <: Flag.Effect](tpe: Type[?])(using TypeTest[Flag.Effect, A], Quotes): Option[Flag.Typed[A]] = {
     inScope.collect {
-      case Flag(effect: A, kind @ Flag.Kind.TypeSpecific(flagType), span, prio) if flagType.repr <:< tpe.repr => 
+      case Flag(effect: A, kind @ Flag.Kind.TypeSpecific(flagType), span, prio) if tpe.repr <:< flagType.repr =>
         Flag.Typed(effect, kind, span, prio)
-      case Flag(effect: A, kind @ (Flag.Kind.Local | Flag.Kind.Regional), span, prio)                           => 
+      case Flag(effect: A, kind @ (Flag.Kind.Local | Flag.Kind.Regional), span, prio) =>
         Flag.Typed(effect, kind, span, prio)
     }
       .maxByOption(_.priority)
-      
+  }
 
   def transition(step: Step | Passthrough)(using Quotes): SideSpecficFlags = {
     val (nextInScope, nextOutOfScope) = outOfScope.partitionMap { segmentsAndFlag =>
@@ -123,7 +125,7 @@ private[ducktape] case class SideSpecficFlags(
     SideSpecficFlags(
       nextOutOfScope.flatten,
       // check for isCase here to be able to apply local flags to children of an enum and bubble down to all the non-case children
-      nextInScope ++ inScope.filter(flag => !flag.kind.isLocal || isCase) 
+      nextInScope ++ inScope.filter(flag => !flag.kind.isLocal || isCase)
     )
   }
 }

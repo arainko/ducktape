@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.internal
 
 import scala.Ordering.Implicits.*
+import scala.annotation.nowarn
 import scala.quoted.*
 
 private[ducktape] object Logger {
@@ -10,9 +11,9 @@ private[ducktape] object Logger {
   }
 
   // Logger Config
-  private[ducktape] transparent inline given level: Level = Level.Info
+  private[ducktape] transparent inline given level: Level = Level.Off
   private val output = Output.StdOut
-  private def filter(msg: String, loc: String)(using Quotes) = Expr.summon[locally.type].isDefined
+  @nowarn private def filter(msg: String, loc: String)(using Quotes) = Expr.summon[locally.type].isDefined
   enum Level {
     case Off, Debug, Info
   }

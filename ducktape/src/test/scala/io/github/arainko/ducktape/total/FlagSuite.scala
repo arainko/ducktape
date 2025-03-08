@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
+
 import scala.annotation.nowarn
 
 class FlagSuite extends DucktapeSuite {
@@ -517,7 +518,7 @@ class FlagSuite extends DucktapeSuite {
       Dest(1, "asd")
     )(
       Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).local(a => a),
-      Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).local(a => a),
+      Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).local(a => a)
     )
   }
 
@@ -530,7 +531,7 @@ class FlagSuite extends DucktapeSuite {
       Dest(1, "asd")
     )(
       Field.modifyDestNames(_.toUpperCase.replace("_ADDITION", "whatever")).regional(a => a),
-      Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).regional(a => a),
+      Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).regional(a => a)
     )
   }
 
@@ -543,7 +544,7 @@ class FlagSuite extends DucktapeSuite {
       Dest(1, "asd")
     )(
       Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).typeSpecific[Dest],
-      Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).typeSpecific[Dest],
+      Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).typeSpecific[Dest]
     )
   }
 
@@ -623,7 +624,6 @@ Case 'case1' (transformed to 'CASE1') in Source maps to more than one case names
     )
   }
 
-
   test("dest name amiguities are reported for functions") {
     case class Source(int: Int, str: String)
     case class Dest(INT: Int, STR: String)
@@ -653,7 +653,30 @@ Field 'INT' (transformed to 'AMBIGOUS') in Dest maps to more than one field name
     }("""Field 'STR' (transformed to 'STR') in Source maps to more than one field name: 'str', 'extra' @ Dest.STR""")
   }: @nowarn
 
-  // todo: regional flags (copy-paste of local flag tests)
-  // todo: type specific flags
+  test("dest rename flags don't mess up configs") {
+    case class Source(int: Int, str: String)
+    case class Dest(INT: Int, STR: String)
+
+    assertTransformsConfigured(
+      Source(1, "2"),
+      Dest(1, "CONFIGURED")
+    )(
+      Field.modifyDestNames(_.toLowerCase),
+      Field.const(_.STR, "CONFIGURED")
+    )
+  }
+
+  test("source rename flags don't mess up configs") {
+    case class Source(int: Int, str: String)
+    case class Dest(INT: Int, STR: String)
+
+    assertTransformsConfigured(
+      Source(1, "2"),
+      Dest(1, "CONFIGURED")
+    )(
+      Field.modifySourceNames(_.toUpperCase),
+      Field.const(_.STR, "CONFIGURED")
+    )
+  }
 
 }

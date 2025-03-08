@@ -77,7 +77,6 @@ private[ducktape] object TotalTransformations {
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
     val (config, flags) = Configuration.parse(configs, ConfigParser.total)
 
-
     val plan =
       Function
         .fromFunctionArguments[Args, Func](function)
