@@ -27,6 +27,8 @@ private[ducktape] object Planner {
   )(using quotes: Quotes, depth: Depth, context: Context.Of[F], flags: PlanFlags): Plan[Erroneous, F] = {
     import quotes.reflect.*
     given Depth = depth.incremented
+    Logger.info("Flags going in: ", PlanFlags.current)
+
 
     Logger.loggedDebug(s"Plan @ depth ${Depth.current}"):
       (source.force -> dest.force) match {
@@ -578,6 +580,7 @@ private[ducktape] object Planner {
     sourceFlag: Option[Flag.Typed[Flag.Effect.CaseRename]],
     destFlag: Option[Flag.Typed[Flag.Effect.CaseRename]]
   )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+    Logger.info("Flags going in: ", PlanFlags.current)
 
     val transformDestName = destFlag.map(_.effect.renamer).getOrElse(identity[String])
     val transformSrcName = sourceFlag.map(_.effect.renamer).getOrElse(identity[String])
@@ -606,7 +609,7 @@ private[ducktape] object Planner {
         Plan.Error(
           sourceCaseStruct,
           Structure.of[Any](dest.path),
-          ErrorMessage.AmbiguousCaseTransformations(source.tpe, sourceName, transformedSrc, sourceAmbs, destFlag.map(_.span)),
+          ErrorMessage.AmbiguousCaseTransformations(source.tpe, sourceName, transformedSrc, destAmbs, destFlag.map(_.span)),
           None
         )
       else {
@@ -622,7 +625,7 @@ private[ducktape] object Planner {
               Plan.Error(
                 sourceCaseStruct,
                 Structure.of[Any](dest.path),
-                ErrorMessage.NoChildFound(transformedSrc + s" ${transformedDest.keySet}", dest.tpe),
+                ErrorMessage.NoChildFound(transformedSrc, dest.tpe),
                 None
               )
             )

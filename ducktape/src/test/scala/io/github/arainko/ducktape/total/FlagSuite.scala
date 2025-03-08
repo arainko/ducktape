@@ -529,7 +529,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "asd"),
       Dest(1, "asd")
     )(
-      Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).regional(a => a),
+      Field.modifyDestNames(_.toUpperCase.replace("_ADDITION", "whatever")).regional(a => a),
       Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).regional(a => a),
     )
   }
@@ -562,7 +562,6 @@ class FlagSuite extends DucktapeSuite {
 Field 'INT' (transformed to 'AMBIGOUS') in Dest maps to more than one field name: 'INT', 'STR' @ Dest.INT""")
   }: @nowarn
 
-  //TODO: I feel like this should report an ambiguity warning
   test("source name ambiguities are reported for products") {
     case class Source(int: Int, str: String, extra: String)
     case class Dest(INT: Int, STR: String)
@@ -577,8 +576,83 @@ Field 'INT' (transformed to 'AMBIGOUS') in Dest maps to more than one field name
     }("""Field 'STR' (transformed to 'STR') in Source maps to more than one field name: 'str', 'extra' @ Dest.STR""")
   }: @nowarn
 
+  test("dest name ambiguities are reported for coproducts") {
+    enum Source {
+      case case1
+      case case2
+    }
 
-  // todo: name ambiguities (coproducts, functions)
+    enum Dest {
+      case CASE1
+      case CASE2
+      case CASE3
+    }
+
+    assertFailsToCompileWith {
+      """
+      val source: Source = ???
+      source
+        .into[Dest]
+        .transform(Case.modifyDestNames(_.toLowerCase.rename("case3", "case2")))
+      """
+    }("Case 'case2' (transformed to 'case2') in Source maps to more than one case names: 'CASE2', 'CASE3' @ Dest")
+  }
+
+  test("source name ambiguities are reported for coproducts") {
+    enum Source {
+      case case1
+      case case2
+    }
+
+    enum Dest {
+      case CASE1
+      case CASE2
+      case CASE3
+    }
+
+    assertFailsToCompileWith {
+      """
+      val source: Source = ???
+      source
+        .into[Dest]
+        .transform(Case.modifySourceNames(_.toUpperCase.rename("CASE2", "CASE1")))
+      """
+    }(
+      """Case 'case2' (transformed to 'CASE1') in Source maps to more than one case names: 'case1', 'case2' @ Dest
+Case 'case1' (transformed to 'CASE1') in Source maps to more than one case names: 'case1', 'case2' @ Dest"""
+    )
+  }
+
+
+  test("dest name amiguities are reported for functions") {
+    case class Source(int: Int, str: String)
+    case class Dest(INT: Int, STR: String)
+
+    assertFailsToCompileWith {
+      """
+      val source: Source = ???
+      source
+        .intoVia(Dest.apply)
+        .transform(Field.modifyDestNames(_.rename("INT", "AMBIGOUS").rename("STR", "AMBIGOUS")))
+      """
+    }("""Field 'STR' (transformed to 'AMBIGOUS') in Dest maps to more than one field name: 'INT', 'STR' @ Dest.STR
+Field 'INT' (transformed to 'AMBIGOUS') in Dest maps to more than one field name: 'INT', 'STR' @ Dest.INT""")
+  }: @nowarn
+
+  test("source name ambiguities are reported for functions") {
+    case class Source(int: Int, str: String, extra: String)
+    case class Dest(INT: Int, STR: String)
+
+    assertFailsToCompileWith {
+      """
+    val source: Source = ???
+    source
+      .intoVia(Dest.apply)
+      .transform(Field.modifySourceNames(_.toUpperCase.rename("EXTRA", "STR")))
+      """
+    }("""Field 'STR' (transformed to 'STR') in Source maps to more than one field name: 'str', 'extra' @ Dest.STR""")
+  }: @nowarn
+
   // todo: regional flags (copy-paste of local flag tests)
   // todo: type specific flags
 
