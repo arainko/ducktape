@@ -123,9 +123,9 @@ private[ducktape] object Configuration {
   def parse[G[+x], A: Type, B: Type, F <: Fallible](
     configs: Expr[Seq[Field.Fallible[G, A, B] | Case.Fallible[G, A, B]]],
     parsers: NonEmptyList[ConfigParser[F]]
-  )(using Quotes, Context): List[Instruction[F]] = {
+  )(using Quotes, Context): (List[Instruction[F]], PlanFlags) = {
     import quotes.reflect.*
-    def fallback(term: quotes.reflect.Term) =
+    def fallback(term: quotes.reflect.Term, priority: Priority) =
       Configuration.Instruction.Failed(
         Path.empty(Type.of[Nothing]),
         Side.Dest,
@@ -134,10 +134,28 @@ private[ducktape] object Configuration {
       )
     val parser = ConfigParser.combine(parsers)
 
-    Varargs
+    val (instructions, flags) = Varargs
       .unapply(configs)
       .getOrElse(report.errorAndAbort("All of the transformation configs need to be inlined", configs))
-      .map(expr => parser.applyOrElse(expr.asTerm, fallback))
-      .toList
+      .zipWithIndex // index is the priority, so that we can sort out if we should override a Preconfig with a Config
+      .toVector
+      .partitionMap[Instruction[F], ParsedFlag] { (expr, priority) =>
+        parser
+          .applyOrElse(
+            (Priority.of(priority), expr.asTerm),
+            (priority, expr) => fallback(expr, Priority.of(priority))
+          )
+          .match {
+            case instruction: Instruction[F] => Left(instruction)
+            case flag: ParsedFlag            => Right(flag)
+          }
+      }
+
+    val (sourceFlags, destFlags) = flags.partitionMap {
+      case ParsedFlag(Side.Source, flag, steps) => Left(steps -> flag)
+      case ParsedFlag(Side.Dest, flag, steps)   => Right(steps -> flag)
+    }
+
+    instructions.toList -> PlanFlags(SideSpecficFlags.create(sourceFlags), SideSpecficFlags.create(destFlags))
   }
 }

@@ -27,8 +27,8 @@ private[ducktape] object FallibleTransformations {
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
     val destStruct = Structure.of[B](Path.empty(Type.of[B]))
-    val plan = Planner.between(sourceStruct, destStruct)
-    val config = Configuration.parse(configs, ConfigParser.fallible[F])
+    val (config, flags) = Configuration.parse(configs, ConfigParser.fallible[F])
+    val plan = Planner.between(sourceStruct, destStruct, flags)
 
     val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
     FalliblePlanInterpreter.run[F, A, B](totalPlan, source, Context.current.mode).asExprOf[F[B]]
@@ -57,7 +57,7 @@ private[ducktape] object FallibleTransformations {
     )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
-    val config = Configuration.parse(configs, ConfigParser.fallible[F])
+    val (config, flags) = Configuration.parse(configs, ConfigParser.fallible[F])
 
     Function
       .fromFunctionArguments[Args, Func](function)
@@ -71,7 +71,7 @@ private[ducktape] object FallibleTransformations {
       )
       .map { func =>
         val destStruct = Structure.fromFunction(func)
-        Planner.between(sourceStruct, destStruct)
+        Planner.between(sourceStruct, destStruct, flags)
       }
       .match {
         case Left(error) => Backend.reportErrorsAndAbort(NonEmptyList(error), config)
@@ -112,7 +112,7 @@ private[ducktape] object FallibleTransformations {
       )
       .map { func =>
         val destStruct = Structure.fromFunction(func)
-        Planner.between(sourceStruct, destStruct)
+        Planner.between(sourceStruct, destStruct, PlanFlags.empty)
       }
       .match {
         case Left(error) => Backend.reportErrorsAndAbort(NonEmptyList(error), Nil)

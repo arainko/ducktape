@@ -296,7 +296,11 @@ private[ducktape] object Plan {
   }
 
   object Configured {
-    def from[F <: Fallible](plan: Plan[Erroneous, F], conf: Configuration[F], instruction: Configuration.Instruction[F])(using
+    def from[F <: Fallible](
+      plan: Plan[Erroneous, F],
+      conf: Configuration[F],
+      instruction: Configuration.Instruction[F]
+    )(using
       Quotes,
       Context
     ): Plan.Configured[F] =

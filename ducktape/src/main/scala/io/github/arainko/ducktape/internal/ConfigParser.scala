@@ -6,8 +6,10 @@ import scala.quoted.*
 
 import Configuration.*
 
+private[ducktape] case class ParsedFlag(side: Side, flag: Flag, steps: List[Step])
+
 private[ducktape] sealed trait ConfigParser[+F <: Fallible] {
-  def apply(using Quotes, Context): PartialFunction[quotes.reflect.Term, Instruction[F]]
+  def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F] | ParsedFlag]
 }
 
 private[ducktape] object ConfigParser {
@@ -17,16 +19,19 @@ private[ducktape] object ConfigParser {
 
   def combine[F <: Fallible](
     parsers: NonEmptyList[ConfigParser[F]]
-  )(using Quotes, Context): PartialFunction[quotes.reflect.Term, Instruction[F]] =
+  )(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F] | ParsedFlag] =
     parsers.map(_.apply).reduceLeft(_ orElse _)
 
   object Total extends ConfigParser[Nothing] {
-    def apply(using Quotes, Context): PartialFunction[quotes.reflect.Term, Instruction[Nothing]] = {
+    def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[Nothing] | ParsedFlag] = {
       import quotes.reflect.*
       {
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
-              PathSelector(path) :: value :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(Select(IdentOfType('[Field.type]), "const"), a :: b :: destFieldTpe :: constTpe :: Nil),
+                PathSelector(path) :: value :: Nil
+              )
             ) =>
           Configuration.Instruction.Static(
             path,
@@ -35,9 +40,12 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "default"), a :: b :: destFieldTpe :: Nil),
-              PathSelector(path) :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(Select(IdentOfType('[Field.type]), "default"), a :: b :: destFieldTpe :: Nil),
+                PathSelector(path) :: Nil
+              )
             ) =>
           def default(parent: Plan[Erroneous, Fallible] | None.type) =
             for {
@@ -62,9 +70,15 @@ private[ducktape] object ConfigParser {
 
           Configuration.Instruction.Dynamic(path, Side.Dest, default, span)
 
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "computed" | "renamed"), a :: b :: destFieldTpe :: computedTpe :: Nil),
-              PathSelector(path) :: function :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(
+                  Select(IdentOfType('[Field.type]), "computed" | "renamed"),
+                  a :: b :: destFieldTpe :: computedTpe :: Nil
+                ),
+                PathSelector(path) :: function :: Nil
+              )
             ) =>
           Configuration.Instruction.Static(
             path,
@@ -73,12 +87,15 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-        case cfg @ Apply(
-              TypeApply(
-                Select(IdentOfType('[Field.type]), "computedDeep"),
-                a :: b :: destFieldTpe :: sourceFieldTpe :: computedFieldTpe :: Nil
-              ),
-              PathSelector(path) :: function :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(
+                  Select(IdentOfType('[Field.type]), "computedDeep"),
+                  a :: b :: destFieldTpe :: sourceFieldTpe :: computedFieldTpe :: Nil
+                ),
+                PathSelector(path) :: function :: Nil
+              )
             ) =>
           Configuration.Instruction.Static(
             path,
@@ -91,15 +108,21 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
-              PathSelector(path) :: fieldSource :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(Select(IdentOfType('[Field.type]), "allMatching"), a :: b :: destFieldTpe :: fieldSourceTpe :: Nil),
+                PathSelector(path) :: fieldSource :: Nil
+              )
             ) =>
           parseAllMatching(fieldSource.asExpr, path, fieldSourceTpe.tpe, Span.fromPosition(cfg.pos))
 
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Case.type]), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
-              PathSelector(path) :: value :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(Select(IdentOfType('[Case.type]), "const"), a :: b :: sourceTpe :: constTpe :: Nil),
+                PathSelector(path) :: value :: Nil
+              )
             ) =>
           Configuration.Instruction.Static(
             path,
@@ -108,9 +131,12 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Case.type]), "computed"), a :: b :: sourceTpe :: computedTpe :: Nil),
-              PathSelector(path) :: function :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(Select(IdentOfType('[Case.type]), "computed"), a :: b :: sourceTpe :: computedTpe :: Nil),
+                PathSelector(path) :: function :: Nil
+              )
             ) =>
           Configuration.Instruction.Static(
             path,
@@ -119,13 +145,10 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "fallbackToNone"), a :: b :: destFieldTpe :: Nil),
-              PathSelector(path) :: Nil
+        case (
+              prio,
+              cfg @ AsExpr('{ Field.fallbackToNone[a, b] })
             ) =>
-          Configuration.Instruction.Regional(path, Side.Dest, ErrorModifier.substituteOptionsWithNone, Span.fromPosition(cfg.pos))
-
-        case cfg @ AsExpr('{ Field.fallbackToNone[a, b] }) =>
           Configuration.Instruction.Regional(
             Path.empty(Type.of[b]),
             Side.Dest,
@@ -133,7 +156,7 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-        case regionalCfg @ RegionalConfig(AsExpr('{ Field.fallbackToNone[a, b] }), path) =>
+        case (prio, regionalCfg @ RegionalConfig(AsExpr('{ Field.fallbackToNone[a, b] }), path)) =>
           Configuration.Instruction.Regional(
             path,
             Side.Dest,
@@ -141,7 +164,7 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(regionalCfg.pos)
           )
 
-        case cfg @ AsExpr('{ Field.fallbackToDefault[a, b] }) =>
+        case (prio, cfg @ AsExpr('{ Field.fallbackToDefault[a, b] })) =>
           Configuration.Instruction.Regional(
             Path.empty(Type.of[b]),
             Side.Dest,
@@ -149,7 +172,7 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-        case cfg @ RegionalConfig(AsExpr('{ Field.fallbackToDefault[a, b] }), path) =>
+        case (prio, cfg @ RegionalConfig(AsExpr('{ Field.fallbackToDefault[a, b] }), path)) =>
           Configuration.Instruction.Regional(
             path,
             Side.Dest,
@@ -157,18 +180,153 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
+        case (prio, cfg @ AsExpr('{ Field.modifyDestNames[a, b]($renamer) })) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Nil
+          )
+
+        case (prio, cfg @ RegionalConfig(AsExpr('{ Field.modifyDestNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ LocalConfig(AsExpr('{ Field.modifyDestNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ AsExpr('{ Field.modifyDestNames[a, b]($renamer).typeSpecific[tpe] })) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(
+              Flag.Effect.FieldRename(ParseRenamer.parse(renamer)),
+              Flag.Kind.TypeSpecific(Type.of[tpe]),
+              Span.fromPosition(cfg.pos),
+              prio
+            ),
+            Nil
+          )
+
+        case (prio, cfg @ AsExpr('{ Field.modifySourceNames[a, b]($renamer) })) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Nil
+          )
+
+        case (prio, cfg @ RegionalConfig(AsExpr('{ Field.modifySourceNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ LocalConfig(AsExpr('{ Field.modifySourceNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.FieldRename(ParseRenamer.parse(renamer)), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ AsExpr('{ Field.modifySourceNames[a, b]($renamer).typeSpecific[tpe] })) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(
+              Flag.Effect.FieldRename(ParseRenamer.parse(renamer)),
+              Flag.Kind.TypeSpecific(Type.of[tpe]),
+              Span.fromPosition(cfg.pos),
+              prio
+            ),
+            Nil
+          )
+
+        case (prio, cfg @ AsExpr('{ Case.modifySourceNames[a, b]($renamer) })) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Nil
+          )
+
+        case (prio, cfg @ RegionalConfig(AsExpr('{ Case.modifySourceNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ LocalConfig(AsExpr('{ Case.modifySourceNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ AsExpr('{ Case.modifySourceNames[a, b]($renamer).typeSpecific[tpe] })) =>
+          ParsedFlag(
+            Side.Source,
+            Flag(
+              Flag.Effect.CaseRename(ParseRenamer.parse(renamer)),
+              Flag.Kind.TypeSpecific(Type.of[tpe]),
+              Span.fromPosition(cfg.pos),
+              prio
+            ),
+            Nil
+          )
+
+        case (prio, cfg @ AsExpr('{ Case.modifyDestNames[a, b]($renamer) })) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            Nil
+          )
+
+        case (prio, cfg @ RegionalConfig(AsExpr('{ Case.modifyDestNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Regional, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ LocalConfig(AsExpr('{ Case.modifyDestNames[a, b]($renamer) }), path)) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(Flag.Effect.CaseRename(ParseRenamer.parse(renamer)), Flag.Kind.Local, Span.fromPosition(cfg.pos), prio),
+            path.segments.map(Step.fromPathSegment).toList
+          )
+
+        case (prio, cfg @ AsExpr('{ Case.modifyDestNames[a, b]($renamer).typeSpecific[tpe] })) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(
+              Flag.Effect.CaseRename(ParseRenamer.parse(renamer)),
+              Flag.Kind.TypeSpecific(Type.of[tpe]),
+              Span.fromPosition(cfg.pos),
+              prio
+            ),
+            Nil
+          )
+
         case DeprecatedConfig(configs) => configs
       }
     }
   }
 
-  class PossiblyFallible[F[+x]: Type] extends ConfigParser[Fallible] {
-    def apply(using Quotes, Context): PartialFunction[quotes.reflect.Term, Instruction[Fallible]] = {
+  final class PossiblyFallible[F[+x]: Type] extends ConfigParser[Fallible] {
+    def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[Fallible] | ParsedFlag] = {
       import quotes.reflect.*
       {
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Field.type]), "fallibleConst"), f :: a :: b :: destFieldTpe :: Nil),
-              PathSelector(path) :: AsExpr('{ $value: F[const] }) :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(Select(IdentOfType('[Field.type]), "fallibleConst"), f :: a :: b :: destFieldTpe :: Nil),
+                PathSelector(path) :: AsExpr('{ $value: F[const] }) :: Nil
+              )
             ) =>
           Configuration.Instruction.Static(
             path,
@@ -176,12 +334,15 @@ private[ducktape] object ConfigParser {
             Configuration.FallibleConst(value, Type.of[const]),
             Span.fromPosition(cfg.pos)
           )
-        case cfg @ Apply(
-              TypeApply(
-                Select(IdentOfType('[Field.type]), "fallibleComputed"),
-                f :: a :: b :: destFieldTpe :: Nil
-              ),
-              PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(
+                  Select(IdentOfType('[Field.type]), "fallibleComputed"),
+                  f :: a :: b :: destFieldTpe :: Nil
+                ),
+                PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
+              )
             ) =>
           Configuration.Instruction.Static(
             path,
@@ -190,12 +351,15 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-        case cfg @ Apply(
-              TypeApply(
-                Select(IdentOfType('[Field.type]), "fallibleComputedDeep"),
-                f :: a :: b :: destFieldTpe :: sourceFieldTpe :: Nil
-              ),
-              PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(
+                  Select(IdentOfType('[Field.type]), "fallibleComputedDeep"),
+                  f :: a :: b :: destFieldTpe :: sourceFieldTpe :: Nil
+                ),
+                PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
+              )
             ) =>
           Configuration.Instruction.Static(
             path,
@@ -205,9 +369,12 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Case.type]), "fallibleConst"), f :: a :: b :: sourceTpe :: constTpe :: Nil),
-              PathSelector(path) :: AsExpr('{ $value: F[const] }) :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(Select(IdentOfType('[Case.type]), "fallibleConst"), f :: a :: b :: sourceTpe :: constTpe :: Nil),
+                PathSelector(path) :: AsExpr('{ $value: F[const] }) :: Nil
+              )
             ) =>
           Configuration.Instruction.Static(
             path,
@@ -216,9 +383,12 @@ private[ducktape] object ConfigParser {
             Span.fromPosition(cfg.pos)
           )
 
-        case cfg @ Apply(
-              TypeApply(Select(IdentOfType('[Case.type]), "fallibleComputed"), f :: a :: b :: sourceTpe :: computedTpe :: Nil),
-              PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
+        case (
+              prio,
+              cfg @ Apply(
+                TypeApply(Select(IdentOfType('[Case.type]), "fallibleComputed"), f :: a :: b :: sourceTpe :: computedTpe :: Nil),
+                PathSelector(path) :: AsExpr('{ $function: (a => F[computed]) }) :: Nil
+              )
             ) =>
           Configuration.Instruction.Static(
             path,
@@ -277,8 +447,10 @@ private[ducktape] object ConfigParser {
   }
 
   private object DeprecatedConfig {
-    def unapply(using Quotes, Context)(term: quotes.reflect.Term) = {
+    def unapply(using Quotes, Context)(prioAndTerm: (Priority, quotes.reflect.Term)) = {
       import quotes.reflect.*
+
+      val (prio, term) = prioAndTerm
 
       PartialFunction.condOpt(term.asExpr):
         case cfg @ '{
@@ -313,8 +485,10 @@ private[ducktape] object ConfigParser {
   }
 
   private object DeprecatedFallibleConfig {
-    def unapply[F[+x]: Type](using Quotes)(expr: quotes.reflect.Term) = {
+    def unapply[F[+x]: Type](using Quotes)(prioAndTerm: (Priority, quotes.reflect.Term)) = {
       import quotes.reflect.*
+
+      val (prio, expr) = prioAndTerm
 
       PartialFunction.condOpt(expr.asExpr) {
         case cfg @ '{ Case.fallibleComputed[srcSubtype].apply[F, source, dest]($function) } =>
@@ -362,6 +536,25 @@ private[ducktape] object ConfigParser {
               TypeApply(
                 Apply(
                   TypeApply(Select(Ident("Regional"), "regional"), _),
+                  term :: Nil
+                ),
+                _
+              ),
+              PathSelector(path) :: Nil
+            ) =>
+          term -> path
+      }
+    }
+  }
+
+  private object LocalConfig {
+    def unapply(using Quotes)(term: quotes.reflect.Term): Option[(quotes.reflect.Term, Path)] = {
+      import quotes.reflect.*
+      PartialFunction.condOpt(term) {
+        case Apply(
+              TypeApply(
+                Apply(
+                  TypeApply(Select(Ident("Local"), "local"), _),
                   term :: Nil
                 ),
                 _

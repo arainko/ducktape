@@ -22,6 +22,11 @@ private[ducktape] object Debug extends LowPriorityDebug {
 
   def show[A](value: A)(using Debug[A], Quotes) = value.show
 
+  given pair[A, B](using A: Debug[A], B: Debug[B]): Debug[(A, B)] with {
+    override def astify(self: (A, B))(using Quotes): AST =
+      AST.Product("Tuple2", VectorMap("_1" -> A.astify(self._1), "_2" -> B.astify(self._2)))
+  }
+
   given string: Debug[String] with {
     override def astify(self: String)(using Quotes): AST = Text(s""""${self}"""")
   }

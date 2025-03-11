@@ -137,17 +137,31 @@ private[ducktape] object ErrorMessage {
     }
   }
 
-  // Currently unused - part of the POC behind field renames will be brought back to life when working
-  // final case class AmbiguousFieldTransformations(
-  //   tpe: Type[?],
-  //   fieldName: String,
-  //   transformedFieldName: String,
-  //   ambiguities: Vector[String],
-  // ) extends ErrorMessage {
-  //   def render(using Quotes): String =
-  //     s"Field '$fieldName' (transformed to '$transformedFieldName') in ${tpe.repr.show} maps to more than one field name: ${ambiguities.map(name => s"'$name'").mkString(", ")}"
+  final case class AmbiguousFieldTransformations(
+    tpe: Type[?],
+    fieldName: String,
+    transformedFieldName: String,
+    ambiguities: Vector[String],
+    flagSpan: Option[Span]
+  ) extends ErrorMessage {
+    def render(using Quotes): String =
+      s"Field '$fieldName' (transformed to '$transformedFieldName') in ${tpe.repr.show} maps to more than one field name: ${ambiguities.map(name => s"'$name'").mkString(", ")}"
 
-  //   val span = None
-  //   val side = Side.Dest
-  // }
+    val span = flagSpan.asUnion
+    val side = Side.Dest
+  }
+
+  final case class AmbiguousCaseTransformations(
+    tpe: Type[?],
+    caseName: String,
+    transformedCaseName: String,
+    ambiguities: Vector[String],
+    flagSpan: Option[Span]
+  ) extends ErrorMessage {
+    def render(using Quotes): String =
+      s"Case '$caseName' (transformed to '$transformedCaseName') in ${tpe.repr.show} maps to more than one case names: ${ambiguities.map(name => s"'$name'").mkString(", ")}"
+
+    val span = flagSpan.asUnion
+    val side = Side.Dest
+  }
 }

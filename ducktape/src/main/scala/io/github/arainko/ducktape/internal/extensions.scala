@@ -49,4 +49,12 @@ extension [A](self: A | None.type) {
 
 }
 
+extension [A](self: Option[A]) {
+  private[ducktape] def asUnion: A | None.type =
+    self match
+      case None        => None
+      case Some(value) => value
+
+}
+
 private[ducktape] type None = None.type

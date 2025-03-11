@@ -112,7 +112,7 @@ private[ducktape] object PlanConfigurer {
         def handleTupleElement(
           segment: Path.Segment.TupleElement,
           tail: List[Segment],
-          currnet: Plan[Erroneous, F]
+          current: Plan[Erroneous, F]
         ): Plan[Erroneous, F] = {
           val index = segment.index
           Logger.debug(s"Matched tupleElement with index of $index")
@@ -235,10 +235,10 @@ private[ducktape] object PlanConfigurer {
       case instruction: Configuration.Instruction.Bulk =>
         bulk(current, instruction)
 
-      case cfg @ Configuration.Instruction.Regional(path, side, modifier, span) =>
+      case cfg: Configuration.Instruction.Regional =>
         regional(current, cfg, parent)
 
-      case cfg @ Configuration.Instruction.Failed(path, side, message, span) =>
+      case cfg: Configuration.Instruction.Failed =>
         Accumulator.append {
           Plan.Error.from(current, ErrorMessage.ConfigurationFailed(cfg), None)
         }
