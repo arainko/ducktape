@@ -66,7 +66,9 @@ object Field {
   def allMatching[A, B, ProductTpe](product: ProductTpe): Field[A, B] =
     ???
 
+  @compileTimeOnly("Field.modifyDestNames is only useable as a field configuration for transformations")
   def modifyDestNames[A, B](renamer: Renamer => Renamer): Field[A, B] & Regional[B] & Local[B] & TypeSpecific = ???
 
+  @compileTimeOnly("Field.modifySourceNames is only useable as a field configuration for transformations")
   def modifySourceNames[A, B](renamer: Renamer => Renamer): Field[A, B] & Regional[A] & Local[A] & TypeSpecific = ???
 }

@@ -25,8 +25,10 @@ object Case {
   @compileTimeOnly("Case.computed is only useable as a case configuration for transformations")
   def computed[A, B, SourceTpe, DestTpe](selector: Selector ?=> A => SourceTpe, function: SourceTpe => DestTpe): Case[A, B] = ???
 
+  @compileTimeOnly("Case.modifySourceNames is only useable as a case configuration for transformations")
   def modifySourceNames[A, B](renamer: Renamer => Renamer): Case[A, B] & Regional[A] & Local[A] & TypeSpecific = ???
 
+  @compileTimeOnly("Case.modifyDestNames is only useable as a case configuration for transformations")
   def modifyDestNames[A, B](renamer: Renamer => Renamer): Case[A, B] & Regional[B] & Local[B] & TypeSpecific = ???
 
   @deprecated(

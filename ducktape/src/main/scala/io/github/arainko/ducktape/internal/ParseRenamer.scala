@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.Renamer
 
+import java.util.regex.Pattern
 import scala.quoted.*
 
 private[ducktape] object ParseRenamer {
@@ -27,8 +28,13 @@ private[ducktape] object ParseRenamer {
         case '{ (arg: Renamer) => ($body(arg): Renamer).replace(${ Expr(from) }, ${ Expr(to) }) } =>
           recurse(body, ((str: String) => str.replace(from, to)) :: accumulatedFunctions)
 
-        case '{ (arg: Renamer) => ($body(arg): Renamer).regexReplace(${ Expr(from) }, ${ Expr(to) }) } =>
-          recurse(body, ((str: String) => str.replaceAll(from, to)) :: accumulatedFunctions)
+        case '{ (arg: Renamer) => ($body(arg): Renamer).regexReplace(${ Expr(pattern) }, ${ Expr(replacement) }) } =>
+          recurse(
+            body, {
+              val regex = Pattern.compile(pattern)
+              (str: String) => regex.matcher(str).replaceAll(replacement)
+            } :: accumulatedFunctions
+          )
 
         case _ =>
           report.errorAndAbort(

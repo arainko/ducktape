@@ -23,7 +23,7 @@ object Local {
 type TypeSpecific
 
 object TypeSpecific {
-  extension [F[a, b] <: (Case[a, b] | Field[a, b]), A, B, C](self: F[A, B] & Local[C]) {
+  extension [F[a, b] <: (Case[a, b] | Field[a, b]), A, B](self: F[A, B] & TypeSpecific) {
     @compileTimeOnly(".typeSpecific is only usable as field configuration for transformations")
     def typeSpecific[Tpe]: F[A, B] = ???
   }

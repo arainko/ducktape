@@ -157,13 +157,5 @@ private[ducktape] object Configuration {
     }
 
     instructions.toList -> PlanFlags(SideSpecficFlags.create(sourceFlags), SideSpecficFlags.create(destFlags))
-    // .map((expr, priority) =>
-    //   parser
-    //     .applyOrElse(
-    //       (Priority.of(priority), expr.asTerm),
-    //       (priority, expr) => fallback(expr, Priority.of(priority))
-    //     )
-    // )
-    // .toList
   }
 }

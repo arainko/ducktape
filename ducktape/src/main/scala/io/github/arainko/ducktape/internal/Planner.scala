@@ -69,8 +69,6 @@ private[ducktape] object Planner {
 
         case BetweenFallibles(plan) => plan
 
-        // case BetweenFallibleNonFallible(plan) => plan
-
         case (source @ Optional(_, _, srcParamStruct)) -> (dest @ Optional(_, _, destParamStruct)) =>
           Plan.BetweenOptions(
             source,
@@ -447,7 +445,6 @@ private[ducktape] object Planner {
               source @ Wrapped(tpe, _, path, underlying),
               dest
             ) =>
-          Logger.debug("Flags going in:", PlanFlags.current)
           ctx.reifyPlan[F] {
             Plan.BetweenFallibles(
               source,
@@ -466,7 +463,6 @@ private[ducktape] object Planner {
               source @ Wrapped(tpe, _, path, underlying),
               dest
             ) =>
-          Logger.debug("Flags going in:", PlanFlags.current)
           ctx.reifyPlan[F] {
             Plan.BetweenFallibles(
               source,
@@ -485,7 +481,6 @@ private[ducktape] object Planner {
               source @ Wrapped(tpe, _, path, underlying),
               dest
             ) =>
-          Logger.debug("Flags going in:", PlanFlags.current)
           // needed for the recurse call to return Plan[Erroneous, Nothing]
           val plan =
             ctx.toTotal.locally {

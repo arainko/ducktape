@@ -6,7 +6,7 @@ import scala.quoted.*
 
 import Configuration.*
 
-case class ParsedFlag(side: Side, flag: Flag, steps: List[Step])
+private[ducktape] case class ParsedFlag(side: Side, flag: Flag, steps: List[Step])
 
 private[ducktape] sealed trait ConfigParser[+F <: Fallible] {
   def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F] | ParsedFlag]
@@ -565,23 +565,4 @@ private[ducktape] object ConfigParser {
       }
     }
   }
-
-  // private object TypeSpecifixConfig {
-  //   def unapply(using Quotes)(term: quotes.reflect.Term): Option[(quotes.reflect.Term, Type[?])] = {
-  //     import quotes.reflect.*
-  //     PartialFunction.condOpt(term) {
-  //       case Apply(
-  //             TypeApply(
-  //               Apply(
-  //                 TypeApply(Select(Ident("TypeSpecific"), "typeSpecific"), _),
-  //                 term :: Nil
-  //               ),
-  //               _
-  //             ),
-  //             PathSelector(path) :: Nil
-  //           ) =>
-  //         term -> path
-  //     }
-  //   }
-  // }
 }
