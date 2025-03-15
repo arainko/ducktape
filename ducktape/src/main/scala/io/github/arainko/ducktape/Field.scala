@@ -220,7 +220,7 @@ object Field {
   /**
    * Fills out errored-out transformations (for example, when a field is missing) with `None` if the expected type is an `Option`.
    * This will NOT overwrite `Option` fields that wouldn't generate transformation errors.
-   * This works across the whole trnsformation no matter the nesting level.
+   * This works across the whole transformation no matter the nesting level.
    *
    * {{{
    * case class Person(name: String, age: Int, info: Person.Info)
@@ -350,7 +350,7 @@ object Field {
 
   /**
    * Transforms field names of the destination type (on all nesting levels).
-   * 
+   *
    * To constrain the blast radius of this config you can apply one of the 3 modifiers:
    *  * `.regional` to constrain the region of this config option (see [[io.github.arainko.ducktape.Regional]])
    *  * `.local` to constrain the config option to a single transformation level or an enum child/family (see [[io.github.arainko.ducktape.Local]])
@@ -373,7 +373,7 @@ object Field {
 
   /**
    * Transforms field names of the source type (on all nesting levels).
-   * 
+   *
    * To constrain the blast radius of this config you can apply one of the 3 modifiers:
    *  * `.regional` to constrain the region of this config option (see [[io.github.arainko.ducktape.Regional]])
    *  * `.local` to constrain the config option to a single transformation level or an enum child/family (see [[io.github.arainko.ducktape.Local]])

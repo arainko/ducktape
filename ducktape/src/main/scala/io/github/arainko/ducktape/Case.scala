@@ -129,20 +129,20 @@ object Case {
     function: SourceTpe => F[DestTpe]
   ): Case.Fallible[F, A, B] = ???
 
-   /**
+  /**
    * Transforms subtype names names of the source's side (on all nesting levels).
-   * 
+   *
    * To constrain the blast radius of this config you can apply one of the 3 modifiers:
    *  * `.regional` to constrain the region of this config option (see [[io.github.arainko.ducktape.Regional]])
    *  * `.local` to constrain the config option to a single transformation level or an enum child/family (see [[io.github.arainko.ducktape.Local]])
    *  * `.typeSpecific` to constrain the config option to subtypes of a type (see [[io.github.arainko.ducktape.TypeSpecific]])
-   * 
+   *
    * {{{
-   * 
+   *
    * enum Source {
    *   case one, two, three
    * }
-   * 
+   *
    * enum Dest {
    *   case ONE, TWO, THREE
    * }
@@ -160,18 +160,18 @@ object Case {
 
   /**
    * Transforms subtype names names of the destination's side (on all nesting levels).
-   * 
+   *
    * To constrain the blast radius of this config you can apply one of the 3 modifiers:
    *  * `.regional` to constrain the region of this config option (see [[io.github.arainko.ducktape.Regional]])
    *  * `.local` to constrain the config option to a single transformation level or an enum child/family (see [[io.github.arainko.ducktape.Local]])
    *  * `.typeSpecific` to constrain the config option to subtypes of a type (see [[io.github.arainko.ducktape.TypeSpecific]])
-   * 
+   *
    * {{{
-   * 
+   *
    * enum Source {
    *   case one, two, three
    * }
-   * 
+   *
    * enum Dest {
    *   case ONE, TWO, THREE
    * }
