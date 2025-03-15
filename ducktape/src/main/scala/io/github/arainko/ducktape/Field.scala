@@ -218,18 +218,18 @@ object Field {
   ): Field.Fallible[F, Source, Dest] = ???
 
   /**
-   * Fills out errored-out transformations (for example, when a field is missing) with `None` if the expected type is an Option.
+   * Fills out errored-out transformations (for example, when a field is missing) with `None` if the expected type is an `Option`.
    * This will NOT overwrite `Option` fields that wouldn't generate transformation errors.
    * This works across the whole trnsformation no matter the nesting level.
-   * 
+   *
    * {{{
    * case class Person(name: String, age: Int, info: Person.Info)
    * object Person {
    *   case class Info(accountNo: String, email: String)
    * }
-   * 
+   *
    * case class ReshuffledPerson(age: Int, name: String, extra: Option[String], info: ReshuffledPerson.Info)
-   * 
+   *
    * object ReshuffledPerson {
    *   case class Info(accountNo: String, email: String, extraInfo: Option[String])
    * }
@@ -239,7 +239,7 @@ object Field {
    * person.into[ReshuffledPerson].transform(Field.fallbackToNone)
    * // ReshuffledPerson(26, "Name", None, ReshuffledPerson.Info("123", "email@example.com", None))
    * }}}
-   * 
+   *
    * To constrain the region of this config option you can call `.regional`:
    * {{{
    * person
@@ -248,15 +248,7 @@ object Field {
    *    Field.const(_.extra, Some("filled out with const since fallback won't be used here now"))
    *    Field.fallbackToNone.regional(_.info)
    *  )
-   * // ReshuffledPerson(26, 
-   * //   "Name",
-   * //   Some("filled out with const since fallback won't be used here now"), 
-   * //   ReshuffledPerson.Info(
-   * //     "123", 
-   * //     "email@example.com",
-   * //     None
-   * //   )
-   * // )
+   * // ReshuffledPerson(26, "Name", Some("filled out with const since fallback won't be used here now"), ReshuffledPerson.Info("123", "email@example.com", None))
    * }}}
    *
    * @see [[io.github.arainko.ducktape.Regional]]
@@ -268,15 +260,15 @@ object Field {
    * Fills out errored-out transformations (for example, when a field is missing) with their respective defaults.
    * This will NOT overwrite fields that wouldn't generate transformation errors.
    * This works across the whole transformation no matter the nesting level.
-   * 
+   *
    * {{{
    * case class Person(name: String, age: Int, info: Person.Info)
    * object Person {
    *   case class Info(accountNo: String, email: String)
    * }
-   * 
+   *
    * case class ReshuffledPerson(age: Int, name: String, extra: String = "default extra", info: ReshuffledPerson.Info)
-   * 
+   *
    * object ReshuffledPerson {
    *   case class Info(accountNo: String, email: String, extraInfo = "default extra info")
    * }
@@ -286,7 +278,7 @@ object Field {
    * person.into[ReshuffledPerson].transform(Field.fallbackToDefault)
    * // ReshuffledPerson(26, "Name", "default extra", ReshuffledPerson.Info("123", "email@example.com", "default extra info"))
    * }}}
-   * 
+   *
    * To constrain the region of this config option you can call `.regional`:
    * {{{
    * person
@@ -295,22 +287,39 @@ object Field {
    *    Field.const(_.extra, "filled out with const since fallback won't be used here now")
    *    Field.fallbackToDefault.regional(_.info)
    *  )
-   * // ReshuffledPerson(26, 
-   * //   "Name",
-   * //   "filled out with const since fallback won't be used here now", 
-   * //   ReshuffledPerson.Info(
-   * //     "123", 
-   * //     "email@example.com",
-   * //     "default extra info"  
-   * //   )
-   * // )
+   * // ReshuffledPerson(26, "Name", "filled out with const since fallback won't be used here now", ReshuffledPerson.Info("123", "email@example.com","default extra info"))
    * }}}
-   *
    * @see [[io.github.arainko.ducktape.Regional]]
    */
   @compileTimeOnly("Field.fallbackToDefault is only useable as a field configuration for transformations")
   def fallbackToDefault[Source, Dest]: Field[Source, Dest] & Regional[Dest] = ???
 
+  /**
+   * A more general variant of the parameterless `Field.allMatching` that allows for specifying the path under which the field source should be applied.
+   *
+   * Fills out (or overwrites) fields with the values of another product (given that the names and the types match).
+   *
+   * {{{
+   * case class Person(name: String, age: Int)
+   * object Person {
+   *    case class Info(accountNo: String, email: String)
+   * }
+   *
+   * case class ReshuffledPerson(age: Int, name: String)
+   * object ReshuffledPerson {
+   *    case class Info(accountNo: String, email: String, extraInfo: String)
+   * }
+   *
+   * case class FieldSource(someField: Int, email: String, extraInfo: String)
+   *
+   * val person: Person = Person("Name", 26, Person.Info("123", "email@example.com"))
+   *
+   * person
+   *  .into[ReshuffledPerson]
+   *  .transform(Field.allMatching(_.info, FieldSource(1, "overwritten email", "extra info")))
+   * // ReshuffledPerson(26, "Name", ReshuffledPerson.Info("123", "overwritten email", "extra info"))
+   * }}}
+   */
   @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
   def allMatching[Source, Dest, DestFieldTpe, ProductTpe](
     selector: Selector ?=> Dest => DestFieldTpe,
@@ -318,33 +327,70 @@ object Field {
   ): Field[Source, Dest] =
     ???
 
+  /**
+   * Fills out (or overwrites) fields with the values of another product (given that the names and the types match).
+   *
+   * {{{
+   * case class Person(name: String, age: Int)
+   * case class ReshuffledPerson(age: Int, name: String, extra: String)
+   *
+   * case class FieldSource(someField: Int, name: String, extra: String)
+   *
+   * val person: Person = Person("Name", 26)
+   *
+   * person
+   *  .into[ReshuffledPerson]
+   *  .transform(Field.allMatching(FieldSource(1, "overwritten name", "extra")))
+   * // ReshuffledPerson(26, "overwritten name", "extra")
+   * }}}
+   */
   @compileTimeOnly("Field.allMatching is only useable as a field configuration for transformations")
   def allMatching[Source, Dest, ProductTpe](product: ProductTpe): Field[Source, Dest] =
     ???
 
+  /**
+   * Transforms field names of the destination type (on all nesting levels).
+   * 
+   * To constrain the blast radius of this config you can apply one of the 3 modifiers:
+   *  * `.regional` to constrain the region of this config option (see [[io.github.arainko.ducktape.Regional]])
+   *  * `.local` to constrain the config option to a single transformation level or an enum child/family (see [[io.github.arainko.ducktape.Local]])
+   *  * `.typeSpecific` to constrain the config option to subtypes of a type (see [[io.github.arainko.ducktape.TypeSpecific]])
+   * {{{
+   * case class Person(name: String, age: Int)
+   * case class ReshuffledPerson(AGE: Int, NAME: String)
+   *
+   * val person: Person = Person("Name", 26)
+   *
+   * person.into[ReshuffledPerson].transform(Field.modifyDestNames(_.toLowerCase))
+   * // ReshuffledPerson(26, "Name")
+   * }}}
+   * @param renamer the transformation function (needs to be known at compile time)
+   * @see [[io.github.arainko.ducktape.Renamer]]
+   */
   @compileTimeOnly("Field.modifyDestNames is only useable as a field configuration for transformations")
   def modifyDestNames[Source, Dest](renamer: Renamer => Renamer): Field[Source, Dest] & Regional[Dest] & Local[Dest] &
     TypeSpecific = ???
 
+  /**
+   * Transforms field names of the source type (on all nesting levels).
+   * 
+   * To constrain the blast radius of this config you can apply one of the 3 modifiers:
+   *  * `.regional` to constrain the region of this config option (see [[io.github.arainko.ducktape.Regional]])
+   *  * `.local` to constrain the config option to a single transformation level or an enum child/family (see [[io.github.arainko.ducktape.Local]])
+   *  * `.typeSpecific` to constrain the config option to subtypes of a type (see [[io.github.arainko.ducktape.TypeSpecific]])
+   * {{{
+   * case class Person(name: String, age: Int)
+   * case class ReshuffledPerson(AGE: Int, NAME: String)
+   *
+   * val person: Person = Person("Name", 26)
+   *
+   * person.into[ReshuffledPerson].transform(Field.modifySourceNames(_.toUpperCase))
+   * // ReshuffledPerson(26, "Name")
+   * }}}
+   * @param renamer the transformation function (needs to be known at compile time)
+   * @see [[io.github.arainko.ducktape.Renamer]]
+   */
   @compileTimeOnly("Field.modifySourceNames is only useable as a field configuration for transformations")
   def modifySourceNames[Source, Dest](renamer: Renamer => Renamer): Field[Source, Dest] & Regional[Source] & Local[Source] &
     TypeSpecific = ???
-}
-
-object a extends App {
-  case class Person(name: String, age: Int)
-  case class ReshuffledPerson(age: Int, name: String, extra: String)
-
-  val person: Person = Person("Name", 18)
-
-  println {
-    Mode.FailFast.either[String].locally {
-      person
-        .into[ReshuffledPerson]
-        .fallible
-        .transform(Field.fallibleComputed(_.extra, person => Right(person.name + " fallible extra")))
-    }
-  }
-
-  // ReshuffledPerson(18, "Name", "extra")
 }
