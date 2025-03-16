@@ -55,7 +55,7 @@ object Local {
      * case class DestLevel2(int: Int, str: String)
      *
      * val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
-     * 
+     *
      * source
      *  .into[Dest]
      *  .transform(Field.modifyDestNames(_.toUpperCase).local(_.level1)) // <-- we use `.local` to only modify names under `Dest.level1` and not anywhere else
@@ -71,6 +71,7 @@ type TypeSpecific
 
 object TypeSpecific {
   extension [F[a, b] <: (Case[a, b] | Field[a, b]), A, B](self: F[A, B] & TypeSpecific) {
+
     /**
      * Constrains a config option to a subtypes of the selected type:
      *
@@ -84,7 +85,7 @@ object TypeSpecific {
      * case class DestLevel2(int: Int, str: String)
      *
      * val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
-     * 
+     *
      * source
      *  .into[Dest]
      *  .transform(Field.modifyDestNames(_.toUpperCase).typeSpecific[DestLevel1]) // <-- we use `.typeSpecifc` to only modify names for `DestLevel1` and not anywhere else
