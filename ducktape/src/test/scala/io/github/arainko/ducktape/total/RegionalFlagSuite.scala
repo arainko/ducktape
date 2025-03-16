@@ -9,8 +9,8 @@ class RegionalFlagSuite extends DucktapeSuite {
     case class SourceLevel2(INT: Int, STR: String)
 
     case class Dest(int: Int, str: String, level1: DestLevel1)
-    case class DestLevel1(INT: Int, STR: String, LEVEL2: DestLevel2)
-    case class DestLevel2(INT: Int, STR: String)
+    case class DestLevel1(int: Int, str: String, level2: DestLevel2)
+    case class DestLevel2(int: Int, str: String)
 
     val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
     val expected = Dest(1, "1", DestLevel1(2, "2", DestLevel2(3, "3")))
@@ -26,14 +26,14 @@ class RegionalFlagSuite extends DucktapeSuite {
     case class SourceLevel2(INT: Int, STR: String)
 
     case class Dest(int: Int, str: String, level1: DestLevel1)
-    case class DestLevel1(INT: Int, STR: String, LEVEL2: DestLevel2)
-    case class DestLevel2(INT: Int, STR: String)
+    case class DestLevel1(int: Int, str: String, level2: DestLevel2)
+    case class DestLevel2(int: Int, str: String)
 
     val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
     val expected = Dest(1, "1", DestLevel1(2, "2", DestLevel2(3, "3")))
 
     assertTransformsConfigured(source, expected)(
-      Field.modifySourceNames(_.toUpperCase).regional(_.level1)
+      Field.modifySourceNames(_.toLowerCase).regional(_.level1)
     )
   }
 

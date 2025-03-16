@@ -679,4 +679,28 @@ Field 'INT' (transformed to 'AMBIGOUS') in Dest maps to more than one field name
     )
   }
 
+  test(
+    "Regional, local and type specific flags can work together in a single transformation according to their rules and the priority"
+  ) {
+    case class Source(int: Int, str: String, level1: SourceLevel1)
+    case class SourceLevel1(int: Int, str: String, level2: SourceLevel2)
+    case class SourceLevel2(int: Int, str: String, level3: SourceLevel3)
+    case class SourceLevel3(int: Int, str: String)
+
+    case class Dest(INT: Int, STR: String, LEVEL1: DestLevel1)
+    case class DestLevel1(int2: Int, str2: String, level22: DestLevel2)
+    case class DestLevel2(_int: Int, _str: String, _level3: DestLevel3)
+    case class DestLevel3(INT: Int, STR: String)
+
+    assertTransformsConfigured(
+      Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3", SourceLevel3(4, "4")))),
+      Dest(1, "1", DestLevel1(2, "2", DestLevel2(3, "3", DestLevel3(4, "4"))))
+    )(
+      Field.modifySourceNames(_.toUpperCase),
+      Field.modifySourceNames(_.rename("int", "int2").rename("str", "str2").rename("level2", "level22")).local(_.level1),
+      Field
+        .modifySourceNames(_.rename("int", "_int").rename("str", "_str").rename("level3", "_level3"))
+        .typeSpecific[SourceLevel2]
+    )
+  }
 }
