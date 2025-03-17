@@ -533,6 +533,135 @@ Docs.printCode(
 ``` 
 @:@
 
+### Field/case name transformations
+
+#### Changing field names
+
+Let's establish a pair of case classes with a peculiar naming scheme first:
+```scala mdoc:nest:silent
+case class Source(int: Int, str: String)
+case class Dest(INT: Int, STR: String)
+
+val source = Source(1, "1")
+```
+
+Obviously, we wouldn't be able to map between those two case classes since their names do not match.
+To make this work we can make use of one of the following configuration options:
+
+* `Field.modifySourceNames` - modifies source field names according to the provided `Renamer`:
+
+@:select(underlying-code-13)
+@:choice(visible)
+```scala mdoc
+source
+  .into[Dest]
+  .transform(
+    Field.modifySourceNames(_.toUpperCase)
+  )
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[Dest]
+    .transform(
+      Field.modifySourceNames(_.toUpperCase)
+    )
+)
+``` 
+@:@
+
+* `Field.modifyDestNames` - modifies destination field names according to the provided `Renamer`:
+
+@:select(underlying-code-14)
+@:choice(visible)
+```scala mdoc
+source
+  .into[Dest]
+  .transform(
+    Field.modifyDestNames(_.toLowerCase)
+  )
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[Dest]
+    .transform(
+      Field.modifyDestNames(_.toLowerCase)
+    )
+)
+``` 
+@:@
+
+#### Changing case names
+
+Sealed traits', enums' and case objects' names can also be changed, let's look at an example:
+
+```scala mdoc:nest:silent
+enum Source {
+  case One, Two, Three
+}
+
+enum Dest {
+  case ONE, TWO, THREE
+}
+```
+
+* `Case.modifyDestNames` - modifies destination case names according to the provided `Renamer`:
+
+@:select(underlying-code-15)
+@:choice(visible)
+```scala mdoc
+Source.One
+  .into[Dest]
+  .transform(
+    Case.modifyDestNames(_.toLowerCase.capitalize)
+  )
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  Source.One
+    .into[Dest]
+    .transform(
+      Case.modifyDestNames(_.toLowerCase.capitalize)
+    )
+)
+``` 
+@:@
+
+* `Case.modifySourceNames` - modifies source case names according to the provided `Renamer`:
+
+@:select(underlying-code-16)
+@:choice(visible)
+```scala mdoc
+Source.One
+  .into[Dest]
+  .transform(
+    Case.modifySourceNames(_.toUpperCase)
+  )
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  Source.One
+    .into[Dest]
+    .transform(
+      Case.modifySourceNames(_.toUpperCase)
+    )
+)
+``` 
+@:@
+
 ### Specifics and limitations
 
 * Configs can override transformations
