@@ -201,6 +201,8 @@ What's worth noting is that any of the configuration options are purely a compil
 |   `Field.allMatching`  |   allow to supply a field source whose fields will replace all matching fields in the destination (given that the names and the types match up)   |
 |   `Field.fallbackToDefault`  |   falls back to default field values but ONLY in case a transformation cannot be created   |
 |   `Field.fallbackToNone`  |   falls back to `None` for `Option` fields for which a transformation cannot be created  |
+|   `Field.modifySourceNames`  |   allows to transform names of fields on the source type side  |
+|   `Field.modifyDestNames`  |   allows to transform names of fields on the dest type side  |
 
 ---
 
@@ -479,6 +481,8 @@ Docs.printCode(
 |:-----------------:|:-------------------:|
 |     `Case.const`   |      allows to supply a constant value for a given subtype of a coproduct     |
 |     `Case.computed`   |      allows to supply a function of the selected source type to the expected destination type    |
+|     `Case.modifySourceNames`   |      allows to transform names of enum/sealed trait children and case objects of the Source type  |
+|     `Case.modifyDestNames`   |      allows to transform names of enum/sealed trait children and case objects of the Dest type  |
 
 ---
 
@@ -532,6 +536,287 @@ Docs.printCode(
 )
 ``` 
 @:@
+
+### Field/case name transformations
+
+#### Changing field names
+
+Let's establish a pair of case classes with a peculiar naming scheme first:
+```scala mdoc:nest:silent
+case class Source(int: Int, str: String)
+case class Dest(INT: Int, STR: String)
+
+val source = Source(1, "1")
+```
+
+Obviously, we wouldn't be able to map between those two case classes since their names do not match.
+To make this work we can make use of one of the following configuration options:
+
+* `Field.modifySourceNames` - modifies source field names according to the provided `Renamer`:
+
+@:select(underlying-code-13)
+@:choice(visible)
+```scala mdoc
+source
+  .into[Dest]
+  .transform(
+    Field.modifySourceNames(_.toUpperCase)
+  )
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[Dest]
+    .transform(
+      Field.modifySourceNames(_.toUpperCase)
+    )
+)
+``` 
+@:@
+
+* `Field.modifyDestNames` - modifies destination field names according to the provided `Renamer`:
+
+@:select(underlying-code-14)
+@:choice(visible)
+```scala mdoc
+source
+  .into[Dest]
+  .transform(
+    Field.modifyDestNames(_.toLowerCase)
+  )
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[Dest]
+    .transform(
+      Field.modifyDestNames(_.toLowerCase)
+    )
+)
+``` 
+@:@
+
+#### Changing case names
+
+Sealed traits', enums' and case objects' names can also be changed, let's look at an example:
+
+```scala mdoc:nest:silent
+enum Source {
+  case One, Two, Three
+}
+
+enum Dest {
+  case ONE, TWO, THREE
+}
+```
+
+* `Case.modifyDestNames` - modifies destination case names according to the provided `Renamer`:
+
+@:select(underlying-code-15)
+@:choice(visible)
+```scala mdoc
+Source.One
+  .into[Dest]
+  .transform(
+    Case.modifyDestNames(_.toLowerCase.capitalize)
+  )
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  Source.One
+    .into[Dest]
+    .transform(
+      Case.modifyDestNames(_.toLowerCase.capitalize)
+    )
+)
+``` 
+@:@
+
+* `Case.modifySourceNames` - modifies source case names according to the provided `Renamer`:
+
+@:select(underlying-code-16)
+@:choice(visible)
+```scala mdoc
+Source.One
+  .into[Dest]
+  .transform(
+    Case.modifySourceNames(_.toUpperCase)
+  )
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  Source.One
+    .into[Dest]
+    .transform(
+      Case.modifySourceNames(_.toUpperCase)
+    )
+)
+``` 
+@:@
+
+#### Constraining the blast radius of name transformations
+
+Let's take one of the config options that modifies names (`Field.modifyDestNames`) under closer inspection:
+```scala
+def modifyDestNames[Source, Dest](renamer: Renamer => Renamer): Field[Source, Dest] & Regional[Dest] & Local[Dest] & TypeSpecific
+```
+
+We can see that, apart from being a `Field[Source, Dest]` (a type for describing field configs), it is also a `Regional[Dest] & Local[Dest] & TypeSpecific` - these are 'config modifiers' and each one of them introduces a method on the config option. Let's take a closer look at all of them:
+
+* `.regional` - constrains a config option to a certain region (i.e. the option will apply to the transformations 'underneath' the selected field/case):
+
+```scala mdoc:nest:silent
+case class Source(int: Int, str: String, level1: SourceLevel1)
+case class SourceLevel1(INT: Int, STR: String, LEVEL2: SourceLevel2)
+case class SourceLevel2(INT: Int, STR: String)
+
+case class Dest(int: Int, str: String, level1: DestLevel1)
+case class DestLevel1(int: Int, str: String, level2: DestLevel2)
+case class DestLevel2(int: Int, str: String)
+
+val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
+```
+
+@:select(underlying-code-17)
+@:choice(visible)
+```scala mdoc  
+source
+  .into[Dest]
+  .transform(Field.modifyDestNames(_.toUpperCase).regional(_.level1)) // <-- we use `.regional` to modify all fields BELOW `Dest.level1`
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[Dest]
+    .transform(Field.modifyDestNames(_.toUpperCase).regional(_.level1))
+)
+``` 
+@:@
+
+If we were to use this modifier on a `Case` rename, we'd modify all case objects and the type names of all children of enums and sealed traits 'under' a type we choose.
+
+* `.local` - constrains a config option to a certain local region (i.e. to a case class/children of an enum 'underneath' the selected field/case):
+
+```scala mdoc:nest:silent
+case class Source(int: Int, str: String, level1: SourceLevel1)
+case class SourceLevel1(INT: Int, STR: String, LEVEL2: SourceLevel2)
+case class SourceLevel2(int: Int, str: String)
+
+case class Dest(int: Int, str: String, level1: DestLevel1)
+case class DestLevel1(int: Int, str: String, level2: DestLevel2)
+case class DestLevel2(int: Int, str: String)
+
+val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
+```
+
+@:select(underlying-code-18)
+@:choice(visible)
+```scala mdoc  
+source
+  .into[Dest]
+  .transform(Field.modifyDestNames(_.toUpperCase).local(_.level1)) // <-- we use `.local` to only modify names under `Dest.level1` and not anywhere else
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[Dest]
+    .transform(Field.modifyDestNames(_.toUpperCase).local(_.level1))
+)
+``` 
+@:@
+
+If we were to use this modifier on a `Case` rename it'd bubble down (is that a phrase?) to all subtypes of an enum/sealed trait we choose, but only in that specific case. 
+
+* `.typeSpecific` - constrains a config option to subtypes of the selected type:
+
+```scala mdoc:nest:silent
+case class Source(int: Int, str: String, level1: SourceLevel1)
+case class SourceLevel1(INT: Int, STR: String, LEVEL2: SourceLevel2)
+case class SourceLevel2(int: Int, str: String)
+     
+case class Dest(int: Int, str: String, level1: DestLevel1)
+case class DestLevel1(int: Int, str: String, level2: DestLevel2) // <-- fields of this type (and only this type) need to be uppercase
+case class DestLevel2(int: Int, str: String)
+     
+val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
+```
+
+@:select(underlying-code-19)
+@:choice(visible)
+```scala mdoc  
+source
+  .into[Dest]
+  .transform(Field.modifyDestNames(_.toUpperCase).typeSpecific[DestLevel1]) // <-- we use `.typeSpecifc` to only modify names for `DestLevel1` and not anywhere else
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode(
+  source
+    .into[Dest]
+    .transform(Field.modifyDestNames(_.toUpperCase).typeSpecific[DestLevel1])
+)
+``` 
+@:@
+
+#### Supported name transformations
+
+Name transformations are designed to look like operations on your run of the mill `String`, this however is not the full story.
+One of the constrains of that design is that all of the operations (and their arguments) need to be known at compiletime so that the library can actually
+lift that into an actual `String => String` function to apply on the field/case names.
+
+This leads us to `Renamer` - a small DSL that describes the supported subset of `String` methods, defined as such:
+```scala
+sealed trait Renamer {
+  // ...small excerpt of the actual Renamer...
+
+  /**
+   * Equivalent to `String#toLowerCase`
+   */
+  def toLowerCase: Renamer
+
+  /**
+   * Equivalent to the function `(str: String) => Pattern.compile(pattern).matcher(str).replaceAll(replacement)`
+   */
+  def regexReplace(pattern: String, replacement: String): Renamer
+
+  /**
+   * Equivalent to `String#replace(target, replacement)`
+   */
+  def replace(target: String, replacement: String): Renamer
+
+  // ...small excerpt of the actual Renamer...
+}
+```
+
+To reiterate, all of the calls on a `Renamer` (which always takes shape of a `Renamer => Renamer` in a config option), i.e. stuff like:
+```scala
+Field.modifyDestNames(_.toLowerCase.replace("some_string", "with_something_else").regexReplace("""_(\d)_""", "$1"))
+```
+...is legal, but the moment we introduce something that ISN'T immediately known at compiletime we'll get a compilation error, for example:
+```scala
+Field.modifyDestNames(_.toLowerCase.replace("some_string", Random.nextString(10)))
+// error: Invalid renamer expression - make sure all of the renamer expressions can be read at compiletime
+```
 
 ### Specifics and limitations
 
