@@ -545,21 +545,22 @@ private[ducktape] object Planner {
       else {
         val plan =
           transformedSource
-            .get(transformedDestField)
-            .map((srcField, srcStruct) =>
+            .andThen((srcField, srcStruct) =>
               PlanFlags.current.transition(Step.Field(srcField), Step.Field(destField)).locally {
                 FieldPlan(srcField, recurse(srcStruct, destFieldStruct))
               }
             )
-            .getOrElse(
-              FieldPlan.empty(
-                Plan.Error(
-                  Structure.of[Nothing](source.path),
-                  destFieldStruct,
-                  ErrorMessage.NoFieldFound(transformedDestField, destFieldStruct.tpe, source.tpe),
-                  None
+            .applyOrElse(
+              transformedDestField,
+              transformedDestField =>
+                FieldPlan.empty(
+                  Plan.Error(
+                    Structure.of[Nothing](source.path),
+                    destFieldStruct,
+                    ErrorMessage.NoFieldFound(transformedDestField, destFieldStruct.tpe, source.tpe),
+                    None
+                  )
                 )
-              )
             )
 
         destField -> plan
@@ -609,19 +610,20 @@ private[ducktape] object Planner {
       else {
         val plan =
           transformedDest
-            .get(transformedSrc)
-            .map(destCaseStruct =>
+            .andThen(destCaseStruct =>
               PlanFlags.current.transition(Step.Case(sourceCaseStruct.tpe), Step.Case(destCaseStruct.tpe)).locally {
                 recurse(sourceCaseStruct, destCaseStruct)
               }
             )
-            .getOrElse(
-              Plan.Error(
-                sourceCaseStruct,
-                Structure.of[Any](dest.path),
-                ErrorMessage.NoChildFound(transformedSrc, dest.tpe),
-                None
-              )
+            .applyOrElse(
+              transformedSrc,
+              transformedSrc =>
+                Plan.Error(
+                  sourceCaseStruct,
+                  Structure.of[Any](dest.path),
+                  ErrorMessage.NoChildFound(transformedSrc, dest.tpe),
+                  None
+                )
             )
 
         plan
@@ -675,13 +677,14 @@ private[ducktape] object Planner {
       else {
         val plan =
           transformedSource
-            .get(transformedDestField)
-            .map((srcField, srcStruct) =>
-              PlanFlags.current.transition(Step.Field(srcField), Step.Field(destField)).locally {
-                FieldPlan(srcField, recurse(srcStruct, destFieldStruct))
-              }
-            )
-            .getOrElse(
+          .andThen((srcField, srcStruct) =>
+            PlanFlags.current.transition(Step.Field(srcField), Step.Field(destField)).locally {
+              FieldPlan(srcField, recurse(srcStruct, destFieldStruct))
+            }
+          )
+          .applyOrElse(
+            transformedDestField,
+            transformedDestField => 
               FieldPlan.empty(
                 Plan.Error(
                   Structure.of[Nothing](source.path),
@@ -689,8 +692,8 @@ private[ducktape] object Planner {
                   ErrorMessage.NoFieldFound(transformedDestField, destFieldStruct.tpe, source.tpe),
                   None
                 )
-              )
-            )
+              ) 
+          )
 
         destField -> plan
       }
