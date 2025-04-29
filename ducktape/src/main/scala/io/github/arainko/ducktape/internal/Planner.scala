@@ -677,23 +677,23 @@ private[ducktape] object Planner {
       else {
         val plan =
           transformedSource
-          .andThen((srcField, srcStruct) =>
-            PlanFlags.current.transition(Step.Field(srcField), Step.Field(destField)).locally {
-              FieldPlan(srcField, recurse(srcStruct, destFieldStruct))
-            }
-          )
-          .applyOrElse(
-            transformedDestField,
-            transformedDestField => 
-              FieldPlan.empty(
-                Plan.Error(
-                  Structure.of[Nothing](source.path),
-                  destFieldStruct,
-                  ErrorMessage.NoFieldFound(transformedDestField, destFieldStruct.tpe, source.tpe),
-                  None
+            .andThen((srcField, srcStruct) =>
+              PlanFlags.current.transition(Step.Field(srcField), Step.Field(destField)).locally {
+                FieldPlan(srcField, recurse(srcStruct, destFieldStruct))
+              }
+            )
+            .applyOrElse(
+              transformedDestField,
+              transformedDestField =>
+                FieldPlan.empty(
+                  Plan.Error(
+                    Structure.of[Nothing](source.path),
+                    destFieldStruct,
+                    ErrorMessage.NoFieldFound(transformedDestField, destFieldStruct.tpe, source.tpe),
+                    None
+                  )
                 )
-              ) 
-          )
+            )
 
         destField -> plan
       }
