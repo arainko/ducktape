@@ -971,9 +971,11 @@
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">source</span><span>
+            <pre><code class="nohighlight"><span class="identifier">source</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">Dest</span><span>]
-  .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">modifyDestNames</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">toUpperCase</span><span>).</span><span class="identifier">regional</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">level1</span><span>)) </span><span class="comment">// &lt;-- we use `.regional` to modify all fields BELOW `Dest.level1`
+  .</span><span class="identifier">transform</span><span>(
+    </span><span class="type-name">Field</span><span>.</span><span class="identifier">modifyDestNames</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">toUpperCase</span><span>).</span><span class="identifier">regional</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">level1</span><span>)
+  ) </span><span class="comment">// &lt;-- we use `.regional` to modify all fields BELOW `Dest.level1`
 // res36: Dest = Dest(
 //   int = 1,
 //   str = &quot;1&quot;,
@@ -1021,9 +1023,11 @@
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">source</span><span>
+            <pre><code class="nohighlight"><span class="identifier">source</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">Dest</span><span>]
-  .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">modifyDestNames</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">toUpperCase</span><span>).</span><span class="identifier">local</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">level1</span><span>)) </span><span class="comment">// &lt;-- we use `.local` to only modify names under `Dest.level1` and not anywhere else
+  .</span><span class="identifier">transform</span><span>(
+    </span><span class="type-name">Field</span><span>.</span><span class="identifier">modifyDestNames</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">toUpperCase</span><span>).</span><span class="identifier">local</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">level1</span><span>)
+  ) </span><span class="comment">// &lt;-- we use `.local` to only modify names under `Dest.level1` and not anywhere else
 // res38: Dest = Dest(
 //   int = 1,
 //   str = &quot;1&quot;,
@@ -1056,14 +1060,18 @@
         <ul>
           <li><code>.typeSpecific</code> - constrains a config option to subtypes of the selected type:</li>
         </ul>
-        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Source</span><span>(</span><span class="identifier">int</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">level1</span><span>: </span><span class="type-name">SourceLevel1</span><span>)
+        <pre><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Source</span><span>(</span><span class="identifier">int</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">level1</span><span>: </span><span class="type-name">SourceLevel1</span><span>)
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">SourceLevel1</span><span>(</span><span class="type-name">INT</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="type-name">STR</span><span>: </span><span class="type-name">String</span><span>, </span><span class="type-name">LEVEL2</span><span>: </span><span class="type-name">SourceLevel2</span><span>)
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">SourceLevel2</span><span>(</span><span class="identifier">int</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>)
-     
+
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Dest</span><span>(</span><span class="identifier">int</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">level1</span><span>: </span><span class="type-name">DestLevel1</span><span>)
-</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">int</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">level2</span><span>: </span><span class="type-name">DestLevel2</span><span>) </span><span class="comment">// &lt;-- fields of this type (and only this type) need to be uppercase
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestLevel1</span><span>(
+  </span><span class="identifier">int</span><span>: </span><span class="type-name">Int</span><span>,
+  </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>,
+  </span><span class="identifier">level2</span><span>: </span><span class="type-name">DestLevel2</span><span>
+) </span><span class="comment">// &lt;-- fields of this type (and only this type) need to be uppercase
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">int</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">str</span><span>: </span><span class="type-name">String</span><span>)
-     
+
 </span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span> = </span><span class="type-name">Source</span><span>(</span><span class="number-literal">1</span><span>, </span><span class="string-literal">&quot;1&quot;</span><span>, </span><span class="type-name">SourceLevel1</span><span>(</span><span class="number-literal">2</span><span>, </span><span class="string-literal">&quot;2&quot;</span><span>, </span><span class="type-name">SourceLevel2</span><span>(</span><span class="number-literal">3</span><span>, </span><span class="string-literal">&quot;3&quot;</span><span>)))</span></code></pre>
         <div class="tab-container" data-tab-group="underlying-code-19">
           <ul class="tab-group">
@@ -1071,9 +1079,11 @@
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">source</span><span>
+            <pre><code class="nohighlight"><span class="identifier">source</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="type-name">Dest</span><span>]
-  .</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">modifyDestNames</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">toUpperCase</span><span>).</span><span class="identifier">typeSpecific</span><span>[</span><span class="type-name">DestLevel1</span><span>]) </span><span class="comment">// &lt;-- we use `.typeSpecifc` to only modify names for `DestLevel1` and not anywhere else
+  .</span><span class="identifier">transform</span><span>(
+    </span><span class="type-name">Field</span><span>.</span><span class="identifier">modifyDestNames</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">toUpperCase</span><span>).</span><span class="identifier">typeSpecific</span><span>[</span><span class="type-name">DestLevel1</span><span>]
+  ) </span><span class="comment">// &lt;-- we use `.typeSpecifc` to only modify names for `DestLevel1` and not anywhere else
 // res40: Dest = Dest(
 //   int = 1,
 //   str = &quot;1&quot;,
