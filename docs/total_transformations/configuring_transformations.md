@@ -694,7 +694,9 @@ val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
 ```scala mdoc  
 source
   .into[Dest]
-  .transform(Field.modifyDestNames(_.toUpperCase).regional(_.level1)) // <-- we use `.regional` to modify all fields BELOW `Dest.level1`
+  .transform(
+    Field.modifyDestNames(_.toUpperCase).regional(_.level1)
+  ) // <-- we use `.regional` to modify all fields BELOW `Dest.level1`
 ```
 @:choice(generated)
 ```scala mdoc:passthrough
@@ -729,7 +731,9 @@ val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
 ```scala mdoc  
 source
   .into[Dest]
-  .transform(Field.modifyDestNames(_.toUpperCase).local(_.level1)) // <-- we use `.local` to only modify names under `Dest.level1` and not anywhere else
+  .transform(
+    Field.modifyDestNames(_.toUpperCase).local(_.level1)
+  ) // <-- we use `.local` to only modify names under `Dest.level1` and not anywhere else
 ```
 @:choice(generated)
 ```scala mdoc:passthrough
@@ -751,11 +755,15 @@ If we were to use this modifier on a `Case` rename it'd bubble down (is that a p
 case class Source(int: Int, str: String, level1: SourceLevel1)
 case class SourceLevel1(INT: Int, STR: String, LEVEL2: SourceLevel2)
 case class SourceLevel2(int: Int, str: String)
-     
+
 case class Dest(int: Int, str: String, level1: DestLevel1)
-case class DestLevel1(int: Int, str: String, level2: DestLevel2) // <-- fields of this type (and only this type) need to be uppercase
+case class DestLevel1(
+  int: Int,
+  str: String,
+  level2: DestLevel2
+) // <-- fields of this type (and only this type) need to be uppercase
 case class DestLevel2(int: Int, str: String)
-     
+
 val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
 ```
 
@@ -764,7 +772,9 @@ val source = Source(1, "1", SourceLevel1(2, "2", SourceLevel2(3, "3")))
 ```scala mdoc  
 source
   .into[Dest]
-  .transform(Field.modifyDestNames(_.toUpperCase).typeSpecific[DestLevel1]) // <-- we use `.typeSpecifc` to only modify names for `DestLevel1` and not anywhere else
+  .transform(
+    Field.modifyDestNames(_.toUpperCase).typeSpecific[DestLevel1]
+  ) // <-- we use `.typeSpecifc` to only modify names for `DestLevel1` and not anywhere else
 ```
 @:choice(generated)
 ```scala mdoc:passthrough
