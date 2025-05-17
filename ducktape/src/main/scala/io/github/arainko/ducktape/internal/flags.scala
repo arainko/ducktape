@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.internal.Flag.Kind
 
 import scala.quoted.*
 import scala.reflect.TypeTest
+import io.github.arainko.ducktape.internal.Flag.Linter.markUsage
 
 private[ducktape] case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
   def transition[A](
@@ -41,7 +42,27 @@ private[ducktape] object Flag {
     case TypeSpecific(tpe: Type[?])
   }
 
-  final case class Typed[+A <: Effect](effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug
+  final case class Typed[+A <: Effect](private val effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug {
+    inline def use[B](inline f: A => B)(using linter: Linter): B = {
+      linter.markUsage(this)
+      f(effect)
+    }
+  }
+
+  opaque type Linter = collection.mutable.Set[Span]
+
+  object Linter {
+    def create(flags: PlanFlags): Linter = {
+      def collectFlagSpans(sideSpecificFlags: SideSpecficFlags) = 
+        sideSpecificFlags.inScope.map(_.span) ++ sideSpecificFlags.outOfScope.map { (_, flag) => flag.span }
+
+      collection.mutable.Set((collectFlagSpans(flags.dest) ++ collectFlagSpans(flags.source))*)
+    }
+
+    extension (self: Linter) def markUsage(flag: Flag.Typed[?]): Unit = self - flag.span
+  }
+
+
 }
 
 // What to support:

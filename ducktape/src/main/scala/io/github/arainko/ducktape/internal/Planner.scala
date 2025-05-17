@@ -507,9 +507,9 @@ private[ducktape] object Planner {
     dest: Structure.Product,
     sourceFlag: Option[Flag.Typed[Flag.Effect.FieldRename]],
     destFlag: Option[Flag.Typed[Flag.Effect.FieldRename]]
-  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
-    val transformDestName = destFlag.map(_.effect.renamer).getOrElse(identity[String])
-    val transformSrcName = sourceFlag.map(_.effect.renamer).getOrElse(identity[String])
+  )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
+    val transformDestName = destFlag.map(_.use(_.renamer)).getOrElse(identity[String])
+    val transformSrcName = sourceFlag.map(_.use(_.renamer)).getOrElse(identity[String])
 
     // keys to transformed keys
     val destAmbiguities = dest.fields.keys.groupBy(transformDestName).filter((_, ambs) => ambs.size > 1)
