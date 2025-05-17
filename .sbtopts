@@ -1,3 +1,4 @@
 -J-Xmx5G
 -J-Xms1G
 -J-Xss2M
+-Dsun.net.client.defaultReadTimeout=60000
