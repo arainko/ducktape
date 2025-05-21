@@ -6,6 +6,8 @@ import io.github.arainko.ducktape.internal.Flag.Kind
 import scala.quoted.*
 import scala.reflect.TypeTest
 import io.github.arainko.ducktape.internal.Flag.Linter.markUsage
+import io.github.arainko.ducktape.internal.Flag.Effect
+import io.github.arainko.ducktape.internal.Flag.Typed
 
 private[ducktape] case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
   def transition[A](
@@ -22,12 +24,20 @@ private[ducktape] object PlanFlags {
   val empty = PlanFlags(SideSpecficFlags.create(Vector.empty), SideSpecficFlags.create(Vector.empty))
 }
 
-private[ducktape] case class Flag(effect: Flag.Effect, kind: Flag.Kind, span: Span, priority: Priority) derives Debug
+private[ducktape] case class Flag(effect: Flag.Effect[?, ?], kind: Flag.Kind, span: Span, priority: Priority) derives Debug
 
 private[ducktape] object Flag {
-  enum Effect derives Debug {
-    case FieldRename(renamer: String => String)
-    case CaseRename(renamer: String => String)
+  enum Effect[-In, +Out] derives Debug {
+    case FieldRename(renamer: String => String) extends Effect[String, String]
+    case CaseRename(renamer: String => String) extends Effect[String, String]
+
+    final def use(in: In): Out = {
+      this match {
+        case FieldRename(renamer) => renamer(in)
+        case CaseRename(renamer) => renamer(in)
+      }
+    }
+      
   }
 
   enum Kind derives Debug {
@@ -42,10 +52,10 @@ private[ducktape] object Flag {
     case TypeSpecific(tpe: Type[?])
   }
 
-  final case class Typed[+A <: Effect](private val effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug {
-    inline def use[B](inline f: A => B)(using linter: Linter): B = {
+  final case class Typed[-In, +Out, +A <: Effect[In, Out]](private val effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug {
+    inline def use(input: In)(using linter: Linter): Out = {
       linter.markUsage(this)
-      f(effect)
+      effect.use(input)
     }
   }
 
@@ -59,7 +69,12 @@ private[ducktape] object Flag {
       collection.mutable.Set((collectFlagSpans(flags.dest) ++ collectFlagSpans(flags.source))*)
     }
 
-    extension (self: Linter) def markUsage(flag: Flag.Typed[?]): Unit = self - flag.span
+    extension (self: Linter) {
+      def markUsage(flag: Flag.Typed[?, ?, ?]): Unit = self -= flag.span
+      def unusedSpans: List[Span] = self.toList
+    }
+
+
   }
 
 
@@ -108,6 +123,38 @@ private[ducktape] object Step {
     }
 }
 
+sealed trait EffectSubtype {
+  type A <: Flag.Effect[In, Out]
+  type In 
+  type Out
+
+  def typeTest: TypeTest[Flag.Effect[?, ?], A]
+}
+
+object EffectSubtype {
+  given fieldRenamer: (EffectSubtype {
+    type A = Flag.Effect.FieldRename
+    type In = String
+    type Out = String
+  }) = new EffectSubtype {
+    type A = Flag.Effect.FieldRename
+    type In = String
+    type Out = String
+    def typeTest: TypeTest[Effect[?, ?], A] = summon
+  }
+
+  given caseRenamer: (EffectSubtype {
+    type A = Flag.Effect.CaseRename
+    type In = String
+    type Out = String
+  }) = new EffectSubtype {
+    type A = Flag.Effect.CaseRename
+    type In = String
+    type Out = String
+    def typeTest: TypeTest[Effect[?, ?], A] = summon
+  }
+}
+
 private[ducktape] case class SideSpecficFlags(
   outOfScope: Vector[(List[Step], Flag)],
   inScope: Vector[Flag]
@@ -115,12 +162,13 @@ private[ducktape] case class SideSpecficFlags(
 
   import scala.util.chaining.*
 
-  def get[A <: Flag.Effect](tpe: Type[?])(using TypeTest[Flag.Effect, A], Quotes): Option[Flag.Typed[A]] = {
+  def get[B](tpe: Type[?])(using tt: EffectSubtype { type A = B }, quotes: Quotes): Option[Typed[tt.In, tt.Out, Effect[tt.In, tt.Out] & tt.A]] = {
     inScope.collect {
-      case Flag(effect: A, kind @ Flag.Kind.TypeSpecific(flagType), span, prio) if tpe.repr <:< flagType.repr =>
-        Flag.Typed(effect, kind, span, prio)
-      case Flag(effect: A, kind @ (Flag.Kind.Local | Flag.Kind.Regional), span, prio) =>
-        Flag.Typed(effect, kind, span, prio)
+      case Flag(tt.typeTest(effect), kind @ Flag.Kind.TypeSpecific(flagType), span, prio) if tpe.repr <:< flagType.repr =>
+        // effect.u
+        Flag.Typed[tt.In, tt.Out, Effect[tt.In, tt.Out] & tt.A](effect.asInstanceOf, kind, span, prio)
+      case Flag(tt.typeTest(effect), kind @ (Flag.Kind.Local | Flag.Kind.Regional), span, prio) =>
+        Flag.Typed[tt.In, tt.Out, Effect[tt.In, tt.Out] & tt.A](effect.asInstanceOf, kind, span, prio)
     }
       .maxByOption(_.priority)
   }

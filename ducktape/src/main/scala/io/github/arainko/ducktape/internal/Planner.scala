@@ -16,7 +16,12 @@ private[ducktape] object Planner {
   def between[F <: Fallible](source: Structure, dest: Structure, flags: PlanFlags)(using Quotes, Context.Of[F]) = {
     given Depth = Depth.zero
     given PlanFlags = flags
-    recurse(source, dest)
+    given linter: Flag.Linter = Flag.Linter.create(flags)
+    val res = recurse(source, dest)
+    linter.unusedSpans.foreach { span =>
+      quotes.reflect.report.warning("Unused flag!", span.toPosition)
+    }
+    res
   }
 
   private def recurse[F <: Fallible](
@@ -24,7 +29,7 @@ private[ducktape] object Planner {
     dest: Structure,
     // TODO: Come up with something nicer
     noUpcast: FallthroughUpcast = FallthroughUpcast.No
-  )(using quotes: Quotes, depth: Depth, context: Context.Of[F], flags: PlanFlags): Plan[Erroneous, F] = {
+  )(using quotes: Quotes, depth: Depth, context: Context.Of[F], flags: PlanFlags, linter: Flag.Linter): Plan[Erroneous, F] = {
     import quotes.reflect.*
     given Depth = depth.incremented
     Logger.info("Flags going in: ", PlanFlags.current)
@@ -188,7 +193,7 @@ private[ducktape] object Planner {
   private def planProductTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product
-  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
     val fieldPlans = dest.fields.map { (destField, destFieldStruct) =>
       val plan =
         source.fields
@@ -219,7 +224,7 @@ private[ducktape] object Planner {
   private def planTupleTransformation[F <: Fallible](
     source: Structure.Tuple,
     dest: Structure.Tuple
-  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
     val plans = dest.elements.zipWithIndex.map { (destFieldStruct, index) =>
       source.elements
         .andThen(sourceStruct =>
@@ -245,7 +250,7 @@ private[ducktape] object Planner {
   private def planTupleProductTransformation[F <: Fallible](
     source: Structure.Tuple,
     dest: Structure.Product
-  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
     val plans = dest.fields.zipWithIndex.map {
       case (fieldName -> destFieldStruct, index) =>
         val plan = source.elements
@@ -273,7 +278,7 @@ private[ducktape] object Planner {
   private def planTupleFunctionTransformation[F <: Fallible](
     source: Structure.Tuple,
     dest: Structure.Function
-  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
     val plans = dest.args.zipWithIndex.map {
       case (fieldName -> destFieldStruct, index) =>
         val plan = source.elements
@@ -302,7 +307,7 @@ private[ducktape] object Planner {
   private def planProductTupleTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Tuple
-  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
     val sourceFields = source.fields.toVector
     val plans = dest.elements.zipWithIndex.map { (destFieldStruct, index) =>
       sourceFields
@@ -331,7 +336,7 @@ private[ducktape] object Planner {
   private def planProductFunctionTransformation[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function
-  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
     val argPlans = dest.args.map { (destField, destFieldStruct) =>
       val plan = source.fields
         .andThen(sourceStruct =>
@@ -359,7 +364,7 @@ private[ducktape] object Planner {
   private def planCoproductTransformation[F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct
-  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+  )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
     val casePlans = source.children.map { (sourceName, sourceCaseStruct) =>
       dest.children
         .andThen(destCaseStruct =>
@@ -438,7 +443,7 @@ private[ducktape] object Planner {
   object BetweenFallibles {
     def unapply[F <: Fallible](
       structs: (Structure, Structure)
-    )(using Quotes, Depth, Context.Of[F], PlanFlags): Option[Plan[Erroneous, F]] =
+    )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter): Option[Plan[Erroneous, F]] =
       PartialFunction.condOpt(Context.current *: structs) {
         case (
               ctx @ Context.PossiblyFallible(_, _, _, mode: TransformationMode.FailFast[f]),
@@ -505,11 +510,11 @@ private[ducktape] object Planner {
   private def planProductTransformationWithModifiedNames[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product,
-    sourceFlag: Option[Flag.Typed[Flag.Effect.FieldRename]],
-    destFlag: Option[Flag.Typed[Flag.Effect.FieldRename]]
+    sourceFlag: Option[Flag.Typed[String, String, Flag.Effect.FieldRename]],
+    destFlag: Option[Flag.Typed[String, String, Flag.Effect.FieldRename]]
   )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
-    val transformDestName = destFlag.map(_.use(_.renamer)).getOrElse(identity[String])
-    val transformSrcName = sourceFlag.map(_.use(_.renamer)).getOrElse(identity[String])
+    val transformDestName = destFlag.map(_.use).getOrElse(identity[String])
+    val transformSrcName = sourceFlag.map(_.use).getOrElse(identity[String])
 
     // keys to transformed keys
     val destAmbiguities = dest.fields.keys.groupBy(transformDestName).filter((_, ambs) => ambs.size > 1)
@@ -572,13 +577,13 @@ private[ducktape] object Planner {
   private def planCoproductTransformationWithModifiedNames[F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct,
-    sourceFlag: Option[Flag.Typed[Flag.Effect.CaseRename]],
-    destFlag: Option[Flag.Typed[Flag.Effect.CaseRename]]
-  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+    sourceFlag: Option[Flag.Typed[String, String, Flag.Effect.CaseRename]],
+    destFlag: Option[Flag.Typed[String, String, Flag.Effect.CaseRename]]
+  )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
     Logger.info("Flags going in: ", PlanFlags.current)
 
-    val transformDestName = destFlag.map(_.effect.renamer).getOrElse(identity[String])
-    val transformSrcName = sourceFlag.map(_.effect.renamer).getOrElse(identity[String])
+    val transformDestName = destFlag.map(_.use).getOrElse(identity[String])
+    val transformSrcName = sourceFlag.map(_.use).getOrElse(identity[String])
 
     // keys to transformed keys
     val destAmbiguities = dest.children.keys.toVector.groupBy(transformDestName).filter((_, ambs) => ambs.size > 1)
@@ -636,12 +641,12 @@ private[ducktape] object Planner {
   private def planProductFunctionTransformationWithModifiedNames[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function,
-    sourceFlag: Option[Flag.Typed[Flag.Effect.FieldRename]],
-    destFlag: Option[Flag.Typed[Flag.Effect.FieldRename]]
-  )(using Quotes, Depth, Context.Of[F], PlanFlags) = {
+    sourceFlag: Option[Flag.Typed[String, String, Flag.Effect.FieldRename]],
+    destFlag: Option[Flag.Typed[String, String, Flag.Effect.FieldRename]]
+  )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
 
-    val transformDestName = destFlag.map(_.effect.renamer).getOrElse(identity[String])
-    val transformSrcName = sourceFlag.map(_.effect.renamer).getOrElse(identity[String])
+    val transformDestName = destFlag.map(_.use).getOrElse(identity[String])
+    val transformSrcName = sourceFlag.map(_.use).getOrElse(identity[String])
 
     // keys to transformed keys
     val destAmbiguities = dest.args.keys.groupBy(transformDestName).filter((_, ambs) => ambs.size > 1)
@@ -705,11 +710,11 @@ private[ducktape] object Planner {
     case Yes, No
   }
 
-  private def namesAreTheSame(source: Structure.Singleton, dest: Structure.Singleton)(using PlanFlags, Quotes) = {
+  private def namesAreTheSame(source: Structure.Singleton, dest: Structure.Singleton)(using PlanFlags, Flag.Linter, Quotes) = {
     val sourceName =
-      PlanFlags.current.source.get[Flag.Effect.CaseRename](source.tpe).fold(identity[String])(_.effect.renamer)(source.name)
+      PlanFlags.current.source.get[Flag.Effect.CaseRename](source.tpe).fold(identity[String])(_.use)(source.name)
     val destName =
-      PlanFlags.current.dest.get[Flag.Effect.CaseRename](dest.tpe).fold(identity[String])(_.effect.renamer)(dest.name)
+      PlanFlags.current.dest.get[Flag.Effect.CaseRename](dest.tpe).fold(identity[String])(_.use)(dest.name)
 
     sourceName == destName
   }

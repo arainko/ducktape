@@ -107,3 +107,14 @@ extension [F[+x], Source](value: Source)(using F: Mode[F]) {
   transparent inline def fallibleVia[Func](inline function: Func): F[Any] =
     FallibleTransformations.viaInferred[F, Source, Func](value, function, F)
 }
+
+
+object test {
+  case class One(int: Int)
+  case class Two(int: Int)
+
+  One(1).into[Two].transform(
+    Field.modifyDestNames(_.capitalize).typeSpecific[One],
+    // Field.modifyDestNames(a => a),
+  )
+}
