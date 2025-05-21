@@ -510,8 +510,8 @@ private[ducktape] object Planner {
   private def planProductTransformationWithModifiedNames[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Product,
-    sourceFlag: Option[Flag.Typed[String, String, Flag.Effect.FieldRename]],
-    destFlag: Option[Flag.Typed[String, String, Flag.Effect.FieldRename]]
+    sourceFlag: Option[Flag.Typed[Flag.Effect.FieldRename]],
+    destFlag: Option[Flag.Typed[Flag.Effect.FieldRename]]
   )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
     val transformDestName = destFlag.map(_.use).getOrElse(identity[String])
     val transformSrcName = sourceFlag.map(_.use).getOrElse(identity[String])
@@ -577,8 +577,8 @@ private[ducktape] object Planner {
   private def planCoproductTransformationWithModifiedNames[F <: Fallible](
     source: Structure.Coproduct,
     dest: Structure.Coproduct,
-    sourceFlag: Option[Flag.Typed[String, String, Flag.Effect.CaseRename]],
-    destFlag: Option[Flag.Typed[String, String, Flag.Effect.CaseRename]]
+    sourceFlag: Option[Flag.Typed[Flag.Effect.CaseRename]],
+    destFlag: Option[Flag.Typed[Flag.Effect.CaseRename]]
   )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
     Logger.info("Flags going in: ", PlanFlags.current)
 
@@ -641,8 +641,8 @@ private[ducktape] object Planner {
   private def planProductFunctionTransformationWithModifiedNames[F <: Fallible](
     source: Structure.Product,
     dest: Structure.Function,
-    sourceFlag: Option[Flag.Typed[String, String, Flag.Effect.FieldRename]],
-    destFlag: Option[Flag.Typed[String, String, Flag.Effect.FieldRename]]
+    sourceFlag: Option[Flag.Typed[Flag.Effect.FieldRename]],
+    destFlag: Option[Flag.Typed[Flag.Effect.FieldRename]]
   )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter) = {
 
     val transformDestName = destFlag.map(_.use).getOrElse(identity[String])
