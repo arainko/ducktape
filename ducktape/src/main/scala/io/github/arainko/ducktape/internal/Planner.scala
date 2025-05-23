@@ -9,6 +9,7 @@ import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
+import io.github.arainko.ducktape.internal.Flag.Linter.Reason
 
 private[ducktape] object Planner {
   import Structure.*
@@ -18,8 +19,13 @@ private[ducktape] object Planner {
     given PlanFlags = flags
     given linter: Flag.Linter = Flag.Linter.create(flags)
     val res = recurse(source, dest)
-    linter.unusedSpans.foreach { span =>
-      quotes.reflect.report.warning("Unused flag!", span.toPosition)
+    linter.unusedSpans.foreach { (span, reason) =>
+      val pos = span.toPosition
+      reason match
+        case Reason.Unused => 
+          quotes.reflect.report.warning(s"Unused flag! Reason: ${reason}", pos)
+        case Reason.Overridden(overridder) =>
+          quotes.reflect.report.warning(s"Flag is being overriden by ${overridder.toPosition.sourceCode.mkString}", pos) 
     }
     res
   }

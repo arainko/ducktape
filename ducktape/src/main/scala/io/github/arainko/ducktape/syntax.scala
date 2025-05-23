@@ -114,7 +114,9 @@ object test {
   case class Two(int: Int)
 
   One(1).into[Two].transform(
-    Field.modifyDestNames(_.capitalize).typeSpecific[One],
-    // Field.modifyDestNames(a => a),
+    Field.modifyDestNames(a => a),
+    Field.modifyDestNames(a => a),
+    Field.modifyDestNames(a => a),
+    Field.modifyDestNames(a => a),
   )
 }

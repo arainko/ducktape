@@ -548,6 +548,7 @@ class FlagSuite extends DucktapeSuite {
     )
   }
 
+  
   test("dest name amiguities are reported for products") {
     case class Source(int: Int, str: String)
     case class Dest(INT: Int, STR: String)

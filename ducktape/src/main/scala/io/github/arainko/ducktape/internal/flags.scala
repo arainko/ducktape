@@ -8,6 +8,7 @@ import scala.reflect.TypeTest
 import io.github.arainko.ducktape.internal.Flag.Linter.markUsage
 import io.github.arainko.ducktape.internal.Flag.Effect
 import io.github.arainko.ducktape.internal.Flag.Typed
+import scala.collection.immutable.SortedSet
 
 private[ducktape] case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
   def transition[A](
@@ -27,11 +28,12 @@ private[ducktape] object PlanFlags {
 private[ducktape] case class Flag(effect: Flag.Effect, kind: Flag.Kind, span: Span, priority: Priority) derives Debug
 
 private[ducktape] object Flag {
+  given Ordering[Flag] = Ordering.by(_.priority)
   sealed trait Effect derives Debug {
     type In
     type Out
 
-    def use(in: In): Out
+    private[Flag] def use(in: In): Out
   }
 
   object Effect {
@@ -39,13 +41,13 @@ private[ducktape] object Flag {
       final type In = String
       final type Out = String
 
-      final def use(in: String): String = renamer(in) 
+      private[Flag] final def use(in: String): String = renamer(in) 
     }
     case class CaseRename(renamer: String => String) extends Effect {
       final type In = String
       final type Out = String
 
-      final def use(in: String): String = renamer(in) 
+      private[Flag] final def use(in: String): String = renamer(in) 
     }
   }
 
@@ -62,32 +64,39 @@ private[ducktape] object Flag {
     case TypeSpecific(tpe: Type[?])
   }
 
-  final case class Typed[+A <: Effect](val effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug {
-    inline def use(input: effect.In)(using linter: Linter): effect.Out = {
+  final case class Typed[+A <: Effect](effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug {
+    def use(input: effect.In)(using linter: Linter): effect.Out = {
       linter.markUsage(this)
       effect.use(input)
     }
   }
 
-  opaque type Linter = collection.mutable.Set[Span]
+
+  opaque type Linter = collection.mutable.Map[Span, Linter.Reason]
 
   object Linter {
     def create(flags: PlanFlags): Linter = {
       def collectFlagSpans(sideSpecificFlags: SideSpecficFlags) = 
         sideSpecificFlags.inScope.map(_.span) ++ sideSpecificFlags.outOfScope.map { (_, flag) => flag.span }
 
-      collection.mutable.Set((collectFlagSpans(flags.dest) ++ collectFlagSpans(flags.source))*)
+      collection.mutable.Map((collectFlagSpans(flags.dest) ++ collectFlagSpans(flags.source)).map(_ -> Reason.Unused)*)
     }
 
     extension (self: Linter) {
-      def markUsage(flag: Flag.Typed[?]): Unit = self -= flag.span
-      def unusedSpans: List[Span] = self.toList
+      def markUsage(flag: Flag.Typed[?]): Unit = 
+        self -= flag.span
+
+      def markAsOverriden(flag: Flag.Typed[?], overridenBy: Flag.Typed[?]): Unit =
+        self.update(flag.span, Reason.Overridden(overridenBy.span))
+
+      def unusedSpans: Map[Span, Reason] = self.toMap
     }
 
-
+    enum Reason {
+      case Unused
+      case Overridden(overridder: Span)
+    }
   }
-
-
 }
 
 // What to support:
@@ -137,17 +146,27 @@ private[ducktape] case class SideSpecficFlags(
   outOfScope: Vector[(List[Step], Flag)],
   inScope: Vector[Flag]
 ) derives Debug {
-
   import scala.util.chaining.*
 
-  def get[B <: Effect](tpe: Type[?])(using tt: TypeTest[Effect, B], quotes: Quotes): Option[Typed[B]] = {
-    inScope.collect {
+  def get[B <: Effect](tpe: Type[?])(using tt: TypeTest[Effect, B], quotes: Quotes, linter: Flag.Linter): Option[Typed[B]] = {
+    val typedFlags = inScope.collect {
       case Flag(tt(effect), kind @ Flag.Kind.TypeSpecific(flagType), span, prio) if tpe.repr <:< flagType.repr =>
         Flag.Typed(effect, kind, span, prio)
       case Flag(tt(effect), kind @ (Flag.Kind.Local | Flag.Kind.Regional), span, prio) =>
         Flag.Typed(effect, kind, span, prio)
     }
-      .maxByOption(_.priority)
+      .sortBy(_.priority)
+
+    typedFlags.foldRight(None: None | Typed[?]) { (curr, previous) =>
+      previous match
+        case prev: Typed[?] => 
+          linter.markAsOverriden(curr, prev)
+          curr
+        case None =>
+          curr
+    }
+
+    typedFlags.lastOption
   }
 
   def transition(step: Step | Passthrough)(using Quotes): SideSpecficFlags = {
