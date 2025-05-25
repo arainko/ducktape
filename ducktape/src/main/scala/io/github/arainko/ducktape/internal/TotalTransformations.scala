@@ -21,8 +21,8 @@ private[ducktape] object TotalTransformations {
     )
 
     val (config, flags) = Configuration.parse(configs, ConfigParser.total)
-    val plan = Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])), flags)
-    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
+    val (plan, lintedFlags) = Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])), flags)
+    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config, lintedFlags)
     PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
   }
 
@@ -47,7 +47,7 @@ private[ducktape] object TotalTransformations {
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
 
-    val plan =
+    val (plan, lintedFlags) =
       Function
         .fromExpr(function)
         .map(function => Planner.between(sourceStruct, Structure.fromFunction(function), PlanFlags.empty))
@@ -57,10 +57,10 @@ private[ducktape] object TotalTransformations {
             Structure.of[Any](Path.empty(Type.of[Any])),
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
             None
-          )
+          ) -> Flag.Linted.empty
         )
 
-    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, Nil)
+    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, Nil, lintedFlags)
     PlanInterpreter.run[A](totalPlan, value)
   }
 
@@ -77,7 +77,7 @@ private[ducktape] object TotalTransformations {
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
     val (config, flags) = Configuration.parse(configs, ConfigParser.total)
 
-    val plan =
+    val (plan, lintedFlags) =
       Function
         .fromFunctionArguments[Args, Func](function)
         .map(function => Planner.between(sourceStruct, Structure.fromFunction(function), flags))
@@ -87,10 +87,10 @@ private[ducktape] object TotalTransformations {
             Structure.toplevelAny,
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
             None
-          )
+          ) -> Flag.Linted.empty
         )
 
-    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config)
+    val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config, lintedFlags)
     PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
   }
 }

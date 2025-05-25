@@ -530,7 +530,7 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "asd"),
       Dest(1, "asd")
     )(
-      Field.modifyDestNames(_.toUpperCase.replace("_ADDITION", "whatever")).regional(a => a),
+      Field.modifyDestNames(_.toUpperCase.replace("_ADDITION", "whatever")).regional(a => a): @nowarn("msg=Config is being overridden"),
       Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).regional(a => a)
     )
   }

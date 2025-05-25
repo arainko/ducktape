@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
 import scala.quoted.runtime.StopMacroExpansion
+import io.github.arainko.ducktape.internal.Flag.Linter.Reason
 
 private[ducktape] object Backend {
 
@@ -9,9 +10,9 @@ private[ducktape] object Backend {
     Context.Of[F]
   )(
     plan: Plan[Erroneous, F],
-    configs: List[Configuration.Instruction[F]]
+    configs: List[Configuration.Instruction[F]],
+    lintedFlags: Flag.Linted
   )(using Quotes) = {
-    import quotes.reflect.*
 
     val reconfiguredPlan = plan.configureAll(configs)
 
@@ -19,12 +20,8 @@ private[ducktape] object Backend {
     Logger.info("Config", configs)
     Logger.info("Reconfigured plan", reconfiguredPlan)
 
-    reconfiguredPlan.warnings
-      .groupBy(_.span)
-      .foreach { (span, warnings) =>
-        val messages = ConfigWarning.renderAll(warnings)
-        messages.foreach(report.warning(_, span.toPosition))
-      }
+    reportConfigWarnings(reconfiguredPlan)
+    reportFlagWarnings(lintedFlags)
 
     reconfiguredPlan.result.refine match {
       case Left(errors) =>
@@ -56,7 +53,7 @@ private[ducktape] object Backend {
         case span: Span => span
     }
       .transform((_, errors) => errors.map(_.render).toList.distinct.mkString(System.lineSeparator))
-      .foreach { (span, errorMessafe) => quotes.reflect.report.error(errorMessafe, span.toPosition) }
+      .foreach { (span, errorMessage) => quotes.reflect.report.error(errorMessage, span.toPosition) }
 
     throw new StopMacroExpansion
   }
@@ -84,4 +81,26 @@ private[ducktape] object Backend {
 
       String.join(System.lineSeparator, (renderSingle(self) :: suppressedErrors)*)
     }
+
+  private def reportConfigWarnings(reconfiguredPlan: Plan.Reconfigured[?])(using Quotes) = 
+    reconfiguredPlan.warnings
+      .groupBy(_.span)
+      .foreach { (span, warnings) =>
+        val messages = ConfigWarning.renderAll(warnings)
+        messages.foreach(quotes.reflect.report.warning(_, span.toPosition))
+      }
+
+  private def reportFlagWarnings(lintedFlags: Flag.Linted)(using Quotes) = {
+    lintedFlags.foreach { (flagSpan, reason) => 
+      val message = reason match {
+        case Reason.Unused => 
+          "Config is not actually being used anywhere"
+        case Reason.Overridden(overridder) =>
+          val pos = overridder.toPosition
+          val codeAndLocation = s"${pos.sourceCode.mkString} @ ${pos.sourceFile.name}:${pos.endLine + 1}:${pos.endColumn + 1}"
+          s"Config is being overriden by $codeAndLocation"
+      }
+      quotes.reflect.report.warning(message, flagSpan.toPosition)
+    }
+  }
 }

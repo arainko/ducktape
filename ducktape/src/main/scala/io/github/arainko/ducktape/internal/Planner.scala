@@ -9,25 +9,16 @@ import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
 import scala.util.boundary
-import io.github.arainko.ducktape.internal.Flag.Linter.Reason
 
 private[ducktape] object Planner {
   import Structure.*
 
-  def between[F <: Fallible](source: Structure, dest: Structure, flags: PlanFlags)(using Quotes, Context.Of[F]) = {
+  def between[F <: Fallible](source: Structure, dest: Structure, flags: PlanFlags)(using Quotes, Context.Of[F]): (Plan[Erroneous, F], Flag.Linted) = {
     given Depth = Depth.zero
     given PlanFlags = flags
     given linter: Flag.Linter = Flag.Linter.create(flags)
-    val res = recurse(source, dest)
-    linter.unusedSpans.foreach { (span, reason) =>
-      val pos = span.toPosition
-      reason match
-        case Reason.Unused => 
-          quotes.reflect.report.warning(s"Unused flag! Reason: ${reason}", pos)
-        case Reason.Overridden(overridder) =>
-          quotes.reflect.report.warning(s"Flag is being overriden by ${overridder.toPosition.sourceCode.mkString}", pos) 
-    }
-    res
+    val plan = recurse(source, dest)
+    plan -> linter.lintedFlags
   }
 
   private def recurse[F <: Fallible](

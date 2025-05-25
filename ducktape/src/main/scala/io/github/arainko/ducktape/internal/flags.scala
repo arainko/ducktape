@@ -89,13 +89,19 @@ private[ducktape] object Flag {
       def markAsOverriden(flag: Flag.Typed[?], overridenBy: Flag.Typed[?]): Unit =
         self.update(flag.span, Reason.Overridden(overridenBy.span))
 
-      def unusedSpans: Map[Span, Reason] = self.toMap
+      def lintedFlags: Linted = self.toMap
     }
 
     enum Reason {
       case Unused
       case Overridden(overridder: Span)
     }
+  }
+
+  opaque type Linted <: Map[Span, Linter.Reason] = Map[Span, Linter.Reason]
+
+  object Linted {
+    val empty: Linted = Map.empty
   }
 }
 

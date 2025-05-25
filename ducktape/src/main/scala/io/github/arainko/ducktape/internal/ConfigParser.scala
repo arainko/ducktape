@@ -5,6 +5,7 @@ import io.github.arainko.ducktape.*
 import scala.quoted.*
 
 import Configuration.*
+import scala.annotation.nowarn
 
 private[ducktape] case class ParsedFlag(side: Side, flag: Flag, steps: List[Step])
 
@@ -312,6 +313,18 @@ private[ducktape] object ConfigParser {
             Nil
           )
 
+        case (prio, cfg @ AsExpr('{ Case.modifyDestNames[a, b]($renamer).typeSpecific[tpe] })) =>
+          ParsedFlag(
+            Side.Dest,
+            Flag(
+              Flag.Effect.CaseRename(ParseRenamer.parse(renamer)),
+              Flag.Kind.TypeSpecific(Type.of[tpe]),
+              Span.fromPosition(cfg.pos),
+              prio
+            ),
+            Nil
+          )
+
         case DeprecatedConfig(configs) => configs
       }
     }
@@ -524,7 +537,11 @@ private[ducktape] object ConfigParser {
 
   private object AsExpr {
     def unapply(using Quotes)(term: quotes.reflect.Term): Some[Expr[Any]] = {
-      Some(term.asExpr)
+      import quotes.reflect.*
+      term match {
+        // case Typed(term, _: Annotated) => Some(term.asExpr)
+        case term => Some(term.asExpr)
+      }
     }
   }
 

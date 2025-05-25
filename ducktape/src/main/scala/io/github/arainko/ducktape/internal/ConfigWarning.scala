@@ -16,7 +16,7 @@ private[ducktape] object ConfigWarning {
     warnings
       .groupBy(_.overriderSpan)
       .map { (overriderSpan, warnings) =>
-        val pos = overriderSpan.withEnd(_ - 1).toPosition
+        val pos = overriderSpan.toPosition
         val codeAndLocation = s"${pos.sourceCode.mkString} @ ${pos.sourceFile.name}:${pos.endLine + 1}:${pos.endColumn + 1}"
 
         if warnings.size > 1 then s"""Configs for:

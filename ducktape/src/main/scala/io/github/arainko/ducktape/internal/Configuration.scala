@@ -129,7 +129,7 @@ private[ducktape] object Configuration {
       Configuration.Instruction.Failed(
         Path.empty(Type.of[Nothing]),
         Side.Dest,
-        s"Unsupported config expression: ${term.show}",
+        s"Unsupported config expression: ${term.show(using Printer.TreeStructure)}",
         Span.fromPosition(term.pos)
       )
     val parser = ConfigParser.combine(parsers)
