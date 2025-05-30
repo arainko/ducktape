@@ -1,14 +1,11 @@
 package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.internal.*
-import io.github.arainko.ducktape.internal.Flag.Kind
+import io.github.arainko.ducktape.internal.Flag.Linter.markUsage
+import io.github.arainko.ducktape.internal.Flag.{Effect, Kind, Typed}
 
 import scala.quoted.*
 import scala.reflect.TypeTest
-import io.github.arainko.ducktape.internal.Flag.Linter.markUsage
-import io.github.arainko.ducktape.internal.Flag.Effect
-import io.github.arainko.ducktape.internal.Flag.Typed
-import scala.collection.immutable.SortedSet
 
 private[ducktape] case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
   def transition[A](

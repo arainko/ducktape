@@ -1,8 +1,9 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.internal.Flag.Linter.Reason
+
 import scala.quoted.*
 import scala.quoted.runtime.StopMacroExpansion
-import io.github.arainko.ducktape.internal.Flag.Linter.Reason
 
 private[ducktape] object Backend {
 
@@ -98,7 +99,7 @@ private[ducktape] object Backend {
         case Reason.Overridden(overridder) =>
           val pos = overridder.toPosition
           val codeAndLocation = s"${pos.sourceCode.mkString} @ ${pos.sourceFile.name}:${pos.endLine + 1}:${pos.endColumn + 1}"
-          s"Config is being overriden by $codeAndLocation"
+          s"Config is being overridden by $codeAndLocation"
       }
       quotes.reflect.report.warning(message, flagSpan.toPosition)
     }
