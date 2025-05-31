@@ -306,7 +306,7 @@ class TypeSpecificFlagSuite extends DucktapeSuite {
     )
   }
 
-  test("source case local flag DOESN'T cover the selected subtype (picked as a subtype with .at)") {
+  test("source case type specific flag DOESN'T cover the selected subtype (it's only meant to cover its childer)") {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 
@@ -345,7 +345,7 @@ class TypeSpecificFlagSuite extends DucktapeSuite {
     )
   }
 
-  test("dest case local flag DOESN'T cover the selected subtype (picked as a subtype with .at)") {
+  test("dest case type specific DOESN'T cover the selected subtype (it's only meant to cover its childer)") {
     case class Source(int: Int, level1: SourceEnum)
     case class Dest(int: Int, level1: DestEnum)
 

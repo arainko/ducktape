@@ -518,7 +518,7 @@ class FlagSuite extends DucktapeSuite {
       Dest(1, "asd")
     )(
       Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).local(a => a): @nowarn(
-        "msg=Config is being overridden"
+        """msg=Config is being overridden by Field\.modifyDestNames\(_\.toLowerCase\.replace\("_addition", ""\)\)\.local\(a => a\) @ FlagSuite\.scala:523:82"""
       ),
       Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).local(a => a)
     )
@@ -533,7 +533,7 @@ class FlagSuite extends DucktapeSuite {
       Dest(1, "asd")
     )(
       Field.modifyDestNames(_.toUpperCase.replace("_ADDITION", "whatever")).regional(a => a): @nowarn(
-        "msg=Config is being overridden"
+        """msg=Config is being overridden by Field\.modifyDestNames\(_\.toLowerCase\.replace\("_addition", ""\)\)\.regional\(a => a\) @ FlagSuite\.scala:538:85"""
       ),
       Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).regional(a => a)
     )
@@ -548,7 +548,7 @@ class FlagSuite extends DucktapeSuite {
       Dest(1, "asd")
     )(
       Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).typeSpecific[Dest]: @nowarn(
-        "msg=Config is being overridden"
+        """msg=Config is being overridden by Field\.modifyDestNames\(_\.toLowerCase\.replace\("_addition", ""\)\)\.typeSpecific\[Dest\] @ FlagSuite\.scala:553:87"""
       ),
       Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).typeSpecific[Dest]
     )
@@ -707,6 +707,27 @@ Field 'INT' (transformed to 'AMBIGOUS') in Dest maps to more than one field name
       Field
         .modifySourceNames(_.rename("int", "_int").rename("str", "_str").rename("level3", "_level3"))
         .typeSpecific[SourceLevel2]
+    )
+  }
+
+  test("multiple flag overrides are reported correctly") {
+    case class Source(int: Int, str: String)
+    case class Dest(INT_ADDITION: Int, STR: String)
+
+    assertTransformsConfigured(
+      Source(1, "asd"),
+      Dest(1, "asd")
+    )(
+      Field.modifyDestNames(_.toUpperCase.replace("_1", "")).regional(a => a): @nowarn(
+        """msg=Config is being overridden by Field\.modifyDestNames\(_\.toUpperCase\.replace\("_2", ""\)\)\.regional\(a => a\)"""
+      ),
+      Field.modifyDestNames(_.toUpperCase.replace("_2", "")).regional(a => a): @nowarn(
+        """msg=Config is being overridden by Field\.modifyDestNames\(_\.toUpperCase\.replace\("_3", ""\)\)\.regional\(a => a\)"""
+      ),
+      Field.modifyDestNames(_.toUpperCase.replace("_3", "")).regional(a => a): @nowarn(
+        """msg=Config is being overridden by Field\.modifyDestNames\(_\.toLowerCase\.replace\("_addition", ""\)\)\.regional\(a => a\)"""
+      ),
+      Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).regional(a => a)
     )
   }
 }
