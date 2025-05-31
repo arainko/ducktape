@@ -1,7 +1,8 @@
 package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.internal.*
-import io.github.arainko.ducktape.internal.Flag.Kind
+import io.github.arainko.ducktape.internal.Flag.Linter.markUsage
+import io.github.arainko.ducktape.internal.Flag.{ Effect, Kind, Typed }
 
 import scala.quoted.*
 import scala.reflect.TypeTest
@@ -24,9 +25,27 @@ private[ducktape] object PlanFlags {
 private[ducktape] case class Flag(effect: Flag.Effect, kind: Flag.Kind, span: Span, priority: Priority) derives Debug
 
 private[ducktape] object Flag {
-  enum Effect derives Debug {
-    case FieldRename(renamer: String => String)
-    case CaseRename(renamer: String => String)
+  given Ordering[Flag] = Ordering.by(_.priority)
+  sealed trait Effect derives Debug {
+    type In
+    type Out
+
+    private[Flag] def use(in: In): Out
+  }
+
+  object Effect {
+    case class FieldRename(renamer: String => String) extends Effect {
+      final type In = String
+      final type Out = String
+
+      private[Flag] final def use(in: String): String = renamer(in)
+    }
+    case class CaseRename(renamer: String => String) extends Effect {
+      final type In = String
+      final type Out = String
+
+      private[Flag] final def use(in: String): String = renamer(in)
+    }
   }
 
   enum Kind derives Debug {
@@ -41,7 +60,59 @@ private[ducktape] object Flag {
     case TypeSpecific(tpe: Type[?])
   }
 
-  final case class Typed[+A <: Effect](effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug
+  final case class Typed[+A <: Effect](effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug {
+    def use(input: effect.In)(using linter: Linter): effect.Out = {
+      linter.markUsage(this)
+      effect.use(input)
+    }
+  }
+
+  object Typed {
+    // todo: add orderings for each effect because Ordering is invariant :((((((
+    given ordering[A <: Effect]: Ordering[Typed[A]] = Ordering.by(_.priority)
+  }
+
+  opaque type Linter = collection.mutable.Map[Span, Linter.Reason]
+
+  object Linter {
+    def create(flags: PlanFlags): Linter = {
+      def collectFlagSpans(sideSpecificFlags: SideSpecficFlags) =
+        sideSpecificFlags.inScope.map(_.span) ++ sideSpecificFlags.outOfScope.map { (_, flag) => flag.span }
+
+      collection.mutable.Map((collectFlagSpans(flags.dest) ++ collectFlagSpans(flags.source)).map(_ -> Reason.Unused)*)
+    }
+
+    extension (self: Linter) {
+      def markUsage(flag: Flag.Typed[?]): Unit =
+        self -= flag.span
+
+      def markOverrides(flags: SortedVector[Flag.Typed[?]]): Unit =
+        flags.foldRight(None: None | Typed[?]) { (curr, previous) =>
+          previous match {
+            case prev: Typed[?] =>
+              self.markAsOverriden(curr, prev)
+              curr
+            case None => curr
+          }
+        }
+
+      private def markAsOverriden(flag: Flag.Typed[?], overridenBy: Flag.Typed[?]): Unit =
+        self.update(flag.span, Reason.Overridden(overridenBy.span))
+
+      def lintedFlags: Lints = self.toMap
+    }
+
+    enum Reason {
+      case Unused
+      case Overridden(overridder: Span)
+    }
+  }
+
+  opaque type Lints <: Map[Span, Linter.Reason] = Map[Span, Linter.Reason]
+
+  object Lints {
+    val empty: Lints = Map.empty
+  }
 }
 
 // What to support:
@@ -91,17 +162,19 @@ private[ducktape] case class SideSpecficFlags(
   outOfScope: Vector[(List[Step], Flag)],
   inScope: Vector[Flag]
 ) derives Debug {
-
   import scala.util.chaining.*
 
-  def get[A <: Flag.Effect](tpe: Type[?])(using TypeTest[Flag.Effect, A], Quotes): Option[Flag.Typed[A]] = {
-    inScope.collect {
-      case Flag(effect: A, kind @ Flag.Kind.TypeSpecific(flagType), span, prio) if tpe.repr <:< flagType.repr =>
+  def get[B <: Effect](tpe: Type[?])(using tt: TypeTest[Effect, B], quotes: Quotes, linter: Flag.Linter): Option[Typed[B]] = {
+    val typedFlags = inScope.collect {
+      case Flag(tt(effect), kind @ Flag.Kind.TypeSpecific(flagType), span, prio) if tpe.repr <:< flagType.repr =>
         Flag.Typed(effect, kind, span, prio)
-      case Flag(effect: A, kind @ (Flag.Kind.Local | Flag.Kind.Regional), span, prio) =>
+      case Flag(tt(effect), kind @ (Flag.Kind.Local | Flag.Kind.Regional), span, prio) =>
         Flag.Typed(effect, kind, span, prio)
     }
-      .maxByOption(_.priority)
+
+    val sortedFlags = SortedVector.from(typedFlags)
+    linter.markOverrides(sortedFlags)
+    sortedFlags.lastOption
   }
 
   def transition(step: Step | Passthrough)(using Quotes): SideSpecficFlags = {

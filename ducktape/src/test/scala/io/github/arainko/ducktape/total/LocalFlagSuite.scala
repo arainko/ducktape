@@ -2,6 +2,8 @@ package io.github.arainko.ducktape.total
 
 import io.github.arainko.ducktape.*
 
+import scala.annotation.nowarn
+
 class LocalFlagSuite extends DucktapeSuite {
   test("dest field local flag covers the selected case class and nothing else") {
     case class Source(int: Int, str: String, level1: SourceLevel1)
@@ -337,7 +339,9 @@ class LocalFlagSuite extends DucktapeSuite {
       Source(1, SourceEnum.Two(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3), DestLevel1Enum.Two))
     )(
-      Case.modifySourceNames(_.toLowerCase).local(_.level1.at[SourceEnum.Two])
+      Case.modifySourceNames(_.toLowerCase).local(_.level1.at[SourceEnum.Two]): @nowarn(
+        "msg=Config is not actually being used anywhere"
+      )
     )
   }
 
@@ -374,7 +378,9 @@ class LocalFlagSuite extends DucktapeSuite {
       Source(1, SourceEnum.Two(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3), DestLevel1Enum.Two))
     )(
-      Case.modifyDestNames(_.toLowerCase).local(_.level1.at[DestEnum.Two])
+      Case.modifyDestNames(_.toLowerCase).local(_.level1.at[DestEnum.Two]): @nowarn(
+        "msg=Config is not actually being used anywhere"
+      )
     )
   }
 

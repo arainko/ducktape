@@ -190,7 +190,7 @@ class AppliedBuilderSuite extends DucktapeSuite {
     }("""Configs for:
   * TestClassWithAdditionalString.str
   * TestClassWithAdditionalString.additionalArg
-are being overriden by Field.allMatching(fieldSource)""")
+are being overridden by Field.allMatching(fieldSource)""")
   }: @nowarn("msg=unused")
 
   test("When configs are applied to the same field repeateadly a warning is emitted") {
@@ -204,7 +204,7 @@ are being overriden by Field.allMatching(fieldSource)""")
           Field.renamed(_.additionalArg, _.str),
         )
       """
-    }("Config for TestClassWithAdditionalString.additionalArg is being overriden by Field.renamed(_.additionalArg, _.str)")
+    }("Config for TestClassWithAdditionalString.additionalArg is being overridden by Field.renamed(_.additionalArg, _.str)")
   }
 
   test("Case.const properly applies the constant for that subtype") {
@@ -303,7 +303,7 @@ are being overriden by Field.allMatching(fieldSource)""")
           Case.const[LessCases.Case3.type](MoreCases.Case3)
         )
       """
-    }("Config for LessCases.at[io.github.arainko.ducktape.total.AppliedBuilderSuite.LessCases.Case3.type] is being overriden by")
+    }("Config for LessCases.at[io.github.arainko.ducktape.total.AppliedBuilderSuite.LessCases.Case3.type] is being overridden by")
   }
 
   test("derive a transformer for case classes with default values if configured") {

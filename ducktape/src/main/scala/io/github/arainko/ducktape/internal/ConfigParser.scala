@@ -531,7 +531,9 @@ private[ducktape] object ConfigParser {
   private object RegionalConfig {
     def unapply(using Quotes)(term: quotes.reflect.Term): Option[(quotes.reflect.Term, Path)] = {
       import quotes.reflect.*
-      PartialFunction.condOpt(term) {
+      term match {
+        // handle configs annotated with `: @nowarn` - Typed(term, _: Annotated) doesn't work for reasons unknown so we gotta do a wildcard...
+        case Typed(term, _) => unapply(term)
         case Apply(
               TypeApply(
                 Apply(
@@ -542,7 +544,8 @@ private[ducktape] object ConfigParser {
               ),
               PathSelector(path) :: Nil
             ) =>
-          term -> path
+          Some(term -> path)
+        case _ => None
       }
     }
   }
@@ -550,7 +553,9 @@ private[ducktape] object ConfigParser {
   private object LocalConfig {
     def unapply(using Quotes)(term: quotes.reflect.Term): Option[(quotes.reflect.Term, Path)] = {
       import quotes.reflect.*
-      PartialFunction.condOpt(term) {
+      term match {
+        // handle configs annotated with `: @nowarn` - Typed(term, _: Annotated) doesn't work for reasons unknown so we gotta do a wildcard...
+        case Typed(term, _) => unapply(term)
         case Apply(
               TypeApply(
                 Apply(
@@ -561,7 +566,8 @@ private[ducktape] object ConfigParser {
               ),
               PathSelector(path) :: Nil
             ) =>
-          term -> path
+          Some(term -> path)
+        case _ => None
       }
     }
   }

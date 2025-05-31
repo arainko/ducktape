@@ -60,7 +60,7 @@ class AppliedViaBuilderSuite extends DucktapeSuite {
           Arg.renamed(_.additionalArg, _.str)
         )
       """
-    }("Config for TestClassWithAdditionalString.additionalArg is being overriden by")
+    }("Config for TestClassWithAdditionalString.additionalArg is being overridden by")
   }
 
   test("Builder reports a missing argument") {
