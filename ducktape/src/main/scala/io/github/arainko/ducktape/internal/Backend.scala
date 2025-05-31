@@ -12,7 +12,7 @@ private[ducktape] object Backend {
   )(
     plan: Plan[Erroneous, F],
     configs: List[Configuration.Instruction[F]],
-    lintedFlags: Flag.Linted
+    lintedFlags: Flag.Lints
   )(using Quotes) = {
 
     val reconfiguredPlan = plan.configureAll(configs)
@@ -83,7 +83,7 @@ private[ducktape] object Backend {
       String.join(System.lineSeparator, (renderSingle(self) :: suppressedErrors)*)
     }
 
-  private def reportConfigWarnings(reconfiguredPlan: Plan.Reconfigured[?])(using Quotes) = 
+  private def reportConfigWarnings(reconfiguredPlan: Plan.Reconfigured[?])(using Quotes) =
     reconfiguredPlan.warnings
       .groupBy(_.span)
       .foreach { (span, warnings) =>
@@ -91,10 +91,10 @@ private[ducktape] object Backend {
         messages.foreach(quotes.reflect.report.warning(_, span.toPosition))
       }
 
-  private def reportFlagWarnings(lintedFlags: Flag.Linted)(using Quotes) = {
-    lintedFlags.foreach { (flagSpan, reason) => 
+  private def reportFlagWarnings(lintedFlags: Flag.Lints)(using Quotes) = {
+    lintedFlags.foreach { (flagSpan, reason) =>
       val message = reason match {
-        case Reason.Unused => 
+        case Reason.Unused =>
           "Config is not actually being used anywhere"
         case Reason.Overridden(overridder) =>
           val pos = overridder.toPosition

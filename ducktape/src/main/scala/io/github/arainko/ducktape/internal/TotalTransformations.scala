@@ -21,7 +21,8 @@ private[ducktape] object TotalTransformations {
     )
 
     val (config, flags) = Configuration.parse(configs, ConfigParser.total)
-    val (plan, lintedFlags) = Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])), flags)
+    val (plan, lintedFlags) =
+      Planner.between(Structure.of[A](Path.empty(Type.of[A])), Structure.of[B](Path.empty(Type.of[B])), flags)
     val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config, lintedFlags)
     PlanInterpreter.run[A](totalPlan, value).asExprOf[B]
   }
@@ -57,7 +58,7 @@ private[ducktape] object TotalTransformations {
             Structure.of[Any](Path.empty(Type.of[Any])),
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
             None
-          ) -> Flag.Linted.empty
+          ) -> Flag.Lints.empty
         )
 
     val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, Nil, lintedFlags)
@@ -87,7 +88,7 @@ private[ducktape] object TotalTransformations {
             Structure.toplevelAny,
             ErrorMessage.CouldntCreateTransformationFromFunction(Span.fromExpr(function)),
             None
-          ) -> Flag.Linted.empty
+          ) -> Flag.Lints.empty
         )
 
     val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config, lintedFlags)

@@ -13,7 +13,10 @@ import scala.util.boundary
 private[ducktape] object Planner {
   import Structure.*
 
-  def between[F <: Fallible](source: Structure, dest: Structure, flags: PlanFlags)(using Quotes, Context.Of[F]): (Plan[Erroneous, F], Flag.Linted) = {
+  def between[F <: Fallible](source: Structure, dest: Structure, flags: PlanFlags)(using
+    Quotes,
+    Context.Of[F]
+  ): (Plan[Erroneous, F], Flag.Lints) = {
     given Depth = Depth.zero
     given PlanFlags = flags
     given linter: Flag.Linter = Flag.Linter.create(flags)

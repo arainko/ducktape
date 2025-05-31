@@ -339,7 +339,9 @@ class TypeSpecificFlagSuite extends DucktapeSuite {
       Source(1, SourceEnum.Two(2, "2", SourceLevel1(3), SourceLevel1Enum.Two)),
       Dest(1, DestEnum.Two(2, "2", DestLevel1(3), DestLevel1Enum.Two))
     )(
-      Case.modifySourceNames(_.toLowerCase).typeSpecific[SourceEnum.Two]: @nowarn("msg=Config is not actually being used anywhere")
+      Case.modifySourceNames(_.toLowerCase).typeSpecific[SourceEnum.Two]: @nowarn(
+        "msg=Config is not actually being used anywhere"
+      )
     )
   }
 

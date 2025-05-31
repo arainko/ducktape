@@ -517,7 +517,9 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "asd"),
       Dest(1, "asd")
     )(
-      Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).local(a => a): @nowarn("msg=Config is being overridden"),
+      Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).local(a => a): @nowarn(
+        "msg=Config is being overridden"
+      ),
       Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).local(a => a)
     )
   }
@@ -530,7 +532,9 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "asd"),
       Dest(1, "asd")
     )(
-      Field.modifyDestNames(_.toUpperCase.replace("_ADDITION", "whatever")).regional(a => a): @nowarn("msg=Config is being overridden"),
+      Field.modifyDestNames(_.toUpperCase.replace("_ADDITION", "whatever")).regional(a => a): @nowarn(
+        "msg=Config is being overridden"
+      ),
       Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).regional(a => a)
     )
   }
@@ -543,12 +547,13 @@ class FlagSuite extends DucktapeSuite {
       Source(1, "asd"),
       Dest(1, "asd")
     )(
-      Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).typeSpecific[Dest]: @nowarn("msg=Config is being overridden"),
+      Field.modifyDestNames(_.toUpperCase.replace("_WHATEVER_THIS_FLAGS_HAS_LOWER_PRIO", "")).typeSpecific[Dest]: @nowarn(
+        "msg=Config is being overridden"
+      ),
       Field.modifyDestNames(_.toLowerCase.replace("_addition", "")).typeSpecific[Dest]
     )
   }
 
-  
   test("dest name amiguities are reported for products") {
     case class Source(int: Int, str: String)
     case class Dest(INT: Int, STR: String)
