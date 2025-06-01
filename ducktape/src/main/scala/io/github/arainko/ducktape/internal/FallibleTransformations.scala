@@ -74,7 +74,7 @@ private[ducktape] object FallibleTransformations {
         Planner.between(sourceStruct, destStruct, flags)
       }
       .match {
-        case Left(error) => Backend.reportErrorsAndAbort(NonEmptyList(error), config)
+        case Left(error)                => Backend.reportErrorsAndAbort(NonEmptyList(error), config)
         case Right(plan -> lintedFlags) =>
           val totalPlan = Backend.refineOrReportErrorsAndAbort(plan, config, lintedFlags)
           FalliblePlanInterpreter.run[F, A, B](totalPlan, value, Context.current.mode).asExprOf[F[B]]
@@ -115,7 +115,7 @@ private[ducktape] object FallibleTransformations {
         Planner.between(sourceStruct, destStruct, PlanFlags.empty)
       }
       .match {
-        case Left(error) => Backend.reportErrorsAndAbort(NonEmptyList(error), Nil)
+        case Left(error)                => Backend.reportErrorsAndAbort(NonEmptyList(error), Nil)
         case Right(plan -> lintedFlags) =>
           plan.dest.tpe match {
             case '[dest] =>
