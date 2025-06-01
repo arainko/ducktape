@@ -41,9 +41,9 @@ object Mode {
 
       override def product[A, B](fa: scala.Either[Coll[E], A], fb: scala.Either[Coll[E], B]): scala.Either[Coll[E], (A, B)] =
         (fa, fb) match {
-          case (Right(a), Right(b))      => Right(a -> b)
-          case (Right(_), err @ Left(_)) => err.asInstanceOf[scala.Either[Coll[E], (A, B)]]
-          case (err @ Left(_), Right(_)) => err.asInstanceOf[scala.Either[Coll[E], (A, B)]]
+          case (Right(a), Right(b))           => Right(a -> b)
+          case (Right(_), err @ Left(_))      => err.asInstanceOf[scala.Either[Coll[E], (A, B)]]
+          case (err @ Left(_), Right(_))      => err.asInstanceOf[scala.Either[Coll[E], (A, B)]]
           case (Left(errorsA), Left(errorsB)) =>
             val builder = errorCollFactory.newBuilder
             val accumulated = builder ++= errorsA ++= errorsB

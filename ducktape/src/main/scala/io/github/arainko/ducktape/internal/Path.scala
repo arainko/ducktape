@@ -66,7 +66,7 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
         case Path.Segment.Field(_, name)    => name
         case Segment.TupleElement(_, index) => s"apply($index)"
         case Path.Segment.Element(_)        => "element"
-        case Path.Segment.Case(tpe) =>
+        case Path.Segment.Case(tpe)         =>
           val repr = tpe.repr
           val suffix = if repr.isSingleton then ".type" else ""
           s"at[${tpe.repr.show(using Printer.TypeReprAnsiCode)}${suffix}]"

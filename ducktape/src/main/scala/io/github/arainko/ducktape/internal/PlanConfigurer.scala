@@ -268,7 +268,7 @@ private[ducktape] object PlanConfigurer {
 
       case dynamic: Configuration.Instruction.Dynamic =>
         dynamic.config(parent) match {
-          case Right(config) => current.configureIfValid(dynamic, config)
+          case Right(config)      => current.configureIfValid(dynamic, config)
           case Left(errorMessage) =>
             val failed = Configuration.Instruction.Failed.from(dynamic, errorMessage)
             Accumulator.append {

@@ -105,7 +105,7 @@ private[ducktape] object Debug extends LowPriorityDebug {
   inline def derived[A](using A: Mirror.Of[A]): Debug[A] =
     inline summonInline[Logger.Level] match {
       case Level.Off => nonShowable
-      case _ =>
+      case _         =>
         inline A match {
           case given Mirror.ProductOf[A] => product
           case given Mirror.SumOf[A]     => coproduct
@@ -180,8 +180,8 @@ private[ducktape] object Debug extends LowPriorityDebug {
 
       def recurse(ast: AST, depth: Int): String = {
         ast match
-          case Empty       => ""
-          case Text(value) => value
+          case Empty                     => ""
+          case Text(value)               => value
           case p @ Product(name, fields) =>
             if p.length >= 80 then {
               s"$name(".bold + Separator +
