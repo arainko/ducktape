@@ -3,7 +3,6 @@ import laika.config.ChoiceConfig
 import laika.config.Selections
 import org.typelevel.sbt.site.TypelevelSiteSettings
 import com.typesafe.tools.mima.core._
-import xerial.sbt.Sonatype._
 import org.typelevel.sbt.TypelevelMimaPlugin
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -14,7 +13,6 @@ ThisBuild / organizationName := "arainko"
 ThisBuild / startYear := Some(2023)
 ThisBuild / licenses := Seq(License.Apache2)
 ThisBuild / developers := List(tlGitHubDev("arainko", "Aleksander Rainko"))
-ThisBuild / sonatypeCredentialHost := Sonatype.sonatypeCentralHost
 ThisBuild / scalaVersion := "3.3.6"
 ThisBuild / tlSitePublishBranch := Some("series/0.2.x")
 
