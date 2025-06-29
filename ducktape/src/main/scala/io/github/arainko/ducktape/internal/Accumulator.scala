@@ -11,7 +11,7 @@ private[ducktape] object Accumulator {
         val builder = List.newBuilder[A]
         val result = f(using builder)
         builder.result() *: result
-    }
+      }
 
   def append[A](value: A)(using acc: Accumulator[A]): A = {
     acc.addOne(value)
