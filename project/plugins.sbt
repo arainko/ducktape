@@ -1,4 +1,4 @@
-addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.4")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.5")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.7.1")
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.3")
 addSbtPlugin("org.typelevel" % "sbt-typelevel-ci-release" % "0.8.0")
