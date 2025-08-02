@@ -36,6 +36,186 @@ class NamedTupleSuite extends DucktapeSuite {
     )
   }
 
+  test("big named tuple to big case class works") {
+    type BigNamedTuple = (
+      field1: Int,
+      field2: Int,
+      field3: Int,
+      field4: Int,
+      field5: Int,
+      field6: Int,
+      field7: Int,
+      field8: Int,
+      field9: Int,
+      field10: Int,
+      field11: Int,
+      field12: Int,
+      field13: Int,
+      field14: Int,
+      field15: Int,
+      field16: Int,
+      field17: Int,
+      field18: Int,
+      field19: Int,
+      field20: Int,
+      field21: Int,
+      field22: Int,
+      field23: Int
+    )
+    case class Big(
+      field1: Int,
+      field2: Int,
+      field3: Int,
+      field4: Int,
+      field5: Int,
+      field6: Int,
+      field7: Int,
+      field8: Int,
+      field9: Int,
+      field10: Int,
+      field11: Int,
+      field12: Int,
+      field13: Int,
+      field14: Int,
+      field15: Int,
+      field16: Int,
+      field17: Int,
+      field18: Int,
+      field19: Int,
+      field20: Int,
+      field21: Int,
+      field22: Int,
+      field23: Int
+    )
+    val input: BigNamedTuple = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
+    val expected = Big(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
+
+    assertTransforms(
+      input,
+      expected
+    )
+  }
+
+  test("big case class to big named tuple works") {
+    type BigNamedTuple = (
+      field1: Int,
+      field2: Int,
+      field3: Int,
+      field4: Int,
+      field5: Int,
+      field6: Int,
+      field7: Int,
+      field8: Int,
+      field9: Int,
+      field10: Int,
+      field11: Int,
+      field12: Int,
+      field13: Int,
+      field14: Int,
+      field15: Int,
+      field16: Int,
+      field17: Int,
+      field18: Int,
+      field19: Int,
+      field20: Int,
+      field21: Int,
+      field22: Int,
+      field23: Int
+    )
+    case class Big(
+      field1: Int,
+      field2: Int,
+      field3: Int,
+      field4: Int,
+      field5: Int,
+      field6: Int,
+      field7: Int,
+      field8: Int,
+      field9: Int,
+      field10: Int,
+      field11: Int,
+      field12: Int,
+      field13: Int,
+      field14: Int,
+      field15: Int,
+      field16: Int,
+      field17: Int,
+      field18: Int,
+      field19: Int,
+      field20: Int,
+      field21: Int,
+      field22: Int,
+      field23: Int
+    )
+    val expected: BigNamedTuple = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
+    val input = Big(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
+
+    assertTransforms(
+      input,
+      expected
+    )
+  }
+
+  test("big named tuple to big named tuple works") {
+    type BigNamedTuple = (
+      field1: Int,
+      field2: Int,
+      field3: Int,
+      field4: Int,
+      field5: Int,
+      field6: Int,
+      field7: Int,
+      field8: Int,
+      field9: Int,
+      field10: Int,
+      field11: Int,
+      field12: Int,
+      field13: Int,
+      field14: Int,
+      field15: Int,
+      field16: Int,
+      field17: Int,
+      field18: Int,
+      field19: Int,
+      field20: Int,
+      field21: Int,
+      field22: Int,
+      field23: Int
+    )
+    type BigNamedTuple2 = (
+      field23: Int,
+      field2: Int,
+      field3: Int,
+      field4: Int,
+      field5: Int,
+      field6: Int,
+      field7: Int,
+      field8: Int,
+      field9: Int,
+      field10: Int,
+      field11: Int,
+      field12: Int,
+      field13: Int,
+      field14: Int,
+      field15: Int,
+      field16: Int,
+      field17: Int,
+      field18: Int,
+      field19: Int,
+      field20: Int,
+      field21: Int,
+      field22: Int,
+      field1: Int
+    )
+    val input: BigNamedTuple = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
+    val expected: BigNamedTuple2 = (23, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 1)
+
+    assertTransforms(
+      input,
+      expected
+    )
+  }
+
   test("fallible (fail fast) named tuple to case class works") {
     case class Person(int: Int, str: String)
 

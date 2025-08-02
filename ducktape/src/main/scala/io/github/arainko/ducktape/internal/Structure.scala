@@ -190,7 +190,7 @@ private[ducktape] object Structure {
                         type MirroredElemLabels = labels
                         type MirroredElemTypes = types
                       }
-                    } if Type.of[A].repr.typeSymbol.fullName == "scala.NamedTuple$.NamedTuple" =>
+                    } if Type.of[A].repr.dealias.typeSymbol.fullName == "scala.NamedTuple$.NamedTuple" =>
 
                   val typeElems = tupleTypeElements(Type.of[types])
                   val normalizedErasedTupleTpe = rollupTuple(typeElems.toVector)

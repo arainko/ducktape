@@ -22,11 +22,17 @@ extension (expr: Expr[Any]) {
       case Kind.CaseClass =>
         expr.accessFieldByNameUnsafe(name)
       case Kind.NamedTuple(erasedTupleTpe) =>
+        val fieldNames = parentStructure.fields.keys
         val idxOfField = parentStructure.fields.keys.indexOf(name)
-        // TODO: also handle TupleXXL access
         erasedTupleTpe match {
           case '[erasedTpe] =>
-            '{ $expr.asInstanceOf[erasedTpe] }.accessFieldByNameUnsafe(s"_${idxOfField + 1}")
+            if fieldNames.size < 23 then '{ $expr.asInstanceOf[erasedTpe] }.accessFieldByNameUnsafe(s"_${idxOfField + 1}")
+            else
+              val fieldTpe = parentStructure.fields(name).tpe
+              (expr, fieldTpe) match {
+                case '{ $prod } -> '[tpe] =>
+                  '{ $prod.asInstanceOf[Product].productElement(${ Expr(idxOfField) }).asInstanceOf[tpe] }.asTerm
+              }
         }
 
   }
