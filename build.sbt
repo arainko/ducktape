@@ -38,7 +38,7 @@ ThisBuild / githubWorkflowBuild += WorkflowStep.Run(
 
 ThisBuild / tlVersionIntroduced := Map("3" -> "0.1.6")
 
-lazy val root = tlCrossRootProject.aggregate(ducktape)
+lazy val root = tlCrossRootProject.aggregate(ducktape, scalaNextTests)
 
 lazy val ducktape =
   crossProject(JVMPlatform, JSPlatform, NativePlatform)
@@ -56,6 +56,17 @@ lazy val ducktape =
       tlMimaPreviousVersions := Set.empty
     )
     .jsSettings(bspEnabled := false)
+
+lazy val scalaNextTests =
+  project
+    .in(file("scala-next-tests"))
+    .enablePlugins(NoPublishPlugin)
+    .settings(
+      scalaVersion := "3.7.2",
+      scalacOptions ++= List("-Wunused:all", "-Xcheck-macros"),
+      libraryDependencies += "org.scalameta" %%% "munit" % "1.1.1" % Test
+    )
+    .dependsOn(ducktape.jvm % "compile->compile;test->test")
 
 lazy val docs =
   project

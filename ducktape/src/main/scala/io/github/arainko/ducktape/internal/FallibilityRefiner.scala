@@ -34,7 +34,7 @@ private[ducktape] object FallibilityRefiner {
             case Configuration.CaseComputed(tpe, function)                      => ()
             case Configuration.FieldComputed(tpe, function)                     => ()
             case Configuration.FieldComputedDeep(tpe, srcTpe, function)         => ()
-            case Configuration.FieldReplacement(source, name, tpe)              => ()
+            case Configuration.FieldReplacement(source, _, name, tpe)           => ()
             case Configuration.FallibleConst(value, tpe)                        => boundary.break(None)
             case Configuration.FallibleFieldComputed(tpe, function)             => boundary.break(None)
             case Configuration.FallibleFieldComputedDeep(tpe, srcTpe, function) => boundary.break(None)

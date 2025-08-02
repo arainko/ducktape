@@ -32,16 +32,24 @@ private[ducktape] object Structure {
 
   def toplevelNothing(using Quotes) = Structure.Ordinary(Type.of[Nothing], Path.empty(Type.of[Nothing]))
 
-  case class Product(tpe: Type[?], path: Path, fields: VectorMap[String, Structure]) extends Structure {
+  case class Product(tpe: Type[?], path: Path, fields: VectorMap[String, Structure], kind: Product.Kind) extends Structure {
 
     private var cachedDefaults: Map[String, Expr[Any]] = null
 
+    // TODO: check return Map.empty when named tuple
     def defaults(using Quotes): Map[String, Expr[Any]] =
       if cachedDefaults != null then cachedDefaults
       else {
         cachedDefaults = Defaults.of(this)
         cachedDefaults
       }
+  }
+
+  object Product {
+    enum Kind {
+      case CaseClass
+      case NamedTuple(erasedTupleTpe: Type[?])
+    }
   }
 
   case class Tuple(tpe: Type[?], path: Path, elements: Vector[Structure], isPlain: Boolean) extends Structure
@@ -178,6 +186,28 @@ private[ducktape] object Structure {
 
                 case '{
                       $m: Mirror.Product {
+                        type MirroredLabel = "NamedTuple"
+                        type MirroredElemLabels = labels
+                        type MirroredElemTypes = types
+                      }
+                    } if Type.of[A].repr.dealias.typeSymbol.fullName == "scala.NamedTuple$.NamedTuple" =>
+
+                  val typeElems = tupleTypeElements(Type.of[types])
+                  val normalizedErasedTupleTpe = rollupTuple(typeElems.toVector)
+                  val structures =
+                    typeElems
+                      .zip(constStringTuple(TypeRepr.of[labels]))
+                      .map((tpe, name) =>
+                        name -> (tpe.asType match {
+                          case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], name)))
+                        })
+                      )
+                      .to(VectorMap)
+
+                  Structure.Product(Type.of[A], path, structures, Structure.Product.Kind.NamedTuple(normalizedErasedTupleTpe))
+
+                case '{
+                      $m: Mirror.Product {
                         type MirroredElemLabels = labels
                         type MirroredElemTypes = types
                       }
@@ -192,7 +222,7 @@ private[ducktape] object Structure {
                       )
                       .to(VectorMap)
 
-                  Structure.Product(Type.of[A], path, structures)
+                  Structure.Product(Type.of[A], path, structures, Structure.Product.Kind.CaseClass)
                 case '{
                       $m: Mirror.Sum {
                         type MirroredElemLabels = labels
@@ -242,5 +272,25 @@ private[ducktape] object Structure {
   private def constStringTuple(using Quotes)(tp: quotes.reflect.TypeRepr): List[String] = {
     import quotes.reflect.*
     tupleTypeElements(tp.asType).map { case ConstantType(StringConstant(l)) => l }
+  }
+
+  private def rollupTuple(using Quotes)(elements: Vector[quotes.reflect.TypeRepr]) = {
+    import quotes.reflect.*
+
+    elements.size match {
+      case 0 => Type.of[EmptyTuple]
+      case 1 =>
+        elements.head.asType.match { case '[tpe] => Type.of[Tuple1[tpe]] }
+      case size if size <= 22 =>
+        defn
+          .TupleClass(size)
+          .typeRef
+          .appliedTo(elements.toList)
+          .asType
+      case _ =>
+        val TupleCons = TypeRepr.of[*:]
+        val tpe = elements.foldRight(TypeRepr.of[EmptyTuple])((curr, acc) => TupleCons.appliedTo(curr :: acc :: Nil))
+        tpe.asType
+    }
   }
 }

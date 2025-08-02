@@ -1,5 +1,7 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.internal.Structure.Product.Kind
+
 import scala.quoted.*
 
 extension (tpe: Type[? <: AnyKind]) {
@@ -14,14 +16,35 @@ extension (tpe: Type[? <: AnyKind]) {
 }
 
 extension (expr: Expr[Any]) {
-  private[ducktape] def accessFieldByName(name: String)(using Quotes): quotes.reflect.Select = {
+  private[ducktape] def accessFieldByName(name: String, parentStructure: Structure.Product)(using Quotes) = {
+    import quotes.reflect.*
+    parentStructure.kind match
+      case Kind.CaseClass =>
+        expr.accessFieldByNameUnsafe(name)
+      case Kind.NamedTuple(erasedTupleTpe) =>
+        val fieldNames = parentStructure.fields.keys
+        val idxOfField = parentStructure.fields.keys.indexOf(name)
+        erasedTupleTpe match {
+          case '[erasedTpe] =>
+            if fieldNames.size < 23 then '{ $expr.asInstanceOf[erasedTpe] }.accessFieldByNameUnsafe(s"_${idxOfField + 1}")
+            else
+              val fieldTpe = parentStructure.fields(name).tpe
+              (expr, fieldTpe) match {
+                case '{ $prod } -> '[tpe] =>
+                  '{ $prod.asInstanceOf[Product].productElement(${ Expr(idxOfField) }).asInstanceOf[tpe] }.asTerm
+              }
+        }
+
+  }
+
+  private[ducktape] def accessFieldByNameUnsafe(name: String)(using Quotes): quotes.reflect.Select = {
     import quotes.reflect.*
     Select.unique(expr.asTerm, name)
   }
 
   private[ducktape] def accesFieldByIndex(index: Int, parentStructure: Structure.Tuple)(using Quotes): Expr[Any] = {
     import quotes.reflect.*
-    if parentStructure.isPlain then accessFieldByName(s"_${index + 1}").asExpr // tuple accessors are 1 based
+    if parentStructure.isPlain then accessFieldByNameUnsafe(s"_${index + 1}").asExpr // tuple accessors are 1 based
     else
       val tpeAtIndex = parentStructure.elements(index).tpe
       (expr, tpeAtIndex) match {

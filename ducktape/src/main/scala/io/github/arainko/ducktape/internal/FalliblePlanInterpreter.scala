@@ -24,7 +24,6 @@ private[ducktape] object FalliblePlanInterpreter {
 
     FallibilityRefiner.run(plan) match
       case plan: Plan[Nothing, Nothing] =>
-        // TODO: Running with '-Xcheck-macros' exposes an issue with owners of lambdas (like in BetweenOptions), try to fix it later on
         Value.Unwrapped(PlanInterpreter.recurse[A](plan, value))
       case None =>
         plan match {
@@ -40,7 +39,7 @@ private[ducktape] object FalliblePlanInterpreter {
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
               case cfg @ Configuration.FieldComputedDeep(tpe, srcTpe, function) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
-              case cfg @ Configuration.FieldReplacement(source, name, tpe) =>
+              case cfg @ Configuration.FieldReplacement(source, _, name, tpe) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
               case Configuration.FallibleConst(value, tpe) =>
                 tpe match {
@@ -66,10 +65,10 @@ private[ducktape] object FalliblePlanInterpreter {
                 }
 
           case plan @ Plan.BetweenProducts(source, dest, fieldPlans) =>
-            fromProductTransformation(plan, fieldPlans, value, F)(ProductConstructor.Primary(dest))
+            fromProductTransformation(plan, value, F)(ProductConstructor.Primary(dest))
 
           case plan @ Plan.BetweenProductTuple(source, dest, plans) =>
-            fromProductTransformation(plan, plans, value, F)(ProductConstructor.Tuple)
+            fromProductTransformation(plan, value, F)(ProductConstructor.Tuple)
 
           case plan @ Plan.BetweenTupleProduct(source, dest, plans) =>
             fromTupleTransformation(source, plan, plans.values.toVector, value, F)(ProductConstructor.Primary(dest))
@@ -122,7 +121,7 @@ private[ducktape] object FalliblePlanInterpreter {
             }
 
           case plan @ Plan.BetweenProductFunction(source, dest, argPlans) =>
-            fromProductTransformation(plan, argPlans, value, F)(ProductConstructor.Func(dest.function))
+            fromProductTransformation(plan, value, F)(ProductConstructor.Func(dest.function))
 
           case plan @ Plan.BetweenTupleFunction(source, dest, argPlans) =>
             fromTupleTransformation(source, plan, argPlans.values.toVector, value, F)(ProductConstructor.Func(dest.function))
@@ -272,26 +271,28 @@ private[ducktape] object FalliblePlanInterpreter {
   }
 
   private def fromProductTransformation[F[+x]: Type, A: Type](
-    plan: Plan[Nothing, Fallible],
-    fieldPlans: Vector[FieldPlan[Nothing, Fallible]] | VectorMap[String, FieldPlan[Nothing, Fallible]],
+    plan: Plan.BetweenProducts[Nothing, Fallible] | Plan.BetweenProductFunction[Nothing, Fallible] |
+      Plan.BetweenProductTuple[Nothing, Fallible],
     value: Expr[Any],
     F: TransformationMode[F]
   )(construct: ProductConstructor)(using quotes: Quotes, toplevelValue: Expr[A]) = {
     import quotes.reflect.*
 
-    def handleVectorMap(fieldPlans: VectorMap[String, FieldPlan[Nothing, Fallible]])(using Quotes) =
+    def handleVectorMap(sourceStruct: Structure.Product, fieldPlans: VectorMap[String, FieldPlan[Nothing, Fallible]])(using
+      Quotes
+    ) =
       fieldPlans.zipWithIndex.partitionMap {
         case (_, FieldPlan(fieldName: String, plan)) -> index =>
-          val fieldValue = value.accessFieldByName(fieldName).asExpr
+          val fieldValue = value.accessFieldByName(fieldName, sourceStruct).asExpr
           recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
         case (_, FieldPlan(None, plan)) -> index =>
           recurse(plan, value, F).asFieldValue(index, plan.dest.tpe)
       }
 
-    def handleVector(fieldPlans: Vector[FieldPlan[Nothing, Fallible]])(using Quotes) = {
+    def handleVector(sourceStruct: Structure.Product, fieldPlans: Vector[FieldPlan[Nothing, Fallible]])(using Quotes) = {
       fieldPlans.zipWithIndex.partitionMap {
         case FieldPlan(fieldName: String, plan) -> index =>
-          val fieldValue = value.accessFieldByName(fieldName).asExpr
+          val fieldValue = value.accessFieldByName(fieldName, sourceStruct).asExpr
           recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
         case FieldPlan(None, plan) -> index =>
           recurse(plan, value, F).asFieldValue(index, plan.dest.tpe)
@@ -299,9 +300,14 @@ private[ducktape] object FalliblePlanInterpreter {
     }
 
     val (unwrapped, wrapped) =
-      fieldPlans match
-        case vector: Vector[FieldPlan[Nothing, Fallible]]               => handleVector(vector)
-        case vectorMap: VectorMap[String, FieldPlan[Nothing, Fallible]] => handleVectorMap(vectorMap)
+      plan match {
+        case plan: Plan.BetweenProducts[Nothing, Fallible] =>
+          handleVectorMap(plan.source, plan.fieldPlans)
+        case plan: Plan.BetweenProductFunction[Nothing, Fallible] =>
+          handleVectorMap(plan.source, plan.argPlans)
+        case plan: Plan.BetweenProductTuple[Nothing, Fallible] =>
+          handleVector(plan.source, plan.plans)
+      }
 
     plan.dest.tpe match {
       case '[dest] =>

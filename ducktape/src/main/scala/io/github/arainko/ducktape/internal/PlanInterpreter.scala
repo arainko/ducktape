@@ -25,33 +25,32 @@ private[ducktape] object PlanInterpreter {
       case Plan.BetweenProducts(source, dest, fieldPlans) =>
         val args = fieldPlans.map {
           case (fieldName, FieldPlan(sourceField: String, plan)) =>
-            val fieldValue = value.accessFieldByName(sourceField).asExpr
-            NamedArg(fieldName, recurse(plan, fieldValue).asTerm)
+            val fieldValue = value.accessFieldByName(sourceField, source).asExpr
+            recurse(plan, fieldValue)
           case (fieldName, FieldPlan(None, plan)) =>
-            NamedArg(fieldName, recurse(plan, value).asTerm)
+            recurse(plan, value)
         }
-        Constructor(dest.tpe.repr).appliedToArgs(args.toList).asExpr
+        ProductConstructor.Primary(dest)(args.toSeq)
 
       case Plan.BetweenProductTuple(source, dest, plans) =>
         val args = plans.map {
           case FieldPlan(fieldName: String, plan) =>
-            val fieldValue = value.accessFieldByName(fieldName).asExpr
+            val fieldValue = value.accessFieldByNameUnsafe(fieldName).asExpr
             recurse(plan, fieldValue)
           case FieldPlan(None, plan) =>
             recurse(plan, value)
         }
-
-        Expr.ofTupleFromSeq(args.toSeq)
+        ProductConstructor.Tuple(args.toSeq)
 
       case Plan.BetweenTupleProduct(source, dest, plans) =>
         val args = plans.values.zipWithIndex.map {
           case (plan, idx) if source.elements.isDefinedAt(idx) =>
             val elemValue = value.accesFieldByIndex(idx, source)
-            recurse(plan, elemValue).asTerm
+            recurse(plan, elemValue)
           case (plan, _) =>
-            recurse(plan, value).asTerm
+            recurse(plan, value)
         }
-        Constructor(dest.tpe.repr).appliedToArgs(args.toList).asExpr
+        ProductConstructor.Primary(dest)(args.toSeq)
 
       case Plan.BetweenTuples(source, dest, plans) =>
         val args = plans.zipWithIndex.map {
@@ -62,7 +61,7 @@ private[ducktape] object PlanInterpreter {
             recurse(plan, value)
         }
 
-        Expr.ofTupleFromSeq(args)
+        ProductConstructor.Tuple(args)
 
       case Plan.BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
         val branches = casePlans.map { plan =>
@@ -77,7 +76,7 @@ private[ducktape] object PlanInterpreter {
       case Plan.BetweenProductFunction(source, dest, argPlans) =>
         val args = argPlans.map {
           case (fieldName, FieldPlan(sourceField: String, plan)) =>
-            val fieldValue = value.accessFieldByName(sourceField).asExpr
+            val fieldValue = value.accessFieldByName(sourceField, source).asExpr
             recurse(plan, fieldValue).asTerm
           case (fieldName, FieldPlan(None, plan)) =>
             recurse(plan, value).asTerm
@@ -122,7 +121,7 @@ private[ducktape] object PlanInterpreter {
       case Plan.BetweenSingletons(sourceTpe, destTpe) => destTpe.value
 
       case Plan.BetweenWrappedUnwrapped(sourceTpe, destTpe, fieldName) =>
-        value.accessFieldByName(fieldName).asExpr
+        value.accessFieldByNameUnsafe(fieldName).asExpr
 
       case Plan.BetweenUnwrappedWrapped(sourceTpe, destTpe) =>
         Constructor(destTpe.tpe.repr).appliedTo(value.asTerm).asExpr
@@ -159,7 +158,7 @@ private[ducktape] object PlanInterpreter {
         '{ $function.apply($toplevelValue) }
       case Configuration.FieldComputedDeep(tpe, sourceTpe, function) =>
         '{ $function.apply($value) }
-      case Configuration.FieldReplacement(source, name, tpe) =>
-        source.accessFieldByName(name).asExpr
+      case Configuration.FieldReplacement(source, struct, name, tpe) =>
+        source.accessFieldByName(name, struct).asExpr
     }
 }
