@@ -204,23 +204,26 @@
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Person</span><span>, </span><span class="type-name">Person</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Person</span><span>](</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">wirePerson</span><span>)[</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">Person</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy2</span><span>: </span><span class="type-name">Person</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">Person</span><span>(
-      </span><span class="identifier">firstName</span><span> = </span><span class="identifier">value$proxy2</span><span>.</span><span class="identifier">firstName</span><span>,
-      </span><span class="identifier">lastName</span><span> = </span><span class="identifier">value$proxy2</span><span>.</span><span class="identifier">lastName</span><span>,
-      </span><span class="identifier">age</span><span> = </span><span class="number-literal">24</span><span>,
-      </span><span class="identifier">paymentMethods</span><span> = </span><span class="identifier">value$proxy2</span><span>.</span><span class="identifier">paymentMethods</span><span>
-        .</span><span class="identifier">map</span><span>[</span><span class="type-name">PaymentMethod</span><span>]((</span><span class="identifier">src</span><span>: </span><span class="type-name">PaymentMethod</span><span>) =&gt;
-          </span><span class="keyword">if</span><span> </span><span class="identifier">src</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">src</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">src</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
-          </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">src</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">src</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
-          </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">src</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
-          </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">src</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
-          </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>)
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">Person</span><span>(
+      </span><span class="identifier">value$proxy2</span><span>.</span><span class="identifier">firstName</span><span>,
+      </span><span class="identifier">value$proxy2</span><span>.</span><span class="identifier">lastName</span><span>,
+      </span><span class="number-literal">24</span><span>,
+      </span><span class="identifier">value$proxy2</span><span>.</span><span class="identifier">paymentMethods</span><span>
+        .</span><span class="identifier">map</span><span>[</span><span class="type-name">PaymentMethod</span><span>](
+          (
+            (</span><span class="identifier">src</span><span>: </span><span class="type-name">PaymentMethod</span><span>) =&gt;
+              </span><span class="keyword">if</span><span> </span><span class="identifier">src</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">src</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">src</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
+              </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">src</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">src</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
+              </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">src</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+              </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">src</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+              </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>)
+          )
         )
         .</span><span class="identifier">to</span><span>[</span><span class="type-name">Vector</span><span>[</span><span class="type-name">PaymentMethod</span><span>]](</span><span class="identifier">iterableFactory</span><span>[</span><span class="type-name">PaymentMethod</span><span>])
-    ): </span><span class="type-name">Person</span><span>
-  }: </span><span class="type-name">Person</span><span>
+    ): </span><span class="type-name">Person</span><span>)
+  }: </span><span class="type-name">Person</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -257,24 +260,24 @@
   </span><span class="keyword">val</span><span> </span><span class="identifier">source</span><span>: </span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>] = </span><span class="type-name">Tuple4</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>](</span><span class="number-literal">1</span><span>, </span><span class="type-name">List</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>)
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>], </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]] =
     </span><span class="identifier">into</span><span>[</span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>]](</span><span class="identifier">source</span><span>)[</span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy6</span><span>: </span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>] = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="type-name">Tuple3</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="identifier">_1</span><span>.</span><span class="keyword">type</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="number-literal">10</span><span>](
+    (</span><span class="type-name">Tuple3</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="identifier">_1</span><span>.</span><span class="keyword">type</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="number-literal">10</span><span>](
       </span><span class="identifier">value$proxy6</span><span class="number-literal">._1</span><span>,
-      </span><span class="identifier">value$proxy6</span><span class="number-literal">._2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">Int</span><span>]((</span><span class="identifier">src</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="identifier">src</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="identifier">iterableFactory</span><span>[</span><span class="type-name">Int</span><span>]),
+      </span><span class="identifier">value$proxy6</span><span class="number-literal">._2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">Int</span><span>](((</span><span class="identifier">src</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="identifier">src</span><span>)).</span><span class="identifier">to</span><span>[</span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="identifier">iterableFactory</span><span>[</span><span class="type-name">Int</span><span>]),
       </span><span class="number-literal">10</span><span>
-    ): </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]
-  }: </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]
+    ): </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>])
+  }: </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>])
   </span><span class="keyword">val</span><span> </span><span class="identifier">`AppliedBuilder_this₂`</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>], </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]] =
     </span><span class="identifier">into</span><span>[</span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>]](</span><span class="identifier">source</span><span>)[</span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy7</span><span>: </span><span class="type-name">Tuple4</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>, </span><span class="type-name">Int</span><span>] = </span><span class="identifier">`AppliedBuilder_this₂`</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="type-name">Tuple3</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="identifier">_1</span><span>.</span><span class="keyword">type</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="number-literal">10</span><span>](
+    (</span><span class="type-name">Tuple3</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="identifier">_1</span><span>.</span><span class="keyword">type</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="number-literal">10</span><span>](
       </span><span class="identifier">value$proxy7</span><span class="number-literal">._1</span><span>,
-      </span><span class="identifier">value$proxy7</span><span class="number-literal">._2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">Int</span><span>]((</span><span class="identifier">`src₂`</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="identifier">`src₂`</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="identifier">iterableFactory</span><span>[</span><span class="type-name">Int</span><span>]),
+      </span><span class="identifier">value$proxy7</span><span class="number-literal">._2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">Int</span><span>](((</span><span class="identifier">`src₂`</span><span>: </span><span class="type-name">Int</span><span>) =&gt; </span><span class="identifier">`src₂`</span><span>)).</span><span class="identifier">to</span><span>[</span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="identifier">iterableFactory</span><span>[</span><span class="type-name">Int</span><span>]),
       </span><span class="number-literal">10</span><span>
-    ): </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]
-  }: </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>]
+    ): </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>])
+  }: </span><span class="type-name">Tuple3</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Int</span><span>])
 }</span></code></pre>
           </div>
         </div>
@@ -416,10 +419,10 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Card</span><span>, </span><span class="type-name">PaymentBand</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Card</span><span>](</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">card</span><span>)[</span><span class="type-name">PaymentBand</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy10</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy10</span><span>.</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy10</span><span>.</span><span class="identifier">digits</span><span>, </span><span class="identifier">color</span><span> = </span><span class="string-literal">&quot;blue&quot;</span><span>): </span><span class="type-name">PaymentBand</span><span>
-  }: </span><span class="type-name">PaymentBand</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(</span><span class="identifier">value$proxy10</span><span>.</span><span class="identifier">name</span><span>, </span><span class="identifier">value$proxy10</span><span>.</span><span class="identifier">digits</span><span>, </span><span class="string-literal">&quot;blue&quot;</span><span>): </span><span class="type-name">PaymentBand</span><span>)
+  }: </span><span class="type-name">PaymentBand</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -446,14 +449,14 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Card</span><span>, </span><span class="type-name">PaymentBand</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Card</span><span>](</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">card</span><span>)[</span><span class="type-name">PaymentBand</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy13</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(
-      </span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy13</span><span>.</span><span class="identifier">name</span><span>,
-      </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy13</span><span>.</span><span class="identifier">digits</span><span>,
-      </span><span class="identifier">color</span><span> = </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy13</span><span>.</span><span class="identifier">digits</span><span>.%(</span><span class="number-literal">2</span><span>).==(</span><span class="number-literal">0</span><span>) </span><span class="keyword">then</span><span> </span><span class="string-literal">&quot;green&quot;</span><span> </span><span class="keyword">else</span><span> </span><span class="string-literal">&quot;yellow&quot;</span><span>
-    ): </span><span class="type-name">PaymentBand</span><span>
-  }: </span><span class="type-name">PaymentBand</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(
+      </span><span class="identifier">value$proxy13</span><span>.</span><span class="identifier">name</span><span>,
+      </span><span class="identifier">value$proxy13</span><span>.</span><span class="identifier">digits</span><span>,
+      </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy13</span><span>.</span><span class="identifier">digits</span><span>.%(</span><span class="number-literal">2</span><span>).==(</span><span class="number-literal">0</span><span>) </span><span class="keyword">then</span><span> </span><span class="string-literal">&quot;green&quot;</span><span> </span><span class="keyword">else</span><span> </span><span class="string-literal">&quot;yellow&quot;</span><span>
+    ): </span><span class="type-name">PaymentBand</span><span>)
+  }: </span><span class="type-name">PaymentBand</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -478,14 +481,14 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Card</span><span>, </span><span class="type-name">PaymentBand</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Card</span><span>](</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">card</span><span>)[</span><span class="type-name">PaymentBand</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy16</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(
-      </span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy16</span><span>.</span><span class="identifier">name</span><span>,
-      </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy16</span><span>.</span><span class="identifier">digits</span><span>,
-      </span><span class="identifier">color</span><span> = </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="type-name">PaymentBand</span><span>.</span><span class="identifier">$lessinit$greater$default$3</span><span>
-    ): </span><span class="type-name">PaymentBand</span><span>
-  }: </span><span class="type-name">PaymentBand</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(
+      </span><span class="identifier">value$proxy16</span><span>.</span><span class="identifier">name</span><span>,
+      </span><span class="identifier">value$proxy16</span><span>.</span><span class="identifier">digits</span><span>,
+      </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="type-name">PaymentBand</span><span>.</span><span class="identifier">$lessinit$greater$default$3</span><span>
+    ): </span><span class="type-name">PaymentBand</span><span>)
+  }: </span><span class="type-name">PaymentBand</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -526,21 +529,27 @@
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel1</span><span>, </span><span class="type-name">DestToplevel1</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel1</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel1</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy19</span><span>: </span><span class="type-name">SourceToplevel1</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel1</span><span>(</span><span class="identifier">level1</span><span> =
-      </span><span class="identifier">value$proxy19</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">DestLevel1</span><span>]((</span><span class="identifier">src</span><span>: </span><span class="type-name">SourceLevel1</span><span>) =&gt;
-        </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">level2</span><span> =
-          </span><span class="identifier">src</span><span>.</span><span class="identifier">level2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">DestLevel2</span><span>]((</span><span class="identifier">`src₂`</span><span>: </span><span class="type-name">SourceLevel2</span><span>) =&gt;
-            </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">int</span><span> = {
-              </span><span class="keyword">val</span><span> </span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span> = </span><span class="identifier">`src₂`</span><span>.</span><span class="identifier">int</span><span>
-              </span><span class="identifier">value</span><span>.+(</span><span class="number-literal">10L</span><span>)
-            })
-          )
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel1</span><span>(
+      </span><span class="identifier">value$proxy19</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">DestLevel1</span><span>](
+        (
+          (</span><span class="identifier">src</span><span>: </span><span class="type-name">SourceLevel1</span><span>) =&gt;
+            </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(
+              </span><span class="identifier">src</span><span>.</span><span class="identifier">level2</span><span>.</span><span class="identifier">map</span><span>[</span><span class="type-name">DestLevel2</span><span>](
+                (
+                  (</span><span class="identifier">`src₂`</span><span>: </span><span class="type-name">SourceLevel2</span><span>) =&gt;
+                    </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel2</span><span>({
+                      </span><span class="keyword">val</span><span> </span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span> = </span><span class="identifier">`src₂`</span><span>.</span><span class="identifier">int</span><span>
+                      </span><span class="identifier">value</span><span>.+(</span><span class="number-literal">10L</span><span>)
+                    })
+                )
+              )
+            )
         )
       )
-    ): </span><span class="type-name">DestToplevel1</span><span>
-  }: </span><span class="type-name">DestToplevel1</span><span>
+    ): </span><span class="type-name">DestToplevel1</span><span>)
+  }: </span><span class="type-name">DestToplevel1</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -567,10 +576,10 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Card</span><span>, </span><span class="type-name">PaymentBand</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Card</span><span>](</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">card</span><span>)[</span><span class="type-name">PaymentBand</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy22</span><span>: </span><span class="type-name">Card</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy22</span><span>.</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">source</span><span>.</span><span class="identifier">digits</span><span>, </span><span class="identifier">color</span><span> = </span><span class="identifier">source</span><span>.</span><span class="identifier">color</span><span>): </span><span class="type-name">PaymentBand</span><span>
-  }: </span><span class="type-name">PaymentBand</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">PaymentBand</span><span>(</span><span class="identifier">value$proxy22</span><span>.</span><span class="identifier">name</span><span>, </span><span class="identifier">source</span><span>.</span><span class="identifier">digits</span><span>, </span><span class="identifier">source</span><span>.</span><span class="identifier">color</span><span>): </span><span class="type-name">PaymentBand</span><span>)
+  }: </span><span class="type-name">PaymentBand</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -602,14 +611,14 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy25</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy25</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
-      </span><span class="identifier">extra</span><span> = </span><span class="type-name">DestToplevel</span><span>.</span><span class="identifier">$lessinit$greater$default$2</span><span>,
-      </span><span class="identifier">transformableButWithDefault</span><span> = </span><span class="identifier">value$proxy25</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
-    ): </span><span class="type-name">DestToplevel</span><span>
-  }: </span><span class="type-name">DestToplevel</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
+      </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">value$proxy25</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="type-name">DestToplevel</span><span>.</span><span class="identifier">$lessinit$greater$default$2</span><span>,
+      </span><span class="identifier">value$proxy25</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
+    ): </span><span class="type-name">DestToplevel</span><span>)
+  }: </span><span class="type-name">DestToplevel</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -637,14 +646,14 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy28</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy28</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
-      </span><span class="identifier">extra</span><span> = </span><span class="number-literal">123</span><span>,
-      </span><span class="identifier">transformableButWithDefault</span><span> = </span><span class="identifier">value$proxy28</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
-    ): </span><span class="type-name">DestToplevel</span><span>
-  }: </span><span class="type-name">DestToplevel</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
+      </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="type-name">DestLevel1</span><span>.</span><span class="identifier">$lessinit$greater$default$1</span><span>, </span><span class="identifier">value$proxy28</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="number-literal">123</span><span>,
+      </span><span class="identifier">value$proxy28</span><span>.</span><span class="identifier">transformableButWithDefault</span><span>
+    ): </span><span class="type-name">DestToplevel</span><span>)
+  }: </span><span class="type-name">DestToplevel</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -676,14 +685,10 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy31</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy31</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
-      </span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>,
-      </span><span class="identifier">transformable</span><span> = </span><span class="identifier">value$proxy31</span><span>.</span><span class="identifier">transformable</span><span>
-    ): </span><span class="type-name">DestToplevel</span><span>
-  }: </span><span class="type-name">DestToplevel</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(</span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="type-name">None</span><span>, </span><span class="identifier">value$proxy31</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>), </span><span class="type-name">None</span><span>, </span><span class="identifier">value$proxy31</span><span>.</span><span class="identifier">transformable</span><span>): </span><span class="type-name">DestToplevel</span><span>)
+  }: </span><span class="type-name">DestToplevel</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -711,14 +716,14 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">SourceToplevel</span><span>, </span><span class="type-name">DestToplevel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">SourceToplevel</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">DestToplevel</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy34</span><span>: </span><span class="type-name">SourceToplevel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="identifier">extra</span><span> = </span><span class="type-name">None</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
-      </span><span class="identifier">extra</span><span> = </span><span class="type-name">Some</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="number-literal">123</span><span>),
-      </span><span class="identifier">transformable</span><span> = </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">transformable</span><span>
-    ): </span><span class="type-name">DestToplevel</span><span>
-  }: </span><span class="type-name">DestToplevel</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">DestToplevel</span><span>(
+      </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(</span><span class="type-name">None</span><span>, </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="identifier">str</span><span>),
+      </span><span class="type-name">Some</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span>](</span><span class="number-literal">123</span><span>),
+      </span><span class="identifier">value$proxy34</span><span>.</span><span class="identifier">transformable</span><span>
+    ): </span><span class="type-name">DestToplevel</span><span>)
+  }: </span><span class="type-name">DestToplevel</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -771,15 +776,15 @@
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">PaymentMethod</span><span>, </span><span class="type-name">PaymentMethod</span><span>] =
     </span><span class="identifier">into</span><span>[</span><span class="type-name">PaymentMethod</span><span>](</span><span class="identifier">transfer</span><span>)[</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy37</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>] </span><span class="keyword">then</span><span>
-      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">PaymentMethod</span><span>
-  }: </span><span class="type-name">PaymentMethod</span><span>
+    (</span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>] </span><span class="keyword">then</span><span>
+       </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
+     </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
+     </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+     </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy37</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+     </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">PaymentMethod</span><span>)
+  }: </span><span class="type-name">PaymentMethod</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -803,17 +808,17 @@
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">PaymentMethod</span><span>, </span><span class="type-name">PaymentMethod</span><span>] =
     </span><span class="identifier">into</span><span>[</span><span class="type-name">PaymentMethod</span><span>](</span><span class="identifier">transfer</span><span>)[</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy40</span><span>: </span><span class="type-name">PaymentMethod</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>] </span><span class="keyword">then</span><span>
-      </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">name</span><span> = </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">digits</span><span> = </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">email</span><span> = </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>] </span><span class="keyword">then</span><span> {
-      </span><span class="keyword">val</span><span> </span><span class="identifier">`transfer₂`</span><span>: </span><span class="type-name">Transfer</span><span> = </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>]
-      </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Card</span><span>.</span><span class="identifier">apply</span><span>(</span><span class="string-literal">&quot;J. Doe&quot;</span><span>, </span><span class="identifier">augmentString</span><span>(</span><span class="identifier">`transfer₂`</span><span>.</span><span class="identifier">accountNo</span><span>).</span><span class="identifier">toLong</span><span>): </span><span class="type-name">PaymentMethod</span><span>
-    } </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">PaymentMethod</span><span>
-  }: </span><span class="type-name">PaymentMethod</span><span>
+    (</span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Card</span><span>] </span><span class="keyword">then</span><span>
+       </span><span class="keyword">new</span><span> </span><span class="type-name">Card</span><span>(</span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">name</span><span>, </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Card</span><span>].</span><span class="identifier">digits</span><span>)
+     </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>] </span><span class="keyword">then</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">PayPal</span><span>(</span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">PayPal</span><span>].</span><span class="identifier">email</span><span>)
+     </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Cash</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>
+     </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>] </span><span class="keyword">then</span><span> {
+       </span><span class="keyword">val</span><span> </span><span class="identifier">`transfer₂`</span><span>: </span><span class="type-name">Transfer</span><span> = </span><span class="identifier">value$proxy40</span><span>.</span><span class="identifier">asInstanceOf</span><span>[</span><span class="type-name">Transfer</span><span>]
+       (</span><span class="type-name">MdocApp</span><span>.</span><span class="keyword">this</span><span>.</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Card</span><span>.</span><span class="identifier">apply</span><span>(</span><span class="string-literal">&quot;J. Doe&quot;</span><span>, </span><span class="identifier">augmentString</span><span>(</span><span class="identifier">`transfer₂`</span><span>.</span><span class="identifier">accountNo</span><span>).</span><span class="identifier">toLong</span><span>): </span><span class="type-name">PaymentMethod</span><span>)
+     } </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">PaymentMethod</span><span>)
+  }: </span><span class="type-name">PaymentMethod</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -847,10 +852,10 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Source</span><span>, </span><span class="type-name">Dest</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Source</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">Dest</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy43</span><span>: </span><span class="type-name">Source</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(</span><span class="type-name">INT</span><span> = </span><span class="identifier">value$proxy43</span><span>.</span><span class="identifier">int</span><span>, </span><span class="type-name">STR</span><span> = </span><span class="identifier">value$proxy43</span><span>.</span><span class="identifier">str</span><span>): </span><span class="type-name">Dest</span><span>
-  }: </span><span class="type-name">Dest</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(</span><span class="identifier">value$proxy43</span><span>.</span><span class="identifier">int</span><span>, </span><span class="identifier">value$proxy43</span><span>.</span><span class="identifier">str</span><span>): </span><span class="type-name">Dest</span><span>)
+  }: </span><span class="type-name">Dest</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -873,10 +878,10 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Source</span><span>, </span><span class="type-name">Dest</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Source</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">Dest</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy46</span><span>: </span><span class="type-name">Source</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(</span><span class="type-name">INT</span><span> = </span><span class="identifier">value$proxy46</span><span>.</span><span class="identifier">int</span><span>, </span><span class="type-name">STR</span><span> = </span><span class="identifier">value$proxy46</span><span>.</span><span class="identifier">str</span><span>): </span><span class="type-name">Dest</span><span>
-  }: </span><span class="type-name">Dest</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(</span><span class="identifier">value$proxy46</span><span>.</span><span class="identifier">int</span><span>, </span><span class="identifier">value$proxy46</span><span>.</span><span class="identifier">str</span><span>): </span><span class="type-name">Dest</span><span>)
+  }: </span><span class="type-name">Dest</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -909,13 +914,13 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Source</span><span>, </span><span class="type-name">Dest</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Source</span><span>](</span><span class="type-name">Source</span><span>.</span><span class="type-name">One</span><span>)[</span><span class="type-name">Dest</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy49</span><span>: </span><span class="type-name">Source</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy49</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">One</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">ONE</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy49</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Two</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">TWO</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy49</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Three</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">THREE</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">Dest</span><span>
-  }: </span><span class="type-name">Dest</span><span>
+    (</span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy49</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">One</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">ONE</span><span>
+     </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy49</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Two</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">TWO</span><span>
+     </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy49</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Three</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">THREE</span><span>
+     </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">Dest</span><span>)
+  }: </span><span class="type-name">Dest</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -938,13 +943,13 @@
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Source</span><span>, </span><span class="type-name">Dest</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Source</span><span>](</span><span class="type-name">Source</span><span>.</span><span class="type-name">One</span><span>)[</span><span class="type-name">Dest</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy52</span><span>: </span><span class="type-name">Source</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy52</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">One</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">ONE</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy52</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Two</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">TWO</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy52</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Three</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">THREE</span><span>
-    </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">Dest</span><span>
-  }: </span><span class="type-name">Dest</span><span>
+    (</span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy52</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">One</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">ONE</span><span>
+     </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy52</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Two</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">TWO</span><span>
+     </span><span class="keyword">else</span><span> </span><span class="keyword">if</span><span> </span><span class="identifier">value$proxy52</span><span>.</span><span class="identifier">isInstanceOf</span><span>[</span><span class="type-name">Three</span><span>.</span><span class="keyword">type</span><span>] </span><span class="keyword">then</span><span> </span><span class="type-name">Dest</span><span>.</span><span class="type-name">THREE</span><span>
+     </span><span class="keyword">else</span><span> </span><span class="keyword">throw</span><span> </span><span class="keyword">new</span><span> </span><span class="type-name">RuntimeException</span><span>(</span><span class="string-literal">&quot;Unhandled case. This is most likely a bug in ducktape.&quot;</span><span>): </span><span class="type-name">Dest</span><span>)
+  }: </span><span class="type-name">Dest</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -989,18 +994,18 @@
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Source</span><span>, </span><span class="type-name">Dest</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Source</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">Dest</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy55</span><span>: </span><span class="type-name">Source</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(
-      </span><span class="identifier">int</span><span> = </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">int</span><span>,
-      </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">str</span><span>,
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(
-        </span><span class="identifier">int</span><span> = </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">INT</span><span>,
-        </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">STR</span><span>,
-        </span><span class="identifier">level2</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">int</span><span> = </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="type-name">INT</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="type-name">STR</span><span>)
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(
+      </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">int</span><span>,
+      </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">str</span><span>,
+      </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(
+        </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">INT</span><span>,
+        </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">STR</span><span>,
+        </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="type-name">INT</span><span>, </span><span class="identifier">value$proxy55</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="type-name">STR</span><span>)
       )
-    ): </span><span class="type-name">Dest</span><span>
-  }: </span><span class="type-name">Dest</span><span>
+    ): </span><span class="type-name">Dest</span><span>)
+  }: </span><span class="type-name">Dest</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -1041,18 +1046,18 @@
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Source</span><span>, </span><span class="type-name">Dest</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Source</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">Dest</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy58</span><span>: </span><span class="type-name">Source</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(
-      </span><span class="identifier">int</span><span> = </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">int</span><span>,
-      </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">str</span><span>,
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(
-        </span><span class="identifier">int</span><span> = </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">INT</span><span>,
-        </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">STR</span><span>,
-        </span><span class="identifier">level2</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">int</span><span> = </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="identifier">int</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="identifier">str</span><span>)
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(
+      </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">int</span><span>,
+      </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">str</span><span>,
+      </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(
+        </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">INT</span><span>,
+        </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">STR</span><span>,
+        </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="identifier">int</span><span>, </span><span class="identifier">value$proxy58</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="identifier">str</span><span>)
       )
-    ): </span><span class="type-name">Dest</span><span>
-  }: </span><span class="type-name">Dest</span><span>
+    ): </span><span class="type-name">Dest</span><span>)
+  }: </span><span class="type-name">Dest</span><span>)
 }</span></code></pre>
           </div>
         </div>
@@ -1097,18 +1102,18 @@
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
   </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Source</span><span>, </span><span class="type-name">Dest</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Source</span><span>](</span><span class="identifier">source</span><span>)[</span><span class="type-name">Dest</span><span>]
-  {
+  ({
     </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy61</span><span>: </span><span class="type-name">Source</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
-    </span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(
-      </span><span class="identifier">int</span><span> = </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">int</span><span>,
-      </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">str</span><span>,
-      </span><span class="identifier">level1</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(
-        </span><span class="identifier">int</span><span> = </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">INT</span><span>,
-        </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">STR</span><span>,
-        </span><span class="identifier">level2</span><span> = </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">int</span><span> = </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="identifier">int</span><span>, </span><span class="identifier">str</span><span> = </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="identifier">str</span><span>)
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">Dest</span><span>(
+      </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">int</span><span>,
+      </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">str</span><span>,
+      </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel1</span><span>(
+        </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">INT</span><span>,
+        </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">STR</span><span>,
+        </span><span class="keyword">new</span><span> </span><span class="type-name">DestLevel2</span><span>(</span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="identifier">int</span><span>, </span><span class="identifier">value$proxy61</span><span>.</span><span class="identifier">level1</span><span>.</span><span class="type-name">LEVEL2</span><span>.</span><span class="identifier">str</span><span>)
       )
-    ): </span><span class="type-name">Dest</span><span>
-  }: </span><span class="type-name">Dest</span><span>
+    ): </span><span class="type-name">Dest</span><span>)
+  }: </span><span class="type-name">Dest</span><span>)
 }</span></code></pre>
           </div>
         </div>
