@@ -5,7 +5,6 @@ import io.github.arainko.ducktape.internal.*
 
 import scala.collection.Factory
 import scala.quoted.*
-import io.github.arainko.ducktape.internal.Structure.Product.Kind
 
 private[ducktape] object PlanInterpreter {
 
@@ -24,29 +23,14 @@ private[ducktape] object PlanInterpreter {
         evaluateConfig(config, value)
 
       case Plan.BetweenProducts(source, dest, fieldPlans) =>
-        dest.kind match
-          case Kind.CaseClass =>
-            val args = fieldPlans.map {
-              case (fieldName, FieldPlan(sourceField: String, plan)) =>
-                val fieldValue = value.accessFieldByName(sourceField, source).asExpr
-                NamedArg(fieldName, recurse(plan, fieldValue).asTerm)
-              case (fieldName, FieldPlan(None, plan)) =>
-                NamedArg(fieldName, recurse(plan, value).asTerm)
-            }
-            Constructor(dest.tpe.repr).appliedToArgs(args.toList).asExpr
-          case Kind.NamedTuple(erasedTupleTpe) =>
-            val args = fieldPlans.map {
-              case (fieldName, FieldPlan(sourceField: String, plan)) =>
-                val fieldValue = value.accessFieldByName(sourceField, source).asExpr
-                recurse(plan, fieldValue)
-              case (fieldName, FieldPlan(None, plan)) =>
-                recurse(plan, value)
-            }
-            dest.tpe match {
-              case '[tpe] =>
-                Typed(Expr.ofTupleFromSeq(args.toSeq).asTerm, TypeTree.of[tpe]).asExpr
-            }
-
+        val args = fieldPlans.map {
+          case (fieldName, FieldPlan(sourceField: String, plan)) =>
+            val fieldValue = value.accessFieldByName(sourceField, source).asExpr
+            recurse(plan, fieldValue)
+          case (fieldName, FieldPlan(None, plan)) =>
+            recurse(plan, value)
+        }
+        ProductConstructor.Primary(dest)(args.toSeq)
 
       case Plan.BetweenProductTuple(source, dest, plans) =>
         val args = plans.map {
@@ -56,18 +40,17 @@ private[ducktape] object PlanInterpreter {
           case FieldPlan(None, plan) =>
             recurse(plan, value)
         }
-
-        Expr.ofTupleFromSeq(args.toSeq)
+        ProductConstructor.Tuple(args.toSeq)
 
       case Plan.BetweenTupleProduct(source, dest, plans) =>
         val args = plans.values.zipWithIndex.map {
           case (plan, idx) if source.elements.isDefinedAt(idx) =>
             val elemValue = value.accesFieldByIndex(idx, source)
-            recurse(plan, elemValue).asTerm
+            recurse(plan, elemValue)
           case (plan, _) =>
-            recurse(plan, value).asTerm
+            recurse(plan, value)
         }
-        Constructor(dest.tpe.repr).appliedToArgs(args.toList).asExpr
+        ProductConstructor.Primary(dest)(args.toSeq)
 
       case Plan.BetweenTuples(source, dest, plans) =>
         val args = plans.zipWithIndex.map {
@@ -78,7 +61,7 @@ private[ducktape] object PlanInterpreter {
             recurse(plan, value)
         }
 
-        Expr.ofTupleFromSeq(args)
+        ProductConstructor.Tuple(args)
 
       case Plan.BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
         val branches = casePlans.map { plan =>
@@ -93,7 +76,7 @@ private[ducktape] object PlanInterpreter {
       case Plan.BetweenProductFunction(source, dest, argPlans) =>
         val args = argPlans.map {
           case (fieldName, FieldPlan(sourceField: String, plan)) =>
-            val fieldValue = value.accessFieldByNameUnsafe(sourceField).asExpr
+            val fieldValue = value.accessFieldByName(sourceField, source).asExpr
             recurse(plan, fieldValue).asTerm
           case (fieldName, FieldPlan(None, plan)) =>
             recurse(plan, value).asTerm
@@ -175,7 +158,7 @@ private[ducktape] object PlanInterpreter {
         '{ $function.apply($toplevelValue) }
       case Configuration.FieldComputedDeep(tpe, sourceTpe, function) =>
         '{ $function.apply($value) }
-      case Configuration.FieldReplacement(source, name, tpe) =>
-        source.accessFieldByNameUnsafe(name).asExpr
+      case Configuration.FieldReplacement(source, struct, name, tpe) =>
+        source.accessFieldByName(name, struct).asExpr
     }
 }

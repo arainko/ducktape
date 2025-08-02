@@ -425,7 +425,7 @@ private[ducktape] object ConfigParser {
           )(using Quotes): Configuration[Nothing] | plan.type =
             sourceStruct.fields.get(field).match {
               case Some(struct) if struct.tpe.repr <:< plan.dest.tpe.repr =>
-                Configuration.FieldReplacement(sourceExpr, field, struct.tpe)
+                Configuration.FieldReplacement(sourceExpr, sourceStruct, field, struct.tpe)
               case other => plan
             }
 

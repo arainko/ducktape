@@ -17,7 +17,8 @@ private[ducktape] enum Configuration[+F <: Fallible] {
   case FieldComputedDeep(destTpe: Type[?], override val sourceTpe: Type[?], function: Expr[Any => Any])
       extends Configuration[Nothing]
 
-  case FieldReplacement(source: Expr[Any], name: String, destTpe: Type[?]) extends Configuration[Nothing]
+  case FieldReplacement(source: Expr[Any], struct: Structure.Product, name: String, destTpe: Type[?])
+      extends Configuration[Nothing]
 
   case FallibleConst(value: Expr[Any], destTpe: Type[?]) extends Configuration[Fallible]
 

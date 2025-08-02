@@ -1,5 +1,7 @@
 package io.github.arainko.ducktape.internal
 
+import io.github.arainko.ducktape.internal.Structure.Product.Kind
+
 import scala.quoted.*
 
 private[ducktape] sealed trait ProductConstructor {
@@ -11,9 +13,13 @@ private[ducktape] object ProductConstructor {
     def apply(fields: Seq[Expr[Any]])(using Quotes): Expr[Any] = {
       import quotes.reflect.*
 
-      Constructor(structure.tpe.repr)
-        .appliedToArgs(fields.map(value => value.asTerm).toList)
-        .asExpr
+      structure.kind match
+        case Kind.CaseClass =>
+          Constructor(structure.tpe.repr)
+            .appliedToArgs(fields.map(value => value.asTerm).toList)
+            .asExpr
+        case Kind.NamedTuple(erasedTupleTpe) =>
+          Typed(Expr.ofTupleFromSeq(fields).asTerm, TypeTree.of(using structure.tpe)).asExpr
     }
   }
 

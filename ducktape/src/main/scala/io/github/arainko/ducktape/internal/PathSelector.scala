@@ -75,7 +75,7 @@ private[ducktape] object PathSelector {
 
         case other =>
           Logger.debug(s"Matched an unexpected term")
-          report.errorAndAbort(s"Couldn't parse an unexpected config option: ${other.show(using Printer.TreeShortCode)}")
+          report.errorAndAbort(s"Couldn't parse an unexpected config option: ${other.show(using Printer.TreeStructure)}")
       }
     }
 
