@@ -282,7 +282,7 @@ private[ducktape] object FalliblePlanInterpreter {
     def handleVectorMap(fieldPlans: VectorMap[String, FieldPlan[Nothing, Fallible]])(using Quotes) =
       fieldPlans.zipWithIndex.partitionMap {
         case (_, FieldPlan(fieldName: String, plan)) -> index =>
-          val fieldValue = value.accessFieldByName(fieldName).asExpr
+          val fieldValue = value.accessFieldByNameUnsafe(fieldName).asExpr
           recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
         case (_, FieldPlan(None, plan)) -> index =>
           recurse(plan, value, F).asFieldValue(index, plan.dest.tpe)
@@ -291,7 +291,7 @@ private[ducktape] object FalliblePlanInterpreter {
     def handleVector(fieldPlans: Vector[FieldPlan[Nothing, Fallible]])(using Quotes) = {
       fieldPlans.zipWithIndex.partitionMap {
         case FieldPlan(fieldName: String, plan) -> index =>
-          val fieldValue = value.accessFieldByName(fieldName).asExpr
+          val fieldValue = value.accessFieldByNameUnsafe(fieldName).asExpr
           recurse(plan, fieldValue, F).asFieldValue(index, plan.dest.tpe)
         case FieldPlan(None, plan) -> index =>
           recurse(plan, value, F).asFieldValue(index, plan.dest.tpe)

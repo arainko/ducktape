@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape.internal
 
 import scala.quoted.*
+import io.github.arainko.ducktape.internal.Structure.Product.Kind
 
 extension (tpe: Type[? <: AnyKind]) {
   private[ducktape] def fullName(using Quotes): String = {
@@ -14,14 +15,29 @@ extension (tpe: Type[? <: AnyKind]) {
 }
 
 extension (expr: Expr[Any]) {
-  private[ducktape] def accessFieldByName(name: String)(using Quotes): quotes.reflect.Select = {
+  private[ducktape] def accessFieldByName(name: String, parentStructure: Structure.Product)(using Quotes) = {
+    import quotes.reflect.*
+    parentStructure.kind match
+      case Kind.CaseClass => 
+        expr.accessFieldByNameUnsafe(name)
+      case Kind.NamedTuple(erasedTupleTpe) => 
+        val idxOfField = parentStructure.fields.keys.indexOf(name)
+        //TODO: also handle TupleXXL access
+        erasedTupleTpe match {
+          case '[erasedTpe] => 
+            '{ $expr.asInstanceOf[erasedTpe] }.accessFieldByNameUnsafe(s"_${idxOfField + 1}")
+        }
+    
+  }
+
+  private[ducktape] def accessFieldByNameUnsafe(name: String)(using Quotes): quotes.reflect.Select = {
     import quotes.reflect.*
     Select.unique(expr.asTerm, name)
   }
 
   private[ducktape] def accesFieldByIndex(index: Int, parentStructure: Structure.Tuple)(using Quotes): Expr[Any] = {
     import quotes.reflect.*
-    if parentStructure.isPlain then accessFieldByName(s"_${index + 1}").asExpr // tuple accessors are 1 based
+    if parentStructure.isPlain then accessFieldByNameUnsafe(s"_${index + 1}").asExpr // tuple accessors are 1 based
     else
       val tpeAtIndex = parentStructure.elements(index).tpe
       (expr, tpeAtIndex) match {

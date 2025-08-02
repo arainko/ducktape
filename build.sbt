@@ -57,6 +57,16 @@ lazy val ducktape =
     )
     .jsSettings(bspEnabled := false)
 
+lazy val scalaNextTests =
+  project
+    .in(file("scala-next-tests"))
+    .enablePlugins(NoPublishPlugin)
+    .settings(
+      scalaVersion := "3.7.2",
+      libraryDependencies += "org.scalameta" %%% "munit" % "1.1.1" % Test
+    )
+    .dependsOn(ducktape.jvm)
+
 lazy val docs =
   project
     .in(file("documentation"))
