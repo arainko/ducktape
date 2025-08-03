@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.internal.*
 import io.github.arainko.ducktape.internal.Structure.*
+import io.github.arainko.ducktape.internal.Structure.Product.Kind
 
 import scala.annotation.unused
 import scala.collection.immutable.VectorMap
@@ -36,11 +37,10 @@ private[ducktape] object Structure {
 
     private var cachedDefaults: Map[String, Expr[Any]] = null
 
-    // TODO: check return Map.empty when named tuple
     def defaults(using Quotes): Map[String, Expr[Any]] =
       if cachedDefaults != null then cachedDefaults
       else {
-        cachedDefaults = Defaults.of(this)
+        cachedDefaults = if kind == Kind.CaseClass then Defaults.of(this) else Map.empty
         cachedDefaults
       }
   }
