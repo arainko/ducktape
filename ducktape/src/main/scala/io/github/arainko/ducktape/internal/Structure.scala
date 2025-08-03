@@ -136,11 +136,15 @@ private[ducktape] object Structure {
 
         case tpe @ '[Any *: scala.Tuple] if !tpe.repr.isTupleN => // let plain tuples be caught later on
           val elements =
-            Tuples.unroll(tpe).zipWithIndex.map { (tpe, idx) =>
-              tpe.asType match {
-                case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
+            Tuples
+              .unroll(tpe)
+              .zipWithIndex
+              .map { (tpe, idx) =>
+                tpe.asType match {
+                  case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
+                }
               }
-            }.toVector
+              .toVector
           Structure.Tuple(Type.of[A], path, elements, isPlain = false)
 
         case tpe =>
@@ -174,7 +178,9 @@ private[ducktape] object Structure {
                       }
                     } if tpe.repr.isTupleN =>
                   val structures =
-                    Tuples.unroll(Type.of[types]).zipWithIndex
+                    Tuples
+                      .unroll(Type.of[types])
+                      .zipWithIndex
                       .map((tpe, idx) =>
                         tpe.asType match {
                           case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
@@ -202,7 +208,7 @@ private[ducktape] object Structure {
                       )
                       .to(VectorMap)
 
-                  val kind = 
+                  val kind =
                     if Type.of[A].repr.dealias.typeSymbol.fullName == "scala.NamedTuple$.NamedTuple" then {
                       val normalizedErasedTupleTpe = Tuples.rollup(typeElems.toVector)
                       Structure.Product.Kind.NamedTuple(normalizedErasedTupleTpe)
@@ -216,7 +222,8 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val structures =
-                    Tuples.unroll(Type.of[types])
+                    Tuples
+                      .unroll(Type.of[types])
                       .zip(Tuples.unrollStrings(TypeRepr.of[labels]))
                       .map((tpe, name) =>
                         name -> (tpe.asType match { case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Case(Type.of[tpe]))) })

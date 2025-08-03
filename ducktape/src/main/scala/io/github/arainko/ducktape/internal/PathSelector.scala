@@ -4,15 +4,6 @@ import scala.annotation.tailrec
 import scala.quoted.*
 
 private[ducktape] object PathSelector {
-  inline def invoke[A, B](inline f: A => B) = ${ invokeMacro('f) }
-
-  def invokeMacro(expr: Expr[Any])(using Quotes) = {
-    import quotes.reflect.*
-    val path = unapply(expr.asTerm).value
-    report.info(path.render)
-    '{}
-  }
-
   def unapply(using Quotes)(expr: quotes.reflect.Term): Some[Path] = {
     @tailrec
     def recurse(using Quotes)(acc: List[Path.Segment], term: quotes.reflect.Term): Path = {
@@ -30,7 +21,7 @@ private[ducktape] object PathSelector {
               Typed(term, tpe @ Applied(TypeIdent("Elem"), _))
             ) =>
           Logger.debug(s"Matching positional tuple .apply($index)")
-          
+
           recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.widen.simplified.asType, index)), tree)
 
         case tr @ Inlined(

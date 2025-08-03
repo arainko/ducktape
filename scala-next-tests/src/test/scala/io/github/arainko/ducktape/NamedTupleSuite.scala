@@ -337,7 +337,7 @@ class NamedTupleSuite extends DucktapeSuite {
 
     assertTransformsConfigured(
       Source((field2 = (field3 = 3))),
-      Dest((field2 = (field3 = 3, additionalField = 1))),
+      Dest((field2 = (field3 = 3, additionalField = 1)))
     )(
       Field.const(_.field1.field2.additionalField, 1)
     )
