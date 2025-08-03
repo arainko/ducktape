@@ -20,7 +20,23 @@ private[ducktape] object PathSelector {
               _,
               Typed(term, tpe @ Applied(TypeIdent("Elem"), _))
             ) =>
-          recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.asType, index)), tree)
+          Logger.debug(s"Matching positional tuple .apply($index)")
+
+          recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.widen.simplified.asType, index)), tree)
+
+        case tr @ Inlined(
+              Some(
+                Apply(
+                  Apply(TypeApply(Select(Ident("NamedTuple"), "apply"), List(namesTpe, _)), List(tree)),
+                  List(Literal(IntConstant(idx)))
+                )
+              ),
+              _,
+              tpe
+            ) =>
+          Logger.debug(s"Matching named tuple field access (index: ${idx}), ${namesTpe.show}")
+          val name = Tuples.unrollStrings(namesTpe.tpe)(idx) // .apply on a List... not great  but eh
+          recurse(acc.prepended(Path.Segment.Field(tpe.tpe.asType, name)), tree)
 
         case Inlined(_, _, tree) =>
           Logger.debug("Matched 'Inlined', recursing...")

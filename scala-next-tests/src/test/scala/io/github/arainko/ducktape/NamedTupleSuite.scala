@@ -321,4 +321,39 @@ class NamedTupleSuite extends DucktapeSuite {
       (INT = 1, STR = "str")
     )(Field.modifyDestNames(_.toLowerCase))
   }
+
+  test("path selectors on named tuples work") {
+    assertTransformsConfigured(
+      (toplevel = (level1 = (level2 = 1))),
+      (toplevel = (level1 = (level2 = 1, field = 2)))
+    )(
+      Field.const(_.toplevel.level1.field, 2)
+    )
+  }
+
+  test("path selectors on named tuples inside case classes work") {
+    case class Source(field1: (field2: (field3: Int)))
+    case class Dest(field1: (field2: (field3: Int, additionalField: Int)))
+
+    assertTransformsConfigured(
+      Source((field2 = (field3 = 3))),
+      Dest((field2 = (field3 = 3, additionalField = 1)))
+    )(
+      Field.const(_.field1.field2.additionalField, 1)
+    )
+  }
+
+  test("Field.allMatching with a named tuple source works") {
+    case class Empty()
+    case class TestClass(str: String, int: Int)
+
+    val fieldSource = (str = "sourced-str", int = 1)
+
+    assertTransformsConfigured(
+      Empty(),
+      TestClass("sourced-str", 1)
+    )(
+      Field.allMatching(fieldSource)
+    )
+  }
 }
