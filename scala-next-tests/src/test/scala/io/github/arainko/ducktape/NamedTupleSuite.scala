@@ -1,7 +1,6 @@
 package io.github.arainko.ducktape
 
 import munit.*
-import io.github.arainko.ducktape.internal.CodePrinter
 
 class NamedTupleSuite extends DucktapeSuite {
   test("named tuple to case class works") {
@@ -324,20 +323,37 @@ class NamedTupleSuite extends DucktapeSuite {
   }
 
   test("path selectors on named tuples work") {
-    import io.github.arainko.ducktape.internal.*
-    val input = (toplevel = (level1 = (level2 = 1, field = 2)))
+    assertTransformsConfigured(
+      (toplevel = (level1 = (level2 = 1))),
+      (toplevel = (level1 = (level2 = 1, field = 2)))
+    )(
+      Field.const(_.toplevel.level1.field, 2)
+    )
+  }
 
-    Logger.locally {
-      PathSelector.invoke(((i: input.type) => i.toplevel.level1.level2))
-    }
+  test("path selectors on named tuples inside case classes work") {
+    case class Source(field1: (field2: (field3: Int)))
+    case class Dest(field1: (field2: (field3: Int, additionalField: Int)))
 
-    CodePrinter.structure:
-      ((i: input.type) => i.toplevel)
+    assertTransformsConfigured(
+      Source((field2 = (field3 = 3))),
+      Dest((field2 = (field3 = 3, additionalField = 1))),
+    )(
+      Field.const(_.field1.field2.additionalField, 1)
+    )
+  }
 
-    // input
-    //   .into[(toplevel: (level1: (level2: Int, field: Int)))]
-    //   .transform(
-    //     Field.const(_.toplevel.level1.field, 1)
-    //   )
+  test("Field.allMatching with a named tuple source works") {
+    case class Empty()
+    case class TestClass(str: String, int: Int)
+
+    val fieldSource = (str = "sourced-str", int = 1)
+
+    assertTransformsConfigured(
+      Empty(),
+      TestClass("sourced-str", 1)
+    )(
+      Field.allMatching(fieldSource)
+    )
   }
 }

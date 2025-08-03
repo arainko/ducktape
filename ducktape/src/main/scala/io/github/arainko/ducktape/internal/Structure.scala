@@ -3,7 +3,7 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.internal.*
 import io.github.arainko.ducktape.internal.Structure.*
 
-import scala.annotation.{ tailrec, unused }
+import scala.annotation.unused
 import scala.collection.immutable.VectorMap
 import scala.deriving.Mirror
 import scala.quoted.*
@@ -136,7 +136,7 @@ private[ducktape] object Structure {
 
         case tpe @ '[Any *: scala.Tuple] if !tpe.repr.isTupleN => // let plain tuples be caught later on
           val elements =
-            tupleTypeElements(tpe).zipWithIndex.map { (tpe, idx) =>
+            Tuples.unroll(tpe).zipWithIndex.map { (tpe, idx) =>
               tpe.asType match {
                 case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
               }
@@ -174,7 +174,7 @@ private[ducktape] object Structure {
                       }
                     } if tpe.repr.isTupleN =>
                   val structures =
-                    tupleTypeElements(Type.of[types]).zipWithIndex
+                    Tuples.unroll(Type.of[types]).zipWithIndex
                       .map((tpe, idx) =>
                         tpe.asType match {
                           case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.TupleElement(Type.of[tpe], idx)))
@@ -186,35 +186,15 @@ private[ducktape] object Structure {
 
                 case '{
                       $m: Mirror.Product {
-                        type MirroredLabel = "NamedTuple"
-                        type MirroredElemLabels = labels
-                        type MirroredElemTypes = types
-                      }
-                    } if Type.of[A].repr.dealias.typeSymbol.fullName == "scala.NamedTuple$.NamedTuple" =>
-
-                  val typeElems = tupleTypeElements(Type.of[types])
-                  val normalizedErasedTupleTpe = rollupTuple(typeElems.toVector)
-                  val structures =
-                    typeElems
-                      .zip(constStringTuple(TypeRepr.of[labels]))
-                      .map((tpe, name) =>
-                        name -> (tpe.asType match {
-                          case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], name)))
-                        })
-                      )
-                      .to(VectorMap)
-
-                  Structure.Product(Type.of[A], path, structures, Structure.Product.Kind.NamedTuple(normalizedErasedTupleTpe))
-
-                case '{
-                      $m: Mirror.Product {
                         type MirroredElemLabels = labels
                         type MirroredElemTypes = types
                       }
                     } =>
+
+                  val typeElems = Tuples.unroll(Type.of[types])
                   val structures =
-                    tupleTypeElements(Type.of[types])
-                      .zip(constStringTuple(TypeRepr.of[labels]))
+                    typeElems
+                      .zip(Tuples.unrollStrings(TypeRepr.of[labels]))
                       .map((tpe, name) =>
                         name -> (tpe.asType match {
                           case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], name)))
@@ -222,7 +202,13 @@ private[ducktape] object Structure {
                       )
                       .to(VectorMap)
 
-                  Structure.Product(Type.of[A], path, structures, Structure.Product.Kind.CaseClass)
+                  val kind = 
+                    if Type.of[A].repr.dealias.typeSymbol.fullName == "scala.NamedTuple$.NamedTuple" then {
+                      val normalizedErasedTupleTpe = Tuples.rollup(typeElems.toVector)
+                      Structure.Product.Kind.NamedTuple(normalizedErasedTupleTpe)
+                    } else Structure.Product.Kind.CaseClass
+
+                  Structure.Product(Type.of[A], path, structures, kind)
                 case '{
                       $m: Mirror.Sum {
                         type MirroredElemLabels = labels
@@ -230,8 +216,8 @@ private[ducktape] object Structure {
                       }
                     } =>
                   val structures =
-                    tupleTypeElements(Type.of[types])
-                      .zip(constStringTuple(TypeRepr.of[labels]))
+                    Tuples.unroll(Type.of[types])
+                      .zip(Tuples.unrollStrings(TypeRepr.of[labels]))
                       .map((tpe, name) =>
                         name -> (tpe.asType match { case '[tpe] => Lazy.of[tpe](path.appended(Path.Segment.Case(Type.of[tpe]))) })
                       )
@@ -249,48 +235,4 @@ private[ducktape] object Structure {
   }
 
   private def constantString[Const <: String: Type](using Quotes) = Type.valueOfConstant[Const].get
-
-  private def tupleTypeElements(tpe: Type[?])(using Quotes): List[quotes.reflect.TypeRepr] = {
-    @tailrec def loop(using Quotes)(curr: Type[?], acc: List[quotes.reflect.TypeRepr]): List[quotes.reflect.TypeRepr] = {
-      import quotes.reflect.*
-
-      curr match {
-        case '[head *: tail] =>
-          loop(Type.of[tail], TypeRepr.of[head] :: acc)
-        case '[EmptyTuple] =>
-          acc
-        case other =>
-          report.errorAndAbort(
-            s"Unexpected type (${other.repr.show}) encountered when extracting tuple type elems. This is a bug in ducktape."
-          )
-      }
-    }
-
-    loop(tpe, Nil).reverse
-  }
-
-  private def constStringTuple(using Quotes)(tp: quotes.reflect.TypeRepr): List[String] = {
-    import quotes.reflect.*
-    tupleTypeElements(tp.asType).map { case ConstantType(StringConstant(l)) => l }
-  }
-
-  private def rollupTuple(using Quotes)(elements: Vector[quotes.reflect.TypeRepr]) = {
-    import quotes.reflect.*
-
-    elements.size match {
-      case 0 => Type.of[EmptyTuple]
-      case 1 =>
-        elements.head.asType.match { case '[tpe] => Type.of[Tuple1[tpe]] }
-      case size if size <= 22 =>
-        defn
-          .TupleClass(size)
-          .typeRef
-          .appliedTo(elements.toList)
-          .asType
-      case _ =>
-        val TupleCons = TypeRepr.of[*:]
-        val tpe = elements.foldRight(TypeRepr.of[EmptyTuple])((curr, acc) => TupleCons.appliedTo(curr :: acc :: Nil))
-        tpe.asType
-    }
-  }
 }

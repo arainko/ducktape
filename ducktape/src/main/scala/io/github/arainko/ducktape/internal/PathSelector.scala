@@ -29,26 +29,23 @@ private[ducktape] object PathSelector {
               _,
               Typed(term, tpe @ Applied(TypeIdent("Elem"), _))
             ) =>
-          Logger.debug("HERE1")
+          Logger.debug(s"Matching positional tuple .apply($index)")
           
           recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.widen.simplified.asType, index)), tree)
 
         case tr @ Inlined(
               Some(
                 Apply(
-                  Apply(TypeApply(Select(Ident("NamedTuple"), "apply"), List(Inferred(), Inferred())), List(tree)),
+                  Apply(TypeApply(Select(Ident("NamedTuple"), "apply"), List(namesTpe, _)), List(tree)),
                   List(Literal(IntConstant(idx)))
                 )
               ),
               _,
               tpe
             ) =>
-          Logger.debug("HERE")
-          recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.asType, idx)), tree)
-        // tree.tpe.dealias.simplified match {
-        //   case AppliedType(tpe, tpes) =>
-        //     report.errorAndAbort(tpes.map(_.show).mkString)
-        // }
+          Logger.debug(s"Matching named tuple field access (index: ${idx}), ${namesTpe.show}")
+          val name = Tuples.unrollStrings(namesTpe.tpe)(idx) // .apply on a List... not great  but eh
+          recurse(acc.prepended(Path.Segment.Field(tpe.tpe.asType, name)), tree)
 
         case Inlined(_, _, tree) =>
           Logger.debug("Matched 'Inlined', recursing...")
@@ -60,10 +57,6 @@ private[ducktape] object PathSelector {
 
         case Block(_, tree) =>
           Logger.debug("Matched 'Block', recursing...")
-          recurse(acc, tree)
-
-        case Typed(tree, _) =>
-          Logger.debug("Matched 'Typed'")
           recurse(acc, tree)
 
         case select @ Select(tree, name @ TupleField(index)) =>

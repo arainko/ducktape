@@ -11,7 +11,7 @@ private[ducktape] object Logger {
   }
 
   // Logger Config
-  private[ducktape] transparent inline given level: Level = Level.Debug
+  private[ducktape] transparent inline given level: Level = Level.Off
   private val output = Output.StdOut
   @nowarn private def filter(msg: String, loc: String)(using Quotes) = Expr.summon[locally.type].isDefined
   enum Level {
