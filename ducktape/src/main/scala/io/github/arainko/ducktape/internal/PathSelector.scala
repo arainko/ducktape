@@ -4,6 +4,15 @@ import scala.annotation.tailrec
 import scala.quoted.*
 
 private[ducktape] object PathSelector {
+  inline def invoke[A, B](inline f: A => B) = ${ invokeMacro('f) }
+
+  def invokeMacro(expr: Expr[Any])(using Quotes) = {
+    import quotes.reflect.*
+    val path = unapply(expr.asTerm).value
+    report.info(path.render)
+    '{}
+  }
+
   def unapply(using Quotes)(expr: quotes.reflect.Term): Some[Path] = {
     @tailrec
     def recurse(using Quotes)(acc: List[Path.Segment], term: quotes.reflect.Term): Path = {
@@ -20,7 +29,26 @@ private[ducktape] object PathSelector {
               _,
               Typed(term, tpe @ Applied(TypeIdent("Elem"), _))
             ) =>
-          recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.asType, index)), tree)
+          Logger.debug("HERE1")
+          
+          recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.widen.simplified.asType, index)), tree)
+
+        case tr @ Inlined(
+              Some(
+                Apply(
+                  Apply(TypeApply(Select(Ident("NamedTuple"), "apply"), List(Inferred(), Inferred())), List(tree)),
+                  List(Literal(IntConstant(idx)))
+                )
+              ),
+              _,
+              tpe
+            ) =>
+          Logger.debug("HERE")
+          recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.asType, idx)), tree)
+        // tree.tpe.dealias.simplified match {
+        //   case AppliedType(tpe, tpes) =>
+        //     report.errorAndAbort(tpes.map(_.show).mkString)
+        // }
 
         case Inlined(_, _, tree) =>
           Logger.debug("Matched 'Inlined', recursing...")
@@ -32,6 +60,10 @@ private[ducktape] object PathSelector {
 
         case Block(_, tree) =>
           Logger.debug("Matched 'Block', recursing...")
+          recurse(acc, tree)
+
+        case Typed(tree, _) =>
+          Logger.debug("Matched 'Typed'")
           recurse(acc, tree)
 
         case select @ Select(tree, name @ TupleField(index)) =>

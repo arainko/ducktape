@@ -46,7 +46,7 @@ private[ducktape] object Structure {
   }
 
   object Product {
-    enum Kind {
+    enum Kind derives Debug {
       case CaseClass
       case NamedTuple(erasedTupleTpe: Type[?])
     }

@@ -1,6 +1,7 @@
 package io.github.arainko.ducktape
 
 import munit.*
+import io.github.arainko.ducktape.internal.CodePrinter
 
 class NamedTupleSuite extends DucktapeSuite {
   test("named tuple to case class works") {
@@ -320,5 +321,23 @@ class NamedTupleSuite extends DucktapeSuite {
       (int = 1, str = "str"),
       (INT = 1, STR = "str")
     )(Field.modifyDestNames(_.toLowerCase))
+  }
+
+  test("path selectors on named tuples work") {
+    import io.github.arainko.ducktape.internal.*
+    val input = (toplevel = (level1 = (level2 = 1, field = 2)))
+
+    Logger.locally {
+      PathSelector.invoke(((i: input.type) => i.toplevel.level1.level2))
+    }
+
+    CodePrinter.structure:
+      ((i: input.type) => i.toplevel)
+
+    // input
+    //   .into[(toplevel: (level1: (level2: Int, field: Int)))]
+    //   .transform(
+    //     Field.const(_.toplevel.level1.field, 1)
+    //   )
   }
 }
