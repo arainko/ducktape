@@ -4,7 +4,7 @@ import scala.annotation.tailrec
 import scala.quoted.*
 
 private[ducktape] object PathSelector {
-  def unapply(using Quotes)(expr: quotes.reflect.Term): Some[Path] = {
+  def unapply(using outer: Quotes)(expr: quotes.reflect.Term): Some[Path] = {
     @tailrec
     def recurse(using Quotes)(acc: List[Path.Segment], term: quotes.reflect.Term): Path = {
       import quotes.reflect.*
@@ -90,8 +90,10 @@ private[ducktape] object PathSelector {
           Path(ident.tpe.asType, acc.toVector)
 
         case other =>
-          Logger.debug(s"Matched an unexpected term")
-          report.errorAndAbort(s"Couldn't parse an unexpected config option: ${other.show(using Printer.TreeStructure)}")
+          Logger.debug(s"Matched an unexpected term: ${Printer.TreeStructure.show(other)}")
+          val pos = expr.pos
+          val code = pos.sourceCode.mkString
+          outer.reflect.report.errorAndAbort(s"Couldn't parse '$code' as a valid path selector", pos)
       }
     }
 
