@@ -1,17 +1,15 @@
 # ![ducktape-logo-32](https://user-images.githubusercontent.com/46346508/236060869-3b118075-f660-44c9-9d0d-d40fba5c8db0.svg) ducktape 0.2.x
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape_3/badge.svg?style=flat-square)](https://maven-badges.herokuapp.com/maven-central/io.github.arainko/ducktape_3)
-
 *ducktape* is a library for boilerplate-less and configurable transformations between case classes and enums/sealed traits for Scala 3. Directly inspired by [chimney](https://github.com/scalalandio/chimney).
 
 If this project interests you, please drop a 🌟 - these things are worthless but give me a dopamine rush nonetheless.
 
 ## Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.9"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.10"
 
 // or if you're using Scala.js or Scala Native
-libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.9"
+libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.10"
 ```
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
