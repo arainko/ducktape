@@ -4,6 +4,14 @@ import scala.annotation.tailrec
 import scala.quoted.*
 
 private[ducktape] object Tuples {
+
+  object Named {
+    def AnyNamedTuple(using Quotes): Option[Type[?]] = {
+      import quotes.reflect.*
+      Symbol.requiredModule("scala.NamedTuple").declaredType("AnyNamedTuple").headOption.map(_.typeRef.asType)
+    } 
+  }
+
   def unroll(tpe: Type[?])(using Quotes): List[quotes.reflect.TypeRepr] = {
     @tailrec def loop(using Quotes)(curr: Type[?], acc: List[quotes.reflect.TypeRepr]): List[quotes.reflect.TypeRepr] = {
       import quotes.reflect.*

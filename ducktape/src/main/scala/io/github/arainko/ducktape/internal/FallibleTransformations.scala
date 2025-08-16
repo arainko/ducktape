@@ -22,7 +22,8 @@ private[ducktape] object FallibleTransformations {
       WrapperType.create[F],
       TransformationSite.fromStringExpr(transformationSite),
       Summoner.PossiblyFallible[F],
-      TransformationMode.create(F)
+      TransformationMode.create(F),
+      Context.NamedTuples.create
     )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
@@ -53,7 +54,8 @@ private[ducktape] object FallibleTransformations {
       WrapperType.create[F],
       TransformationSite.fromStringExpr(transformationSite),
       Summoner.PossiblyFallible[F],
-      TransformationMode.create(F)
+      TransformationMode.create(F),
+      Context.NamedTuples.create
     )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
@@ -95,7 +97,8 @@ private[ducktape] object FallibleTransformations {
       WrapperType.create[F],
       TransformationSite.Transformation,
       Summoner.PossiblyFallible[F],
-      TransformationMode.create(F)
+      TransformationMode.create(F),
+      Context.NamedTuples.create
     )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
