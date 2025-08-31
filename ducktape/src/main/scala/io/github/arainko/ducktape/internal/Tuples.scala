@@ -4,6 +4,7 @@ import scala.annotation.tailrec
 import scala.quoted.*
 
 private[ducktape] object Tuples {
+
   def unroll(tpe: Type[?])(using Quotes): List[quotes.reflect.TypeRepr] = {
     @tailrec def loop(using Quotes)(curr: Type[?], acc: List[quotes.reflect.TypeRepr]): List[quotes.reflect.TypeRepr] = {
       import quotes.reflect.*

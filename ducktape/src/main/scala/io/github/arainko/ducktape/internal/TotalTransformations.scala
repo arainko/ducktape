@@ -17,7 +17,8 @@ private[ducktape] object TotalTransformations {
     configs: Expr[Seq[Field[A, B] | Case[A, B]]]
   )(using Quotes): Expr[B] = {
     given Context.Total(
-      TransformationSite.fromStringExpr(transformationSite)
+      TransformationSite.fromStringExpr(transformationSite),
+      Context.NamedTuples.create
     )
 
     val (config, flags) = Configuration.parse(configs, ConfigParser.total)
@@ -43,7 +44,8 @@ private[ducktape] object TotalTransformations {
   )(using Quotes) = {
 
     given Context.Total(
-      TransformationSite.Transformation
+      TransformationSite.Transformation,
+      Context.NamedTuples.create
     )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))
@@ -72,7 +74,8 @@ private[ducktape] object TotalTransformations {
     configs: Expr[Seq[Field[A, Args] | Case[A, Args]]]
   )(using Quotes) = {
     given Context.Total(
-      TransformationSite.fromStringExpr(transformationSite)
+      TransformationSite.fromStringExpr(transformationSite),
+      Context.NamedTuples.create
     )
 
     val sourceStruct = Structure.of[A](Path.empty(Type.of[A]))

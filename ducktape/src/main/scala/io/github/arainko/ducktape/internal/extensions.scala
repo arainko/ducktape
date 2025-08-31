@@ -13,6 +13,13 @@ extension (tpe: Type[? <: AnyKind]) {
 
   private[ducktape] def repr(using Quotes): quotes.reflect.TypeRepr =
     quotes.reflect.TypeRepr.of(using tpe)
+
+  private[ducktape] def isNamedTuple(using Context, Quotes): Boolean = {
+    Context.current.namedTuples.match {
+      case None              => false
+      case Some(namedTuples) => namedTuples.isNamedTuple(tpe)
+    }
+  }
 }
 
 extension (expr: Expr[Any]) {

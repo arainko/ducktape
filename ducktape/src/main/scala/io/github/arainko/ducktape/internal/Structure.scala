@@ -209,7 +209,7 @@ private[ducktape] object Structure {
                       .to(VectorMap)
 
                   val kind =
-                    if Type.of[A].repr.dealias.typeSymbol.fullName == "scala.NamedTuple$.NamedTuple" then {
+                    if Type.of[A].isNamedTuple then {
                       val normalizedErasedTupleTpe = Tuples.rollup(typeElems.toVector)
                       Structure.Product.Kind.NamedTuple(normalizedErasedTupleTpe)
                     } else Structure.Product.Kind.CaseClass

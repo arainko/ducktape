@@ -446,7 +446,7 @@ private[ducktape] object Planner {
     )(using Quotes, Depth, Context.Of[F], PlanFlags, Flag.Linter): Option[Plan[Erroneous, F]] =
       PartialFunction.condOpt(Context.current *: structs) {
         case (
-              ctx @ Context.PossiblyFallible(_, _, _, mode: TransformationMode.FailFast[f]),
+              ctx @ Context.PossiblyFallible(_, _, _, mode: TransformationMode.FailFast[f], _),
               source @ Wrapped(tpe, _, path, underlying),
               dest
             ) =>
@@ -464,7 +464,7 @@ private[ducktape] object Planner {
           }
 
         case (
-              ctx @ Context.PossiblyFallible(_, _, _, TransformationMode.Accumulating(mode, Some(localMode))),
+              ctx @ Context.PossiblyFallible(_, _, _, TransformationMode.Accumulating(mode, Some(localMode)), _),
               source @ Wrapped(tpe, _, path, underlying),
               dest
             ) =>
@@ -482,7 +482,7 @@ private[ducktape] object Planner {
           }
 
         case (
-              ctx @ Context.PossiblyFallible(_, _, _, TransformationMode.Accumulating(mode, None)),
+              ctx @ Context.PossiblyFallible(_, _, _, TransformationMode.Accumulating(mode, None), _),
               source @ Wrapped(tpe, _, path, underlying),
               dest
             ) =>
