@@ -1,7 +1,8 @@
 package io.github.arainko.ducktape.internal
 
-import scala.quoted.*
 import io.github.arainko.ducktape.internal.Context.NamedTuples
+
+import scala.quoted.*
 
 private[ducktape] sealed trait Context {
   type F <: Fallible

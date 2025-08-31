@@ -34,7 +34,7 @@ private[ducktape] object WrapperType {
   def unapply(using Quotes, Context)(tpe: Type[?]) =
     Context.current match {
       case ctx: Context.PossiblyFallible[?] => ctx.wrapperType.unapply(tpe)
-      case Context.Total(_, _)                 => None
+      case Context.Total(_, _)              => None
     }
 
   case object Optional extends WrapperType[Option] {
