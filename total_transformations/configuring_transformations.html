@@ -195,7 +195,7 @@
 //   age = 24,
 //   paymentMethods = Vector(
 //     Cash,
-//     PayPal(email = &quot;john@doe.com&quot;),
+//     PayPal(&quot;john@doe.com&quot;),
 //     Card(name = &quot;J. Doe&quot;, digits = 23232323L),
 //     Cash
 //   )
@@ -521,9 +521,7 @@
     )
   )
 </span><span class="comment">// res12: DestToplevel1 = DestToplevel1(
-//   level1 = Some(
-//     value = DestLevel1(level2 = Some(value = DestLevel2(int = 11L)))
-//   )
+//   Some(DestLevel1(Some(DestLevel2(11L))))
 // )</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
@@ -679,7 +677,7 @@
 </span><span class="comment">// res20: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(extra = None, str = &quot;str&quot;),
 //   extra = None,
-//   transformable = Some(value = 400)
+//   transformable = Some(400)
 // )</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
@@ -709,8 +707,8 @@
 </span><span>  )
 </span><span class="comment">// res22: DestToplevel = DestToplevel(
 //   level1 = DestLevel1(extra = None, str = &quot;str&quot;),
-//   extra = Some(value = 123),
-//   transformable = Some(value = 400)
+//   extra = Some(123),
+//   transformable = Some(400)
 // )</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
@@ -757,7 +755,7 @@
         </table>
         <hr>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">val</span><span> </span><span class="identifier">transfer</span><span> = </span><span class="identifier">wire</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Transfer</span><span>(</span><span class="string-literal">&quot;2764262&quot;</span><span>)
-</span><span class="comment">// transfer: PaymentMethod = Transfer(accountNo = &quot;2764262&quot;)</span></code></pre>
+</span><span class="comment">// transfer: PaymentMethod = Transfer(&quot;2764262&quot;)</span></code></pre>
         <ul>
           <li><code>Case.const</code> - allows to supply a constant value for a given subtype of a coproduct</li>
         </ul>
@@ -1182,7 +1180,7 @@
 //   age = 50,
 //   paymentMethods = Vector(
 //     Cash,
-//     PayPal(email = &quot;john@doe.com&quot;),
+//     PayPal(&quot;john@doe.com&quot;),
 //     Card(name = &quot;J. Doe&quot;, digits = 23232323L),
 //     Cash
 //   )

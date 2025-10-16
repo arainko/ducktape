@@ -209,12 +209,12 @@
 
 </span><span class="identifier">wirePerson</span><span>.</span><span class="identifier">fallibleTo</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">Person</span><span>]
 </span><span class="comment">// res0: Either[List[String], Person] = Right(
-//   value = Person(
+//   Person(
 //     firstName = &quot;John&quot;,
 //     lastName = &quot;Doe&quot;,
 //     paymentMethods = Vector(
 //       Cash,
-//       PayPal(email = &quot;john@doe.com&quot;),
+//       PayPal(&quot;john@doe.com&quot;),
 //       Card(digits = 23232323L, name = &quot;J. Doe&quot;)
 //     )
 //   )
@@ -285,12 +285,12 @@
     )
   )
 </span><span class="comment">// res2: Either[String, Person] = Right(
-//   value = Person(
+//   Person(
 //     firstName = &quot;John&quot;,
 //     lastName = &quot;Doe&quot;,
 //     paymentMethods = Vector(
 //       Cash,
-//       PayPal(email = &quot;overridden@email.com&quot;),
+//       PayPal(&quot;overridden@email.com&quot;),
 //       Card(digits = 23232323L, name = &quot;J. Doe&quot;)
 //     )
 //   )
@@ -364,12 +364,12 @@
 
 </span><span class="identifier">wirePerson</span><span>.</span><span class="identifier">fallibleVia</span><span>(</span><span class="identifier">domain</span><span>.</span><span class="type-name">Person</span><span>.</span><span class="identifier">apply</span><span>)
 </span><span class="comment">// res4: Either[List[String], Person] = Right(
-//   value = Person(
+//   Person(
 //     firstName = &quot;John&quot;,
 //     lastName = &quot;Doe&quot;,
 //     paymentMethods = Vector(
 //       Cash,
-//       PayPal(email = &quot;john@doe.com&quot;),
+//       PayPal(&quot;john@doe.com&quot;),
 //       Card(digits = 23232323L, name = &quot;J. Doe&quot;)
 //     )
 //   )
@@ -443,12 +443,12 @@
     )
   )
 </span><span class="comment">// res6: Either[String, Person] = Right(
-//   value = Person(
+//   Person(
 //     firstName = &quot;John&quot;,
 //     lastName = &quot;Doe&quot;,
 //     paymentMethods = Vector(
 //       Cash,
-//       PayPal(email = &quot;overridden@email.com&quot;),
+//       PayPal(&quot;overridden@email.com&quot;),
 //       Card(digits = 23232323L, name = &quot;J. Doe&quot;)
 //     )
 //   )

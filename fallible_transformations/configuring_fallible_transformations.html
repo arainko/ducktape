@@ -220,11 +220,7 @@
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">fallibleConst</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">age</span><span>, </span><span class="type-name">Positive</span><span>.</span><span class="identifier">makeAccumulating</span><span>(</span><span class="number-literal">25</span><span>))
   )
 </span><span class="comment">// res0: Either[List[String], Person] = Right(
-//   value = Person(
-//     name = &quot;ConstValidName&quot;,
-//     age = 25L,
-//     socialSecurityNo = &quot;SOCIALNO&quot;
-//   )
+//   Person(name = &quot;ConstValidName&quot;, age = 25L, socialSecurityNo = &quot;SOCIALNO&quot;)
 // )</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
@@ -262,7 +258,7 @@
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>]()
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="type-name">Either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>]()
 
 </span><span class="identifier">bad</span><span>
   .</span><span class="identifier">into</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">Person</span><span>]
@@ -272,11 +268,7 @@
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">fallibleComputed</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">age</span><span>, </span><span class="identifier">uvp</span><span> =&gt; </span><span class="type-name">Positive</span><span>.</span><span class="identifier">makeAccumulating</span><span>(</span><span class="identifier">uvp</span><span>.</span><span class="identifier">age</span><span> + </span><span class="number-literal">25</span><span>))
   )
 </span><span class="comment">// res2: Either[List[String], Person] = Right(
-//   value = Person(
-//     name = &quot;ConstValidName&quot;,
-//     age = 24L,
-//     socialSecurityNo = &quot;SOCIALNO&quot;
-//   )
+//   Person(name = &quot;ConstValidName&quot;, age = 24L, socialSecurityNo = &quot;SOCIALNO&quot;)
 // )</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
@@ -337,11 +329,7 @@
     )
   )
 </span><span class="comment">// res4: Either[List[String], DestToplevel1] = Right(
-//   value = DestToplevel1(
-//     level1 = Some(
-//       value = DestLevel1(level2 = Some(value = DestLevel2(int = 11L)))
-//     )
-//   )
+//   DestToplevel1(Some(DestLevel1(Some(DestLevel2(11L)))))
 // )</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
@@ -441,7 +429,7 @@
   .</span><span class="identifier">transform</span><span>(
     </span><span class="type-name">Case</span><span>.</span><span class="identifier">fallibleConst</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">at</span><span>[</span><span class="identifier">wire</span><span>.</span><span class="type-name">ReleaseKind</span><span>.</span><span class="type-name">Single</span><span>.</span><span class="keyword">type</span><span>], </span><span class="type-name">Left</span><span>(</span><span class="string-literal">&quot;Unsupported release kind&quot;</span><span>))
   )
-</span><span class="comment">// res6: Either[String, ReleaseKind] = Left(value = &quot;Unsupported release kind&quot;)</span></code></pre>
+</span><span class="comment">// res6: Either[String, ReleaseKind] = Left(&quot;Unsupported release kind&quot;)</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre><code class="nohighlight"><span>{
@@ -481,7 +469,7 @@
     </span><span class="type-name">Case</span><span>.</span><span class="identifier">fallibleComputed</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">at</span><span>[</span><span class="identifier">wire</span><span>.</span><span class="type-name">ReleaseKind</span><span>.</span><span class="type-name">Single</span><span>.</span><span class="keyword">type</span><span>], </span><span class="identifier">handleSingle</span><span>)
   )
 </span><span class="comment">// res8: Either[String, ReleaseKind] = Left(
-//   value = &quot;It&#39;s a single alright, too bad we don&#39;t support it&quot;
+//   &quot;It&#39;s a single alright, too bad we don&#39;t support it&quot;
 // )</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">

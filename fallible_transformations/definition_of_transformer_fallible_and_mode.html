@@ -167,17 +167,17 @@
     </span><span class="type-name">Right</span><span>(</span><span class="number-literal">4</span><span>)
   )
 </span><span class="comment">// source: Tuple4[Right[Nothing, Int], Right[Nothing, String], Right[Nothing, List[Int]], Right[Nothing, Int]] = (
-//   Right(value = 1),
-//   Right(value = &quot;str&quot;),
-//   Right(value = List(3, 3, 3)),
-//   Right(value = 4)
+//   Right(1),
+//   Right(&quot;str&quot;),
+//   Right(List(3, 3, 3)),
+//   Right(4)
 // )
 </span><span>
 </span><span class="type-name">Mode</span><span>.</span><span class="type-name">Accumulating</span><span>.</span><span class="identifier">either</span><span>[</span><span class="type-name">String</span><span>, </span><span class="type-name">List</span><span>].</span><span class="identifier">locally</span><span> {
   </span><span class="identifier">source</span><span>.</span><span class="identifier">fallibleTo</span><span>[</span><span class="type-name">Tuple</span><span>.</span><span class="type-name">InverseMap</span><span>[</span><span class="identifier">source</span><span>.</span><span class="keyword">type</span><span>, </span><span class="type-name">Mode</span><span>.</span><span class="identifier">current</span><span>.</span><span class="type-name">Self</span><span>]]
 }
 </span><span class="comment">// res0: Either[List[String], *:[Int, *:[String, *:[List[Int], *:[Int, EmptyTuple]]]]] = Right(
-//   value = (1, &quot;str&quot;, List(3, 3, 3), 4)
+//   (1, &quot;str&quot;, List(3, 3, 3), 4)
 // )</span></code></pre>
         <p>...where repeatedly referring to the <code>F</code> wrapper becomes really unwieldly - that type is known to the compiler at each call site so we make it work for us in conjunction with <code>Mode.current</code> which summons the <code>Mode[F]</code> instance in the current implicit scope.</p>
         <div class="callout info">
@@ -192,7 +192,7 @@
   </span><span class="identifier">source</span><span>.</span><span class="identifier">parTupled</span><span>
 }
 </span><span class="comment">// res1: Either[List[String], *:[Int, *:[String, *:[List[Int], *:[Int, EmptyTuple]]]]] = Right(
-//   value = (1, &quot;str&quot;, List(3, 3, 3), 4)
+//   (1, &quot;str&quot;, List(3, 3, 3), 4)
 // )</span></code></pre>
         </div>
 

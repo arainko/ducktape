@@ -180,7 +180,7 @@
 </span><span class="type-name">Mode</span><span>.</span><span class="type-name">FailFast</span><span>.</span><span class="identifier">either</span><span>[</span><span class="type-name">String</span><span>].</span><span class="identifier">locally</span><span> {
   </span><span class="type-name">Right</span><span>(</span><span class="number-literal">1</span><span>).</span><span class="identifier">fallibleTo</span><span>[</span><span class="type-name">Positive</span><span>]
 }
-</span><span class="comment">// res4: Either[String, Positive] = Right(value = Positive(value = 1))</span></code></pre>
+</span><span class="comment">// res4: Either[String, Positive] = Right(Positive(1))</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
@@ -211,7 +211,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="type-name">Mode</span><span>.</span><span class="type-name">FailFast</span><span>.</span><span class="identifier">either</span><span>[</span><span class="type-name">String</span><span>].</span><span class="identifier">locally</span><span> {
   </span><span class="type-name">Right</span><span>(</span><span class="number-literal">1</span><span>).</span><span class="identifier">fallibleTo</span><span>[</span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]]
 }
-</span><span class="comment">// res6: Either[String, Option[Int]] = Right(value = Some(value = 1))</span></code></pre>
+</span><span class="comment">// res6: Either[String, Option[Int]] = Right(Some(1))</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
@@ -238,7 +238,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">given</span><span> </span><span class="type-name">Transformer</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">String</span><span>] = </span><span class="identifier">int</span><span> =&gt; </span><span class="identifier">int</span><span>.</span><span class="identifier">toString</span><span>
 
 </span><span class="type-name">Option</span><span>(</span><span class="number-literal">1</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">Option</span><span>[</span><span class="type-name">String</span><span>]]
-</span><span class="comment">// res8: Option[String] = Some(value = &quot;1&quot;)</span></code></pre>
+</span><span class="comment">// res8: Option[String] = Some(&quot;1&quot;)</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
@@ -258,7 +258,7 @@
           </ul>
           <div class="tab-content active" data-choice-name="visible">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="number-literal">1</span><span>.</span><span class="identifier">to</span><span>[</span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>]]
-</span><span class="comment">// res10: Option[Int | String] = Some(value = 1)</span></code></pre>
+</span><span class="comment">// res10: Option[Int | String] = Some(1)</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>((</span><span class="type-name">Some</span><span>.</span><span class="identifier">apply</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>](</span><span class="number-literal">1</span><span>): </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>]): </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span> | </span><span class="type-name">String</span><span>])</span></code></pre>
@@ -312,12 +312,9 @@
 
 </span><span class="type-name">SourceToplevel</span><span>(</span><span class="type-name">SourceLevel1</span><span>(</span><span class="string-literal">&quot;extra&quot;</span><span>, </span><span class="number-literal">1</span><span>, </span><span class="type-name">List</span><span>(</span><span class="type-name">SourceLevel2</span><span>(</span><span class="number-literal">1</span><span>), </span><span class="type-name">SourceLevel2</span><span>(</span><span class="number-literal">2</span><span>)))).</span><span class="identifier">to</span><span>[</span><span class="type-name">DestToplevel</span><span>]
 </span><span class="comment">// res15: DestToplevel = DestToplevel(
-//   level1 = DestLevel1(
+//   DestLevel1(
 //     int = 1,
-//     level2s = Vector(
-//       DestLevel2(value = Some(value = 1)),
-//       DestLevel2(value = Some(value = 2))
-//     )
+//     level2s = Vector(DestLevel2(Some(1)), DestLevel2(Some(2)))
 //   )
 // )</span></code></pre>
           </div>
@@ -354,11 +351,7 @@
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Source</span><span>(</span><span class="identifier">field1</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field2</span><span>: </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="identifier">field3</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field4</span><span>: </span><span class="type-name">Int</span><span>)
 
 </span><span class="type-name">Source</span><span>(</span><span class="number-literal">1</span><span>, </span><span class="type-name">List</span><span>(</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>).</span><span class="identifier">to</span><span>[(</span><span class="type-name">Int</span><span>, </span><span class="type-name">Vector</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>])]
-</span><span class="comment">// res18: Tuple3[Int, Vector[Int], Option[Int]] = (
-//   1,
-//   Vector(2, 2, 2),
-//   Some(value = 3)
-// )</span></code></pre>
+</span><span class="comment">// res18: Tuple3[Int, Vector[Int], Option[Int]] = (1, Vector(2, 2, 2), Some(3))</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
@@ -389,11 +382,7 @@
 </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Dest</span><span>(</span><span class="identifier">field1</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field2</span><span>: </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="identifier">field3</span><span>: </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>])
 
 (</span><span class="number-literal">1</span><span>, </span><span class="type-name">Vector</span><span>(</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>).</span><span class="identifier">to</span><span>[</span><span class="type-name">Dest</span><span>]
-</span><span class="comment">// res21: Dest = Dest(
-//   field1 = 1,
-//   field2 = List(2, 2, 2),
-//   field3 = Some(value = 3)
-// )</span></code></pre>
+</span><span class="comment">// res21: Dest = Dest(field1 = 1, field2 = List(2, 2, 2), field3 = Some(3))</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
@@ -423,11 +412,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">io</span><span>.</span><span class="identifier">github</span><span>.</span><span class="identifier">arainko</span><span>.</span><span class="identifier">ducktape</span><span>.*
 
 (</span><span class="number-literal">1</span><span>, </span><span class="type-name">Vector</span><span>(</span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>, </span><span class="number-literal">2</span><span>), </span><span class="number-literal">3</span><span>, </span><span class="number-literal">4</span><span>).</span><span class="identifier">to</span><span>[(</span><span class="type-name">Int</span><span>, </span><span class="type-name">List</span><span>[</span><span class="type-name">Int</span><span>], </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>])]
-</span><span class="comment">// res24: Tuple3[Int, List[Int], Option[Int]] = (
-//   1,
-//   List(2, 2, 2),
-//   Some(value = 3)
-// )</span></code></pre>
+</span><span class="comment">// res24: Tuple3[Int, List[Int], Option[Int]] = (1, List(2, 2, 2), Some(3))</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
@@ -543,7 +528,7 @@
             <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Wrapper2</span><span>(</span><span class="identifier">value</span><span>: </span><span class="type-name">Int</span><span>) </span><span class="keyword">extends</span><span> </span><span class="type-name">AnyVal</span><span>
 
 </span><span class="number-literal">1</span><span>.</span><span class="identifier">to</span><span>[</span><span class="type-name">Wrapper2</span><span>]
-</span><span class="comment">// res32: Wrapper2 = Wrapper2(value = 1)</span></code></pre>
+</span><span class="comment">// res32: Wrapper2 = Wrapper2(1)</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>((</span><span class="keyword">new</span><span> </span><span class="type-name">Wrapper2</span><span>(</span><span class="number-literal">1</span><span>): </span><span class="type-name">Wrapper2</span><span>): </span><span class="type-name">Wrapper2</span><span>)</span></code></pre>
@@ -559,7 +544,7 @@
             <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
           </ul>
           <div class="tab-content active" data-choice-name="visible">
-            <pre><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">io</span><span>.</span><span class="identifier">github</span><span>.</span><span class="identifier">arainko</span><span>.</span><span class="identifier">ducktape</span><span>.*
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">io</span><span>.</span><span class="identifier">github</span><span>.</span><span class="identifier">arainko</span><span>.</span><span class="identifier">ducktape</span><span>.*
 
 </span><span class="keyword">final</span><span> </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Source</span><span>[</span><span class="type-name">A</span><span>](</span><span class="identifier">field1</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field2</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">generic</span><span>: </span><span class="type-name">A</span><span>)
 </span><span class="keyword">final</span><span> </span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Dest</span><span>[</span><span class="type-name">A</span><span>](</span><span class="identifier">field1</span><span>: </span><span class="type-name">Int</span><span>, </span><span class="identifier">field2</span><span>: </span><span class="type-name">String</span><span>, </span><span class="identifier">generic</span><span>: </span><span class="type-name">A</span><span>)
@@ -567,11 +552,7 @@
 </span><span class="keyword">def</span><span> </span><span class="declaration-name">transformSource</span><span>[</span><span class="type-name">A</span><span>, </span><span class="type-name">B</span><span>](</span><span class="identifier">source</span><span>: </span><span class="type-name">Source</span><span>[</span><span class="type-name">A</span><span>])(</span><span class="keyword">using</span><span> </span><span class="type-name">Transformer</span><span>.</span><span class="type-name">Derived</span><span>[</span><span class="type-name">A</span><span>, </span><span class="type-name">B</span><span>]): </span><span class="type-name">Dest</span><span>[</span><span class="type-name">B</span><span>] = </span><span class="identifier">source</span><span>.</span><span class="identifier">to</span><span>[</span><span class="type-name">Dest</span><span>[</span><span class="type-name">B</span><span>]]
 
 </span><span class="identifier">transformSource</span><span>[</span><span class="type-name">Int</span><span>, </span><span class="type-name">Option</span><span>[</span><span class="type-name">Int</span><span>]](</span><span class="type-name">Source</span><span>(</span><span class="number-literal">1</span><span>, </span><span class="string-literal">&quot;2&quot;</span><span>, </span><span class="number-literal">3</span><span>))
-</span><span class="comment">// res35: Dest[Option[Int]] = Dest(
-//   field1 = 1,
-//   field2 = &quot;2&quot;,
-//   generic = Some(value = 3)
-// )</span></code></pre>
+</span><span class="comment">// res35: Dest[Option[Int]] = Dest(field1 = 1, field2 = &quot;2&quot;, generic = Some(3))</span></code></pre>
           </div>
           <div class="tab-content" data-choice-name="generated">
             <pre class="keep-together pdf epub"><code class="nohighlight"><span>{
