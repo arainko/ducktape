@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.internal.*
 import io.github.arainko.ducktape.internal.Structure.*
 import io.github.arainko.ducktape.internal.Structure.Product.Kind
 
-import scala.annotation.{nowarn, unused}
+import scala.annotation.{ nowarn, unused }
 import scala.collection.immutable.VectorMap
 import scala.deriving.Mirror
 import scala.quoted.*
