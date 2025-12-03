@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.*
 
+import scala.annotation.nowarn
 import scala.quoted.*
 
 import Configuration.*
@@ -12,6 +13,8 @@ private[ducktape] sealed trait ConfigParser[+F <: Fallible] {
   def apply(using Quotes, Context): PartialFunction[(Priority, quotes.reflect.Term), Instruction[F] | ParsedFlag]
 }
 
+@nowarn("msg=unused pattern variable")
+@nowarn("msg=unused local definition")
 private[ducktape] object ConfigParser {
   val total = NonEmptyList(Total)
 
@@ -486,8 +489,6 @@ private[ducktape] object ConfigParser {
 
   private object DeprecatedFallibleConfig {
     def unapply[F[+x]: Type](using Quotes)(prioAndTerm: (Priority, quotes.reflect.Term)) = {
-      import quotes.reflect.*
-
       val (prio, expr) = prioAndTerm
 
       PartialFunction.condOpt(expr.asExpr) {

@@ -3,6 +3,7 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.internal.*
 
+import scala.annotation.nowarn
 import scala.collection.Factory
 import scala.quoted.*
 
@@ -24,10 +25,10 @@ private[ducktape] object PlanInterpreter {
 
       case Plan.BetweenProducts(source, dest, fieldPlans) =>
         val args = fieldPlans.map {
-          case (fieldName, FieldPlan(sourceField: String, plan)) =>
+          case (_, FieldPlan(sourceField: String, plan)) =>
             val fieldValue = value.accessFieldByName(sourceField, source).asExpr
             recurse(plan, fieldValue)
-          case (fieldName, FieldPlan(None, plan)) =>
+          case (_, FieldPlan(None, plan)) =>
             recurse(plan, value)
         }
         ProductConstructor.Primary(dest)(args.toSeq)
@@ -63,10 +64,10 @@ private[ducktape] object PlanInterpreter {
 
         ProductConstructor.Tuple(args)
 
-      case Plan.BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
+      case Plan.BetweenCoproducts(_, _, casePlans) =>
         val branches = casePlans.map { plan =>
-          (plan.source.tpe -> plan.dest.tpe) match {
-            case '[src] -> '[dest] =>
+          plan.source.tpe match {
+            case '[src] =>
               val sourceValue = '{ $value.asInstanceOf[src] }
               IfExpression.Branch(IsInstanceOf(value, plan.source.tpe), recurse(plan, sourceValue))
           }
@@ -75,10 +76,10 @@ private[ducktape] object PlanInterpreter {
 
       case Plan.BetweenProductFunction(source, dest, argPlans) =>
         val args = argPlans.map {
-          case (fieldName, FieldPlan(sourceField: String, plan)) =>
+          case (_, FieldPlan(sourceField: String, plan)) =>
             val fieldValue = value.accessFieldByName(sourceField, source).asExpr
             recurse(plan, fieldValue).asTerm
-          case (fieldName, FieldPlan(None, plan)) =>
+          case (_, FieldPlan(None, plan)) =>
             recurse(plan, value).asTerm
         }
         dest.function.appliedTo(args.toList)
@@ -88,7 +89,7 @@ private[ducktape] object PlanInterpreter {
           case (plan, index) if source.elements.isDefinedAt(index) =>
             val fieldValue = value.accesFieldByIndex(index, source)
             recurse(plan, fieldValue).asTerm
-          case (plan, index) =>
+          case (plan, _) =>
             recurse(plan, value).asTerm
         }
         dest.function.appliedTo(args.toList)
@@ -118,12 +119,12 @@ private[ducktape] object PlanInterpreter {
             '{ $sourceValue.map(src => ${ transformation('src) }).to($factory) }
         }
 
-      case Plan.BetweenSingletons(sourceTpe, destTpe) => destTpe.value
+      case Plan.BetweenSingletons(_, destTpe) => destTpe.value
 
-      case Plan.BetweenWrappedUnwrapped(sourceTpe, destTpe, fieldName) =>
+      case Plan.BetweenWrappedUnwrapped(_, _, fieldName) =>
         value.accessFieldByNameUnsafe(fieldName).asExpr
 
-      case Plan.BetweenUnwrappedWrapped(sourceTpe, destTpe) =>
+      case Plan.BetweenUnwrappedWrapped(_, destTpe) =>
         Constructor(destTpe.tpe.repr).appliedTo(value.asTerm).asExpr
 
       case Plan.UserDefined(source, dest, transformer) =>
@@ -133,7 +134,7 @@ private[ducktape] object PlanInterpreter {
               case '{ $t: Transformer[src, dest] } =>
                 val sourceValue = value.asExprOf[src]
                 '{ $t.transform($sourceValue) }
-            }
+            }: @nowarn("msg=unused local definition")
         }
 
       case Plan.Derived(source, dest, transformer) =>
@@ -143,7 +144,7 @@ private[ducktape] object PlanInterpreter {
               case '{ $t: Transformer.Derived[src, dest] } =>
                 val sourceValue = value.asExprOf[src]
                 '{ $t.transform($sourceValue) }
-            }
+            }: @nowarn("msg=unused local definition")
         }
     }
   }
@@ -156,9 +157,9 @@ private[ducktape] object PlanInterpreter {
         '{ $function.apply($value) }
       case Configuration.FieldComputed(_, function) =>
         '{ $function.apply($toplevelValue) }
-      case Configuration.FieldComputedDeep(tpe, sourceTpe, function) =>
+      case Configuration.FieldComputedDeep(_, sourceTpe, function) =>
         '{ $function.apply($value) }
-      case Configuration.FieldReplacement(source, struct, name, tpe) =>
+      case Configuration.FieldReplacement(source, struct, name, _) =>
         source.accessFieldByName(name, struct).asExpr
     }
 }

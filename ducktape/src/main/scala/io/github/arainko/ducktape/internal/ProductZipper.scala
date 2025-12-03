@@ -2,6 +2,7 @@ package io.github.arainko.ducktape.internal
 
 import io.github.arainko.ducktape.Mode
 
+import scala.annotation.nowarn
 import scala.quoted.*
 
 private[ducktape] object ProductZipper {
@@ -29,7 +30,7 @@ private[ducktape] object ProductZipper {
           def transform(value: a) = ${ unzipAndConstruct[Dest](reorderedFields, unwrappedFields, 'value, construct) }
           $F.map($zipped, transform)
         }
-    }
+    }: @nowarn("msg=unused local definition")
   }
 
   private def zipFields[F[+x]: Type](
@@ -40,7 +41,7 @@ private[ducktape] object ProductZipper {
       (accumulated -> current) match {
         case '{ $accumulated: F[a] } -> '{ $current: F[b] } =>
           '{ $F.product[`b`, `a`]($current, $accumulated) }
-      }
+      }: @nowarn("msg=unused local definition")
     }
     alignOwner(zipped).asExprOf[F[Any]]
   }

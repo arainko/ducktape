@@ -18,13 +18,13 @@ private[ducktape] object PathSelector {
                 )
               ),
               _,
-              Typed(term, tpe @ Applied(TypeIdent("Elem"), _))
+              Typed(_, tpe @ Applied(TypeIdent("Elem"), _))
             ) =>
           Logger.debug(s"Matching positional tuple .apply($index)")
 
           recurse(acc.prepended(Path.Segment.TupleElement(tpe.tpe.widen.simplified.asType, index)), tree)
 
-        case tr @ Inlined(
+        case Inlined(
               Some(
                 Apply(
                   Apply(TypeApply(Select(Ident("NamedTuple"), "apply"), List(namesTpe, _)), List(tree)),

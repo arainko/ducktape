@@ -4,7 +4,7 @@ import io.github.arainko.ducktape.internal.*
 import io.github.arainko.ducktape.internal.Structure.*
 import io.github.arainko.ducktape.internal.Structure.Product.Kind
 
-import scala.annotation.unused
+import scala.annotation.{ nowarn, unused }
 import scala.collection.immutable.VectorMap
 import scala.deriving.Mirror
 import scala.quoted.*
@@ -89,7 +89,6 @@ private[ducktape] object Structure {
   }
 
   def fromFunction(function: io.github.arainko.ducktape.internal.Function)(using Context, Quotes): Structure.Function = {
-    import quotes.reflect.*
     val path = Path.empty(function.returnTpe)
 
     val args =
@@ -231,7 +230,7 @@ private[ducktape] object Structure {
                       .toMap
 
                   Structure.Coproduct(Type.of[A], path, structures)
-              }
+              }: @nowarn("msg=unused [local definition|pattern variable]")
           }
       }
   }

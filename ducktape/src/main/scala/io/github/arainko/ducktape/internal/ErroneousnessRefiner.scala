@@ -5,7 +5,7 @@ private[ducktape] object ErroneousnessRefiner {
     protected def foldOver(plan: Plan[Erroneous, Fallible], accumulator: List[Plan.Error]): List[Plan.Error] =
       plan match {
         case error: Plan.Error => error :: accumulator
-        case other             => accumulator
+        case _                 => accumulator
       }
   }
 

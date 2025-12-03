@@ -4,6 +4,7 @@ import io.github.arainko.ducktape.internal.*
 import io.github.arainko.ducktape.internal.Flag.Linter.markUsage
 import io.github.arainko.ducktape.internal.Flag.{ Effect, Kind, Typed }
 
+import scala.annotation.nowarn
 import scala.quoted.*
 import scala.reflect.TypeTest
 
@@ -60,6 +61,7 @@ private[ducktape] object Flag {
     case TypeSpecific(tpe: Type[?])
   }
 
+  @nowarn("msg=unused implicit parameter")
   final case class Typed[+A <: Effect](effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug {
     def use(input: effect.In)(using linter: Linter): effect.Out = {
       linter.markUsage(this)
@@ -162,8 +164,6 @@ private[ducktape] case class SideSpecficFlags(
   outOfScope: Vector[(List[Step], Flag)],
   inScope: Vector[Flag]
 ) derives Debug {
-  import scala.util.chaining.*
-
   def get[B <: Effect](tpe: Type[?])(using tt: TypeTest[Effect, B], quotes: Quotes, linter: Flag.Linter): Option[Typed[B]] = {
     val typedFlags = inScope.collect {
       case Flag(tt(effect), kind @ Flag.Kind.TypeSpecific(flagType), span, prio) if tpe.repr <:< flagType.repr =>
@@ -188,7 +188,7 @@ private[ducktape] case class SideSpecficFlags(
           Left(flag)
         case (segment: Step, head :: tail, flag) if head =:= segment =>
           Right(Some((tail, flag)))
-        case (segment: Step, other, flag) =>
+        case (_: Step, _, _) =>
           Right(None)
       }
     }

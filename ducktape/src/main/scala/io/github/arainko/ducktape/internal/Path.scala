@@ -12,7 +12,7 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
 
   def prepended(segment: Path.Segment): Path = self.copy(segments = segments.prepended(segment))
 
-  def narrowedCurrentTpe(using Quotes): Type[?] =
+  def narrowedCurrentTpe: Type[?] =
     segments.lastOption.fold(root)(_.tpe)
 
   // deliberately use something that requires a total function so that when a new Path.Segment is declared

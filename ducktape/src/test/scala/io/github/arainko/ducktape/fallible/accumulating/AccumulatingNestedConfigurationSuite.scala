@@ -2,7 +2,6 @@ package io.github.arainko.ducktape.fallible.accumulating
 
 import io.github.arainko.ducktape.*
 import io.github.arainko.ducktape.fallible.model.Positive
-import io.github.arainko.ducktape.internal.*
 
 import scala.annotation.nowarn
 

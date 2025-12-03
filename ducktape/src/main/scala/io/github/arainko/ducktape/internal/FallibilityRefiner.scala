@@ -10,8 +10,8 @@ import scala.util.boundary.Label
 private[ducktape] object FallibilityRefiner {
   def run[E <: Erroneous](plan: Plan[E, Fallible]): Plan[E, Nothing] | None.type =
     recurse(plan) match
-      case None    => None
-      case b: Unit => plan.asInstanceOf[Plan[E, Nothing]]
+      case None => None
+      case ()   => plan.asInstanceOf[Plan[E, Nothing]]
 
   private def recurse[E <: Erroneous](plan: Plan[E, Fallible]): None.type | Unit =
     boundary[None.type | Unit]:
@@ -30,15 +30,15 @@ private[ducktape] object FallibilityRefiner {
 
         case Configured(source, dest, config, _) =>
           config match
-            case Configuration.Const(value, tpe)                                => ()
-            case Configuration.CaseComputed(tpe, function)                      => ()
-            case Configuration.FieldComputed(tpe, function)                     => ()
-            case Configuration.FieldComputedDeep(tpe, srcTpe, function)         => ()
-            case Configuration.FieldReplacement(source, _, name, tpe)           => ()
-            case Configuration.FallibleConst(value, tpe)                        => boundary.break(None)
-            case Configuration.FallibleFieldComputed(tpe, function)             => boundary.break(None)
-            case Configuration.FallibleFieldComputedDeep(tpe, srcTpe, function) => boundary.break(None)
-            case Configuration.FallibleCaseComputed(tpe, function)              => boundary.break(None)
+            case Configuration.Const(value, _)                           => ()
+            case Configuration.CaseComputed(_, function)                 => ()
+            case Configuration.FieldComputed(_, function)                => ()
+            case Configuration.FieldComputedDeep(_, _, function)         => ()
+            case Configuration.FieldReplacement(source, _, name, _)      => ()
+            case Configuration.FallibleConst(value, _)                   => boundary.break(None)
+            case Configuration.FallibleFieldComputed(_, function)        => boundary.break(None)
+            case Configuration.FallibleFieldComputedDeep(_, _, function) => boundary.break(None)
+            case Configuration.FallibleCaseComputed(_, function)         => boundary.break(None)
 
         case BetweenProductFunction(source, dest, argPlans) =>
           evaluate(argPlans.map((_, fieldPlan) => fieldPlan.plan))
