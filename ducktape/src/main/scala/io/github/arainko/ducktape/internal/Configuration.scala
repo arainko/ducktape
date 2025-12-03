@@ -46,7 +46,7 @@ private[ducktape] object Configuration {
         Quotes
       ): Configuration[Nothing] | plan.type =
         plan.dest.tpe match {
-          case tpe @ '[Option[a]] => Configuration.Const('{ None }, tpe)
+          case tpe @ '[Option[?]] => Configuration.Const('{ None }, tpe)
           case _                  => plan
         }
 
@@ -126,7 +126,7 @@ private[ducktape] object Configuration {
     parsers: NonEmptyList[ConfigParser[F]]
   )(using Quotes, Context): (List[Instruction[F]], PlanFlags) = {
     import quotes.reflect.*
-    def fallback(term: quotes.reflect.Term, priority: Priority) =
+    def fallback(term: quotes.reflect.Term) =
       Configuration.Instruction.Failed(
         Path.empty(Type.of[Nothing]),
         Side.Dest,
@@ -144,7 +144,7 @@ private[ducktape] object Configuration {
         parser
           .applyOrElse(
             (Priority.of(priority), expr.asTerm),
-            (priority, expr) => fallback(expr, Priority.of(priority))
+            (_, expr) => fallback(expr)
           )
           .match {
             case instruction: Instruction[F] => Left(instruction)

@@ -25,7 +25,6 @@ private[ducktape] object PlanConfigurer {
       )(using Quotes): Plan[Erroneous, F] = {
         def traverseBetweenNotFallible(
           parent: BetweenFallibleNonFallible[Erroneous],
-          plan: Plan[Erroneous, Nothing],
           tail: List[Path.Segment]
         ) =
           ConfigInstructionRefiner.run(config) match
@@ -50,7 +49,7 @@ private[ducktape] object PlanConfigurer {
               parent.update(recurse(_, tail, parent, config))
 
             case parent @ BetweenFallibleNonFallible(source, dest, plan) if config.side.isSource =>
-              traverseBetweenNotFallible(parent, plan, tail)
+              traverseBetweenNotFallible(parent, tail)
 
             case parent @ BetweenFallibles(source, dest, mode, plan) if config.side.isSource =>
               parent.update(recurse(_, tail, parent, config))
@@ -66,13 +65,13 @@ private[ducktape] object PlanConfigurer {
           current match {
             // passthrough BetweenFallibles, the dest is just a normal field in this case
             case parent @ BetweenFallibleNonFallible(source, dest, plan) if config.side.isDest =>
-              traverseBetweenNotFallible(parent, plan, segments)
+              traverseBetweenNotFallible(parent, segments)
 
             // passthrough BetweenFallibles, the dest is just a normal field in this case
             case parent @ BetweenFallibles(source, dest, mode, plan) if config.side.isDest =>
               parent.update(recurse(_, tail, parent, config))
 
-            case parent @ BetweenProducts(sourceTpe, destTpe, fieldPlans) =>
+            case parent @ BetweenProducts(_, _, fieldPlans) =>
               parent.updateOrElse(segment.name)(
                 recurse(_, tail, parent, config),
                 Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None)
@@ -90,7 +89,7 @@ private[ducktape] object PlanConfigurer {
                 Plan.Error.from(parent, ErrorMessage.InvalidFieldAccessor(segment.name, config.span), None)
               )
 
-            case parent @ BetweenProductFunction(sourceTpe, destTpe, argPlans) =>
+            case parent @ BetweenProductFunction(_, _, argPlans) =>
               parent.updateOrElse(segment.name)(
                 recurse(_, tail, parent, config),
                 Plan.Error.from(parent, ErrorMessage.InvalidArgAccessor(segment.name, config.span), None)
@@ -120,7 +119,7 @@ private[ducktape] object PlanConfigurer {
           current match {
             // passthrough BetweenFallibles, the dest is just a tuple elem in this case
             case parent @ BetweenFallibleNonFallible(source, dest, plan) if config.side.isDest =>
-              traverseBetweenNotFallible(parent, plan, segments)
+              traverseBetweenNotFallible(parent, segments)
 
             // passthrough BetweenFallibles, the dest is just a tuple elem in this case
             case parent @ BetweenFallibles(source, dest, mode, plan) if config.side.isDest =>
@@ -147,7 +146,7 @@ private[ducktape] object PlanConfigurer {
                 Plan.Error.from(parent, ErrorMessage.InvalidTupleAccesor(index, config.span), None)
               )
 
-            case parent @ BetweenTupleFunction(source, dest, plans) if config.side.isSource =>
+            case parent @ BetweenTupleFunction(source, dest, _) if config.side.isSource =>
               Logger.debug(ds"Matched $parent")
               parent.updateByIndexOrElse(index)(
                 recurse(_, tail, parent, config),
@@ -171,7 +170,7 @@ private[ducktape] object PlanConfigurer {
             case parent: BetweenNonOptionOption[Erroneous, F] if config.side.isSource =>
               parent.update(recurse(_, segments, parent, config))
 
-            case parent @ BetweenCoproducts(sourceTpe, destTpe, casePlans) =>
+            case parent @ BetweenCoproducts(_, _, casePlans) =>
               def sideTpe(plan: Plan[Erroneous, Fallible]) =
                 if config.side.isSource then plan.source.tpe.repr else plan.dest.tpe.repr
 
@@ -253,7 +252,7 @@ private[ducktape] object PlanConfigurer {
     plan match {
       case suppressed: Plan.Error =>
         Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.side, config.span), Some(suppressed))
-      case other =>
+      case _ =>
         Plan.Error.from(plan, ErrorMessage.InvalidPathSegment(segment, config.side, config.span), None)
     }
 
@@ -331,7 +330,7 @@ private[ducktape] object PlanConfigurer {
       case plan: BetweenFallibleNonFallible[Erroneous] =>
         plan.update(regional(_, modifier, plan))
 
-      case plan @ BetweenFallibles(_, _, _, elemPlan) =>
+      case plan @ BetweenFallibles(_, _, _, _) =>
         plan.update(regional(_, modifier, plan))
 
       case plan: Error =>
@@ -470,7 +469,7 @@ private[ducktape] object PlanConfigurer {
     ): List[Plan.Configured[Fallible]] =
       plan match {
         case configured: Plan.Configured[Fallible] => configured :: accumulator
-        case other                                 => accumulator
+        case _                                     => accumulator
       }
   }
 }

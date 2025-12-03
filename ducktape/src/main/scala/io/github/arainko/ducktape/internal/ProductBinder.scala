@@ -4,7 +4,6 @@ import io.github.arainko.ducktape.Mode
 
 import scala.annotation.*
 import scala.quoted.*
-import scala.util.chaining.*
 
 private[ducktape] object ProductBinder {
 

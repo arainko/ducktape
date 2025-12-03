@@ -3,6 +3,7 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.internal.Summoner.UserDefined.{ FallibleTransformer, TotalTransformer }
 import io.github.arainko.ducktape.{ Mode, Transformer }
 
+import scala.annotation.nowarn
 import scala.collection.Factory
 import scala.collection.immutable.VectorMap
 import scala.quoted.*
@@ -20,7 +21,6 @@ private[ducktape] object FalliblePlanInterpreter {
     value: Expr[Any],
     F: TransformationMode[F]
   )(using toplevelValue: Expr[A])(using Quotes): Value[F] = {
-    import quotes.reflect.*
 
     FallibilityRefiner.run(plan) match
       case plan: Plan[Nothing, Nothing] =>
@@ -33,13 +33,13 @@ private[ducktape] object FalliblePlanInterpreter {
             config match
               case cfg @ Configuration.Const(_, _) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
-              case cfg @ Configuration.CaseComputed(tpe, function) =>
+              case cfg @ Configuration.CaseComputed(_, function) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
-              case cfg @ Configuration.FieldComputed(tpe, function) =>
+              case cfg @ Configuration.FieldComputed(_, function) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
-              case cfg @ Configuration.FieldComputedDeep(tpe, srcTpe, function) =>
+              case cfg @ Configuration.FieldComputedDeep(_, _, function) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
-              case cfg @ Configuration.FieldReplacement(source, _, name, tpe) =>
+              case cfg @ Configuration.FieldReplacement(source, _, name, _) =>
                 Value.Unwrapped(PlanInterpreter.evaluateConfig(cfg, value))
               case Configuration.FallibleConst(value, tpe) =>
                 tpe match {
@@ -52,7 +52,7 @@ private[ducktape] object FalliblePlanInterpreter {
                     Value.Wrapped('{ $function($toplevelValue) }.asExprOf[F[tpe]])
                 }
 
-              case Configuration.FallibleFieldComputedDeep(tpe, srcTpe, function) =>
+              case Configuration.FallibleFieldComputedDeep(tpe, _, function) =>
                 tpe match {
                   case '[tpe] =>
                     Value.Wrapped('{ $function($value) }.asExprOf[F[tpe]])
@@ -167,8 +167,7 @@ private[ducktape] object FalliblePlanInterpreter {
                       )(using $f)
                     })
                 }
-
-            }
+            }: @nowarn("msg=unused local definition")
 
           case Plan.BetweenSingletons(source, dest) =>
             Value.Unwrapped(dest.value)
@@ -235,7 +234,6 @@ private[ducktape] object FalliblePlanInterpreter {
     value: Expr[Any],
     F: TransformationMode[F]
   )(construct: ProductConstructor)(using quotes: Quotes, toplevelValue: Expr[A]) = {
-    import quotes.reflect.*
 
     val (unwrapped, wrapped) =
       plans.zipWithIndex.partitionMap {
@@ -276,7 +274,6 @@ private[ducktape] object FalliblePlanInterpreter {
     value: Expr[Any],
     F: TransformationMode[F]
   )(construct: ProductConstructor)(using quotes: Quotes, toplevelValue: Expr[A]) = {
-    import quotes.reflect.*
 
     def handleVectorMap(sourceStruct: Structure.Product, fieldPlans: VectorMap[String, FieldPlan[Nothing, Fallible]])(using
       Quotes

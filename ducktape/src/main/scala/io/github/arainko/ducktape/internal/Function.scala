@@ -63,7 +63,7 @@ private[ducktape] object Function {
           List
             .unfold(Type.of[Args].repr) {
               case Refinement(leftover, name, tpe) => Some(name -> tpe.asType, leftover)
-              case other                           => None
+              case _                               => None
             }
             .reverse
             .to(VectorMap)

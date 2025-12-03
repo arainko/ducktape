@@ -50,7 +50,6 @@ extension (expr: Expr[Any]) {
   }
 
   private[ducktape] def accesFieldByIndex(index: Int, parentStructure: Structure.Tuple)(using Quotes): Expr[Any] = {
-    import quotes.reflect.*
     if parentStructure.isPlain then accessFieldByNameUnsafe(s"_${index + 1}").asExpr // tuple accessors are 1 based
     else
       val tpeAtIndex = parentStructure.elements(index).tpe

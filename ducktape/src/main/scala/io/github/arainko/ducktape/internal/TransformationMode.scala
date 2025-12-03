@@ -19,7 +19,7 @@ private[ducktape] object TransformationMode {
         Accumulating(acc, Expr.summon[Mode.FailFast[F]])
       case '{ $ff: Mode.FailFast[F] } =>
         FailFast(ff)
-      case other =>
+      case _ =>
         quotes.reflect.report.errorAndAbort(
           "Couldn't determine the transformation mode, make sure an instance of either Mode.FailFast[F] or Mode.Accumulating[F] is in implicit scope"
         )

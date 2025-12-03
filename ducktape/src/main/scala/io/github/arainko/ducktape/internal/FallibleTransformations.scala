@@ -91,8 +91,6 @@ private[ducktape] object FallibleTransformations {
     function: Expr[Func],
     F: Expr[Mode[F]]
   )(using Quotes): Expr[F[Any]] = {
-    import quotes.reflect.*
-
     given Context.PossiblyFallible[F](
       WrapperType.create[F],
       TransformationSite.Transformation,

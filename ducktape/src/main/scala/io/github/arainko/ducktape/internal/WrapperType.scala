@@ -13,12 +13,10 @@ private[ducktape] sealed trait WrapperType[F[+x]] {
 
 private[ducktape] object WrapperType {
   def create[F[+x]: Type](using Quotes): WrapperType[F] = {
-    import quotes.reflect.*
-
     Type.of[F[Any]] match {
-      case '[Option[a]] =>
+      case '[Option[?]] =>
         Optional.asInstanceOf[WrapperType[F]]
-      case other =>
+      case _ =>
         Wrapped(Type.of[F])
     }
   }

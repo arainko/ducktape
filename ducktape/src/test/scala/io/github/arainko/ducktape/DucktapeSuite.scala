@@ -19,7 +19,7 @@ trait DucktapeSuite extends FunSuite {
     assertEquals(errors, expected.toSet, "Error did not contain expected value")
   }
 
-  transparent inline def assertFailsToCompileContains(inline code: String)(head: String, tail: String*)(using Location) = {
+  transparent inline def assertFailsToCompileContains(inline code: String)(head: String, tail: String*) = {
     val errors = compiletime.testing.typeCheckErrors(code).map(_.message).toSet
     (head :: tail.toList).foreach(expected => errors.contains(expected))
   }

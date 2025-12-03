@@ -9,7 +9,7 @@ private[ducktape] object Constructor {
     val (repr, constructor, tpeArgs) =
       tpe match {
         case AppliedType(repr, reprArguments) => (repr, repr.typeSymbol.primaryConstructor, reprArguments)
-        case notApplied                       => (tpe, tpe.typeSymbol.primaryConstructor, Nil)
+        case _                                => (tpe, tpe.typeSymbol.primaryConstructor, Nil)
       }
 
     // workaround for invoking constructors of singleton which in turn actually create new instances of singletons!
