@@ -356,4 +356,12 @@ class NamedTupleSuite extends DucktapeSuite {
       Field.allMatching(fieldSource)
     )
   }
+
+  test("named tuple to tuple works") {
+    assertTransforms((a = 1, b = 2, c = 3), (1, 2, 3))
+  }
+
+  test("tuple to named tuple works") {
+    assertTransforms((1, 2, 3), (a = 1, b = 2, c = 3))
+  }
 }

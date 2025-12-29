@@ -36,7 +36,7 @@ private[ducktape] object PlanInterpreter {
       case Plan.BetweenProductTuple(source, dest, plans) =>
         val args = plans.map {
           case FieldPlan(fieldName: String, plan) =>
-            val fieldValue = value.accessFieldByNameUnsafe(fieldName).asExpr
+            val fieldValue = value.accessFieldByName(fieldName, source).asExpr
             recurse(plan, fieldValue)
           case FieldPlan(None, plan) =>
             recurse(plan, value)
