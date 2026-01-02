@@ -6,10 +6,10 @@ If this project interests you, please drop a 🌟 - these things are worthless b
 
 ## Installation
 ```scala
-libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.10"
+libraryDependencies += "io.github.arainko" %% "ducktape" % "0.2.12"
 
 // or if you're using Scala.js or Scala Native
-libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.10"
+libraryDependencies += "io.github.arainko" %%% "ducktape" % "0.2.12"
 ```
 
 NOTE: the [version scheme](https://www.scala-lang.org/blog/2021/02/16/preventing-version-conflicts-with-versionscheme.html) is set to `early-semver`
