@@ -63,6 +63,10 @@ private[ducktape] object PathSelector {
           Logger.debug(s"Matched 'TypeApply' (matching '.at')", tpe.tpe.asType)
           recurse(acc.prepended(Path.Segment.Case(tpe.tpe.asType)), tree)
 
+        case Apply(select @ Select(tree, name), Nil) if tree.tpe.typeSymbol.flags.is(Flags.JavaDefined) =>
+          Logger.debug(s"Matched 'Apply(Select, Nil)' (matching field access for Java record) with name = $name")
+          recurse(acc.prepended(Path.Segment.Field(select.tpe.asType, name)), tree)
+
         case Apply(TypeApply(Select(Ident(_), "element"), elemTpe :: Nil), tree :: Nil) =>
           Logger.debug(s"Matched 'Apply(TypeApply(...)) (matching .element)'", elemTpe.tpe.asType)
           recurse(acc.prepended(Path.Segment.Element(elemTpe.tpe.asType)), tree)

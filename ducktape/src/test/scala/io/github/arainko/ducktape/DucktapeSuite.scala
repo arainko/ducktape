@@ -4,6 +4,10 @@ import munit.{ Compare, FunSuite, Location }
 
 import scala.compiletime.ops.int.*
 import scala.reflect.ClassTag
+import io.github.arainko.*
+import io.github.arainko.ducktape.internal.CodePrinter
+import scala.quoted.*
+import io.github.arainko.ducktape.internal.*
 
 trait DucktapeSuite extends FunSuite {
   def assertEachEquals[Source, Dest](head: Source, tail: Source*)(expected: Dest)(using Location, Compare[Source, Dest]) = {
@@ -72,5 +76,20 @@ trait DucktapeSuite extends FunSuite {
     inline def code: A = internal.CodePrinter.code(self)
 
     inline def structure: A = internal.CodePrinter.structure(self)
+
   }
+
+  inline def symbolInfo[A]: Unit = ${ DucktapeSuite.typeInfoMacro[A] }
+}
+
+object DucktapeSuite {
+  def typeInfoMacro[A: Type](using Quotes) = {
+    import quotes.reflect.*
+    val repr = Type.of[A].repr
+    val dumpedInfo = SymbolDumper.dumpSymbolInfo(repr.typeSymbol)
+
+    report.info(dumpedInfo)
+    '{}
+  }
+
 }

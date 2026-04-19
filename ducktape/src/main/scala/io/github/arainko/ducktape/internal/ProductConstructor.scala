@@ -14,7 +14,7 @@ private[ducktape] object ProductConstructor {
       import quotes.reflect.*
 
       structure.kind match
-        case Kind.CaseClass =>
+        case Kind.CaseClass | Kind.Record =>
           Constructor(structure.tpe.repr)
             .appliedToArgs(fields.map(value => value.asTerm).toList)
             .asExpr

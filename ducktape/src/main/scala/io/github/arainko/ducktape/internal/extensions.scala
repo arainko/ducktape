@@ -41,6 +41,9 @@ extension (expr: Expr[Any]) {
                   '{ $prod.asInstanceOf[Product].productElement(${ Expr(idxOfField) }).asInstanceOf[tpe] }.asTerm
               }
         }
+      case Kind.Record =>
+        // record fields are accessed using their generated getter, like 'intField()', i.e. they need the empty params which are represented by an empty Apply node
+        Apply(expr.accessFieldByNameUnsafe(name), Nil)
 
   }
 

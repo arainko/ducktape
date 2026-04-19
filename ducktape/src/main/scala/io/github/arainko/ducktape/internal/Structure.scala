@@ -49,6 +49,7 @@ private[ducktape] object Structure {
     enum Kind derives Debug {
       case CaseClass
       case NamedTuple(erasedTupleTpe: Type[?])
+      case Record
     }
   }
 
@@ -145,6 +146,22 @@ private[ducktape] object Structure {
               }
               .toVector
           Structure.Tuple(Type.of[A], path, elements, isPlain = false)
+
+        case tpe @ '[Record] if tpe.repr.typeSymbol.flags.is(Flags.JavaDefined) => {
+          val ctor = tpe.repr.typeSymbol.primaryConstructor.termRef.widen
+          val fields = ctor match {
+            case MethodType(params, tpes, _) =>
+              params
+                .zip(tpes.map(_.asType))
+                .map { (param, tpe) =>
+                  tpe match {
+                    case '[tpe] => param -> Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], param)))
+                  }
+                }
+                .to(VectorMap)
+          }
+          Structure.Product(tpe, path, fields, Kind.Record)
+        }
 
         case tpe =>
           Expr.summon[Mirror.Of[A]] match {
