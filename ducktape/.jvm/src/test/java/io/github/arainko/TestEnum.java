@@ -1,7 +1,9 @@
 package io.github.arainko;
 
-public enum TestEnum {
+import io.github.arainko.SomeInterface;
+
+public enum TestEnum implements SomeInterface {
   First,
   Second,
-  Thrid
+  Third
 }

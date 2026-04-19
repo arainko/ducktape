@@ -163,6 +163,28 @@ private[ducktape] object Structure {
           Structure.Product(tpe, path, fields, Kind.Record)
         }
 
+        case tpe @ '[java.lang.Enum[?]] if tpe.repr.typeSymbol.flags.is(Flags.JavaDefined) => {
+          val sym = tpe.repr.typeSymbol
+          if sym.isClassDef then {
+            val children = sym.children.map { sym => 
+              val ref = Ident(sym.termRef)
+              val tpe = ref.tpe.asType
+              val casePath = path.appended(Path.Segment.Case(tpe))
+              val struct = Structure.Singleton(tpe, casePath, sym.name, ref.asExpr)
+              (sym.name, struct)
+            }
+            Structure.Coproduct(tpe, path, children.toMap)
+          } else { 
+            //TODO: this path doesn't really get hit because a type of a java enum child ALWAYS gets widened to the the parent? smhhhhhhhhhh
+            // this doesn't really affect stuff because there's barely anyone that would do shit like TestEnum.First.to[SomeType]
+            // but whatever. Maybe it's best to degrade the Structure resolution to Strucuture.Ordinary? We'd need to find a way of reliably determining it, there's the '@child' annotation buhh I dunno
+            val name = tpe.repr.typeSymbol.name
+            val value = materializeSingleton(using tpe)
+            Structure.Singleton(tpe, path, name, value.asExpr)
+          }
+
+        }
+
         case tpe =>
           Expr.summon[Mirror.Of[A]] match {
             case None =>
