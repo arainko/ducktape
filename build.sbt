@@ -49,7 +49,6 @@ lazy val ducktape =
       scalacOptions ++= List("-deprecation", "-Wunused:all", "-Ykind-projector:underscores", "-Xcheck-macros"),
       Test / scalacOptions --= List("-deprecation", "-Wunused:all"),
       Test / scalacOptions ++= List("-Werror", "-Wconf:cat=deprecation:s", "-Wunused:imports"),
-      Test / compileOrder := CompileOrder.JavaThenScala,
       libraryDependencies += "org.scalameta" %%% "munit" % "1.3.0" % Test
     )
     .nativeSettings(

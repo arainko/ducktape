@@ -79,7 +79,9 @@ trait DucktapeSuite extends FunSuite {
 
   }
 
-  inline def symbolInfo[A]: Unit = ${ DucktapeSuite.typeInfoMacro[A] }
+  inline def symbolTypeInfo[A]: Unit = ${ DucktapeSuite.typeInfoMacro[A] }
+
+  inline def symbolTermInfo[A]: Unit = ${ DucktapeSuite.termInfoMacro[A] }
 }
 
 object DucktapeSuite {
@@ -87,6 +89,15 @@ object DucktapeSuite {
     import quotes.reflect.*
     val repr = Type.of[A].repr
     val dumpedInfo = SymbolDumper.dumpSymbolInfo(repr.typeSymbol)
+
+    report.info(dumpedInfo)
+    '{}
+  }
+
+  def termInfoMacro[A: Type](using Quotes) = {
+    import quotes.reflect.*
+    val repr = Type.of[A].repr
+    val dumpedInfo = SymbolDumper.dumpSymbolInfo(repr.termSymbol)
 
     report.info(dumpedInfo)
     '{}

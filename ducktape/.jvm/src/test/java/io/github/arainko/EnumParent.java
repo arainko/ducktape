@@ -1,7 +1,7 @@
 package io.github.arainko;
 
-public class Costam {
-  public static enum InnerEnum {
+public class EnumParent {
+  public enum InnerEnum {
     First,
     Second,
     Third

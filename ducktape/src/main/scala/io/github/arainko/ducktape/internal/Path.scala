@@ -58,7 +58,11 @@ private[ducktape] final case class Path(root: Type[?], segments: Vector[Path.Seg
   def render(using Quotes): String = {
     import quotes.reflect.*
 
-    val printedRoot = root.repr.widen.show(using Printer.TypeReprShortCode)
+    val repr = root.repr
+
+    // Java enum cases get widened to their parents which looks off when rendering...
+    val printedRoot = if repr.typeSymbol.flags.is(Flags.JavaDefined) then repr.show(using Printer.TypeReprShortCode)
+    else repr.widen.show(using Printer.TypeReprShortCode)
 
     if self.segments.isEmpty then printedRoot
     else

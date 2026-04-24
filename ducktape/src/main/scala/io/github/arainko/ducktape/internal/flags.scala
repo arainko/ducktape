@@ -4,7 +4,6 @@ import io.github.arainko.ducktape.internal.*
 import io.github.arainko.ducktape.internal.Flag.Linter.markUsage
 import io.github.arainko.ducktape.internal.Flag.{ Effect, Kind, Typed }
 
-import scala.annotation.nowarn
 import scala.quoted.*
 import scala.reflect.TypeTest
 
@@ -61,7 +60,6 @@ private[ducktape] object Flag {
     case TypeSpecific(tpe: Type[?])
   }
 
-  @nowarn("msg=unused implicit parameter")
   final case class Typed[+A <: Effect](effect: A, kind: Flag.Kind, span: Span, priority: Priority) derives Debug {
     def use(input: effect.In)(using linter: Linter): effect.Out = {
       linter.markUsage(this)

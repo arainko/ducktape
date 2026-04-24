@@ -148,25 +148,32 @@ private[ducktape] object Structure {
           Structure.Tuple(Type.of[A], path, elements, isPlain = false)
 
         case tpe @ '[Record] if tpe.repr.typeSymbol.flags.is(Flags.JavaDefined) => {
-          val ctor = tpe.repr.typeSymbol.primaryConstructor.termRef.widen
-          val fields = ctor match {
-            case MethodType(params, tpes, _) =>
-              params
-                .zip(tpes.map(_.asType))
-                .map { (param, tpe) =>
-                  tpe match {
-                    case '[tpe] => param -> Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], param)))
-                  }
+          def createFields(using Quotes)(params: List[String], tpes: List[quotes.reflect.TypeRepr]) =
+            params
+              .zip(tpes.map(_.asType))
+              .map { (param, tpe) =>
+                tpe match {
+                  case '[tpe] => param -> Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], param)))
                 }
-                .to(VectorMap)
-          }
-          Structure.Product(tpe, path, fields, Kind.Record)
+              }
+              .to(VectorMap)
+
+          val params = tpe.repr.typeArgs
+          val ctor = tpe.repr.typeSymbol.primaryConstructor.termRef.widen
+          // if we don't apply the constructor params we'll get back a polymorphic type with an unapplied type somewhere in there
+          val appliedCtor = if params.isEmpty then ctor else ctor.appliedTo(params)
+          val (ret, fields) = appliedCtor match { case MethodType(params, tpes, ret) => ret -> createFields(params, tpes) }
+          Structure.Product(ret.asType, path, fields, Kind.Record)
         }
 
-        case tpe @ '[java.lang.Enum[?]] if tpe.repr.typeSymbol.flags.is(Flags.JavaDefined) => {
-          val sym = tpe.repr.typeSymbol
-          if sym.isClassDef then {
-            val children = sym.children.map { sym => 
+        case tpe if tpe.repr.typeSymbol.flags.is(Flags.Enum | Flags.JavaDefined) => {
+          // .termSymbol only exists for Java enum's children but not the parent type
+          if tpe.repr.termSymbol.exists then {
+            val name = tpe.repr.termSymbol.name
+            val value = materializeSingleton(using tpe)
+            Structure.Singleton(tpe, path, name, value.asExpr)
+          } else {
+            val children = tpe.repr.typeSymbol.children.map { sym =>
               val ref = Ident(sym.termRef)
               val tpe = ref.tpe.asType
               val casePath = path.appended(Path.Segment.Case(tpe))
@@ -174,13 +181,6 @@ private[ducktape] object Structure {
               (sym.name, struct)
             }
             Structure.Coproduct(tpe, path, children.toMap)
-          } else { 
-            //TODO: this path doesn't really get hit because a type of a java enum child ALWAYS gets widened to the the parent? smhhhhhhhhhh
-            // this doesn't really affect stuff because there's barely anyone that would do shit like TestEnum.First.to[SomeType]
-            // but whatever. Maybe it's best to degrade the Structure resolution to Strucuture.Ordinary? We'd need to find a way of reliably determining it, there's the '@child' annotation buhh I dunno
-            val name = tpe.repr.typeSymbol.name
-            val value = materializeSingleton(using tpe)
-            Structure.Singleton(tpe, path, name, value.asExpr)
           }
 
         }

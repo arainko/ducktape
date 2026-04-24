@@ -13,7 +13,7 @@ object SymbolDumper {
 
     def safeAppend(label: String)(thunk: => Any): Unit =
       try append(label, thunk)
-      catch { case e: Exception => append(label, s"THREW: ${e.getMessage}") }
+      catch { case e: Throwable => append(label, s"THREW: ${e.getMessage}") }
 
     // Identity and Names
     append("name", symbol.name)
@@ -88,7 +88,7 @@ object SymbolDumper {
       }
     }
     append("caseFields", symbol.caseFields.map(_.name))
-    append("children", symbol.children.map(_.name))
+    safeAppend("children")(symbol.children.map(_.name))
     append("companionClass", if symbol.companionClass.exists then symbol.companionClass.name else "None")
     append("companionModule", if symbol.companionModule.exists then symbol.companionModule.name else "None")
     append("moduleClass", if symbol.moduleClass.exists then symbol.moduleClass.name else "None")
