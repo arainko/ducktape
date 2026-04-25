@@ -1,13 +1,12 @@
 package io.github.arainko.ducktape
 
+import io.github.arainko.*
+import io.github.arainko.ducktape.internal.*
 import munit.{ Compare, FunSuite, Location }
 
 import scala.compiletime.ops.int.*
-import scala.reflect.ClassTag
-import io.github.arainko.*
-import io.github.arainko.ducktape.internal.CodePrinter
 import scala.quoted.*
-import io.github.arainko.ducktape.internal.*
+import scala.reflect.ClassTag
 
 trait DucktapeSuite extends FunSuite {
   def assertEachEquals[Source, Dest](head: Source, tail: Source*)(expected: Dest)(using Location, Compare[Source, Dest]) = {

@@ -1,11 +1,8 @@
 package io.github.arainko.ducktape
 
+import io.github.arainko.*
+
 import java.time.DayOfWeek
-import io.github.arainko.TestRecord
-import io.github.arainko.TestEnum
-import io.github.arainko.TestEnumReshuffled
-import io.github.arainko.EnumParent
-import io.github.arainko.StaticEnumParent
 
 class JavaTransformationsSuite extends DucktapeSuite {
   test("transformation from Java records to Scala case classes works") {
@@ -99,7 +96,7 @@ class JavaTransformationsSuite extends DucktapeSuite {
 
     assertTransforms(
       DestTopelevel(1, "str", DestLevel1(DestLevel2(3), "3")),
-      GenericToplevel(1, "str", SourceLevel1(SourceLevel2(3), "3")),
+      GenericToplevel(1, "str", SourceLevel1(SourceLevel2(3), "3"))
     )
   }
 
@@ -180,7 +177,7 @@ class JavaTransformationsSuite extends DucktapeSuite {
       DestTopelevel(1, "str", DestLevel1(DestLevel2(3), "3"))
     )
 
-     assertTransforms[SourceGeneric[SourceLevel1], DestTopelevel](
+    assertTransforms[SourceGeneric[SourceLevel1], DestTopelevel](
       GenericToplevel(1, "str", SourceLevel1(SourceLevel2(3), "3")),
       DestTopelevel(1, "str", DestLevel1(DestLevel2(3), "3"))
     )
@@ -195,12 +192,12 @@ class JavaTransformationsSuite extends DucktapeSuite {
 
     assertTransforms[DestTopelevel, Dest](
       DestTopelevel(1, "str", DestLevel1(DestLevel2(3), "3")),
-      GenericToplevel(1, "str", SourceLevel1(SourceLevel2(3), "3")),
+      GenericToplevel(1, "str", SourceLevel1(SourceLevel2(3), "3"))
     )
 
-     assertTransforms[DestTopelevel, DestGeneric[SourceLevel1]](
+    assertTransforms[DestTopelevel, DestGeneric[SourceLevel1]](
       DestTopelevel(1, "str", DestLevel1(DestLevel2(3), "3")),
-      GenericToplevel(1, "str", SourceLevel1(SourceLevel2(3), "3")),
+      GenericToplevel(1, "str", SourceLevel1(SourceLevel2(3), "3"))
     )
   }
 
@@ -369,9 +366,9 @@ class JavaTransformationsSuite extends DucktapeSuite {
 
     val mappings =
       Vector(
-        ScalaEnum.First  -> TestEnum.First,
+        ScalaEnum.First -> TestEnum.First,
         ScalaEnum.Second -> TestEnum.Second,
-        ScalaEnum.Third  -> TestEnum.Third
+        ScalaEnum.Third -> TestEnum.Third
       )
 
     mappings.foreach { (source, dest) =>
@@ -391,9 +388,9 @@ class JavaTransformationsSuite extends DucktapeSuite {
 
     val mappings =
       Vector(
-        ScalaEnum.First  -> StaticEnumParent.InnerEnum.First,
+        ScalaEnum.First -> StaticEnumParent.InnerEnum.First,
         ScalaEnum.Second -> StaticEnumParent.InnerEnum.Second,
-        ScalaEnum.Third  -> StaticEnumParent.InnerEnum.Third
+        ScalaEnum.Third -> StaticEnumParent.InnerEnum.Third
       )
 
     mappings.foreach { (source, dest) =>
@@ -413,9 +410,9 @@ class JavaTransformationsSuite extends DucktapeSuite {
 
     val mappings =
       Vector(
-        ScalaEnum.First  -> EnumParent.InnerEnum.First,
+        ScalaEnum.First -> EnumParent.InnerEnum.First,
         ScalaEnum.Second -> EnumParent.InnerEnum.Second,
-        ScalaEnum.Third  -> EnumParent.InnerEnum.Third
+        ScalaEnum.Third -> EnumParent.InnerEnum.Third
       )
 
     mappings.foreach { (source, dest) =>
@@ -437,9 +434,9 @@ class JavaTransformationsSuite extends DucktapeSuite {
 
     val mappings =
       Vector(
-        ScalaEnum.First  -> TestEnum.First,
+        ScalaEnum.First -> TestEnum.First,
         ScalaEnum.Second -> TestEnum.Second,
-        ScalaEnum.Third  -> TestEnum.Third
+        ScalaEnum.Third -> TestEnum.Third
       )
 
     mappings.foreach { (source, dest) =>
@@ -452,9 +449,9 @@ class JavaTransformationsSuite extends DucktapeSuite {
     // also verify round-trip between two Java enums with reshuffled ordinals
     val javaToJavaMappings =
       Vector(
-        TestEnum.First  -> TestEnumReshuffled.First,
+        TestEnum.First -> TestEnumReshuffled.First,
         TestEnum.Second -> TestEnumReshuffled.Second,
-        TestEnum.Third  -> TestEnumReshuffled.Third
+        TestEnum.Third -> TestEnumReshuffled.Third
       )
 
     javaToJavaMappings.foreach { (source, dest) =>

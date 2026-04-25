@@ -1,13 +1,13 @@
 package io.github.arainko.ducktape.total
 
+import io.github.arainko.*
 import io.github.arainko.ducktape.*
 
 import scala.annotation.nowarn
-import io.github.arainko.*
 
 class AppliedBuilderSuite extends DucktapeSuite {
   import AppliedBuilderSuite.*
-  
+
   private val testClass = TestClass("str", 1)
 
   test("Field.const properly applies a constant to a field") {

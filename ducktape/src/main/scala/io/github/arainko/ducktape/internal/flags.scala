@@ -4,9 +4,9 @@ import io.github.arainko.ducktape.internal.*
 import io.github.arainko.ducktape.internal.Flag.Linter.markUsage
 import io.github.arainko.ducktape.internal.Flag.{ Effect, Kind, Typed }
 
+import scala.annotation.nowarn
 import scala.quoted.*
 import scala.reflect.TypeTest
-import scala.annotation.nowarn
 
 private[ducktape] case class PlanFlags(source: SideSpecficFlags, dest: SideSpecficFlags) derives Debug {
   def transition[A](

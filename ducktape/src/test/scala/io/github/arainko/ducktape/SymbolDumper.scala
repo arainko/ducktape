@@ -78,7 +78,10 @@ object SymbolDumper {
       }
 
       append("primaryConstructor dump {\n", SymbolDumper.dumpSymbolInfo(symbol.primaryConstructor, ident + 2))
-      append("primaryConstr termRef", symbol.primaryConstructor.termRef.widen.show(using Printer.TypeReprStructure)) // <-- return MethodType! migth use it to harvest the fields and shit
+      append(
+        "primaryConstr termRef",
+        symbol.primaryConstructor.termRef.widen.show(using Printer.TypeReprStructure)
+      ) // <-- return MethodType! migth use it to harvest the fields and shit
 
       symbol.primaryConstructor.paramSymss.foreach { symss =>
         symss.foreach { sym =>
