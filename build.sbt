@@ -77,7 +77,6 @@ lazy val javaFixtures = project
     autoScalaLibrary := false
   )
 
-
 lazy val docs =
   project
     .in(file("documentation"))
