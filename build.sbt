@@ -56,6 +56,7 @@ lazy val ducktape =
       tlMimaPreviousVersions := Set.empty
     )
     .jsSettings(bspEnabled := false)
+    .jvmConfigure(_.dependsOn(javaFixtures))
 
 lazy val scalaNextTests =
   project
@@ -67,6 +68,15 @@ lazy val scalaNextTests =
       libraryDependencies += "org.scalameta" %%% "munit" % "1.3.0" % Test
     )
     .dependsOn(ducktape.jvm % "compile->compile;test->test")
+
+lazy val javaFixtures = project
+  .in(file("java-fixtures"))
+  .enablePlugins(NoPublishPlugin)
+  .settings(
+    crossPaths := false,
+    autoScalaLibrary := false
+  )
+
 
 lazy val docs =
   project
