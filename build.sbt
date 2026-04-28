@@ -71,12 +71,12 @@ lazy val scalaNextTests =
 lazy val javaTests =
   project
     .in(file("java-tests"))
+    .enablePlugins(NoPublishPlugin)
     .settings(
       scalacOptions ++= List("-Wunused:all", "-Xcheck-macros"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.3.0" % Test
     )
     .dependsOn(ducktape.jvm % "compile->compile;test->test", javaFixtures)
-
 
 lazy val javaFixtures = project
   .in(file("java-fixtures"))
