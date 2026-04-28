@@ -49,6 +49,7 @@ private[ducktape] object Structure {
     enum Kind derives Debug {
       case CaseClass
       case NamedTuple(erasedTupleTpe: Type[?])
+      case Record
     }
   }
 
@@ -146,6 +147,47 @@ private[ducktape] object Structure {
               .toVector
           Structure.Tuple(Type.of[A], path, elements, isPlain = false)
 
+        case tpe if tpe.repr.dealias.typeSymbol.flags.is(Flags.JavaDefined) && tpe.repr <:< TypeRepr.of[Record] => {
+          val recordTpe = tpe.repr.dealias
+
+          Logger.info("HIT RECORD!")
+          def createFields(using Quotes)(params: List[String], tpes: List[quotes.reflect.TypeRepr]) =
+            params
+              .zip(tpes.map(_.asType))
+              .map { (param, tpe) =>
+                tpe match {
+                  case '[tpe] => param -> Lazy.of[tpe](path.appended(Path.Segment.Field(Type.of[tpe], param)))
+                }
+              }
+              .to(VectorMap)
+
+          val params = recordTpe.typeArgs
+          val ctor = recordTpe.typeSymbol.primaryConstructor.termRef.widen
+          // if we don't apply the constructor params we'll get back a polymorphic type with an unapplied type somewhere in there
+          val appliedCtor = if params.isEmpty then ctor else ctor.appliedTo(params)
+          val (ret, fields) = appliedCtor match { case MethodType(params, tpes, ret) => ret -> createFields(params, tpes) }
+          Structure.Product(ret.asType, path, fields, Kind.Record)
+        }
+
+        case tpe if tpe.repr.typeSymbol.flags.is(Flags.Enum | Flags.JavaDefined) => {
+          // .termSymbol only exists for Java enum's children but not the parent type
+          if tpe.repr.termSymbol.exists then {
+            val name = tpe.repr.termSymbol.name
+            val value = materializeSingleton(using tpe)
+            Structure.Singleton(tpe, path, name, value.asExpr)
+          } else {
+            val children = tpe.repr.typeSymbol.children.map { sym =>
+              val ref = Ident(sym.termRef)
+              val tpe = ref.tpe.asType
+              val casePath = path.appended(Path.Segment.Case(tpe))
+              val struct = Structure.Singleton(tpe, casePath, sym.name, ref.asExpr)
+              (sym.name, struct)
+            }
+            Structure.Coproduct(tpe, path, children.toMap)
+          }
+
+        }
+
         case tpe =>
           Expr.summon[Mirror.Of[A]] match {
             case None =>
@@ -156,22 +198,25 @@ private[ducktape] object Structure {
                 case '{
                       type label <: String
                       $m: Mirror.Singleton {
+                        type MirroredMonoType = tpe
                         type MirroredLabel = `label`
                       }
                     } =>
-                  val value = materializeSingleton[A]
-                  Structure.Singleton(Type.of[A], path, constantString[label], value.asExpr)
+                  val value = materializeSingleton[tpe]
+                  Structure.Singleton(Type.of[tpe], path, constantString[label], value.asExpr)
                 case '{
                       type label <: String
                       $m: Mirror.SingletonProxy {
+                        type MirroredMonoType = tpe
                         type MirroredLabel = `label`
                       }
                     } =>
-                  val value = materializeSingleton[A]
-                  Structure.Singleton(Type.of[A], path, constantString[label], value.asExpr)
+                  val value = materializeSingleton[tpe]
+                  Structure.Singleton(Type.of[tpe], path, constantString[label], value.asExpr)
 
                 case '{
                       $m: Mirror.Product {
+                        type MirroredMonoType = tpe
                         type MirroredElemLabels = labels
                         type MirroredElemTypes = types
                       }
@@ -187,10 +232,11 @@ private[ducktape] object Structure {
                       )
                       .toVector
 
-                  Structure.Tuple(Type.of[A], path, structures, isPlain = true)
+                  Structure.Tuple(Type.of[tpe], path, structures, isPlain = true)
 
                 case '{
                       $m: Mirror.Product {
+                        type MirroredMonoType = tpe
                         type MirroredElemLabels = labels
                         type MirroredElemTypes = types
                       }
@@ -208,14 +254,15 @@ private[ducktape] object Structure {
                       .to(VectorMap)
 
                   val kind =
-                    if Type.of[A].isNamedTuple then {
+                    if Type.of[tpe].isNamedTuple then {
                       val normalizedErasedTupleTpe = Tuples.rollup(typeElems.toVector)
                       Structure.Product.Kind.NamedTuple(normalizedErasedTupleTpe)
                     } else Structure.Product.Kind.CaseClass
 
-                  Structure.Product(Type.of[A], path, structures, kind)
+                  Structure.Product(Type.of[tpe], path, structures, kind)
                 case '{
                       $m: Mirror.Sum {
+                        type MirroredMonoType = tpe
                         type MirroredElemLabels = labels
                         type MirroredElemTypes = types
                       }
@@ -229,7 +276,7 @@ private[ducktape] object Structure {
                       )
                       .toMap
 
-                  Structure.Coproduct(Type.of[A], path, structures)
+                  Structure.Coproduct(Type.of[tpe], path, structures)
               }: @nowarn("msg=unused [local definition|pattern variable]")
           }
       }
@@ -240,5 +287,8 @@ private[ducktape] object Structure {
     TypeRepr.of[A] match { case ref: TermRef => Ident(ref) }
   }
 
-  private def constantString[Const <: String: Type](using Quotes) = Type.valueOfConstant[Const].get
+  private def constantString[Const <: String: Type](using Quotes) = {
+    import quotes.reflect.*
+    Type.valueOfConstant[Const].getOrElse(report.errorAndAbort(s"Couldn't get constant string from ${Type.show[Const]}"))
+  }
 }

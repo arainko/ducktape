@@ -170,7 +170,34 @@ import io.github.arainko.ducktape.docs.*
 Docs.printCode(
   SourceToplevel(SourceLevel1("extra", 1, List(SourceLevel2(1), SourceLevel2(2)))).to[DestToplevel]
 )
-``` 
+```
+@:@
+
+Java records, being a case class-ish construct, are also supported:
+
+@:select(underlying-code-19)
+@:choice(visible)
+```scala mdoc
+import io.github.arainko.docfixtures.PersonRecord
+import io.github.arainko.ducktape.*
+
+/* PersonRecord is defined as:
+  public record PersonRecord(String name, int age)
+ */
+
+case class Person(name: String, age: Int)
+
+PersonRecord("John", 24).to[Person]
+```
+
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode {
+  PersonRecord("John", 24).to[Person]
+}
+```
 @:@
 
 ### 9. Transforming between case classes and tuples
@@ -280,6 +307,38 @@ enum OtherPaymentMethod {
 import io.github.arainko.ducktape.docs.*
 
 Docs.printCode((PaymentMethod.Cash: PaymentMethod).to[OtherPaymentMethod])
+``` 
+@:@
+
+Java enums being... well, enums, are also supported.
+
+@:select(underlying-code-18)
+@:choice(visible)
+```scala mdoc
+import io.github.arainko.docfixtures.JavaStatus
+import io.github.arainko.ducktape.*
+
+/*
+JavaStatus is defined as:
+  public enum JavaStatus {
+    Active,
+    Inactive
+  }
+ */
+
+enum Status {
+  case Active, Inactive
+}
+
+JavaStatus.Active.to[Status]
+```
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode {
+  JavaStatus.Active.to[Status]
+}
 ``` 
 @:@
 

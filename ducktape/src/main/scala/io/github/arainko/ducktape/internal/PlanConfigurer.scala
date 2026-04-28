@@ -105,7 +105,9 @@ private[ducktape] object PlanConfigurer {
               // TODO: use paren.update
               recurse(paren.alt, segments, parent, config)
 
-            case other => invalidPathSegment(config, other, segment)
+            case other =>
+              Logger.debug(s"Failing with invalid path segment on node: ${other.getClass.getSimpleName}")
+              invalidPathSegment(config, other, segment)
           }
 
         def handleTupleElement(

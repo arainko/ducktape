@@ -1,5 +1,6 @@
 package io.github.arainko.ducktape.total
 
+import io.github.arainko.*
 import io.github.arainko.ducktape.*
 
 import scala.annotation.nowarn

@@ -1,8 +1,11 @@
 package io.github.arainko.ducktape
 
+import io.github.arainko.*
+import io.github.arainko.ducktape.internal.*
 import munit.{ Compare, FunSuite, Location }
 
 import scala.compiletime.ops.int.*
+import scala.quoted.*
 import scala.reflect.ClassTag
 
 trait DucktapeSuite extends FunSuite {
@@ -72,5 +75,31 @@ trait DucktapeSuite extends FunSuite {
     inline def code: A = internal.CodePrinter.code(self)
 
     inline def structure: A = internal.CodePrinter.structure(self)
+
   }
+
+  inline def symbolTypeInfo[A]: Unit = ${ DucktapeSuite.typeInfoMacro[A] }
+
+  inline def symbolTermInfo[A]: Unit = ${ DucktapeSuite.termInfoMacro[A] }
+}
+
+object DucktapeSuite {
+  def typeInfoMacro[A: Type](using Quotes) = {
+    import quotes.reflect.*
+    val repr = Type.of[A].repr
+    val dumpedInfo = SymbolDumper.dumpSymbolInfo(repr.typeSymbol)
+
+    report.info(dumpedInfo)
+    '{}
+  }
+
+  def termInfoMacro[A: Type](using Quotes) = {
+    import quotes.reflect.*
+    val repr = Type.of[A].repr
+    val dumpedInfo = SymbolDumper.dumpSymbolInfo(repr.termSymbol)
+
+    report.info(dumpedInfo)
+    '{}
+  }
+
 }

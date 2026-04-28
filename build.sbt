@@ -38,7 +38,7 @@ ThisBuild / githubWorkflowBuild += WorkflowStep.Run(
 
 ThisBuild / tlVersionIntroduced := Map("3" -> "0.1.6")
 
-lazy val root = tlCrossRootProject.aggregate(ducktape, scalaNextTests)
+lazy val root = tlCrossRootProject.aggregate(ducktape, scalaNextTests, javaTests)
 
 lazy val ducktape =
   crossProject(JVMPlatform, JSPlatform, NativePlatform)
@@ -62,11 +62,29 @@ lazy val scalaNextTests =
     .in(file("scala-next-tests"))
     .enablePlugins(NoPublishPlugin)
     .settings(
-      scalaVersion := "3.7.4",
+      scalaVersion := "3.8.3",
       scalacOptions ++= List("-Wunused:all", "-Xcheck-macros"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.3.0" % Test
     )
     .dependsOn(ducktape.jvm % "compile->compile;test->test")
+
+lazy val javaTests =
+  project
+    .in(file("java-tests"))
+    .enablePlugins(NoPublishPlugin)
+    .settings(
+      scalacOptions ++= List("-Wunused:all", "-Xcheck-macros"),
+      libraryDependencies += "org.scalameta" %%% "munit" % "1.3.0" % Test
+    )
+    .dependsOn(ducktape.jvm % "compile->compile;test->test", javaFixtures)
+
+lazy val javaFixtures = project
+  .in(file("java-fixtures"))
+  .enablePlugins(NoPublishPlugin)
+  .settings(
+    crossPaths := false,
+    autoScalaLibrary := false
+  )
 
 lazy val docs =
   project
@@ -106,7 +124,7 @@ lazy val docs =
       mdocVariables := Map("VERSION" -> tlLatestVersion.value.mkString),
       libraryDependencies += ("org.scalameta" %% "scalafmt-dynamic" % "3.6.1").cross(CrossVersion.for3Use2_13)
     )
-    .dependsOn(ducktape.jvm)
+    .dependsOn(ducktape.jvm, javaFixtures)
 
 lazy val generateReadme = taskKey[Unit]("gen readme")
 
