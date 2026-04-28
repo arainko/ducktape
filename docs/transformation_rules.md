@@ -183,7 +183,7 @@ import io.github.arainko.ducktape.*
 
 /* PersonRecord is defined as:
   public record PersonRecord(String name, int age)
-*/
+ */
 
 case class Person(name: String, age: Int)
 
@@ -324,7 +324,7 @@ JavaStatus is defined as:
     Active,
     Inactive
   }
-*/
+ */
 
 enum Status {
   case Active, Inactive
