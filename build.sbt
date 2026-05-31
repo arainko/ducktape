@@ -22,7 +22,8 @@ ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
 ThisBuild / mimaBinaryIssueFilters ++= Seq(
   ProblemFilters.exclude[Problem]("io.github.arainko.ducktape.internal.*"),
   // Selector only exists at compiletime
-  ProblemFilters.exclude[ReversedMissingMethodProblem]("io.github.arainko.ducktape.Selector.element")
+  ProblemFilters.exclude[ReversedMissingMethodProblem]("io.github.arainko.ducktape.Selector.element"),
+  ProblemFilters.exclude[ReversedMissingMethodProblem]("io.github.arainko.ducktape.Renamer.regexReplace")
 )
 
 ThisBuild / tlCiReleaseBranches := Seq("series/0.1.x", "series/0.2.x")
