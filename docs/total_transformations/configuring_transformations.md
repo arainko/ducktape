@@ -602,9 +602,10 @@ Docs.printCode(
 ``` 
 @:@
 
+
 #### Changing case names
 
-Sealed traits', enums' and case objects' names can also be changed, let's look at an example:
+Names of sealed traits, enums and case objects can also be changed, let's look at an example:
 
 ```scala mdoc:nest:silent
 enum Source {
@@ -785,6 +786,45 @@ Docs.printCode(
     .into[Dest]
     .transform(Field.modifyDestNames(_.toUpperCase).typeSpecific[DestLevel1])
 )
+``` 
+@:@
+
+#### Predefined Renamers
+
+The companion object of `Renamer` has a bunch of common definitions for transforming between the various field encodings (snake case, camel case, kebab case), for example:
+
+```scala mdoc:nest:silent
+case class Camel(someField: Int)
+case class Snake(some_field: Int)
+case class Kebab(`some-field`: Int)
+
+val camel = Camel(23)
+val snake = Snake(23)
+val kebab = Kebab(23)
+```
+
+@:select(underlying-code-20)
+@:choice(visible)
+```scala mdoc
+val camelToSnake = camel.into[Snake].transform(Field.modifySourceNames(Renamer.camelCase.toSnakeCase))
+val camelToKebab = camel.into[Kebab].transform(Field.modifySourceNames(Renamer.camelCase.toKebabCase))
+val snakeToCamel = snake.into[Camel].transform(Field.modifySourceNames(Renamer.snakeCase.toCamelCase))
+val kebabToCamel = kebab.into[Camel].transform(Field.modifySourceNames(Renamer.kebabCase.toCamelCase))
+```
+
+@:choice(generated)
+```scala mdoc:passthrough
+import io.github.arainko.ducktape.docs.*
+
+Docs.printCode {
+  camel.into[Snake].transform(Field.modifySourceNames(Renamer.camelCase.toSnakeCase))
+
+  camel.into[Kebab].transform(Field.modifySourceNames(Renamer.camelCase.toKebabCase))
+
+  snake.into[Camel].transform(Field.modifySourceNames(Renamer.snakeCase.toCamelCase))
+
+  kebab.into[Camel].transform(Field.modifySourceNames(Renamer.kebabCase.toCamelCase))
+}
 ``` 
 @:@
 
