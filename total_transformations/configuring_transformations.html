@@ -104,6 +104,7 @@
     <li class="level2 nav-leaf"><a href="#changing-field-names">Changing field names</a></li>
     <li class="level2 nav-leaf"><a href="#changing-case-names">Changing case names</a></li>
     <li class="level2 nav-leaf"><a href="#constraining-the-blast-radius-of-name-transformations">Constraining the blast radius of name transformations</a></li>
+    <li class="level2 nav-leaf"><a href="#predefined-renamers">Predefined Renamers</a></li>
     <li class="level2 nav-leaf"><a href="#supported-name-transformations">Supported name transformations</a></li>
     <li class="level1 nav-leaf"><a href="#specifics-and-limitations">Specifics and limitations</a></li>
   </ul>
@@ -885,7 +886,7 @@
         </div>
         
         <h4 id="changing-case-names" class="section"><a class="anchor-link left" href="#changing-case-names"><i class="icofont-laika link">&#xef71;</i></a>Changing case names</h4>
-        <p>Sealed traits&#39;, enums&#39; and case objects&#39; names can also be changed, let&#39;s look at an example:</p>
+        <p>Names of sealed traits, enums and case objects can also be changed, let&#39;s look at an example:</p>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">enum</span><span> </span><span class="type-name">Source</span><span> {
   </span><span class="keyword">case</span><span> </span><span class="type-name">One</span><span>, </span><span class="type-name">Two</span><span>, </span><span class="type-name">Three</span><span>
 }
@@ -1116,6 +1117,56 @@
           </div>
         </div>
         
+        <h4 id="predefined-renamers" class="section"><a class="anchor-link left" href="#predefined-renamers"><i class="icofont-laika link">&#xef71;</i></a>Predefined Renamers</h4>
+        <p>The companion object of <code>Renamer</code> has a bunch of common definitions for transforming between the various field encodings (snake case, camel case, kebab case), for example:</p>
+        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Camel</span><span>(</span><span class="identifier">someField</span><span>: </span><span class="type-name">Int</span><span>)
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Snake</span><span>(</span><span class="identifier">some_field</span><span>: </span><span class="type-name">Int</span><span>)
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">Kebab</span><span>(</span><span class="identifier">`some-field`</span><span>: </span><span class="type-name">Int</span><span>)
+
+</span><span class="keyword">val</span><span> </span><span class="identifier">camel</span><span> = </span><span class="type-name">Camel</span><span>(</span><span class="number-literal">23</span><span>)
+</span><span class="keyword">val</span><span> </span><span class="identifier">snake</span><span> = </span><span class="type-name">Snake</span><span>(</span><span class="number-literal">23</span><span>)
+</span><span class="keyword">val</span><span> </span><span class="identifier">kebab</span><span> = </span><span class="type-name">Kebab</span><span>(</span><span class="number-literal">23</span><span>)</span></code></pre>
+        <div class="tab-container" data-tab-group="underlying-code-20">
+          <ul class="tab-group">
+            <li class="tab active" data-choice-name="visible"><a href="#">User visible code</a></li>
+            <li class="tab" data-choice-name="generated"><a href="#">Generated code</a></li>
+          </ul>
+          <div class="tab-content active" data-choice-name="visible">
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">val</span><span> </span><span class="identifier">camelToSnake</span><span> = </span><span class="identifier">camel</span><span>.</span><span class="identifier">into</span><span>[</span><span class="type-name">Snake</span><span>].</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">modifySourceNames</span><span>(</span><span class="type-name">Renamer</span><span>.</span><span class="identifier">camelCase</span><span>.</span><span class="identifier">toSnakeCase</span><span>))
+</span><span class="comment">// camelToSnake: Snake = Snake(23)
+</span><span class="keyword">val</span><span> </span><span class="identifier">camelToKebab</span><span> = </span><span class="identifier">camel</span><span>.</span><span class="identifier">into</span><span>[</span><span class="type-name">Kebab</span><span>].</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">modifySourceNames</span><span>(</span><span class="type-name">Renamer</span><span>.</span><span class="identifier">camelCase</span><span>.</span><span class="identifier">toKebabCase</span><span>))
+</span><span class="comment">// camelToKebab: Kebab = Kebab(23)
+</span><span class="keyword">val</span><span> </span><span class="identifier">snakeToCamel</span><span> = </span><span class="identifier">snake</span><span>.</span><span class="identifier">into</span><span>[</span><span class="type-name">Camel</span><span>].</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">modifySourceNames</span><span>(</span><span class="type-name">Renamer</span><span>.</span><span class="identifier">snakeCase</span><span>.</span><span class="identifier">toCamelCase</span><span>))
+</span><span class="comment">// snakeToCamel: Camel = Camel(23)
+</span><span class="keyword">val</span><span> </span><span class="identifier">kebabToCamel</span><span> = </span><span class="identifier">kebab</span><span>.</span><span class="identifier">into</span><span>[</span><span class="type-name">Camel</span><span>].</span><span class="identifier">transform</span><span>(</span><span class="type-name">Field</span><span>.</span><span class="identifier">modifySourceNames</span><span>(</span><span class="type-name">Renamer</span><span>.</span><span class="identifier">kebabCase</span><span>.</span><span class="identifier">toCamelCase</span><span>))
+</span><span class="comment">// kebabToCamel: Camel = Camel(23)</span></code></pre>
+          </div>
+          <div class="tab-content" data-choice-name="generated">
+            <pre><code class="nohighlight"><span>{
+  </span><span class="keyword">val</span><span> </span><span class="type-name">AppliedBuilder_this</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Camel</span><span>, </span><span class="type-name">Snake</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Camel</span><span>](</span><span class="identifier">camel</span><span>)[</span><span class="type-name">Snake</span><span>]
+  ({
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy67</span><span>: </span><span class="type-name">Camel</span><span> = </span><span class="type-name">AppliedBuilder_this</span><span>.</span><span class="identifier">inline$value</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">Snake</span><span>(</span><span class="identifier">value$proxy67</span><span>.</span><span class="identifier">someField</span><span>): </span><span class="type-name">Snake</span><span>)
+  }: </span><span class="type-name">Snake</span><span>)
+  </span><span class="keyword">val</span><span> </span><span class="identifier">`AppliedBuilder_this₂`</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Camel</span><span>, </span><span class="type-name">Kebab</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Camel</span><span>](</span><span class="identifier">camel</span><span>)[</span><span class="type-name">Kebab</span><span>]
+  ({
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy68</span><span>: </span><span class="type-name">Camel</span><span> = </span><span class="identifier">`AppliedBuilder_this₂`</span><span>.</span><span class="identifier">inline$value</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">Kebab</span><span>(</span><span class="identifier">value$proxy68</span><span>.</span><span class="identifier">someField</span><span>): </span><span class="type-name">Kebab</span><span>)
+  }: </span><span class="type-name">Kebab</span><span>)
+  </span><span class="keyword">val</span><span> </span><span class="identifier">`AppliedBuilder_this₃`</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Snake</span><span>, </span><span class="type-name">Camel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Snake</span><span>](</span><span class="identifier">snake</span><span>)[</span><span class="type-name">Camel</span><span>]
+  ({
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy69</span><span>: </span><span class="type-name">Snake</span><span> = </span><span class="identifier">`AppliedBuilder_this₃`</span><span>.</span><span class="identifier">inline$value</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">Camel</span><span>(</span><span class="identifier">value$proxy69</span><span>.</span><span class="identifier">some_field</span><span>): </span><span class="type-name">Camel</span><span>)
+  }: </span><span class="type-name">Camel</span><span>)
+  </span><span class="keyword">val</span><span> </span><span class="identifier">`AppliedBuilder_this₄`</span><span>: </span><span class="type-name">AppliedBuilder</span><span>[</span><span class="type-name">Kebab</span><span>, </span><span class="type-name">Camel</span><span>] = </span><span class="identifier">into</span><span>[</span><span class="type-name">Kebab</span><span>](</span><span class="identifier">kebab</span><span>)[</span><span class="type-name">Camel</span><span>]
+  ({
+    </span><span class="keyword">val</span><span> </span><span class="identifier">value$proxy70</span><span>: </span><span class="type-name">Kebab</span><span> = </span><span class="identifier">`AppliedBuilder_this₄`</span><span>.</span><span class="identifier">inline$value</span><span>
+    (</span><span class="keyword">new</span><span> </span><span class="type-name">Camel</span><span>(</span><span class="identifier">value$proxy70</span><span>.</span><span class="identifier">some</span><span> - </span><span class="identifier">field</span><span>): </span><span class="type-name">Camel</span><span>)
+  }: </span><span class="type-name">Camel</span><span>)
+}</span></code></pre>
+          </div>
+        </div>
+        
         <h4 id="supported-name-transformations" class="section"><a class="anchor-link left" href="#supported-name-transformations"><i class="icofont-laika link">&#xef71;</i></a>Supported name transformations</h4>
         <p>Name transformations are designed to look like operations on your run of the mill <code>String</code>, this however is not the full story.
         One of the constrains of that design is that all of the operations (and their arguments) need to be known at compiletime so that the library can actually
@@ -1158,7 +1209,7 @@
     </span><span class="type-name">Case</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">paymentMethods</span><span>.</span><span class="identifier">element</span><span>.</span><span class="identifier">at</span><span>[</span><span class="identifier">wire</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Transfer</span><span>], </span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>),
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">paymentMethods</span><span>.</span><span class="identifier">element</span><span>, </span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>.</span><span class="type-name">Cash</span><span>) </span><span class="comment">// &lt;-- override all payment methods to `Cash`
 </span><span>  )
-</span><span class="comment">// res42: Person = Person(
+</span><span class="comment">// res43: Person = Person(
 //   firstName = &quot;John&quot;,
 //   lastName = &quot;Doe&quot;,
 //   age = 24,
@@ -1174,7 +1225,7 @@
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">age</span><span>, </span><span class="number-literal">24</span><span>),
     </span><span class="type-name">Field</span><span>.</span><span class="identifier">const</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">age</span><span>, </span><span class="number-literal">50</span><span>) </span><span class="comment">// &lt;-- override the previously configured &#39;age&#39; field`
 </span><span>  )
-</span><span class="comment">// res43: Person = Person(
+</span><span class="comment">// res44: Person = Person(
 //   firstName = &quot;John&quot;,
 //   lastName = &quot;Doe&quot;,
 //   age = 50,
@@ -1199,7 +1250,7 @@
       </span><span class="type-name">Vector</span><span>.</span><span class="identifier">empty</span><span>[</span><span class="identifier">domain</span><span>.</span><span class="type-name">PaymentMethod</span><span>]
     ) </span><span class="comment">// &lt;-- also override the &#39;parent&#39; of &#39;_.paymentMethods.element&#39; so now payment methods are just empty
 </span><span>  )
-</span><span class="comment">// res44: Person = Person(
+</span><span class="comment">// res45: Person = Person(
 //   firstName = &quot;John&quot;,
 //   lastName = &quot;Doe&quot;,
 //   age = 24,
