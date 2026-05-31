@@ -10,7 +10,6 @@ private[ducktape] object ParseRenamer {
   def parse(expr: Expr[Renamer => Renamer])(using Quotes): String => String = {
     import quotes.reflect.*
 
-    @tailrec
     def recurse(
       current: Expr[Renamer => Renamer],
       accumulatedFunctions: List[String => String]
@@ -30,11 +29,24 @@ private[ducktape] object ParseRenamer {
         case '{ (arg: Renamer) => ($body(arg): Renamer).replace(${ Expr(from) }, ${ Expr(to) }) } =>
           recurse(body, ((str: String) => str.replace(from, to)) :: accumulatedFunctions)
 
-        case '{ (arg: Renamer) => ($body(arg): Renamer).regexReplace(${ Expr(pattern) }, ${ Expr(replacement) }) } =>
+        case '{ (arg: Renamer) =>
+              ($body(arg): Renamer).regexReplace(${ Expr(pattern) }: String, ${ Expr(replacement) }: String)
+            } =>
           recurse(
             body, {
               val regex = Pattern.compile(pattern)
               (str: String) => regex.matcher(str).replaceAll(replacement)
+            } :: accumulatedFunctions
+          )
+
+        case '{ (arg: Renamer) =>
+              ($body(arg): Renamer).regexReplace(${ Expr(pattern) }: String, $fieldName: Renamer => Renamer)
+            } =>
+          val nestedFieldName = scala.Function.chain(recurse(fieldName, Nil))
+          recurse(
+            body, {
+              val regex = Pattern.compile(pattern)
+              (str: String) => regex.matcher(str).replaceAll(matchGroup => nestedFieldName(matchGroup.group()))
             } :: accumulatedFunctions
           )
 
@@ -47,9 +59,9 @@ private[ducktape] object ParseRenamer {
         case '{ (arg: Renamer) => ($body(arg): Renamer).capitalize } =>
           recurse(body, ((str: String) => str.capitalize) :: accumulatedFunctions)
 
-        case _ =>
+        case expr =>
           report.errorAndAbort(
-            "Invalid renamer expression - make sure all of the renamer expressions can be read at compiletime",
+            s"Invalid renamer expression - make sure all of the fieldName expressions can be read at compiletime - ${expr.show}",
             expr
           )
       }
