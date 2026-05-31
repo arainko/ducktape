@@ -31,14 +31,14 @@ sealed trait Selector {
 
     /**
      * 'Drills through' an Option or an Iterable (List, Vector, Map etc.)
-     * 
+     *
      * {{{
      * case class Source(opt: Option[Int])
-     * 
+     *
      * case class Dest(randomField: Option[String])
-     * 
+     *
      * val source = Source(Some(1))
-     * 
+     *
      * source
      *  .into[Dest]
      *  .transform(Field.const(_.randomField.element, "CONST!"))
