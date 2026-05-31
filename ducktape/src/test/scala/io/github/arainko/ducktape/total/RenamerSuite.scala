@@ -174,7 +174,7 @@ class RenamerSuite extends DucktapeSuite {
     )
 
     case class Camel(
-     simpleField: Int,
+      simpleField: Int,
       fieldWithNumber1: Int,
       field2WithNumber: Int,
       leadingUnderscore: Int,
@@ -220,7 +220,7 @@ class RenamerSuite extends DucktapeSuite {
       `fieldWithMultiple---Dashes`: Int,
       fieldWithDash1: Int
     )
-    
+
     case class Kebab(
       `simple-field`: Int,
       `field-with-number1`: Int,

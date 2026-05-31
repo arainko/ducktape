@@ -3,7 +3,6 @@ package io.github.arainko.ducktape.internal
 import io.github.arainko.ducktape.Renamer
 
 import java.util.regex.Pattern
-import scala.annotation.tailrec
 import scala.quoted.*
 
 private[ducktape] object ParseRenamer {
