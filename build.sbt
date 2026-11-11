@@ -63,7 +63,7 @@ lazy val scalaNextTests =
     .in(file("scala-next-tests"))
     .enablePlugins(NoPublishPlugin)
     .settings(
-      scalaVersion := "3.8.4",
+      scalaVersion := "3.10.1",
       scalacOptions ++= List("-Wunused:all", "-Xcheck-macros"),
       libraryDependencies += "org.scalameta" %%% "munit" % "1.3.6" % Test
     )
